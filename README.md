@@ -25,7 +25,7 @@ The guide explains:
 - Parallel workflows and advanced techniques
 - The philosophy behind these configs
 
-**This repo is the configs. The X post is the manual.**
+**This repo is configs only! Tips, tricks and more examples are in my X articles and videos (links will be appended to this readme as it evolves).**
 
 ---
 
