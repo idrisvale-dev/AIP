@@ -11,6 +11,8 @@ This repo contains production-ready agents, skills, hooks, commands, rules, and 
 **Before diving into these configs, read the complete guide on X:**
 
 **[The Shorthand Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2012378465664745795)**
+<img width="592" height="445" alt="image" src="https://github.com/user-attachments/assets/1a471488-59cc-425b-8345-5245c7efbcef" />
+
 
 The guide explains:
 - What each config type does and when to use it
