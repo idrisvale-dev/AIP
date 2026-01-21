@@ -41,6 +41,40 @@
           }
         ],
         "description": "Block creation of random .md files - keeps docs consolidated"
+      },
+      {
+        "matcher": "tool == \"Edit\" || tool == \"Write\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/strategic-compact/suggest-compact.sh"
+          }
+        ],
+        "description": "Suggest manual compaction at logical intervals"
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/memory-persistence/pre-compact.sh"
+          }
+        ],
+        "description": "Save state before context compaction"
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/memory-persistence/session-start.sh"
+          }
+        ],
+        "description": "Load previous context on new session"
       }
     ],
     "PostToolUse": [
@@ -95,6 +129,26 @@
           }
         ],
         "description": "Final audit for console.log in modified files before session ends"
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/memory-persistence/session-end.sh"
+          }
+        ],
+        "description": "Persist session state on end"
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/skills/continuous-learning/evaluate-session.sh"
+          }
+        ],
+        "description": "Evaluate session for extractable patterns"
       }
     ]
   }
