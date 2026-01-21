@@ -8,7 +8,7 @@ Production-ready agents, skills, hooks, commands, rules, and MCP configurations 
 
 ## The Guides
 
-This repo is the code. The guides explain everything.
+This repo is the raw code only. The guides explain everything.
 
 ### Start Here: The Shorthand Guide
 
