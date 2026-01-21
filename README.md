@@ -27,6 +27,14 @@ The guide explains:
 
 **This repo is configs only! Tips, tricks and more examples are in my X articles and videos (links will be appended to this readme as it evolves).**
 
+**UPDATE**
+
+<img width="609" height="428" alt="image" src="https://github.com/user-attachments/assets/c9ca43bc-b149-427f-b551-af6840c368f0" />
+
+
+**[The Longform Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2014040193557471352?s=20)**
+
+
 ---
 
 ## What's Inside
