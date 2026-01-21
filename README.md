@@ -2,37 +2,40 @@
 
 **The complete collection of Claude Code configs from an Anthropic hackathon winner.**
 
-This repo contains production-ready agents, skills, hooks, commands, rules, and MCP configurations that I use daily with Claude Code. These configs evolved over 10+ months of intensive use building real products.
+Production-ready agents, skills, hooks, commands, rules, and MCP configurations evolved over 10+ months of intensive daily use building real products.
 
 ---
 
-## Read the Full Guide First
+## The Guides
 
-**Before diving into these configs, read the complete guide on X:**
+This repo is the code. The guides explain everything.
 
+### Start Here: The Shorthand Guide
 
 <img width="592" height="445" alt="image" src="https://github.com/user-attachments/assets/1a471488-59cc-425b-8345-5245c7efbcef" />
 
-
 **[The Shorthand Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2012378465664745795)**
 
+The foundation - what each config type does, how to structure your setup, context window management, and the philosophy behind these configs. **Read this first.**
 
+---
 
-The guide explains:
-- What each config type does and when to use it
-- How to structure your Claude Code setup
-- Context window management (critical for performance)
-- Parallel workflows and advanced techniques
-- The philosophy behind these configs
-
-**This repo is configs only! Tips, tricks and more examples are in my X articles and videos (links will be appended to this readme as it evolves).**
-
-**UPDATE**
+### Then: The Longform Guide
 
 <img width="609" height="428" alt="image" src="https://github.com/user-attachments/assets/c9ca43bc-b149-427f-b551-af6840c368f0" />
 
+**[The Longform Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2014040193557471352)**
 
-**[The Longform Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2014040193557471352?s=20)**
+The advanced techniques - token optimization, memory persistence across sessions, verification loops & evals, parallelization strategies, subagent orchestration, and continuous learning. Everything in this guide has working code in this repo.
+
+| Topic | What You'll Learn |
+|-------|-------------------|
+| Token Optimization | Model selection, system prompt slimming, background processes |
+| Memory Persistence | Hooks that save/load context across sessions automatically |
+| Continuous Learning | Auto-extract patterns from sessions into reusable skills |
+| Verification Loops | Checkpoint vs continuous evals, grader types, pass@k metrics |
+| Parallelization | Git worktrees, cascade method, when to scale instances |
+| Subagent Orchestration | The context problem, iterative retrieval pattern |
 
 
 ---
@@ -56,10 +59,10 @@ everything-claude-code/
 |   |-- coding-standards.md         # Language best practices
 |   |-- backend-patterns.md         # API, database, caching patterns
 |   |-- frontend-patterns.md        # React, Next.js patterns
-|   |-- project-guidelines-example.md # Example project-specific skill
+|   |-- continuous-learning/        # Auto-extract patterns from sessions (Longform Guide)
+|   |-- strategic-compact/          # Manual compaction suggestions (Longform Guide)
 |   |-- tdd-workflow/               # TDD methodology
 |   |-- security-review/            # Security checklist
-|   |-- clickhouse-io.md            # ClickHouse analytics
 |
 |-- commands/         # Slash commands for quick execution
 |   |-- tdd.md              # /tdd - Test-driven development
@@ -68,9 +71,7 @@ everything-claude-code/
 |   |-- code-review.md      # /code-review - Quality review
 |   |-- build-fix.md        # /build-fix - Fix build errors
 |   |-- refactor-clean.md   # /refactor-clean - Dead code removal
-|   |-- test-coverage.md    # /test-coverage - Coverage analysis
-|   |-- update-codemaps.md  # /update-codemaps - Refresh docs
-|   |-- update-docs.md      # /update-docs - Sync documentation
+|   |-- learn.md            # /learn - Extract patterns mid-session (Longform Guide)
 |
 |-- rules/            # Always-follow guidelines
 |   |-- security.md         # Mandatory security checks
@@ -79,22 +80,30 @@ everything-claude-code/
 |   |-- git-workflow.md     # Commit format, PR process
 |   |-- agents.md           # When to delegate to subagents
 |   |-- performance.md      # Model selection, context management
-|   |-- patterns.md         # API response formats, hooks
-|   |-- hooks.md            # Hook documentation
 |
 |-- hooks/            # Trigger-based automations
-|   |-- hooks.json          # PreToolUse, PostToolUse, Stop hooks
+|   |-- hooks.json                # All hooks config (PreToolUse, PostToolUse, Stop, etc.)
+|   |-- memory-persistence/       # Session lifecycle hooks (Longform Guide)
+|   |   |-- pre-compact.sh        # Save state before compaction
+|   |   |-- session-start.sh      # Load previous context
+|   |   |-- session-end.sh        # Persist learnings on end
+|   |-- strategic-compact/        # Compaction suggestions (Longform Guide)
+|
+|-- contexts/         # Dynamic system prompt injection contexts (Longform Guide)
+|   |-- dev.md              # Development mode context
+|   |-- review.md           # Code review mode context
+|   |-- research.md         # Research/exploration mode context
+|
+|-- examples/         # Example configurations and sessions
+|   |-- CLAUDE.md           # Example project-level config
+|   |-- user-CLAUDE.md      # Example user-level config
+|   |-- sessions/           # Example session log files (Longform Guide)
 |
 |-- mcp-configs/      # MCP server configurations
 |   |-- mcp-servers.json    # GitHub, Supabase, Vercel, Railway, etc.
 |
 |-- plugins/          # Plugin ecosystem documentation
-|   |-- README.md           # Plugins, marketplaces, skills guide
-|
-|-- examples/         # Example configurations
-    |-- CLAUDE.md           # Example project-level config
-    |-- user-CLAUDE.md      # Example user-level config (~/.claude/CLAUDE.md)
-    |-- statusline.json     # Custom status line config
+    |-- README.md           # Plugins, marketplaces, skills guide
 ```
 
 ---
@@ -130,9 +139,12 @@ Copy desired MCP servers from `mcp-configs/mcp-servers.json` to your `~/.claude.
 
 **Important:** Replace `YOUR_*_HERE` placeholders with your actual API keys.
 
-### 4. Read the guide
+### 4. Read the guides
 
-Seriously, [read the guide](https://x.com/affaanmustafa/status/2012378465664745795). These configs make 10x more sense with context.
+Seriously, read the guides. These configs make 10x more sense with context.
+
+1. **[Shorthand Guide](https://x.com/affaanmustafa/status/2012378465664745795)** - Setup and foundations
+2. **[Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352)** - Advanced techniques (token optimization, memory persistence, evals, parallelization)
 
 ---
 
@@ -249,7 +261,8 @@ These configs work for my workflow. You should:
 
 ## Links
 
-- **Full Guide:** [The Shorthand Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2012378465664745795)
+- **Shorthand Guide (Start Here):** [The Shorthand Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2012378465664745795)
+- **Longform Guide (Advanced):** [The Longform Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2014040193557471352)
 - **Follow:** [@affaanmustafa](https://x.com/affaanmustafa)
 - **zenith.chat:** [zenith.chat](https://zenith.chat)
 
@@ -261,4 +274,4 @@ MIT - Use freely, modify as needed, contribute back if you can.
 
 ---
 
-**Star this repo if it helps. Read the guide. Build something great.**
+**Star this repo if it helps. Read both guides. Build something great.**
