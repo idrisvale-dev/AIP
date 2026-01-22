@@ -24,7 +24,6 @@
     "best-practices"
   ],
   "commands": "./commands",
-  "agents": "./agents",
   "skills": "./skills",
   "hooks": "./hooks/hooks.json"
 }
