@@ -16,23 +16,24 @@ Production-ready agents, skills, hooks, commands, rules, and MCP configurations 
 
 This repo is the raw code only. The guides explain everything.
 
-### Start Here: The Shorthand Guide
-
-<img width="592" height="445" alt="image" src="https://github.com/user-attachments/assets/1a471488-59cc-425b-8345-5245c7efbcef" />
-
-**[The Shorthand Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2012378465664745795)**
-
-The foundation - what each config type does, how to structure your setup, context window management, and the philosophy behind these configs. **Read this first.**
-
----
-
-### Then: The Longform Guide
-
-<img width="609" height="428" alt="image" src="https://github.com/user-attachments/assets/c9ca43bc-b149-427f-b551-af6840c368f0" />
-
-**[The Longform Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2014040193557471352)**
-
-The advanced techniques - token optimization, memory persistence across sessions, verification loops & evals, parallelization strategies, subagent orchestration, and continuous learning. Everything in this guide has working code in this repo.
+<table>
+<tr>
+<td width="50%">
+<a href="https://x.com/affaanmustafa/status/2012378465664745795">
+<img src="https://github.com/user-attachments/assets/1a471488-59cc-425b-8345-5245c7efbcef" alt="The Shorthand Guide to Everything Claude Code" />
+</a>
+</td>
+<td width="50%">
+<a href="https://x.com/affaanmustafa/status/2014040193557471352">
+<img src="https://github.com/user-attachments/assets/c9ca43bc-b149-427f-b551-af6840c368f0" alt="The Longform Guide to Everything Claude Code" />
+</a>
+</td>
+</tr>
+<tr>
+<td align="center"><b>Shorthand Guide</b><br/>Setup, foundations, philosophy. <b>Read this first.</b></td>
+<td align="center"><b>Longform Guide</b><br/>Token optimization, memory persistence, evals, parallelization.</td>
+</tr>
+</table>
 
 | Topic | What You'll Learn |
 |-------|-------------------|
@@ -42,7 +43,6 @@ The advanced techniques - token optimization, memory persistence across sessions
 | Verification Loops | Checkpoint vs continuous evals, grader types, pass@k metrics |
 | Parallelization | Git worktrees, cascade method, when to scale instances |
 | Subagent Orchestration | The context problem, iterative retrieval pattern |
-
 
 ---
 
@@ -185,15 +185,6 @@ Copy the hooks from `hooks/hooks.json` to your `~/.claude/settings.json`.
 Copy desired MCP servers from `mcp-configs/mcp-servers.json` to your `~/.claude.json`.
 
 **Important:** Replace `YOUR_*_HERE` placeholders with your actual API keys.
-
----
-
-### Read the Guides
-
-Seriously, read the guides. These configs make 10x more sense with context.
-
-1. **[Shorthand Guide](https://x.com/affaanmustafa/status/2012378465664745795)** - Setup and foundations
-2. **[Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352)** - Advanced techniques (token optimization, memory persistence, evals, parallelization)
 
 ---
 
