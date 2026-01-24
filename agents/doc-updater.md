@@ -27,8 +27,8 @@ You are a documentation specialist focused on keeping codemaps and documentation
 
 ### Analysis Commands
 ```bash
-# Analyze TypeScript project structure
-npx ts-morph
+# Analyze TypeScript project structure (run custom script using ts-morph library)
+npx tsx scripts/codemaps/generate.ts
 
 # Generate dependency graph
 npx madge --image graph.svg src/
