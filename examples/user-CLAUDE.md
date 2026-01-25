@@ -58,6 +58,10 @@ Located in `~/.claude/agents/`:
 
 ## Personal Preferences
 
+### Privacy
+- Always redact logs; never paste secrets (API keys/tokens/passwords/JWTs)
+- Review output before sharing - remove any sensitive data
+
 ### Code Style
 - No emojis in code, comments, or documentation
 - Prefer immutability - never mutate objects or arrays
