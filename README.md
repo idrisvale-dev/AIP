@@ -107,6 +107,8 @@ everything-claude-code/
 |   |-- backend-patterns/           # API, database, caching patterns
 |   |-- frontend-patterns/          # React, Next.js patterns
 |   |-- continuous-learning/        # Auto-extract patterns from sessions (Longform Guide)
+|   |-- continuous-learning-v2/     # Instinct-based learning with confidence scoring
+|   |-- iterative-retrieval/        # Progressive context refinement for subagents
 |   |-- strategic-compact/          # Manual compaction suggestions (Longform Guide)
 |   |-- tdd-workflow/               # TDD methodology
 |   |-- security-review/            # Security checklist
@@ -169,6 +171,28 @@ everything-claude-code/
 |
 |-- marketplace.json  # Self-hosted marketplace config (for /plugin marketplace add)
 ```
+
+---
+
+## Ecosystem Tools
+
+### ecc.tools - Skill Creator
+
+Automatically generate Claude Code skills from your repository.
+
+[Install GitHub App](https://github.com/apps/skill-creator) | [ecc.tools](https://ecc.tools)
+
+Analyzes your repository and creates:
+- **SKILL.md files** - Ready-to-use skills for Claude Code
+- **Instinct collections** - For continuous-learning-v2
+- **Pattern extraction** - Learns from your commit history
+
+```bash
+# After installing the GitHub App, skills appear in:
+~/.claude/skills/generated/
+```
+
+Works seamlessly with the `continuous-learning-v2` skill for inherited instincts.
 
 ---
 

@@ -89,6 +89,18 @@
         "description": "Log PR URL and provide review command after PR creation"
       },
       {
+        "matcher": "tool == \"Bash\" && tool_input.command matches \"(npm run build|pnpm build|yarn build)\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{console.error('[Hook] Build completed - async analysis running in background');console.log(d)})\"",
+            "async": true,
+            "timeout": 30
+          }
+        ],
+        "description": "Example: async hook for build analysis (runs in background without blocking)"
+      },
+      {
         "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(ts|tsx|js|jsx)$\"",
         "hooks": [
           {

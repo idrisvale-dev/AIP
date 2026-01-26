@@ -80,6 +80,19 @@ function getTimeString() {
 }
 
 /**
+ * Get short session ID from CLAUDE_SESSION_ID environment variable
+ * Returns the last 8 characters for uniqueness with brevity
+ * @param {string} fallback - Fallback value if no session ID (default: 'default')
+ */
+function getSessionIdShort(fallback = 'default') {
+  const sessionId = process.env.CLAUDE_SESSION_ID;
+  if (!sessionId || sessionId.length === 0) {
+    return fallback;
+  }
+  return sessionId.slice(-8);
+}
+
+/**
  * Get current datetime in YYYY-MM-DD HH:MM:SS format
  */
 function getDateTimeString() {
@@ -360,6 +373,7 @@ module.exports = {
   getDateString,
   getTimeString,
   getDateTimeString,
+  getSessionIdShort,
 
   // File operations
   findFiles,
