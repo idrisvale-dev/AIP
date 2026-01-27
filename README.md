@@ -238,6 +238,20 @@ Or add directly to your `~/.claude/settings.json`:
 
 This gives you instant access to all commands, agents, skills, and hooks.
 
+> **Note:** The Claude Code plugin system does not support distributing `rules` via plugins ([upstream limitation](https://code.claude.com/docs/en/plugins-reference)). You need to install rules manually:
+>
+> ```bash
+> # Clone the repo first
+> git clone https://github.com/affaan-m/everything-claude-code.git
+>
+> # Option A: User-level rules (applies to all projects)
+> cp -r everything-claude-code/rules/* ~/.claude/rules/
+>
+> # Option B: Project-level rules (applies to current project only)
+> mkdir -p .claude/rules
+> cp -r everything-claude-code/rules/* .claude/rules/
+> ```
+
 ---
 
 ### Option 2: Manual Installation
