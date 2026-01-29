@@ -165,7 +165,7 @@ function findFiles(dir, pattern, options = {}) {
           searchDir(fullPath);
         }
       }
-    } catch (err) {
+    } catch (_err) {
       // Ignore permission errors
     }
   }

@@ -8,7 +8,7 @@ const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { execSync, spawn } = require('child_process');
+const { spawn } = require('child_process');
 
 // Test helper
 function test(name, fn) {
@@ -113,14 +113,19 @@ async function runTests() {
     // Run the script
     await runScript(path.join(scriptsDir, 'session-end.js'));
 
-    // Check if session file was created (default session ID)
+    // Check if session file was created
+    // Note: Without CLAUDE_SESSION_ID, falls back to project name (not 'default')
     // Use local time to match the script's getDateString() function
     const sessionsDir = path.join(os.homedir(), '.claude', 'sessions');
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const sessionFile = path.join(sessionsDir, `${today}-default-session.tmp`);
 
-    assert.ok(fs.existsSync(sessionFile), 'Session file should exist');
+    // Get the expected session ID (project name fallback)
+    const utils = require('../../scripts/lib/utils');
+    const expectedId = utils.getSessionIdShort();
+    const sessionFile = path.join(sessionsDir, `${today}-${expectedId}-session.tmp`);
+
+    assert.ok(fs.existsSync(sessionFile), `Session file should exist: ${sessionFile}`);
   })) passed++; else failed++;
 
   if (await asyncTest('includes session ID in filename', async () => {
@@ -296,7 +301,7 @@ async function runTests() {
       }
     };
 
-    for (const [eventType, hookArray] of Object.entries(hooks.hooks)) {
+    for (const [, hookArray] of Object.entries(hooks.hooks)) {
       checkHooks(hookArray);
     }
   })) passed++; else failed++;
@@ -320,7 +325,7 @@ async function runTests() {
       }
     };
 
-    for (const [eventType, hookArray] of Object.entries(hooks.hooks)) {
+    for (const [, hookArray] of Object.entries(hooks.hooks)) {
       checkHooks(hookArray);
     }
   })) passed++; else failed++;

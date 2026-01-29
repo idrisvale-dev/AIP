@@ -7,7 +7,6 @@
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 
 // Import the module
 const utils = require('../../scripts/lib/utils');
