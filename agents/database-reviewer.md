@@ -132,7 +132,7 @@ CREATE INDEX orders_customer_id_idx ON orders (customer_id);
 | Index Type | Use Case | Operators |
 |------------|----------|-----------|
 | **B-tree** (default) | Equality, range | `=`, `<`, `>`, `BETWEEN`, `IN` |
-| **GIN** | Arrays, JSONB, full-text | `@>`, `?`, `?&`, `?|`, `@@` |
+| **GIN** | Arrays, JSONB, full-text | `@>`, `?`, `?&`, `?\|`, `@@` |
 | **BRIN** | Large time-series tables | Range queries on sorted data |
 | **Hash** | Equality only | `=` (marginally faster than B-tree) |
 

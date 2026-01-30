@@ -1,7 +1,6 @@
 # The Shorthand Guide to Everything Claude Code
 
-![Header: Anthropic Hackathon Winner - Tips & Tricks for Claude Code](./assets/images/shortform/01-hackathon-tweet.png)
-*Won the Anthropic x Forum Ventures hackathon with [zenith.chat](https://zenith.chat) alongside [@DRodriguezFX](https://x.com/DRodriguezFX)*
+![Header: Anthropic Hackathon Winner - Tips & Tricks for Claude Code](./assets/images/shortform/00-header.png)
 
 ---
 
