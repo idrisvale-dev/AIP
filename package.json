@@ -18,7 +18,8 @@
     "automation",
     "best-practices",
     "cursor",
-    "cursor-ide"
+    "cursor-ide",
+    "opencode"
   ],
   "author": {
     "name": "Affaan Mustafa",
@@ -35,6 +36,17 @@
   },
   "files": [
     ".cursor/",
+    ".opencode/commands/",
+    ".opencode/instructions/",
+    ".opencode/plugins/",
+    ".opencode/prompts/",
+    ".opencode/tools/",
+    ".opencode/index.ts",
+    ".opencode/opencode.json",
+    ".opencode/package.json",
+    ".opencode/tsconfig.json",
+    ".opencode/MIGRATION.md",
+    ".opencode/README.md",
     "agents/",
     "commands/",
     "contexts/",
