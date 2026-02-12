@@ -103,10 +103,10 @@ PARSED_OK=$(echo "$PARSED" | python3 -c "import json,sys; print(json.load(sys.st
 if [ "$PARSED_OK" != "True" ]; then
   # Fallback: log raw input for debugging
   timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  echo "$INPUT_JSON" | python3 -c "
-import json, sys
+  TIMESTAMP="$timestamp" echo "$INPUT_JSON" | python3 -c "
+import json, sys, os
 raw = sys.stdin.read()[:2000]
-print(json.dumps({'timestamp': '$timestamp', 'event': 'parse_error', 'raw': raw}))
+print(json.dumps({'timestamp': os.environ['TIMESTAMP'], 'event': 'parse_error', 'raw': raw}))
 " >> "$OBSERVATIONS_FILE"
   exit 0
 fi
@@ -124,12 +124,12 @@ fi
 # Build and write observation
 timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-echo "$PARSED" | python3 -c "
-import json, sys
+TIMESTAMP="$timestamp" echo "$PARSED" | python3 -c "
+import json, sys, os
 
 parsed = json.load(sys.stdin)
 observation = {
-    'timestamp': '$timestamp',
+    'timestamp': os.environ['TIMESTAMP'],
     'event': parsed['event'],
     'tool': parsed['tool'],
     'session': parsed['session']
@@ -140,9 +140,8 @@ if parsed['input']:
 if parsed['output']:
     observation['output'] = parsed['output']
 
-with open('$OBSERVATIONS_FILE', 'a') as f:
-    f.write(json.dumps(observation) + '\n')
-"
+print(json.dumps(observation))
+" >> "$OBSERVATIONS_FILE"
 
 # Signal observer if running
 OBSERVER_PID_FILE="${CONFIG_DIR}/.observer.pid"

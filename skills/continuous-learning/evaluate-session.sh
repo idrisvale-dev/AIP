@@ -32,8 +32,12 @@ MIN_SESSION_LENGTH=10
 
 # Load config if exists
 if [ -f "$CONFIG_FILE" ]; then
-  MIN_SESSION_LENGTH=$(jq -r '.min_session_length // 10' "$CONFIG_FILE")
-  LEARNED_SKILLS_PATH=$(jq -r '.learned_skills_path // "~/.claude/skills/learned/"' "$CONFIG_FILE" | sed "s|~|$HOME|")
+  if ! command -v jq &>/dev/null; then
+    echo "[ContinuousLearning] jq is required to parse config.json but not installed, using defaults" >&2
+  else
+    MIN_SESSION_LENGTH=$(jq -r '.min_session_length // 10' "$CONFIG_FILE")
+    LEARNED_SKILLS_PATH=$(jq -r '.learned_skills_path // "~/.claude/skills/learned/"' "$CONFIG_FILE" | sed "s|~|$HOME|")
+  fi
 fi
 
 # Ensure learned skills directory exists

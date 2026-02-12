@@ -88,10 +88,12 @@ case "${1:-start}" in
         # Use Claude Code with Haiku to analyze observations
         # This spawns a quick analysis session
         if command -v claude &> /dev/null; then
-          if ! claude --model haiku --max-turns 3 --print \
+          exit_code=0
+          claude --model haiku --max-turns 3 --print \
             "Read $OBSERVATIONS_FILE and identify patterns. If you find 3+ occurrences of the same pattern, create an instinct file in $CONFIG_DIR/instincts/personal/ following the format in the observer agent spec. Be conservative - only create instincts for clear patterns." \
-            >> "$LOG_FILE" 2>&1; then
-            echo "[$(date)] Claude analysis failed (exit $?)" >> "$LOG_FILE"
+            >> "$LOG_FILE" 2>&1 || exit_code=$?
+          if [ "$exit_code" -ne 0 ]; then
+            echo "[$(date)] Claude analysis failed (exit $exit_code)" >> "$LOG_FILE"
           fi
         else
           echo "[$(date)] claude CLI not found, skipping analysis" >> "$LOG_FILE"

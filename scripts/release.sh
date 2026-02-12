@@ -47,15 +47,19 @@ fi
 
 # Read current version
 OLD_VERSION=$(grep -oE '"version": *"[^"]*"' "$PLUGIN_JSON" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+if [[ -z "$OLD_VERSION" ]]; then
+  echo "Error: Could not extract current version from $PLUGIN_JSON"
+  exit 1
+fi
 echo "Bumping version: $OLD_VERSION -> $VERSION"
 
-# Update version in plugin.json (cross-platform sed)
+# Update version in plugin.json (cross-platform sed, pipe-delimiter avoids issues with slashes)
 if [[ "$OSTYPE" == "darwin"* ]]; then
   # macOS
-  sed -i '' "s/\"version\": *\"[^\"]*\"/\"version\": \"$VERSION\"/" "$PLUGIN_JSON"
+  sed -i '' "s|\"version\": *\"[^\"]*\"|\"version\": \"$VERSION\"|" "$PLUGIN_JSON"
 else
   # Linux
-  sed -i "s/\"version\": *\"[^\"]*\"/\"version\": \"$VERSION\"/" "$PLUGIN_JSON"
+  sed -i "s|\"version\": *\"[^\"]*\"|\"version\": \"$VERSION\"|" "$PLUGIN_JSON"
 fi
 
 # Stage, commit, tag, and push

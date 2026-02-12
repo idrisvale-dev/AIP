@@ -19,7 +19,14 @@ function validateCommands() {
 
   for (const file of files) {
     const filePath = path.join(COMMANDS_DIR, file);
-    const content = fs.readFileSync(filePath, 'utf-8');
+    let content;
+    try {
+      content = fs.readFileSync(filePath, 'utf-8');
+    } catch (err) {
+      console.error(`ERROR: ${file} - ${err.message}`);
+      hasErrors = true;
+      continue;
+    }
 
     // Validate the file is non-empty readable markdown
     if (content.trim().length === 0) {
