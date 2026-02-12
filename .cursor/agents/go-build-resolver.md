@@ -1,8 +1,8 @@
 ---
 name: go-build-resolver
 description: Go build, vet, and compilation error resolution specialist. Fixes build errors, go vet issues, and linter warnings with minimal changes. Use when Go builds fail.
-model: anthropic/claude-opus-4-5
-readonly: false
+tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+model: sonnet
 ---
 
 # Go Build Error Resolver
@@ -307,23 +307,23 @@ x = x  // Remove pointless assignment
 
 ```text
 1. go build ./...
-   | Error?
+   ↓ Error?
 2. Parse error message
-   |
+   ↓
 3. Read affected file
-   |
+   ↓
 4. Apply minimal fix
-   |
+   ↓
 5. go build ./...
-   | Still errors?
-   -> Back to step 2
-   | Success?
+   ↓ Still errors?
+   → Back to step 2
+   ↓ Success?
 6. go vet ./...
-   | Warnings?
-   -> Fix and repeat
-   |
+   ↓ Warnings?
+   → Fix and repeat
+   ↓
 7. go test ./...
-   |
+   ↓
 8. Done!
 ```
 

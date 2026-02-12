@@ -292,6 +292,6 @@ The reviewer notes when code uses features from newer Python versions:
 | Walrus operator (`:=`) | 3.8+ |
 | Position-only parameters | 3.8+ |
 | Match statements | 3.10+ |
-| Type unions (`x | None`) | 3.10+ |
+| Type unions (&#96;x &#124; None&#96;) | 3.10+ |
 
 Ensure your project's `pyproject.toml` or `setup.py` specifies the correct minimum Python version.

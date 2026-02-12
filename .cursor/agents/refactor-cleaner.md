@@ -1,8 +1,8 @@
 ---
 name: refactor-cleaner
 description: Dead code cleanup and consolidation specialist. Use PROACTIVELY for removing unused code, duplicates, and refactoring. Runs analysis tools (knip, depcheck, ts-prune) to identify dead code and safely removes it.
-model: anthropic/claude-opus-4-5
-readonly: false
+tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+model: sonnet
 ---
 
 # Refactor & Dead Code Cleaner
@@ -104,7 +104,7 @@ Create/update `docs/DELETION_LOG.md` with this structure:
 - lib/deprecated-util.ts - Functionality moved to: lib/utils.ts
 
 ### Duplicate Code Consolidated
-- src/components/Button1.tsx + Button2.tsx -> Button.tsx
+- src/components/Button1.tsx + Button2.tsx → Button.tsx
 - Reason: Both implementations were identical
 
 ### Unused Exports Removed
@@ -118,9 +118,9 @@ Create/update `docs/DELETION_LOG.md` with this structure:
 - Bundle size reduction: ~45 KB
 
 ### Testing
-- All unit tests passing
-- All integration tests passing
-- Manual testing completed
+- All unit tests passing: ✓
+- All integration tests passing: ✓
+- Manual testing completed: ✓
 ```
 
 ## Safety Checklist
@@ -146,22 +146,22 @@ After each removal:
 
 ### 1. Unused Imports
 ```typescript
-// Remove unused imports
+// ❌ Remove unused imports
 import { useState, useEffect, useMemo } from 'react' // Only useState used
 
-// Keep only what's used
+// ✅ Keep only what's used
 import { useState } from 'react'
 ```
 
 ### 2. Dead Code Branches
 ```typescript
-// Remove unreachable code
+// ❌ Remove unreachable code
 if (false) {
   // This never executes
   doSomething()
 }
 
-// Remove unused functions
+// ❌ Remove unused functions
 export function unusedHelper() {
   // No references in codebase
 }
@@ -169,22 +169,22 @@ export function unusedHelper() {
 
 ### 3. Duplicate Components
 ```typescript
-// Multiple similar components
+// ❌ Multiple similar components
 components/Button.tsx
 components/PrimaryButton.tsx
 components/NewButton.tsx
 
-// Consolidate to one
+// ✅ Consolidate to one
 components/Button.tsx (with variant prop)
 ```
 
 ### 4. Unused Dependencies
 ```json
-// Package installed but not imported
+// ❌ Package installed but not imported
 {
   "dependencies": {
-    "lodash": "^4.17.21",
-    "moment": "^2.29.4"
+    "lodash": "^4.17.21",  // Not used anywhere
+    "moment": "^2.29.4"     // Replaced by date-fns
   }
 }
 ```
@@ -240,7 +240,7 @@ Dead code cleanup removing unused exports, dependencies, and duplicates.
 - Dependencies: -X packages
 
 ### Risk Level
-LOW - Only removed verifiably unused code
+🟢 LOW - Only removed verifiably unused code
 
 See DELETION_LOG.md for complete details.
 ```
@@ -294,12 +294,12 @@ If something breaks after removal:
 ## Success Metrics
 
 After cleanup session:
-- All tests passing
-- Build succeeds
-- No console errors
-- DELETION_LOG.md updated
-- Bundle size reduced
-- No regressions in production
+- ✅ All tests passing
+- ✅ Build succeeds
+- ✅ No console errors
+- ✅ DELETION_LOG.md updated
+- ✅ Bundle size reduced
+- ✅ No regressions in production
 
 ---
 

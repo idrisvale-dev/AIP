@@ -1,8 +1,8 @@
 ---
 name: security-reviewer
 description: Security vulnerability detection and remediation specialist. Use PROACTIVELY after writing code that handles user input, authentication, API endpoints, or sensitive data. Flags secrets, SSRF, injection, unsafe crypto, and OWASP Top 10 vulnerabilities.
-model: anthropic/claude-opus-4-5
-readonly: false
+tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+model: sonnet
 ---
 
 # Security Reviewer
@@ -184,12 +184,12 @@ Search Security (Redis + OpenAI):
 ### 1. Hardcoded Secrets (CRITICAL)
 
 ```javascript
-// CRITICAL: Hardcoded secrets
+// ❌ CRITICAL: Hardcoded secrets
 const apiKey = "sk-proj-xxxxx"
 const password = "admin123"
 const token = "ghp_xxxxxxxxxxxx"
 
-// CORRECT: Environment variables
+// ✅ CORRECT: Environment variables
 const apiKey = process.env.OPENAI_API_KEY
 if (!apiKey) {
   throw new Error('OPENAI_API_KEY not configured')
@@ -199,11 +199,11 @@ if (!apiKey) {
 ### 2. SQL Injection (CRITICAL)
 
 ```javascript
-// CRITICAL: SQL injection vulnerability
+// ❌ CRITICAL: SQL injection vulnerability
 const query = `SELECT * FROM users WHERE id = ${userId}`
 await db.query(query)
 
-// CORRECT: Parameterized queries
+// ✅ CORRECT: Parameterized queries
 const { data } = await supabase
   .from('users')
   .select('*')
@@ -213,11 +213,11 @@ const { data } = await supabase
 ### 3. Command Injection (CRITICAL)
 
 ```javascript
-// CRITICAL: Command injection
+// ❌ CRITICAL: Command injection
 const { exec } = require('child_process')
 exec(`ping ${userInput}`, callback)
 
-// CORRECT: Use libraries, not shell commands
+// ✅ CORRECT: Use libraries, not shell commands
 const dns = require('dns')
 dns.lookup(userInput, callback)
 ```
@@ -225,10 +225,10 @@ dns.lookup(userInput, callback)
 ### 4. Cross-Site Scripting (XSS) (HIGH)
 
 ```javascript
-// HIGH: XSS vulnerability
+// ❌ HIGH: XSS vulnerability
 element.innerHTML = userInput
 
-// CORRECT: Use textContent or sanitize
+// ✅ CORRECT: Use textContent or sanitize
 element.textContent = userInput
 // OR
 import DOMPurify from 'dompurify'
@@ -238,10 +238,10 @@ element.innerHTML = DOMPurify.sanitize(userInput)
 ### 5. Server-Side Request Forgery (SSRF) (HIGH)
 
 ```javascript
-// HIGH: SSRF vulnerability
+// ❌ HIGH: SSRF vulnerability
 const response = await fetch(userProvidedUrl)
 
-// CORRECT: Validate and whitelist URLs
+// ✅ CORRECT: Validate and whitelist URLs
 const allowedDomains = ['api.example.com', 'cdn.example.com']
 const url = new URL(userProvidedUrl)
 if (!allowedDomains.includes(url.hostname)) {
@@ -253,10 +253,10 @@ const response = await fetch(url.toString())
 ### 6. Insecure Authentication (CRITICAL)
 
 ```javascript
-// CRITICAL: Plaintext password comparison
+// ❌ CRITICAL: Plaintext password comparison
 if (password === storedPassword) { /* login */ }
 
-// CORRECT: Hashed password comparison
+// ✅ CORRECT: Hashed password comparison
 import bcrypt from 'bcrypt'
 const isValid = await bcrypt.compare(password, hashedPassword)
 ```
@@ -264,13 +264,13 @@ const isValid = await bcrypt.compare(password, hashedPassword)
 ### 7. Insufficient Authorization (CRITICAL)
 
 ```javascript
-// CRITICAL: No authorization check
+// ❌ CRITICAL: No authorization check
 app.get('/api/user/:id', async (req, res) => {
   const user = await getUser(req.params.id)
   res.json(user)
 })
 
-// CORRECT: Verify user can access resource
+// ✅ CORRECT: Verify user can access resource
 app.get('/api/user/:id', authenticateUser, async (req, res) => {
   if (req.user.id !== req.params.id && !req.user.isAdmin) {
     return res.status(403).json({ error: 'Forbidden' })
@@ -283,13 +283,13 @@ app.get('/api/user/:id', authenticateUser, async (req, res) => {
 ### 8. Race Conditions in Financial Operations (CRITICAL)
 
 ```javascript
-// CRITICAL: Race condition in balance check
+// ❌ CRITICAL: Race condition in balance check
 const balance = await getBalance(userId)
 if (balance >= amount) {
   await withdraw(userId, amount) // Another request could withdraw in parallel!
 }
 
-// CORRECT: Atomic transaction with lock
+// ✅ CORRECT: Atomic transaction with lock
 await db.transaction(async (trx) => {
   const balance = await trx('balances')
     .where({ user_id: userId })
@@ -309,13 +309,13 @@ await db.transaction(async (trx) => {
 ### 9. Insufficient Rate Limiting (HIGH)
 
 ```javascript
-// HIGH: No rate limiting
+// ❌ HIGH: No rate limiting
 app.post('/api/trade', async (req, res) => {
   await executeTrade(req.body)
   res.json({ success: true })
 })
 
-// CORRECT: Rate limiting
+// ✅ CORRECT: Rate limiting
 import rateLimit from 'express-rate-limit'
 
 const tradeLimiter = rateLimit({
@@ -333,10 +333,10 @@ app.post('/api/trade', tradeLimiter, async (req, res) => {
 ### 10. Logging Sensitive Data (MEDIUM)
 
 ```javascript
-// MEDIUM: Logging sensitive data
+// ❌ MEDIUM: Logging sensitive data
 console.log('User login:', { email, password, apiKey })
 
-// CORRECT: Sanitize logs
+// ✅ CORRECT: Sanitize logs
 console.log('User login:', {
   email: email.replace(/(?<=.).(?=.*@)/g, '*'),
   passwordProvided: !!password
@@ -358,7 +358,7 @@ console.log('User login:', {
 - **High Issues:** Y
 - **Medium Issues:** Z
 - **Low Issues:** W
-- **Risk Level:** HIGH / MEDIUM / LOW
+- **Risk Level:** 🔴 HIGH / 🟡 MEDIUM / 🟢 LOW
 
 ## Critical Issues (Fix Immediately)
 
@@ -374,10 +374,14 @@ console.log('User login:', {
 [What could happen if exploited]
 
 **Proof of Concept:**
-[Example of how this could be exploited]
+```javascript
+// Example of how this could be exploited
+```
 
 **Remediation:**
-[Secure implementation]
+```javascript
+// ✅ Secure implementation
+```
 
 **References:**
 - OWASP: [link]
@@ -429,7 +433,7 @@ When reviewing PRs, post inline comments:
 ## Security Review
 
 **Reviewer:** security-reviewer agent
-**Risk Level:** HIGH / MEDIUM / LOW
+**Risk Level:** 🔴 HIGH / 🟡 MEDIUM / 🟢 LOW
 
 ### Blocking Issues
 - [ ] **CRITICAL**: [Description] @ `file:line`
@@ -528,13 +532,13 @@ If you find a CRITICAL vulnerability:
 ## Success Metrics
 
 After security review:
-- No CRITICAL issues found
-- All HIGH issues addressed
-- Security checklist complete
-- No secrets in code
-- Dependencies up to date
-- Tests include security scenarios
-- Documentation updated
+- ✅ No CRITICAL issues found
+- ✅ All HIGH issues addressed
+- ✅ Security checklist complete
+- ✅ No secrets in code
+- ✅ Dependencies up to date
+- ✅ Tests include security scenarios
+- ✅ Documentation updated
 
 ---
 
