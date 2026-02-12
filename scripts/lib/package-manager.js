@@ -127,6 +127,11 @@ function detectFromPackageJson(projectDir = process.cwd()) {
 
 /**
  * Get available package managers (installed on system)
+ *
+ * WARNING: This spawns child processes (where.exe on Windows, which on Unix)
+ * for each package manager. Do NOT call this during session startup hooks —
+ * it can exceed Bun's spawn limit on Windows and freeze the plugin.
+ * Use detectFromLockFile() or detectFromPackageJson() for hot paths.
  */
 function getAvailablePackageManagers() {
   const available = [];
@@ -149,7 +154,7 @@ function getAvailablePackageManagers() {
  * 3. package.json packageManager field
  * 4. Lock file detection
  * 5. Global user preference (in ~/.claude/package-manager.json)
- * 6. First available package manager (by priority)
+ * 6. Default to npm (no child processes spawned)
  *
  * @param {object} options - { projectDir, fallbackOrder }
  * @returns {object} - { name, config, source }
@@ -215,19 +220,13 @@ function getPackageManager(options = {}) {
     };
   }
 
-  // 6. Use first available package manager
-  const available = getAvailablePackageManagers();
-  for (const pmName of fallbackOrder) {
-    if (available.includes(pmName)) {
-      return {
-        name: pmName,
-        config: PACKAGE_MANAGERS[pmName],
-        source: 'fallback'
-      };
-    }
-  }
-
-  // Default to npm (always available with Node.js)
+  // 6. Default to npm (always available with Node.js)
+  // NOTE: Previously this called getAvailablePackageManagers() which spawns
+  // child processes (where.exe/which) for each PM. This caused plugin freezes
+  // on Windows (see #162) because session-start hooks run during Bun init,
+  // and the spawned processes exceed Bun's spawn limit.
+  // Steps 1-5 already cover all config-based and file-based detection.
+  // If none matched, npm is the safe default.
   return {
     name: 'npm',
     config: PACKAGE_MANAGERS.npm,
@@ -306,22 +305,18 @@ function getExecCommand(binary, args = '', options = {}) {
 /**
  * Interactive prompt for package manager selection
  * Returns a message for Claude to show to user
+ *
+ * NOTE: Does NOT spawn child processes to check availability.
+ * Lists all supported PMs and shows how to configure preference.
  */
 function getSelectionPrompt() {
-  const available = getAvailablePackageManagers();
-  const current = getPackageManager();
-
-  let message = '[PackageManager] Available package managers:\n';
-
-  for (const pmName of available) {
-    const indicator = pmName === current.name ? ' (current)' : '';
-    message += `  - ${pmName}${indicator}\n`;
-  }
-
+  let message = '[PackageManager] No package manager preference detected.\n';
+  message += 'Supported package managers: ' + Object.keys(PACKAGE_MANAGERS).join(', ') + '\n';
   message += '\nTo set your preferred package manager:\n';
   message += '  - Global: Set CLAUDE_PACKAGE_MANAGER environment variable\n';
   message += '  - Or add to ~/.claude/package-manager.json: {"packageManager": "pnpm"}\n';
   message += '  - Or add to package.json: {"packageManager": "pnpm@8"}\n';
+  message += '  - Or add a lock file to your project (e.g., pnpm-lock.yaml)\n';
 
   return message;
 }

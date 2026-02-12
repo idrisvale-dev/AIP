@@ -66,8 +66,8 @@ async function main() {
   const pm = getPackageManager();
   log(`[SessionStart] Package manager: ${pm.name} (${pm.source})`);
 
-  // If package manager was detected via fallback, show selection prompt
-  if (pm.source === 'fallback' || pm.source === 'default') {
+  // If no explicit package manager config was found, show selection prompt
+  if (pm.source === 'default') {
     log('[SessionStart] No package manager preference found.');
     log(getSelectionPrompt());
   }
