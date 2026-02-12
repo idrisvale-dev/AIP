@@ -4,7 +4,8 @@
  *
  * Cross-platform (Windows, macOS, Linux)
  *
- * Runs on Stop hook to extract reusable patterns from Claude Code sessions
+ * Runs on Stop hook to extract reusable patterns from Claude Code sessions.
+ * Reads transcript_path from stdin JSON (Claude Code hook input).
  *
  * Why Stop hook instead of UserPromptSubmit:
  * - Stop runs once at session end (lightweight)
@@ -21,7 +22,34 @@ const {
   log
 } = require('../lib/utils');
 
+// Read hook input from stdin (Claude Code provides transcript_path via stdin JSON)
+const MAX_STDIN = 1024 * 1024;
+let stdinData = '';
+
+process.stdin.on('data', chunk => {
+  if (stdinData.length < MAX_STDIN) {
+    stdinData += chunk;
+  }
+});
+
+process.stdin.on('end', () => {
+  main().catch(err => {
+    console.error('[ContinuousLearning] Error:', err.message);
+    process.exit(0);
+  });
+});
+
 async function main() {
+  // Parse stdin JSON to get transcript_path
+  let transcriptPath = null;
+  try {
+    const input = JSON.parse(stdinData);
+    transcriptPath = input.transcript_path;
+  } catch {
+    // Fallback: try env var for backwards compatibility
+    transcriptPath = process.env.CLAUDE_TRANSCRIPT_PATH;
+  }
+
   // Get script directory to find config
   const scriptDir = __dirname;
   const configFile = path.join(scriptDir, '..', '..', 'skills', 'continuous-learning', 'config.json');
@@ -49,9 +77,6 @@ async function main() {
   // Ensure learned skills directory exists
   ensureDir(learnedSkillsPath);
 
-  // Get transcript path from environment (set by Claude Code)
-  const transcriptPath = process.env.CLAUDE_TRANSCRIPT_PATH;
-
   if (!transcriptPath || !fs.existsSync(transcriptPath)) {
     process.exit(0);
   }
@@ -71,8 +96,3 @@ async function main() {
 
   process.exit(0);
 }
-
-main().catch(err => {
-  console.error('[ContinuousLearning] Error:', err.message);
-  process.exit(0);
-});

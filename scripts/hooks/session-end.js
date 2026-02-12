@@ -5,7 +5,7 @@
  * Cross-platform (Windows, macOS, Linux)
  *
  * Runs when Claude session ends. Extracts a meaningful summary from
- * the session transcript (via CLAUDE_TRANSCRIPT_PATH) and saves it
+ * the session transcript (via stdin JSON transcript_path) and saves it
  * to a session file for cross-session continuity.
  */
 
@@ -85,7 +85,38 @@ function extractSessionSummary(transcriptPath) {
   };
 }
 
+// Read hook input from stdin (Claude Code provides transcript_path via stdin JSON)
+const MAX_STDIN = 1024 * 1024;
+let stdinData = '';
+
+process.stdin.on('data', chunk => {
+  if (stdinData.length < MAX_STDIN) {
+    stdinData += chunk;
+  }
+});
+
+process.stdin.on('end', () => {
+  runMain();
+});
+
+function runMain() {
+  main().catch(err => {
+    console.error('[SessionEnd] Error:', err.message);
+    process.exit(0);
+  });
+}
+
 async function main() {
+  // Parse stdin JSON to get transcript_path
+  let transcriptPath = null;
+  try {
+    const input = JSON.parse(stdinData);
+    transcriptPath = input.transcript_path;
+  } catch {
+    // Fallback: try env var for backwards compatibility
+    transcriptPath = process.env.CLAUDE_TRANSCRIPT_PATH;
+  }
+
   const sessionsDir = getSessionsDir();
   const today = getDateString();
   const shortId = getSessionIdShort();
@@ -96,7 +127,6 @@ async function main() {
   const currentTime = getTimeString();
 
   // Try to extract summary from transcript
-  const transcriptPath = process.env.CLAUDE_TRANSCRIPT_PATH;
   let summary = null;
 
   if (transcriptPath) {
@@ -183,7 +213,3 @@ function buildSummarySection(summary) {
   return section;
 }
 
-main().catch(err => {
-  console.error('[SessionEnd] Error:', err.message);
-  process.exit(0);
-});

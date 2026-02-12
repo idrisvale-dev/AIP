@@ -28,7 +28,9 @@ async function main() {
   const sessionId = process.env.CLAUDE_SESSION_ID || String(process.ppid) || 'default';
   const counterFile = path.join(getTempDir(), `claude-tool-count-${sessionId}`);
   const rawThreshold = parseInt(process.env.COMPACT_THRESHOLD || '50', 10);
-  const threshold = Number.isFinite(rawThreshold) ? rawThreshold : 50;
+  const threshold = Number.isFinite(rawThreshold) && rawThreshold > 0 && rawThreshold <= 10000
+    ? rawThreshold
+    : 50;
 
   let count = 1;
 

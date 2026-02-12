@@ -232,9 +232,8 @@ async function runTests() {
     const transcript = Array(5).fill('{"type":"user","content":"test"}\n').join('');
     fs.writeFileSync(transcriptPath, transcript);
 
-    const result = await runScript(path.join(scriptsDir, 'evaluate-session.js'), '', {
-      CLAUDE_TRANSCRIPT_PATH: transcriptPath
-    });
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'evaluate-session.js'), stdinJson);
 
     assert.ok(
       result.stderr.includes('Session too short'),
@@ -252,9 +251,8 @@ async function runTests() {
     const transcript = Array(15).fill('{"type":"user","content":"test"}\n').join('');
     fs.writeFileSync(transcriptPath, transcript);
 
-    const result = await runScript(path.join(scriptsDir, 'evaluate-session.js'), '', {
-      CLAUDE_TRANSCRIPT_PATH: transcriptPath
-    });
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'evaluate-session.js'), stdinJson);
 
     assert.ok(
       result.stderr.includes('15 messages'),
