@@ -278,6 +278,7 @@ async function runTests() {
     assert.ok(hooks.hooks.PreToolUse, 'Should have PreToolUse hooks');
     assert.ok(hooks.hooks.PostToolUse, 'Should have PostToolUse hooks');
     assert.ok(hooks.hooks.SessionStart, 'Should have SessionStart hooks');
+    assert.ok(hooks.hooks.SessionEnd, 'Should have SessionEnd hooks');
     assert.ok(hooks.hooks.Stop, 'Should have Stop hooks');
     assert.ok(hooks.hooks.PreCompact, 'Should have PreCompact hooks');
   })) passed++; else failed++;

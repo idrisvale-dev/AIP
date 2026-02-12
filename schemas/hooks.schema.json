@@ -25,6 +25,15 @@
               }
             }
           ]
+        },
+        "async": {
+          "type": "boolean",
+          "description": "Run hook asynchronously in background without blocking"
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Timeout in seconds for async hooks"
         }
       }
     },

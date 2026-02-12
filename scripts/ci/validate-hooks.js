@@ -24,6 +24,16 @@ function validateHookEntry(hook, label) {
     hasErrors = true;
   }
 
+  // Validate optional async and timeout fields
+  if ('async' in hook && typeof hook.async !== 'boolean') {
+    console.error(`ERROR: ${label} 'async' must be a boolean`);
+    hasErrors = true;
+  }
+  if ('timeout' in hook && (typeof hook.timeout !== 'number' || hook.timeout < 0)) {
+    console.error(`ERROR: ${label} 'timeout' must be a non-negative number`);
+    hasErrors = true;
+  }
+
   if (!hook.command || (typeof hook.command !== 'string' && !Array.isArray(hook.command))) {
     console.error(`ERROR: ${label} missing or invalid 'command' field`);
     hasErrors = true;
