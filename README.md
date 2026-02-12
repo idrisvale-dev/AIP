@@ -756,6 +756,26 @@ Rule of thumb:
 
 Use `disabledMcpServers` in project config to disable unused ones.
 
+### Token Optimization
+
+Hitting daily limits? See the **[Token Optimization Guide](docs/token-optimization.md)** for recommended settings and workflow tips.
+
+Quick wins:
+
+```json
+// ~/.claude/settings.json
+{
+  "model": "sonnet",
+  "env": {
+    "MAX_THINKING_TOKENS": "10000",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku"
+  }
+}
+```
+
+Use `/clear` between unrelated tasks, `/compact` at logical breakpoints, and `/cost` to monitor spending.
+
 ### Customization
 
 These configs work for my workflow. You should:
