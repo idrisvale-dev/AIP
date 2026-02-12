@@ -156,11 +156,12 @@ function getAvailablePackageManagers() {
  * 5. Global user preference (in ~/.claude/package-manager.json)
  * 6. Default to npm (no child processes spawned)
  *
- * @param {object} options - { projectDir, fallbackOrder }
+ * @param {object} options - Options
+ * @param {string} options.projectDir - Project directory to detect from (default: cwd)
  * @returns {object} - { name, config, source }
  */
 function getPackageManager(options = {}) {
-  const { projectDir = process.cwd(), fallbackOrder = DETECTION_PRIORITY } = options;
+  const { projectDir = process.cwd() } = options;
 
   // 1. Check environment variable
   const envPm = process.env.CLAUDE_PACKAGE_MANAGER;

@@ -38,6 +38,7 @@ function extractSessionSummary(transcriptPath) {
   const userMessages = [];
   const toolsUsed = new Set();
   const filesModified = new Set();
+  let parseErrors = 0;
 
   for (const line of lines) {
     try {
@@ -66,8 +67,12 @@ function extractSessionSummary(transcriptPath) {
         }
       }
     } catch {
-      // Skip unparseable lines
+      parseErrors++;
     }
+  }
+
+  if (parseErrors > 0) {
+    log(`[SessionEnd] Skipped ${parseErrors}/${lines.length} unparseable transcript lines`);
   }
 
   if (userMessages.length === 0) return null;

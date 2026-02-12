@@ -57,10 +57,20 @@ function getTempDir() {
 
 /**
  * Ensure a directory exists (create if not)
+ * @param {string} dirPath - Directory path to create
+ * @returns {string} The directory path
+ * @throws {Error} If directory cannot be created (e.g., permission denied)
  */
 function ensureDir(dirPath) {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
+  try {
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+  } catch (err) {
+    // EEXIST is fine (race condition with another process creating it)
+    if (err.code !== 'EEXIST') {
+      throw err;
+    }
   }
   return dirPath;
 }
@@ -187,10 +197,29 @@ function findFiles(dir, pattern, options = {}) {
 
 /**
  * Read JSON from stdin (for hook input)
+ * @param {object} options - Options
+ * @param {number} options.timeoutMs - Timeout in milliseconds (default: 5000).
+ *   Prevents hooks from hanging indefinitely if stdin never closes.
+ * @returns {Promise<object>} Parsed JSON object, or empty object if stdin is empty
  */
-async function readStdinJson() {
+async function readStdinJson(options = {}) {
+  const { timeoutMs = 5000 } = options;
+
   return new Promise((resolve, reject) => {
     let data = '';
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        // Resolve with whatever we have so far rather than hanging
+        try {
+          resolve(data.trim() ? JSON.parse(data) : {});
+        } catch {
+          resolve({});
+        }
+      }
+    }, timeoutMs);
 
     process.stdin.setEncoding('utf8');
     process.stdin.on('data', chunk => {
@@ -198,18 +227,22 @@ async function readStdinJson() {
     });
 
     process.stdin.on('end', () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       try {
-        if (data.trim()) {
-          resolve(JSON.parse(data));
-        } else {
-          resolve({});
-        }
+        resolve(data.trim() ? JSON.parse(data) : {});
       } catch (err) {
         reject(err);
       }
     });
 
-    process.stdin.on('error', reject);
+    process.stdin.on('error', err => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(err);
+    });
   });
 }
 
@@ -313,7 +346,10 @@ function isGitRepo() {
 }
 
 /**
- * Get git modified files
+ * Get git modified files, optionally filtered by regex patterns
+ * @param {string[]} patterns - Array of regex pattern strings to filter files.
+ *   Invalid patterns are silently skipped.
+ * @returns {string[]} Array of modified file paths
  */
 function getGitModifiedFiles(patterns = []) {
   if (!isGitRepo()) return [];
@@ -324,12 +360,18 @@ function getGitModifiedFiles(patterns = []) {
   let files = result.output.split('\n').filter(Boolean);
 
   if (patterns.length > 0) {
-    files = files.filter(file => {
-      return patterns.some(pattern => {
-        const regex = new RegExp(pattern);
-        return regex.test(file);
-      });
-    });
+    // Pre-compile patterns, skipping invalid ones
+    const compiled = [];
+    for (const pattern of patterns) {
+      try {
+        compiled.push(new RegExp(pattern));
+      } catch {
+        // Skip invalid regex patterns
+      }
+    }
+    if (compiled.length > 0) {
+      files = files.filter(file => compiled.some(regex => regex.test(file)));
+    }
   }
 
   return files;
@@ -349,12 +391,23 @@ function replaceInFile(filePath, search, replace) {
 
 /**
  * Count occurrences of a pattern in a file
+ * @param {string} filePath - Path to the file
+ * @param {string|RegExp} pattern - Pattern to count. Strings are treated as
+ *   global regex patterns. RegExp instances are used as-is but the global
+ *   flag is enforced to ensure correct counting.
+ * @returns {number} Number of matches found
  */
 function countInFile(filePath, pattern) {
   const content = readFile(filePath);
   if (content === null) return 0;
 
-  const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern, 'g');
+  let regex;
+  if (pattern instanceof RegExp) {
+    // Ensure global flag is set for correct counting
+    regex = pattern.global ? pattern : new RegExp(pattern.source, pattern.flags + 'g');
+  } else {
+    regex = new RegExp(pattern, 'g');
+  }
   const matches = content.match(regex);
   return matches ? matches.length : 0;
 }

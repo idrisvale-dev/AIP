@@ -143,11 +143,21 @@ function parseSessionMetadata(content) {
 
 /**
  * Calculate statistics for a session
- * @param {string} sessionPath - Full path to session file
+ * @param {string} sessionPathOrContent - Full path to session file, OR
+ *   the pre-read content string (to avoid redundant disk reads when
+ *   the caller already has the content loaded).
  * @returns {object} Statistics object
  */
-function getSessionStats(sessionPath) {
-  const content = getSessionContent(sessionPath);
+function getSessionStats(sessionPathOrContent) {
+  // Accept pre-read content string to avoid redundant file reads.
+  // If the argument looks like a file path (no newlines, ends with .tmp),
+  // read from disk. Otherwise treat it as content.
+  const content = (typeof sessionPathOrContent === 'string' &&
+    !sessionPathOrContent.includes('\n') &&
+    sessionPathOrContent.endsWith('.tmp'))
+    ? getSessionContent(sessionPathOrContent)
+    : sessionPathOrContent;
+
   const metadata = parseSessionMetadata(content);
 
   return {
@@ -281,7 +291,8 @@ function getSessionById(sessionId, includeContent = false) {
     if (includeContent) {
       session.content = getSessionContent(sessionPath);
       session.metadata = parseSessionMetadata(session.content);
-      session.stats = getSessionStats(sessionPath);
+      // Pass pre-read content to avoid a redundant disk read
+      session.stats = getSessionStats(session.content || '');
     }
 
     return session;

@@ -23,9 +23,9 @@ const {
 
 async function main() {
   // Track tool call count (increment in a temp file)
-  // Use a session-specific counter file based on PID from parent process
-  // or session ID from environment
-  const sessionId = process.env.CLAUDE_SESSION_ID || process.ppid || 'default';
+  // Use a session-specific counter file based on session ID from environment
+  // or parent PID as fallback
+  const sessionId = process.env.CLAUDE_SESSION_ID || String(process.ppid) || 'default';
   const counterFile = path.join(getTempDir(), `claude-tool-count-${sessionId}`);
   const threshold = parseInt(process.env.COMPACT_THRESHOLD || '50', 10);
 
@@ -34,7 +34,9 @@ async function main() {
   // Read existing count or start at 1
   const existing = readFile(counterFile);
   if (existing) {
-    count = parseInt(existing.trim(), 10) + 1;
+    const parsed = parseInt(existing.trim(), 10);
+    // Guard against NaN from corrupted counter file
+    count = Number.isFinite(parsed) ? parsed + 1 : 1;
   }
 
   // Save updated count

@@ -135,9 +135,13 @@ function saveAliases(aliases) {
       }
     }
 
-    // Clean up temp file
-    if (fs.existsSync(tempPath)) {
-      fs.unlinkSync(tempPath);
+    // Clean up temp file (best-effort)
+    try {
+      if (fs.existsSync(tempPath)) {
+        fs.unlinkSync(tempPath);
+      }
+    } catch {
+      // Non-critical: temp file will be overwritten on next save
     }
 
     return false;
