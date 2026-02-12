@@ -289,6 +289,7 @@ everything-claude-code/
 |   |-- golang/              # Go specific
 |
 |-- hooks/            # Trigger-based automations
+|   |-- README.md                 # Hook documentation, recipes, and customization guide
 |   |-- hooks.json                # All hooks config (PreToolUse, PostToolUse, Stop, etc.)
 |   |-- memory-persistence/       # Session lifecycle hooks (Longform Guide)
 |   |-- strategic-compact/        # Compaction suggestions (Longform Guide)
@@ -320,6 +321,7 @@ everything-claude-code/
 |   |-- user-CLAUDE.md        # Example user-level config
 |   |-- saas-nextjs-CLAUDE.md   # Real-world SaaS (Next.js + Supabase + Stripe)
 |   |-- go-microservice-CLAUDE.md # Real-world Go microservice (gRPC + PostgreSQL)
+|   |-- django-api-CLAUDE.md      # Real-world Django REST API (DRF + Celery)
 |
 |-- mcp-configs/      # MCP server configurations
 |   |-- mcp-servers.json    # GitHub, Supabase, Vercel, Railway, etc.
