@@ -820,14 +820,13 @@ OpenCode's plugin system is MORE sophisticated than Claude Code with 20+ event t
 
 **Additional OpenCode events**: `file.edited`, `file.watcher.updated`, `message.updated`, `lsp.client.diagnostics`, `tui.toast.show`, and more.
 
-### Available Commands (24)
+### Available Commands (31)
 
 | Command | Description |
 |---------|-------------|
 | `/plan` | Create implementation plan |
 | `/tdd` | Enforce TDD workflow |
 | `/code-review` | Review code changes |
-| `/security` | Run security review |
 | `/build-fix` | Fix build errors |
 | `/e2e` | Generate E2E tests |
 | `/refactor-clean` | Remove dead code |
@@ -842,6 +841,14 @@ OpenCode's plugin system is MORE sophisticated than Claude Code with 20+ event t
 | `/go-review` | Go code review |
 | `/go-test` | Go TDD workflow |
 | `/go-build` | Fix Go build errors |
+| `/python-review` | Python code review (PEP 8, type hints, security) |
+| `/multi-plan` | Multi-model collaborative planning |
+| `/multi-execute` | Multi-model collaborative execution |
+| `/multi-backend` | Backend-focused multi-model workflow |
+| `/multi-frontend` | Frontend-focused multi-model workflow |
+| `/multi-workflow` | Full multi-model development workflow |
+| `/pm2` | Auto-generate PM2 service commands |
+| `/sessions` | Manage session history |
 | `/skill-create` | Generate skills from git |
 | `/instinct-status` | View learned instincts |
 | `/instinct-import` | Import instincts |
