@@ -17,7 +17,9 @@ const os = require('os');
 const tmpHome = path.join(os.tmpdir(), `ecc-alias-test-${Date.now()}`);
 fs.mkdirSync(path.join(tmpHome, '.claude'), { recursive: true });
 const origHome = process.env.HOME;
+const origUserProfile = process.env.USERPROFILE;
 process.env.HOME = tmpHome;
+process.env.USERPROFILE = tmpHome; // Windows: os.homedir() uses USERPROFILE
 
 const aliases = require('../../scripts/lib/session-aliases');
 
@@ -496,8 +498,13 @@ function runTests() {
     assert.ok(data.metadata.lastUpdated);
   })) passed++; else failed++;
 
-  // Cleanup
+  // Cleanup — restore both HOME and USERPROFILE (Windows)
   process.env.HOME = origHome;
+  if (origUserProfile !== undefined) {
+    process.env.USERPROFILE = origUserProfile;
+  } else {
+    delete process.env.USERPROFILE;
+  }
   try {
     fs.rmSync(tmpHome, { recursive: true, force: true });
   } catch {

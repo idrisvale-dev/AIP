@@ -332,10 +332,12 @@ src/main.ts
   console.log('\ngetAllSessions:');
 
   // Override HOME to a temp dir for isolated getAllSessions/getSessionById tests
+  // On Windows, os.homedir() uses USERPROFILE, not HOME — set both for cross-platform
   const tmpHome = path.join(os.tmpdir(), `ecc-session-mgr-test-${Date.now()}`);
   const tmpSessionsDir = path.join(tmpHome, '.claude', 'sessions');
   fs.mkdirSync(tmpSessionsDir, { recursive: true });
   const origHome = process.env.HOME;
+  const origUserProfile = process.env.USERPROFILE;
 
   // Create test session files with controlled modification times
   const testSessions = [
@@ -354,6 +356,7 @@ src/main.ts
   }
 
   process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
 
   if (test('getAllSessions returns all sessions', () => {
     const result = sessionManager.getAllSessions({ limit: 100 });
@@ -578,8 +581,13 @@ src/main.ts
     assert.ok(!isNaN(result.datetime.getTime()), 'datetime should be valid');
   })) passed++; else failed++;
 
-  // Cleanup
+  // Cleanup — restore both HOME and USERPROFILE (Windows)
   process.env.HOME = origHome;
+  if (origUserProfile !== undefined) {
+    process.env.USERPROFILE = origUserProfile;
+  } else {
+    delete process.env.USERPROFILE;
+  }
   try {
     fs.rmSync(tmpHome, { recursive: true, force: true });
   } catch {

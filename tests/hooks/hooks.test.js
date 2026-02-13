@@ -110,7 +110,7 @@ async function runTests() {
     fs.mkdirSync(path.join(isoHome, '.claude', 'skills', 'learned'), { recursive: true });
     try {
       const result = await runScript(path.join(scriptsDir, 'session-start.js'), '', {
-        HOME: isoHome
+        HOME: isoHome, USERPROFILE: isoHome
       });
       assert.strictEqual(result.code, 0, `Exit code should be 0, got ${result.code}`);
     } finally {
@@ -138,7 +138,7 @@ async function runTests() {
 
     try {
       const result = await runScript(path.join(scriptsDir, 'session-start.js'), '', {
-        HOME: isoHome
+        HOME: isoHome, USERPROFILE: isoHome
       });
       assert.strictEqual(result.code, 0);
       // stdout should NOT contain the template content
@@ -163,7 +163,7 @@ async function runTests() {
 
     try {
       const result = await runScript(path.join(scriptsDir, 'session-start.js'), '', {
-        HOME: isoHome
+        HOME: isoHome, USERPROFILE: isoHome
       });
       assert.strictEqual(result.code, 0);
       assert.ok(
@@ -191,7 +191,7 @@ async function runTests() {
 
     try {
       const result = await runScript(path.join(scriptsDir, 'session-start.js'), '', {
-        HOME: isoHome
+        HOME: isoHome, USERPROFILE: isoHome
       });
       assert.strictEqual(result.code, 0);
       assert.ok(
