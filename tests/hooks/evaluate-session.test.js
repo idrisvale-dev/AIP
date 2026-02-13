@@ -311,6 +311,55 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  // ── Round 85: config file parse error (corrupt JSON) ──
+  console.log('\nRound 85: config parse error catch block:');
+
+  if (test('falls back to defaults when config file contains invalid JSON', () => {
+    // The evaluate-session.js script reads config from:
+    //   path.join(__dirname, '..', '..', 'skills', 'continuous-learning', 'config.json')
+    // where __dirname = scripts/hooks/ → config = repo_root/skills/continuous-learning/config.json
+    const configPath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning', 'config.json');
+    let originalContent = null;
+    try {
+      originalContent = fs.readFileSync(configPath, 'utf8');
+    } catch {
+      // Config file may not exist — that's fine
+    }
+
+    try {
+      // Write corrupt JSON to the config file
+      fs.writeFileSync(configPath, 'NOT VALID JSON {{{ corrupt data !!!', 'utf8');
+
+      // Create a transcript with 12 user messages (above default threshold of 10)
+      const testDir = createTestDir();
+      const transcript = createTranscript(testDir, 12);
+      const result = runEvaluate({ transcript_path: transcript });
+
+      assert.strictEqual(result.code, 0, 'Should exit 0 despite corrupt config');
+      // With corrupt config, defaults apply: min_session_length = 10
+      // 12 >= 10 → should evaluate (not "too short")
+      assert.ok(!result.stderr.includes('too short'),
+        `Should NOT say too short — corrupt config falls back to default min=10. Got: ${result.stderr}`);
+      assert.ok(
+        result.stderr.includes('12 messages') || result.stderr.includes('evaluate'),
+        `Should evaluate with 12 messages using default threshold. Got: ${result.stderr}`
+      );
+      // The catch block logs "Failed to parse config" — verify that log message
+      assert.ok(result.stderr.includes('Failed to parse config'),
+        `Should log config parse error. Got: ${result.stderr}`);
+
+      cleanupTestDir(testDir);
+    } finally {
+      // Restore original config file
+      if (originalContent !== null) {
+        fs.writeFileSync(configPath, originalContent, 'utf8');
+      } else {
+        // Config didn't exist before — remove the corrupt one we created
+        try { fs.unlinkSync(configPath); } catch { /* best-effort */ }
+      }
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

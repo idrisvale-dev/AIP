@@ -125,7 +125,7 @@ ${chalk.bold('Files Tracked:')}    ${chalk.green(data.files)}
     console.log(chalk.gray('─'.repeat(50)));
 
     patterns.forEach((pattern, i) => {
-      const confidence = pattern.confidence || 0.8;
+      const confidence = pattern.confidence ?? 0.8;
       const confidenceBar = progressBar(Math.round(confidence * 100), 15);
       console.log(`
   ${chalk.bold(chalk.yellow(`${i + 1}.`))} ${chalk.bold(pattern.name)}

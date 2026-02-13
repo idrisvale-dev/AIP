@@ -481,6 +481,22 @@ function runTests() {
     assert.strictEqual(typeof mod.SkillCreateOutput, 'function', 'SkillCreateOutput should be a constructor');
   })) passed++; else failed++;
 
+  // ── Round 85: patterns() confidence=0 uses ?? (not ||) ──
+  console.log('\nRound 85: patterns() confidence=0 nullish coalescing:');
+
+  if (test('patterns() with confidence=0 shows 0%, not 80% (nullish coalescing fix)', () => {
+    const output = new SkillCreateOutput('repo');
+    const logs = captureLog(() => output.patterns([
+      { name: 'Zero Confidence', trigger: 'never', confidence: 0, evidence: 'none' },
+    ]));
+    const combined = stripAnsi(logs.join('\n'));
+    // With ?? operator: 0 ?? 0.8 = 0 → Math.round(0 * 100) = 0 → shows "0%"
+    // With || operator (bug): 0 || 0.8 = 0.8 → shows "80%"
+    assert.ok(combined.includes('0%'), 'Should show 0% for zero confidence');
+    assert.ok(!combined.includes('80%'),
+      'Should NOT show 80% — confidence=0 is explicitly provided, not missing');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

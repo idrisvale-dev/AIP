@@ -1165,6 +1165,35 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 85: getSessionIdShort fallback parameter ──
+  console.log('\ngetSessionIdShort fallback (Round 85):');
+
+  if (test('getSessionIdShort uses fallback when getProjectName returns null (CWD at root)', () => {
+    if (process.platform === 'win32') {
+      console.log('    (skipped — root CWD differs on Windows)');
+      return;
+    }
+    // Spawn a subprocess at CWD=/ with CLAUDE_SESSION_ID empty.
+    // At /, git rev-parse --show-toplevel fails → getGitRepoName() = null.
+    // path.basename('/') = '' → '' || null = null → getProjectName() = null.
+    // So getSessionIdShort('my-custom-fallback') = null || 'my-custom-fallback'.
+    const utilsPath = path.join(__dirname, '..', '..', 'scripts', 'lib', 'utils.js');
+    const script = `
+      const utils = require('${utilsPath.replace(/'/g, "\\'")}');
+      process.stdout.write(utils.getSessionIdShort('my-custom-fallback'));
+    `;
+    const { spawnSync } = require('child_process');
+    const result = spawnSync('node', ['-e', script], {
+      encoding: 'utf8',
+      cwd: '/',
+      env: { ...process.env, CLAUDE_SESSION_ID: '' },
+      timeout: 10000
+    });
+    assert.strictEqual(result.status, 0, `Should exit 0, got status ${result.status}. stderr: ${result.stderr}`);
+    assert.strictEqual(result.stdout, 'my-custom-fallback',
+      `At CWD=/ with no session ID, should use the fallback parameter. Got: "${result.stdout}"`);
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
