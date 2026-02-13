@@ -193,7 +193,7 @@ function runTests() {
 
   if (test('handles frontmatter with colons in values', () => {
     const testDir = createTestDir();
-    fs.writeFileSync(path.join(testDir, 'colon-agent.md'), '---\nmodel: claude-sonnet-4-5-20250929\ntools: Read, Write, Bash\n---\n# Agent');
+    fs.writeFileSync(path.join(testDir, 'colon-agent.md'), '---\nmodel: sonnet\ntools: Read, Write, Bash\ndescription: Run this: always check: everything\n---\n# Agent');
 
     const result = runValidatorWithDir('validate-agents', 'AGENTS_DIR', testDir);
     assert.strictEqual(result.code, 0, 'Should handle colons in values');
