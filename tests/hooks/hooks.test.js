@@ -2937,6 +2937,68 @@ async function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 60: replaceInFile failure, console-warn stdin overflow, format missing tool_input ──
+  console.log('\nRound 60: session-end.js (replaceInFile returns false — timestamp update warning):');
+
+  if (await asyncTest('logs warning when existing session file lacks Last Updated field', async () => {
+    const isoHome = path.join(os.tmpdir(), `ecc-end-nots-${Date.now()}`);
+    const sessionsDir = path.join(isoHome, '.claude', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+
+    // Create transcript with a user message so a summary is produced
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'transcript.jsonl');
+    fs.writeFileSync(transcriptPath, '{"type":"user","content":"test message"}\n');
+
+    // Pre-create session file WITHOUT the **Last Updated:** line
+    // Use today's date and a short ID matching getSessionIdShort() pattern
+    const today = new Date().toISOString().split('T')[0];
+    const sessionFile = path.join(sessionsDir, `${today}-session-session.tmp`);
+    fs.writeFileSync(sessionFile, '# Session file without timestamp marker\nSome existing content\n');
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+      HOME: isoHome, USERPROFILE: isoHome
+    });
+
+    assert.strictEqual(result.code, 0, 'Should exit 0 even when replaceInFile fails');
+    // replaceInFile returns false → line 166 logs warning about failed timestamp update
+    assert.ok(result.stderr.includes('Failed to update') || result.stderr.includes('[SessionEnd]'),
+      'Should log warning when timestamp pattern not found in session file');
+
+    cleanupTestDir(testDir);
+    try { fs.rmSync(isoHome, { recursive: true, force: true }); } catch { /* best-effort */ }
+  })) passed++; else failed++;
+
+  console.log('\nRound 60: post-edit-console-warn.js (stdin exceeding 1MB — truncation):');
+
+  if (await asyncTest('truncates stdin at 1MB limit and still passes through data', async () => {
+    // Send 1.2MB of data — exceeds the 1MB MAX_STDIN limit
+    const payload = 'x'.repeat(1024 * 1024 + 200000);
+    const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), payload);
+
+    assert.strictEqual(result.code, 0, 'Should exit 0 even with oversized stdin');
+    // Data should be truncated — stdout significantly less than input
+    assert.ok(result.stdout.length < payload.length,
+      `stdout (${result.stdout.length}) should be shorter than input (${payload.length})`);
+    // Should be approximately 1MB (last accepted chunk may push slightly over)
+    assert.ok(result.stdout.length <= 1024 * 1024 + 65536,
+      `stdout (${result.stdout.length}) should be near 1MB, not unbounded`);
+    assert.ok(result.stdout.length > 0, 'Should still pass through truncated data');
+  })) passed++; else failed++;
+
+  console.log('\nRound 60: post-edit-format.js (valid JSON without tool_input key):');
+
+  if (await asyncTest('skips formatting when JSON has no tool_input field', async () => {
+    const stdinJson = JSON.stringify({ result: 'ok', output: 'some data' });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-format.js'), stdinJson);
+
+    assert.strictEqual(result.code, 0, 'Should exit 0 for JSON without tool_input');
+    // input.tool_input?.file_path is undefined → skips formatting → passes through
+    assert.strictEqual(result.stdout, stdinJson,
+      'Should pass through data unchanged when tool_input is absent');
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
