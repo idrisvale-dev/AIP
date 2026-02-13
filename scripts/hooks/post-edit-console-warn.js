@@ -28,7 +28,7 @@ process.stdin.on('end', () => {
 
     if (filePath && /\.(ts|tsx|js|jsx)$/.test(filePath)) {
       const content = readFile(filePath);
-      if (!content) { console.log(data); return; }
+      if (!content) { process.stdout.write(data); return; }
       const lines = content.split('\n');
       const matches = [];
 
@@ -48,5 +48,5 @@ process.stdin.on('end', () => {
     // Invalid input — pass through
   }
 
-  console.log(data);
+  process.stdout.write(data);
 });

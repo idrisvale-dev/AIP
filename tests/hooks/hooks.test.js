@@ -2013,6 +2013,72 @@ async function runTests() {
     }
   })) passed++; else failed++;
 
+  // ─── Round 25: post-edit-console-warn pass-through fix, check-console-log edge cases ───
+  console.log('\nRound 25: post-edit-console-warn.js (pass-through fix):');
+
+  if (await asyncTest('stdout is exact byte match of stdin (no trailing newline)', async () => {
+    // Regression test: console.log(data) was replaced with process.stdout.write(data)
+    const stdinData = '{"tool_input":{"file_path":"/nonexistent/file.py"}}';
+    const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), stdinData);
+    assert.strictEqual(result.code, 0);
+    assert.strictEqual(result.stdout, stdinData, 'stdout should exactly match stdin (no extra newline)');
+  })) passed++; else failed++;
+
+  if (await asyncTest('passes through malformed JSON unchanged without crash', async () => {
+    const malformed = '{"tool_input": {"file_path": "/test.ts"';
+    const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), malformed);
+    assert.strictEqual(result.code, 0);
+    assert.strictEqual(result.stdout, malformed, 'Should pass through malformed JSON exactly');
+  })) passed++; else failed++;
+
+  if (await asyncTest('handles missing file_path in tool_input gracefully', async () => {
+    const stdinJson = JSON.stringify({ tool_input: {} });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), stdinJson);
+    assert.strictEqual(result.code, 0);
+    assert.strictEqual(result.stdout, stdinJson, 'Should pass through with missing file_path');
+  })) passed++; else failed++;
+
+  if (await asyncTest('passes through when file does not exist (readFile returns null)', async () => {
+    const stdinJson = JSON.stringify({ tool_input: { file_path: '/nonexistent/deep/file.ts' } });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), stdinJson);
+    assert.strictEqual(result.code, 0);
+    assert.strictEqual(result.stdout, stdinJson, 'Should pass through exactly when file not found');
+  })) passed++; else failed++;
+
+  console.log('\nRound 25: check-console-log.js (edge cases):');
+
+  if (await asyncTest('source has expected exclusion patterns', async () => {
+    // The EXCLUDED_PATTERNS array includes .test.ts, .spec.ts, etc.
+    const source = fs.readFileSync(path.join(scriptsDir, 'check-console-log.js'), 'utf8');
+    // Verify the exclusion patterns exist (regex escapes use \. so check for the pattern names)
+    assert.ok(source.includes('EXCLUDED_PATTERNS'), 'Should have exclusion patterns array');
+    assert.ok(/\.test\\\./.test(source), 'Should have test file exclusion pattern');
+    assert.ok(/\.spec\\\./.test(source), 'Should have spec file exclusion pattern');
+    assert.ok(source.includes('scripts'), 'Should exclude scripts/ directory');
+    assert.ok(source.includes('__tests__'), 'Should exclude __tests__/ directory');
+    assert.ok(source.includes('__mocks__'), 'Should exclude __mocks__/ directory');
+  })) passed++; else failed++;
+
+  if (await asyncTest('passes through data unchanged on non-git repo', async () => {
+    // In a temp dir with no git repo, the hook should pass through data unchanged
+    const testDir = createTestDir();
+    const stdinData = '{"tool_input":"test"}';
+    const result = await runScript(path.join(scriptsDir, 'check-console-log.js'), stdinData, {
+      // Use a non-git directory as CWD
+      HOME: testDir, USERPROFILE: testDir
+    });
+    // Note: We're still running from a git repo, so isGitRepo() may still return true.
+    // This test verifies the script doesn't crash and passes through data.
+    assert.strictEqual(result.code, 0);
+    assert.ok(result.stdout.includes(stdinData), 'Should pass through data');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('exits 0 even when no stdin is provided', async () => {
+    const result = await runScript(path.join(scriptsDir, 'check-console-log.js'), '');
+    assert.strictEqual(result.code, 0, 'Should exit 0 with empty stdin');
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
