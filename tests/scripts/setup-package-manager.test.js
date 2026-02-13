@@ -228,6 +228,34 @@ function runTests() {
     assert.ok(result.stderr.includes('requires a package manager name'));
   })) passed++; else failed++;
 
+  // ── Round 45: output completeness and marker uniqueness ──
+  console.log('\n--detect marker uniqueness (Round 45):');
+
+  if (test('--detect output shows exactly one (current) marker', () => {
+    const result = run(['--detect']);
+    assert.strictEqual(result.code, 0);
+    const lines = result.stdout.split('\n');
+    const currentLines = lines.filter(l => l.includes('(current)'));
+    assert.strictEqual(currentLines.length, 1, `Expected exactly 1 "(current)" marker, found ${currentLines.length}`);
+    // The (current) marker should be on a line with a PM name
+    assert.ok(/\b(npm|pnpm|yarn|bun)\b/.test(currentLines[0]), 'Current marker should be on a PM line');
+  })) passed++; else failed++;
+
+  console.log('\n--list output completeness (Round 45):');
+
+  if (test('--list shows all four supported package managers', () => {
+    const result = run(['--list']);
+    assert.strictEqual(result.code, 0);
+    for (const pm of ['npm', 'pnpm', 'yarn', 'bun']) {
+      assert.ok(result.stdout.includes(pm), `Should list ${pm}`);
+    }
+    // Each PM should show Lock file and Install info
+    const lockFileCount = (result.stdout.match(/Lock file:/g) || []).length;
+    assert.strictEqual(lockFileCount, 4, `Expected 4 "Lock file:" entries, found ${lockFileCount}`);
+    const installCount = (result.stdout.match(/Install:/g) || []).length;
+    assert.strictEqual(installCount, 4, `Expected 4 "Install:" entries, found ${installCount}`);
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
