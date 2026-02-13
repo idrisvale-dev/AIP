@@ -88,7 +88,11 @@ def load_all_instincts() -> list[dict]:
     for directory in [PERSONAL_DIR, INHERITED_DIR]:
         if not directory.exists():
             continue
-        yaml_files = sorted(set(directory.glob("*.yaml")) | set(directory.glob("*.yml")))
+        yaml_files = sorted(
+            set(directory.glob("*.yaml"))
+            | set(directory.glob("*.yml"))
+            | set(directory.glob("*.md"))
+        )
         for file in yaml_files:
             try:
                 content = file.read_text()
