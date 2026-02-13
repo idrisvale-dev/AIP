@@ -3213,6 +3213,45 @@ async function runTests() {
       `stderr should contain [SessionEnd] Error:, got: ${result.stderr}`);
   })) passed++; else failed++;
 
+  // ── Round 76: evaluate-session.js main().catch handler ──
+  console.log('\nRound 76: evaluate-session.js (main catch — unrecoverable error):');
+
+  if (await asyncTest('evaluate-session exits 0 with error message when HOME is non-directory', async () => {
+    if (process.platform === 'win32') {
+      console.log('    (skipped — /dev/null not available on Windows)');
+      return;
+    }
+    // HOME=/dev/null makes ensureDir(learnedSkillsPath) throw ENOTDIR,
+    // which propagates to main().catch — the top-level error boundary
+    const result = await runScript(path.join(scriptsDir, 'evaluate-session.js'), '{}', {
+      HOME: '/dev/null',
+      USERPROFILE: '/dev/null'
+    });
+    assert.strictEqual(result.code, 0,
+      `Should exit 0 (don't block on errors), got ${result.code}`);
+    assert.ok(result.stderr.includes('[ContinuousLearning] Error:'),
+      `stderr should contain [ContinuousLearning] Error:, got: ${result.stderr}`);
+  })) passed++; else failed++;
+
+  // ── Round 76: suggest-compact.js main().catch handler ──
+  console.log('\nRound 76: suggest-compact.js (main catch — double-failure):');
+
+  if (await asyncTest('suggest-compact exits 0 with error when TMPDIR is non-directory', async () => {
+    if (process.platform === 'win32') {
+      console.log('    (skipped — /dev/null not available on Windows)');
+      return;
+    }
+    // TMPDIR=/dev/null causes openSync to fail (ENOTDIR), then the catch
+    // fallback writeFile also fails, propagating to main().catch
+    const result = await runScript(path.join(scriptsDir, 'suggest-compact.js'), '', {
+      TMPDIR: '/dev/null'
+    });
+    assert.strictEqual(result.code, 0,
+      `Should exit 0 (don't block on errors), got ${result.code}`);
+    assert.ok(result.stderr.includes('[StrategicCompact] Error:'),
+      `stderr should contain [StrategicCompact] Error:, got: ${result.stderr}`);
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

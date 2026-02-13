@@ -1991,6 +1991,22 @@ function runTests() {
     fs.rmSync(skillsDir, { recursive: true, force: true });
   })) passed++; else failed++;
 
+  // ── Round 76: validate-hooks.js invalid JSON in hooks.json ──
+  console.log('\nRound 76: validate-hooks.js (invalid JSON in hooks.json):');
+
+  if (test('reports error for invalid JSON in hooks.json', () => {
+    const testDir = createTestDir();
+    const hooksFile = path.join(testDir, 'hooks.json');
+    fs.writeFileSync(hooksFile, '{not valid json!!!');
+
+    const result = runValidatorWithDir('validate-hooks', 'HOOKS_FILE', hooksFile);
+    assert.strictEqual(result.code, 1,
+      `Expected exit 1 for invalid JSON, got ${result.code}`);
+    assert.ok(result.stderr.includes('Invalid JSON'),
+      `stderr should mention Invalid JSON, got: ${result.stderr}`);
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
