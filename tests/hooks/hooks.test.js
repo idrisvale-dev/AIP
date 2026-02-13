@@ -639,6 +639,18 @@ async function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  if (await asyncTest('passes through stdin data on stdout (post-edit-typecheck)', async () => {
+    const testDir = createTestDir();
+    const testFile = path.join(testDir, 'test.ts');
+    fs.writeFileSync(testFile, 'const x: number = 1;');
+
+    const stdinJson = JSON.stringify({ tool_input: { file_path: testFile } });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-typecheck.js'), stdinJson);
+    assert.strictEqual(result.code, 0);
+    assert.ok(result.stdout.includes('tool_input'), 'Should pass through stdin data on stdout');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // session-end.js extractSessionSummary tests
   console.log('\nsession-end.js (extractSessionSummary):');
 

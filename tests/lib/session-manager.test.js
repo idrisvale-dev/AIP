@@ -621,6 +621,117 @@ src/main.ts
     assert.ok(!isNaN(result.datetime.getTime()), 'datetime should be valid');
   })) passed++; else failed++;
 
+  // writeSessionContent tests
+  console.log('\nwriteSessionContent:');
+
+  if (test('creates new session file', () => {
+    const dir = createTempSessionDir();
+    try {
+      const sessionPath = path.join(dir, 'write-test.tmp');
+      const result = sessionManager.writeSessionContent(sessionPath, '# Test Session\n');
+      assert.strictEqual(result, true, 'Should return true on success');
+      assert.ok(fs.existsSync(sessionPath), 'File should exist');
+      assert.strictEqual(fs.readFileSync(sessionPath, 'utf8'), '# Test Session\n');
+    } finally {
+      cleanup(dir);
+    }
+  })) passed++; else failed++;
+
+  if (test('overwrites existing session file', () => {
+    const dir = createTempSessionDir();
+    try {
+      const sessionPath = path.join(dir, 'overwrite-test.tmp');
+      fs.writeFileSync(sessionPath, 'old content');
+      const result = sessionManager.writeSessionContent(sessionPath, 'new content');
+      assert.strictEqual(result, true);
+      assert.strictEqual(fs.readFileSync(sessionPath, 'utf8'), 'new content');
+    } finally {
+      cleanup(dir);
+    }
+  })) passed++; else failed++;
+
+  if (test('writeSessionContent returns false for invalid path', () => {
+    const result = sessionManager.writeSessionContent('/nonexistent/deep/path/session.tmp', 'content');
+    assert.strictEqual(result, false, 'Should return false for invalid path');
+  })) passed++; else failed++;
+
+  // appendSessionContent tests
+  console.log('\nappendSessionContent:');
+
+  if (test('appends to existing session file', () => {
+    const dir = createTempSessionDir();
+    try {
+      const sessionPath = path.join(dir, 'append-test.tmp');
+      fs.writeFileSync(sessionPath, '# Session\n');
+      const result = sessionManager.appendSessionContent(sessionPath, '\n## Added Section\n');
+      assert.strictEqual(result, true);
+      const content = fs.readFileSync(sessionPath, 'utf8');
+      assert.ok(content.includes('# Session'));
+      assert.ok(content.includes('## Added Section'));
+    } finally {
+      cleanup(dir);
+    }
+  })) passed++; else failed++;
+
+  // deleteSession tests
+  console.log('\ndeleteSession:');
+
+  if (test('deletes existing session file', () => {
+    const dir = createTempSessionDir();
+    try {
+      const sessionPath = path.join(dir, 'delete-me.tmp');
+      fs.writeFileSync(sessionPath, '# To Delete');
+      assert.ok(fs.existsSync(sessionPath), 'File should exist before delete');
+      const result = sessionManager.deleteSession(sessionPath);
+      assert.strictEqual(result, true, 'Should return true');
+      assert.ok(!fs.existsSync(sessionPath), 'File should not exist after delete');
+    } finally {
+      cleanup(dir);
+    }
+  })) passed++; else failed++;
+
+  if (test('deleteSession returns false for non-existent file', () => {
+    const result = sessionManager.deleteSession('/nonexistent/session.tmp');
+    assert.strictEqual(result, false, 'Should return false for missing file');
+  })) passed++; else failed++;
+
+  // sessionExists tests
+  console.log('\nsessionExists:');
+
+  if (test('returns true for existing session file', () => {
+    const dir = createTempSessionDir();
+    try {
+      const sessionPath = path.join(dir, 'exists.tmp');
+      fs.writeFileSync(sessionPath, '# Exists');
+      assert.strictEqual(sessionManager.sessionExists(sessionPath), true);
+    } finally {
+      cleanup(dir);
+    }
+  })) passed++; else failed++;
+
+  if (test('returns false for non-existent file', () => {
+    assert.strictEqual(sessionManager.sessionExists('/nonexistent/file.tmp'), false);
+  })) passed++; else failed++;
+
+  if (test('returns false for directory (not a file)', () => {
+    const dir = createTempSessionDir();
+    try {
+      assert.strictEqual(sessionManager.sessionExists(dir), false, 'Directory should not count as session');
+    } finally {
+      cleanup(dir);
+    }
+  })) passed++; else failed++;
+
+  // getSessionStats with empty content
+  if (test('getSessionStats handles empty string content', () => {
+    const stats = sessionManager.getSessionStats('');
+    assert.strictEqual(stats.totalItems, 0);
+    // Empty string is falsy in JS, so content ? ... : 0 returns 0
+    assert.strictEqual(stats.lineCount, 0, 'Empty string is falsy, lineCount = 0');
+    assert.strictEqual(stats.hasNotes, false);
+    assert.strictEqual(stats.hasContext, false);
+  })) passed++; else failed++;
+
   // Cleanup — restore both HOME and USERPROFILE (Windows)
   process.env.HOME = origHome;
   if (origUserProfile !== undefined) {
