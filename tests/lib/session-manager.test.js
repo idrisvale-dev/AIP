@@ -1088,6 +1088,35 @@ src/main.ts
   }
   try { fs.rmSync(r33Home, { recursive: true, force: true }); } catch {}
 
+  // ── Round 46: path heuristic and checklist edge cases ──
+  console.log('\ngetSessionStats Windows path heuristic (Round 46):');
+
+  if (test('recognises Windows drive-letter path as a file path', () => {
+    // The looksLikePath regex includes /^[A-Za-z]:[/\\]/ for Windows
+    // A non-existent Windows path should still be treated as a path
+    // (getSessionContent returns null → parseSessionMetadata(null) → defaults)
+    const stats1 = sessionManager.getSessionStats('C:/Users/test/session.tmp');
+    assert.strictEqual(stats1.lineCount, 0, 'C:/ path treated as path, not content');
+    const stats2 = sessionManager.getSessionStats('D:\\Sessions\\2026-01-01.tmp');
+    assert.strictEqual(stats2.lineCount, 0, 'D:\\ path treated as path, not content');
+  })) passed++; else failed++;
+
+  if (test('does not treat bare drive letter without slash as path', () => {
+    // "C:session.tmp" has no slash after colon → regex fails → treated as content
+    const stats = sessionManager.getSessionStats('C:session.tmp');
+    assert.strictEqual(stats.lineCount, 1, 'Bare C: without slash treated as content');
+  })) passed++; else failed++;
+
+  console.log('\nparseSessionMetadata checkbox case sensitivity (Round 46):');
+
+  if (test('uppercase [X] does not match completed items regex', () => {
+    const content = '# Test\n\n### Completed\n- [X] Uppercase task\n- [x] Lowercase task\n';
+    const meta = sessionManager.parseSessionMetadata(content);
+    // Regex is /- \[x\]\s*(.+)/g — only matches lowercase [x]
+    assert.strictEqual(meta.completed.length, 1, 'Only lowercase [x] should match');
+    assert.strictEqual(meta.completed[0], 'Lowercase task');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
