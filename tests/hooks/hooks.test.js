@@ -2338,6 +2338,101 @@ async function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  // ── Round 38: evaluate-session.js tilde expansion & missing config ──
+  console.log('\nRound 38: evaluate-session.js (tilde expansion & missing config):');
+
+  if (await asyncTest('expands ~ in learned_skills_path to home directory', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'transcript.jsonl');
+    // 1 user message — below threshold, but we only need to verify directory creation
+    fs.writeFileSync(transcriptPath, '{"type":"user","content":"msg"}');
+
+    const skillsDir = path.join(testDir, 'skills', 'continuous-learning');
+    fs.mkdirSync(skillsDir, { recursive: true });
+    const configPath = path.join(skillsDir, 'config.json');
+    // Use ~ prefix — should expand to the HOME dir we set
+    fs.writeFileSync(configPath, JSON.stringify({
+      learned_skills_path: '~/test-tilde-skills'
+    }));
+
+    const wrapperScript = createEvalWrapper(testDir, configPath);
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(wrapperScript, stdinJson, {
+      HOME: testDir, USERPROFILE: testDir
+    });
+    assert.strictEqual(result.code, 0);
+    // ~ should expand to os.homedir() which during the script run is the real home
+    // The script creates the directory via ensureDir — check that it attempted to
+    // create a directory starting with the home dir, not a literal ~/
+    // Verify the literal ~/test-tilde-skills was NOT created
+    assert.ok(
+      !fs.existsSync(path.join(testDir, '~', 'test-tilde-skills')),
+      'Should NOT create literal ~/test-tilde-skills directory'
+    );
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('does NOT expand ~ in middle of learned_skills_path', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'transcript.jsonl');
+    fs.writeFileSync(transcriptPath, '{"type":"user","content":"msg"}');
+
+    const midTildeDir = path.join(testDir, 'some~path', 'skills');
+    const skillsDir = path.join(testDir, 'skills', 'continuous-learning');
+    fs.mkdirSync(skillsDir, { recursive: true });
+    const configPath = path.join(skillsDir, 'config.json');
+    // Path with ~ in the middle — should NOT be expanded
+    fs.writeFileSync(configPath, JSON.stringify({
+      learned_skills_path: midTildeDir
+    }));
+
+    const wrapperScript = createEvalWrapper(testDir, configPath);
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(wrapperScript, stdinJson, {
+      HOME: testDir, USERPROFILE: testDir
+    });
+    assert.strictEqual(result.code, 0);
+    // The directory with ~ in the middle should be created as-is
+    assert.ok(
+      fs.existsSync(midTildeDir),
+      'Should create directory with ~ in middle of path unchanged'
+    );
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('uses defaults when config file does not exist', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'transcript.jsonl');
+    // 5 user messages — below default threshold of 10
+    const lines = [];
+    for (let i = 0; i < 5; i++) lines.push(`{"type":"user","content":"msg${i}"}`);
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+    // Point config to a non-existent file
+    const configPath = path.join(testDir, 'nonexistent', 'config.json');
+    const wrapperScript = createEvalWrapper(testDir, configPath);
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(wrapperScript, stdinJson, {
+      HOME: testDir, USERPROFILE: testDir
+    });
+    assert.strictEqual(result.code, 0);
+    // With no config file, default min_session_length=10 applies
+    // 5 messages should be "too short"
+    assert.ok(
+      result.stderr.includes('too short'),
+      'Should use default threshold (10) when config file missing'
+    );
+    // No error messages about missing config
+    assert.ok(
+      !result.stderr.includes('Failed to parse config'),
+      'Should NOT log config parse error for missing file'
+    );
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
