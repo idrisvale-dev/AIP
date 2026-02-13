@@ -2078,6 +2078,33 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  // ── Round 82: Notification and SubagentStop event types ──
+
+  console.log('\nRound 82: validate-hooks (Notification and SubagentStop event types):');
+
+  if (test('accepts Notification and SubagentStop as valid event types', () => {
+    const testDir = createTestDir();
+    const hooksJson = JSON.stringify({
+      hooks: [
+        {
+          matcher: { type: 'Notification' },
+          hooks: [{ type: 'command', command: 'echo notification' }]
+        },
+        {
+          matcher: { type: 'SubagentStop' },
+          hooks: [{ type: 'command', command: 'echo subagent stopped' }]
+        }
+      ]
+    });
+    fs.writeFileSync(path.join(testDir, 'hooks.json'), hooksJson);
+
+    const result = runValidatorWithDir('validate-hooks', 'HOOKS_FILE', path.join(testDir, 'hooks.json'));
+    assert.strictEqual(result.code, 0, 'Should pass with Notification and SubagentStop events');
+    assert.ok(result.stdout.includes('Validated 2 hook'),
+      `Should report 2 validated matchers, got: ${result.stdout}`);
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

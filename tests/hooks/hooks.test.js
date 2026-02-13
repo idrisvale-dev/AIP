@@ -3355,6 +3355,97 @@ async function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 82: tool_name OR fallback, template marker regex no-match ──
+
+  console.log('\nRound 82: session-end.js (entry.tool_name without type=tool_use):');
+
+  if (await asyncTest('collects tool name from entry with tool_name but non-tool_use type', async () => {
+    const isoHome = path.join(os.tmpdir(), `ecc-r82-toolname-${Date.now()}`);
+    const sessionsDir = path.join(isoHome, '.claude', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+
+    const transcriptPath = path.join(isoHome, 'transcript.jsonl');
+    const lines = [
+      '{"type":"user","content":"Fix the bug"}',
+      '{"type":"result","tool_name":"Edit","tool_input":{"file_path":"/tmp/app.js"}}',
+      '{"type":"assistant","message":{"content":[{"type":"text","text":"Done fixing"}]}}',
+    ];
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    try {
+      const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+        HOME: isoHome, USERPROFILE: isoHome
+      });
+      assert.strictEqual(result.code, 0, 'Should exit 0');
+      const files = fs.readdirSync(sessionsDir).filter(f => f.endsWith('.tmp'));
+      assert.ok(files.length > 0, 'Should create session file');
+      const content = fs.readFileSync(path.join(sessionsDir, files[0]), 'utf8');
+      // The tool name "Edit" should appear even though type is "result", not "tool_use"
+      assert.ok(content.includes('Edit'), 'Should collect Edit tool via tool_name OR fallback');
+      // The file modified should also be collected since tool_name is Edit
+      assert.ok(content.includes('app.js'), 'Should collect modified file path from tool_input');
+    } finally {
+      fs.rmSync(isoHome, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
+  console.log('\nRound 82: session-end.js (template marker present but regex no-match):');
+
+  if (await asyncTest('preserves file when marker present but regex does not match corrupted template', async () => {
+    const isoHome = path.join(os.tmpdir(), `ecc-r82-tmpl-${Date.now()}`);
+    const sessionsDir = path.join(isoHome, '.claude', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+
+    const today = new Date().toISOString().split('T')[0];
+    const sessionFile = path.join(sessionsDir, `session-${today}.tmp`);
+
+    // Write a corrupted template: has the marker but NOT the full regex structure
+    const corruptedTemplate = `# Session: ${today}
+**Date:** ${today}
+**Started:** 10:00
+**Last Updated:** 10:00
+
+---
+
+## Current State
+
+[Session context goes here]
+
+Some random content without the expected ### Context to Load section
+`;
+    fs.writeFileSync(sessionFile, corruptedTemplate);
+
+    // Provide a transcript with enough content to generate a summary
+    const transcriptPath = path.join(isoHome, 'transcript.jsonl');
+    const lines = [
+      '{"type":"user","content":"Implement authentication feature"}',
+      '{"type":"assistant","message":{"content":[{"type":"text","text":"I will implement the auth feature using JWT tokens and bcrypt for password hashing."}]}}',
+      '{"type":"tool_use","tool_name":"Write","name":"Write","tool_input":{"file_path":"/tmp/auth.js"}}',
+      '{"type":"user","content":"Now add the login endpoint"}',
+      '{"type":"assistant","message":{"content":[{"type":"text","text":"Adding the login endpoint with proper validation."}]}}',
+    ];
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    try {
+      const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+        HOME: isoHome, USERPROFILE: isoHome
+      });
+      assert.strictEqual(result.code, 0, 'Should exit 0');
+
+      const content = fs.readFileSync(sessionFile, 'utf8');
+      // The marker text should still be present since regex didn't match
+      assert.ok(content.includes('[Session context goes here]'),
+        'Marker should remain when regex fails to match corrupted template');
+      // The corrupted content should still be there
+      assert.ok(content.includes('Some random content'),
+        'Original corrupted content should be preserved');
+    } finally {
+      fs.rmSync(isoHome, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
