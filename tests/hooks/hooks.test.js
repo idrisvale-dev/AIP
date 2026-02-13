@@ -987,6 +987,158 @@ async function runTests() {
     );
   })) passed++; else failed++;
 
+  // ─── evaluate-session.js tests ───
+  console.log('\nevaluate-session.js:');
+
+  if (await asyncTest('skips when no transcript_path in stdin', async () => {
+    const result = await runScript(path.join(scriptsDir, 'evaluate-session.js'), '{}');
+    assert.strictEqual(result.code, 0, 'Should exit 0 (non-blocking)');
+  })) passed++; else failed++;
+
+  if (await asyncTest('skips when transcript file does not exist', async () => {
+    const stdinJson = JSON.stringify({ transcript_path: '/tmp/nonexistent-transcript-12345.jsonl' });
+    const result = await runScript(path.join(scriptsDir, 'evaluate-session.js'), stdinJson);
+    assert.strictEqual(result.code, 0, 'Should exit 0 when file missing');
+  })) passed++; else failed++;
+
+  if (await asyncTest('skips short sessions (< 10 user messages)', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'short.jsonl');
+    // Only 3 user messages — below the default threshold of 10
+    const lines = [
+      '{"type":"user","content":"msg1"}',
+      '{"type":"user","content":"msg2"}',
+      '{"type":"user","content":"msg3"}',
+    ];
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'evaluate-session.js'), stdinJson);
+    assert.strictEqual(result.code, 0);
+    assert.ok(result.stderr.includes('too short'), 'Should log "too short" message');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('evaluates long sessions (>= 10 user messages)', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'long.jsonl');
+    // 12 user messages — above the default threshold
+    const lines = [];
+    for (let i = 0; i < 12; i++) {
+      lines.push(`{"type":"user","content":"message ${i}"}`);
+    }
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'evaluate-session.js'), stdinJson);
+    assert.strictEqual(result.code, 0);
+    assert.ok(result.stderr.includes('12 messages'), 'Should report message count');
+    assert.ok(result.stderr.includes('evaluate'), 'Should signal evaluation');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('handles malformed stdin JSON (falls back to env var)', async () => {
+    const result = await runScript(
+      path.join(scriptsDir, 'evaluate-session.js'),
+      'not json at all',
+      { CLAUDE_TRANSCRIPT_PATH: '' }
+    );
+    // No valid transcript path from either source → exit 0
+    assert.strictEqual(result.code, 0);
+  })) passed++; else failed++;
+
+  // ─── suggest-compact.js tests ───
+  console.log('\nsuggest-compact.js:');
+
+  if (await asyncTest('increments tool counter on each invocation', async () => {
+    const sessionId = `test-counter-${Date.now()}`;
+    const counterFile = path.join(os.tmpdir(), `claude-tool-count-${sessionId}`);
+    try {
+      // First invocation → count = 1
+      await runScript(path.join(scriptsDir, 'suggest-compact.js'), '', {
+        CLAUDE_SESSION_ID: sessionId
+      });
+      let val = parseInt(fs.readFileSync(counterFile, 'utf8').trim(), 10);
+      assert.strictEqual(val, 1, 'First call should write count 1');
+
+      // Second invocation → count = 2
+      await runScript(path.join(scriptsDir, 'suggest-compact.js'), '', {
+        CLAUDE_SESSION_ID: sessionId
+      });
+      val = parseInt(fs.readFileSync(counterFile, 'utf8').trim(), 10);
+      assert.strictEqual(val, 2, 'Second call should write count 2');
+    } finally {
+      try { fs.unlinkSync(counterFile); } catch {}
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('suggests compact at exact threshold', async () => {
+    const sessionId = `test-threshold-${Date.now()}`;
+    const counterFile = path.join(os.tmpdir(), `claude-tool-count-${sessionId}`);
+    try {
+      // Pre-seed counter at threshold - 1 so next call hits threshold
+      fs.writeFileSync(counterFile, '4');
+      const result = await runScript(path.join(scriptsDir, 'suggest-compact.js'), '', {
+        CLAUDE_SESSION_ID: sessionId,
+        COMPACT_THRESHOLD: '5'
+      });
+      assert.strictEqual(result.code, 0);
+      assert.ok(result.stderr.includes('5 tool calls reached'), 'Should suggest compact at threshold');
+    } finally {
+      try { fs.unlinkSync(counterFile); } catch {}
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('suggests at periodic intervals after threshold', async () => {
+    const sessionId = `test-periodic-${Date.now()}`;
+    const counterFile = path.join(os.tmpdir(), `claude-tool-count-${sessionId}`);
+    try {
+      // Pre-seed at 74 so next call = 75 (threshold 5 + 70, 70 % 25 === 20, not a hit)
+      // Actually: count > threshold && count % 25 === 0 → need count = 75
+      fs.writeFileSync(counterFile, '74');
+      const result = await runScript(path.join(scriptsDir, 'suggest-compact.js'), '', {
+        CLAUDE_SESSION_ID: sessionId,
+        COMPACT_THRESHOLD: '5'
+      });
+      assert.strictEqual(result.code, 0);
+      assert.ok(result.stderr.includes('75 tool calls'), 'Should suggest at multiples of 25');
+    } finally {
+      try { fs.unlinkSync(counterFile); } catch {}
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('does not suggest below threshold', async () => {
+    const sessionId = `test-below-${Date.now()}`;
+    const counterFile = path.join(os.tmpdir(), `claude-tool-count-${sessionId}`);
+    try {
+      fs.writeFileSync(counterFile, '2');
+      const result = await runScript(path.join(scriptsDir, 'suggest-compact.js'), '', {
+        CLAUDE_SESSION_ID: sessionId,
+        COMPACT_THRESHOLD: '50'
+      });
+      assert.strictEqual(result.code, 0);
+      assert.ok(!result.stderr.includes('tool calls reached'), 'Should not suggest below threshold');
+      assert.ok(!result.stderr.includes('checkpoint'), 'Should not suggest checkpoint');
+    } finally {
+      try { fs.unlinkSync(counterFile); } catch {}
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('handles invalid COMPACT_THRESHOLD (falls back to 50)', async () => {
+    const sessionId = `test-invalid-thresh-${Date.now()}`;
+    const counterFile = path.join(os.tmpdir(), `claude-tool-count-${sessionId}`);
+    try {
+      // Pre-seed at 49 so next call = 50 (the fallback default)
+      fs.writeFileSync(counterFile, '49');
+      const result = await runScript(path.join(scriptsDir, 'suggest-compact.js'), '', {
+        CLAUDE_SESSION_ID: sessionId,
+        COMPACT_THRESHOLD: 'not-a-number'
+      });
+      assert.strictEqual(result.code, 0);
+      assert.ok(result.stderr.includes('50 tool calls reached'), 'Should use default threshold of 50');
+    } finally {
+      try { fs.unlinkSync(counterFile); } catch {}
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

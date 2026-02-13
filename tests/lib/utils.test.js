@@ -684,6 +684,37 @@ function runTests() {
     assert.deepStrictEqual(parsed, { a: { b: 1 }, c: [1, 2] });
   })) passed++; else failed++;
 
+  // grepFile with global regex (regression: g flag causes alternating matches)
+  console.log('\ngrepFile (global regex fix):');
+
+  if (test('grepFile with /g flag finds ALL matching lines (not alternating)', () => {
+    const testFile = path.join(utils.getTempDir(), `utils-test-grep-g-${Date.now()}.txt`);
+    try {
+      // 4 consecutive lines matching the same pattern
+      utils.writeFile(testFile, 'match-line\nmatch-line\nmatch-line\nmatch-line');
+      // Bug: without fix, /match/g would only find lines 1 and 3 (alternating)
+      const matches = utils.grepFile(testFile, /match/g);
+      assert.strictEqual(matches.length, 4, `Should find all 4 lines, found ${matches.length}`);
+      assert.strictEqual(matches[0].lineNumber, 1);
+      assert.strictEqual(matches[1].lineNumber, 2);
+      assert.strictEqual(matches[2].lineNumber, 3);
+      assert.strictEqual(matches[3].lineNumber, 4);
+    } finally {
+      fs.unlinkSync(testFile);
+    }
+  })) passed++; else failed++;
+
+  if (test('grepFile preserves regex flags other than g (e.g. case-insensitive)', () => {
+    const testFile = path.join(utils.getTempDir(), `utils-test-grep-flags-${Date.now()}.txt`);
+    try {
+      utils.writeFile(testFile, 'FOO\nfoo\nFoO\nbar');
+      const matches = utils.grepFile(testFile, /foo/gi);
+      assert.strictEqual(matches.length, 3, `Should find 3 case-insensitive matches, found ${matches.length}`);
+    } finally {
+      fs.unlinkSync(testFile);
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
