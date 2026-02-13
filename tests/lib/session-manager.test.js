@@ -1181,6 +1181,32 @@ src/main.ts
     }
   })) passed++; else failed++;
 
+  // ── Round 69: getSessionById returns null when sessions dir missing ──
+  console.log('\nRound 69: getSessionById (missing sessions directory):');
+
+  if (test('getSessionById returns null when sessions directory does not exist', () => {
+    const tmpDir = createTempSessionDir();
+    const origHome = process.env.HOME;
+    const origUserProfile = process.env.USERPROFILE;
+    try {
+      // Point HOME to a dir with no .claude/sessions/
+      process.env.HOME = tmpDir;
+      process.env.USERPROFILE = tmpDir;
+      // Re-require to pick up new HOME
+      delete require.cache[require.resolve('../../scripts/lib/session-manager')];
+      delete require.cache[require.resolve('../../scripts/lib/utils')];
+      const freshSM = require('../../scripts/lib/session-manager');
+      const result = freshSM.getSessionById('anything');
+      assert.strictEqual(result, null, 'Should return null when sessions dir does not exist');
+    } finally {
+      process.env.HOME = origHome;
+      process.env.USERPROFILE = origUserProfile;
+      delete require.cache[require.resolve('../../scripts/lib/session-manager')];
+      delete require.cache[require.resolve('../../scripts/lib/utils')];
+      cleanup(tmpDir);
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

@@ -1230,6 +1230,45 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 69: getPackageManager global-config success path ──
+  console.log('\nRound 69: getPackageManager (global-config success):');
+
+  if (test('getPackageManager returns source global-config when valid global config exists', () => {
+    const tmpDir = createTestDir();
+    const projDir = path.join(tmpDir, 'proj');
+    fs.mkdirSync(projDir, { recursive: true });
+    const origHome = process.env.HOME;
+    const origUserProfile = process.env.USERPROFILE;
+    const origPM = process.env.CLAUDE_PACKAGE_MANAGER;
+    try {
+      // Create valid global config with pnpm preference
+      const claudeDir = path.join(tmpDir, '.claude');
+      fs.mkdirSync(claudeDir, { recursive: true });
+      fs.writeFileSync(path.join(claudeDir, 'package-manager.json'),
+        JSON.stringify({ packageManager: 'pnpm', setAt: '2026-01-01T00:00:00Z' }), 'utf8');
+      process.env.HOME = tmpDir;
+      process.env.USERPROFILE = tmpDir;
+      delete process.env.CLAUDE_PACKAGE_MANAGER;
+      // Re-require to pick up new HOME
+      delete require.cache[require.resolve('../../scripts/lib/package-manager')];
+      delete require.cache[require.resolve('../../scripts/lib/utils')];
+      const freshPM = require('../../scripts/lib/package-manager');
+      // Empty project dir: no lock file, no package.json, no project config
+      const result = freshPM.getPackageManager({ projectDir: projDir });
+      assert.strictEqual(result.name, 'pnpm', 'Should detect pnpm from global config');
+      assert.strictEqual(result.source, 'global-config', 'Source should be global-config');
+      assert.ok(result.config, 'Should include config object');
+      assert.strictEqual(result.config.lockFile, 'pnpm-lock.yaml', 'Config should match pnpm');
+    } finally {
+      process.env.HOME = origHome;
+      process.env.USERPROFILE = origUserProfile;
+      if (origPM !== undefined) process.env.CLAUDE_PACKAGE_MANAGER = origPM;
+      delete require.cache[require.resolve('../../scripts/lib/package-manager')];
+      delete require.cache[require.resolve('../../scripts/lib/utils')];
+      cleanupTestDir(tmpDir);
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

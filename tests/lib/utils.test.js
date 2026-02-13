@@ -1048,6 +1048,20 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 69: getGitModifiedFiles with ALL invalid patterns ──
+  console.log('\ngetGitModifiedFiles all-invalid patterns (Round 69):');
+
+  if (test('getGitModifiedFiles with all-invalid patterns skips filtering (returns all files)', () => {
+    // When every pattern is invalid regex, compiled.length === 0 at line 386,
+    // so the filtering is skipped entirely and all modified files are returned.
+    // This differs from the mixed-valid test where at least one pattern compiles.
+    const allInvalid = utils.getGitModifiedFiles(['(unclosed', '[bad', '**invalid']);
+    const unfiltered = utils.getGitModifiedFiles();
+    // Both should return the same list — all-invalid patterns = no filtering
+    assert.deepStrictEqual(allInvalid, unfiltered,
+      'All-invalid patterns should return same result as no patterns (no filtering)');
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
