@@ -1808,6 +1808,64 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  // ── Round 63: object-format missing matcher, unreadable command file, empty commands dir ──
+  console.log('\nRound 63: validate-hooks.js (object-format matcher missing matcher field):');
+
+  if (test('rejects object-format matcher entry missing matcher field', () => {
+    const testDir = createTestDir();
+    const hooksFile = path.join(testDir, 'hooks.json');
+    // Object format: matcher entry has hooks array but NO matcher field
+    fs.writeFileSync(hooksFile, JSON.stringify({
+      hooks: {
+        PreToolUse: [{ hooks: [{ type: 'command', command: 'echo ok' }] }]
+      }
+    }));
+
+    const result = runValidatorWithDir('validate-hooks', 'HOOKS_FILE', hooksFile);
+    assert.strictEqual(result.code, 1, 'Should fail on missing matcher field in object format');
+    assert.ok(result.stderr.includes("missing 'matcher' field"), 'Should report missing matcher field');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  console.log('\nRound 63: validate-commands.js (unreadable command file):');
+
+  if (test('reports error when command .md file is unreadable (chmod 000)', () => {
+    if (process.platform === 'win32' || (process.getuid && process.getuid() === 0)) {
+      console.log('    (skipped — not supported on this platform)');
+      return;
+    }
+    const testDir = createTestDir();
+    const cmdFile = path.join(testDir, 'locked.md');
+    fs.writeFileSync(cmdFile, '# Locked Command');
+    fs.chmodSync(cmdFile, 0o000);
+
+    try {
+      const result = runValidatorWithDirs('validate-commands', {
+        COMMANDS_DIR: testDir, AGENTS_DIR: '/nonexistent', SKILLS_DIR: '/nonexistent'
+      });
+      assert.strictEqual(result.code, 1, 'Should exit 1 on read error');
+      assert.ok(result.stderr.includes('locked.md'), 'Should mention the unreadable file');
+    } finally {
+      fs.chmodSync(cmdFile, 0o644);
+      cleanupTestDir(testDir);
+    }
+  })) passed++; else failed++;
+
+  console.log('\nRound 63: validate-commands.js (empty commands directory):');
+
+  if (test('passes on empty commands directory (no .md files)', () => {
+    const testDir = createTestDir();
+    // Only non-.md files — no .md files to validate
+    fs.writeFileSync(path.join(testDir, 'readme.txt'), 'not a command');
+
+    const result = runValidatorWithDirs('validate-commands', {
+      COMMANDS_DIR: testDir, AGENTS_DIR: '/nonexistent', SKILLS_DIR: '/nonexistent'
+    });
+    assert.strictEqual(result.code, 0, 'Should pass on empty commands directory');
+    assert.ok(result.stdout.includes('Validated 0'), 'Should report 0 validated');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
