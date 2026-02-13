@@ -2433,6 +2433,49 @@ async function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  // Round 40: session-end.js (newline collapse in markdown list items)
+  console.log('\nRound 40: session-end.js (newline collapse):');
+
+  if (await asyncTest('collapses newlines in user messages to single-line markdown items', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'transcript.jsonl');
+
+    // User message containing newlines that would break markdown list
+    const lines = [
+      JSON.stringify({ type: 'user', content: 'Please help me with:\n1. Task one\n2. Task two\n3. Task three' }),
+    ];
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+      HOME: testDir
+    });
+    assert.strictEqual(result.code, 0);
+
+    // Find the session file and verify newlines were collapsed
+    const claudeDir = path.join(testDir, '.claude', 'sessions');
+    if (fs.existsSync(claudeDir)) {
+      const files = fs.readdirSync(claudeDir).filter(f => f.endsWith('.tmp'));
+      if (files.length > 0) {
+        const content = fs.readFileSync(path.join(claudeDir, files[0]), 'utf8');
+        // Each task should be a single-line markdown list item
+        const taskLines = content.split('\n').filter(l => l.startsWith('- '));
+        for (const line of taskLines) {
+          assert.ok(
+            !line.includes('\n'),
+            'Task list items should be single-line'
+          );
+        }
+        // Newlines should be replaced with spaces
+        assert.ok(
+          content.includes('Please help me with: 1. Task one 2. Task two'),
+          `Newlines should be collapsed to spaces, got: ${content.substring(0, 500)}`
+        );
+      }
+    }
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
