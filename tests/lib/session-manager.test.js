@@ -938,6 +938,24 @@ src/main.ts
     assert.strictEqual(meta.completed.length, 1);
   })) passed++; else failed++;
 
+  // ── Round 43: getSessionById default excludes content ──
+  console.log('\nRound 43: getSessionById (default excludes content):');
+
+  if (test('getSessionById without includeContent omits content, metadata, and stats', () => {
+    // Default call (includeContent=false) should NOT load file content
+    const result = sessionManager.getSessionById('abcd1234');
+    assert.ok(result, 'Should find the session');
+    assert.strictEqual(result.shortId, 'abcd1234');
+    // These fields should be absent when includeContent is false
+    assert.strictEqual(result.content, undefined, 'content should be undefined');
+    assert.strictEqual(result.metadata, undefined, 'metadata should be undefined');
+    assert.strictEqual(result.stats, undefined, 'stats should be undefined');
+    // Basic fields should still be present
+    assert.ok(result.sessionPath, 'sessionPath should be present');
+    assert.ok(result.size !== undefined, 'size should be present');
+    assert.ok(result.modifiedTime, 'modifiedTime should be present');
+  })) passed++; else failed++;
+
   // Cleanup — restore both HOME and USERPROFILE (Windows)
   process.env.HOME = origHome;
   if (origUserProfile !== undefined) {
