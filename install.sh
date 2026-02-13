@@ -22,7 +22,15 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve symlinks — needed when invoked as `ecc-install` via npm/bun bin symlink
+SCRIPT_PATH="$0"
+while [ -L "$SCRIPT_PATH" ]; do
+    link_dir="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    # Resolve relative symlinks
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$link_dir/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 RULES_DIR="$SCRIPT_DIR/rules"
 
 # --- Parse --target flag ---
