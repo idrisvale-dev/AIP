@@ -1350,6 +1350,19 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 86: detectFromPackageJson with empty (0-byte) package.json ──
+  console.log('\nRound 86: detectFromPackageJson (empty package.json):');
+
+  if (test('detectFromPackageJson returns null for empty (0-byte) package.json', () => {
+    // package-manager.js line 109-111: readFile returns "" for empty file.
+    // "" is falsy → if (content) is false → skips JSON.parse → returns null.
+    const testDir = createTestDir();
+    fs.writeFileSync(path.join(testDir, 'package.json'), '');
+    const result = pm.detectFromPackageJson(testDir);
+    assert.strictEqual(result, null, 'Empty package.json should return null (content="" is falsy)');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

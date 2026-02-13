@@ -1202,6 +1202,27 @@ function runTests() {
       'Entries with invalid/missing dates should sort to the end');
   })) passed++; else failed++;
 
+  // ── Round 86: loadAliases with truthy non-object aliases field ──
+  console.log('\nRound 86: loadAliases (truthy non-object aliases field):');
+
+  if (test('loadAliases resets to defaults when aliases field is a string (typeof !== object)', () => {
+    // session-aliases.js line 58: if (!data.aliases || typeof data.aliases !== 'object')
+    // Previous tests covered !data.aliases (undefined) via { noAliasesKey: true }.
+    // This exercises the SECOND half: aliases is truthy but typeof !== 'object'.
+    const aliasesPath = aliases.getAliasesPath();
+    fs.writeFileSync(aliasesPath, JSON.stringify({
+      version: '1.0',
+      aliases: 'this-is-a-string-not-an-object',
+      metadata: { totalCount: 0 }
+    }));
+    const data = aliases.loadAliases();
+    assert.strictEqual(typeof data.aliases, 'object', 'Should reset aliases to object');
+    assert.ok(!Array.isArray(data.aliases), 'Should be a plain object, not array');
+    assert.strictEqual(Object.keys(data.aliases).length, 0, 'Should have no aliases');
+    assert.strictEqual(data.version, '1.0', 'Should have version');
+    resetAliases();
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

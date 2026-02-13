@@ -360,6 +360,57 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 86: config learned_skills_path override with ~ expansion ──
+  console.log('\nRound 86: config learned_skills_path override:');
+
+  if (test('uses learned_skills_path from config with ~ expansion', () => {
+    // evaluate-session.js lines 69-72:
+    //   if (config.learned_skills_path) {
+    //     learnedSkillsPath = config.learned_skills_path.replace(/^~/, require('os').homedir());
+    //   }
+    // This branch was never tested — only the parse error (Round 85) and default path.
+    const configPath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning', 'config.json');
+    let originalContent = null;
+    try {
+      originalContent = fs.readFileSync(configPath, 'utf8');
+    } catch {
+      // Config file may not exist
+    }
+
+    try {
+      // Write config with a custom learned_skills_path using ~ prefix
+      fs.writeFileSync(configPath, JSON.stringify({
+        min_session_length: 10,
+        learned_skills_path: '~/custom-learned-skills-dir'
+      }));
+
+      // Create a transcript with 12 user messages (above threshold)
+      const testDir = createTestDir();
+      const transcript = createTranscript(testDir, 12);
+      const result = runEvaluate({ transcript_path: transcript });
+
+      assert.strictEqual(result.code, 0, 'Should exit 0');
+      // The script logs "Save learned skills to: <path>" where <path> should
+      // be the expanded home directory, NOT the literal "~"
+      assert.ok(!result.stderr.includes('~/custom-learned-skills-dir'),
+        'Should NOT contain literal ~ in output (should be expanded)');
+      assert.ok(result.stderr.includes('custom-learned-skills-dir'),
+        `Should reference the custom learned skills dir. Got: ${result.stderr}`);
+      // The ~ should have been replaced with os.homedir()
+      assert.ok(result.stderr.includes(os.homedir()),
+        `Should contain expanded home directory. Got: ${result.stderr}`);
+
+      cleanupTestDir(testDir);
+    } finally {
+      // Restore original config file
+      if (originalContent !== null) {
+        fs.writeFileSync(configPath, originalContent, 'utf8');
+      } else {
+        try { fs.unlinkSync(configPath); } catch { /* best-effort */ }
+      }
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
