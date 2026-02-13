@@ -3621,6 +3621,49 @@ Some random content without the expected ### Context to Load section
     });
   })) passed++; else failed++;
 
+  // ── Round 94: session-end.js tools used but no files modified ──
+  console.log('\nRound 94: session-end.js (tools used without files modified):');
+
+  if (await asyncTest('session file includes Tools Used but omits Files Modified when only Read/Grep used', async () => {
+    // session-end.js buildSummarySection (lines 217-228):
+    //   filesModified.length > 0 → include "### Files Modified" section
+    //   toolsUsed.length > 0 → include "### Tools Used" section
+    // Previously tested: BOTH present (Round ~10) and NEITHER present (Round ~10).
+    // Untested combination: toolsUsed present, filesModified empty.
+    // Transcript with Read/Grep tools (don't add to filesModified) and user messages.
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'transcript.jsonl');
+
+    const lines = [
+      '{"type":"user","content":"Search the codebase for auth handlers"}',
+      '{"type":"tool_use","tool_name":"Read","tool_input":{"file_path":"/src/auth.ts"}}',
+      '{"type":"tool_use","tool_name":"Grep","tool_input":{"pattern":"handler"}}',
+      '{"type":"user","content":"Check the test file too"}',
+      '{"type":"tool_use","tool_name":"Read","tool_input":{"file_path":"/tests/auth.test.ts"}}',
+    ];
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+      HOME: testDir
+    });
+    assert.strictEqual(result.code, 0, 'Should exit 0');
+
+    const claudeDir = path.join(testDir, '.claude', 'sessions');
+    if (fs.existsSync(claudeDir)) {
+      const files = fs.readdirSync(claudeDir).filter(f => f.endsWith('.tmp'));
+      if (files.length > 0) {
+        const content = fs.readFileSync(path.join(claudeDir, files[0]), 'utf8');
+        assert.ok(content.includes('### Tools Used'), 'Should include Tools Used section');
+        assert.ok(content.includes('Read'), 'Should list Read tool');
+        assert.ok(content.includes('Grep'), 'Should list Grep tool');
+        assert.ok(!content.includes('### Files Modified'),
+          'Should NOT include Files Modified section (Read/Grep do not modify files)');
+      }
+    }
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

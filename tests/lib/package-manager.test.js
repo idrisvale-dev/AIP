@@ -1412,6 +1412,49 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  // ── Round 94: detectFromPackageJson with scoped package name ──
+  console.log('\nRound 94: detectFromPackageJson (scoped package name @scope/pkg@version):');
+
+  if (test('detectFromPackageJson returns null for scoped package name (@scope/pkg@version)', () => {
+    // package-manager.js line 116: pmName = pkg.packageManager.split('@')[0]
+    // For "@pnpm/exe@8.0.0", split('@') → ['', 'pnpm/exe', '8.0.0'], so [0] = ''
+    // PACKAGE_MANAGERS[''] is undefined → returns null.
+    // Scoped npm packages like @pnpm/exe are a real-world pattern but the
+    // packageManager field spec uses unscoped names (e.g., "pnpm@8"), so returning
+    // null is the correct defensive behaviour for this edge case.
+    const testDir = createTestDir();
+    fs.writeFileSync(
+      path.join(testDir, 'package.json'),
+      JSON.stringify({ name: 'test', packageManager: '@pnpm/exe@8.0.0' }));
+    const result = pm.detectFromPackageJson(testDir);
+    assert.strictEqual(result, null,
+      'Scoped package name should return null (split("@")[0] is empty string)');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  // ── Round 94: getPackageManager with empty string CLAUDE_PACKAGE_MANAGER ──
+  console.log('\nRound 94: getPackageManager (empty string CLAUDE_PACKAGE_MANAGER env var):');
+
+  if (test('getPackageManager skips empty string CLAUDE_PACKAGE_MANAGER (falsy short-circuit)', () => {
+    // package-manager.js line 168: if (envPm && PACKAGE_MANAGERS[envPm])
+    // Empty string '' is falsy — the && short-circuits before checking PACKAGE_MANAGERS.
+    // This is distinct from the 'totally-fake-pm' test (truthy but unknown PM).
+    const originalEnv = process.env.CLAUDE_PACKAGE_MANAGER;
+    try {
+      process.env.CLAUDE_PACKAGE_MANAGER = '';
+      const result = pm.getPackageManager();
+      assert.notStrictEqual(result.source, 'environment',
+        'Empty string env var should NOT be treated as environment source');
+      assert.ok(result.name, 'Should still return a valid package manager name');
+    } finally {
+      if (originalEnv !== undefined) {
+        process.env.CLAUDE_PACKAGE_MANAGER = originalEnv;
+      } else {
+        delete process.env.CLAUDE_PACKAGE_MANAGER;
+      }
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
