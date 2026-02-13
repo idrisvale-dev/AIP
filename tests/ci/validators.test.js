@@ -470,6 +470,18 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  if (test('fails on whitespace-only SKILL.md', () => {
+    const testDir = createTestDir();
+    const skillDir = path.join(testDir, 'blank-skill');
+    fs.mkdirSync(skillDir);
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '   \n\t\n  ');
+
+    const result = runValidatorWithDir('validate-skills', 'SKILLS_DIR', testDir);
+    assert.strictEqual(result.code, 1, 'Should reject whitespace-only SKILL.md');
+    assert.ok(result.stderr.includes('Empty file'), 'Should report empty file');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // ==========================================
   // validate-commands.js
   // ==========================================
@@ -670,6 +682,29 @@ function runTests() {
     const result = runValidatorWithDir('validate-rules', 'RULES_DIR', testDir);
     assert.strictEqual(result.code, 0, 'Should pass for valid rules');
     assert.ok(result.stdout.includes('Validated 1'), 'Should report 1 validated');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('fails on whitespace-only rule file', () => {
+    const testDir = createTestDir();
+    fs.writeFileSync(path.join(testDir, 'blank.md'), '   \n\t\n  ');
+
+    const result = runValidatorWithDir('validate-rules', 'RULES_DIR', testDir);
+    assert.strictEqual(result.code, 1, 'Should reject whitespace-only rule file');
+    assert.ok(result.stderr.includes('Empty'), 'Should report empty file');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('validates rules in subdirectories recursively', () => {
+    const testDir = createTestDir();
+    const subDir = path.join(testDir, 'sub');
+    fs.mkdirSync(subDir);
+    fs.writeFileSync(path.join(testDir, 'top.md'), '# Top Level Rule');
+    fs.writeFileSync(path.join(subDir, 'nested.md'), '# Nested Rule');
+
+    const result = runValidatorWithDir('validate-rules', 'RULES_DIR', testDir);
+    assert.strictEqual(result.code, 0, 'Should validate nested rules');
+    assert.ok(result.stdout.includes('Validated 2'), 'Should find both rules');
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 

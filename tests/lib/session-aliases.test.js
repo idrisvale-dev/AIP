@@ -282,6 +282,30 @@ function runTests() {
     assert.strictEqual(result.success, false);
   })) passed++; else failed++;
 
+  if (test('rejects rename to empty string', () => {
+    resetAliases();
+    aliases.setAlias('valid', '/path');
+    const result = aliases.renameAlias('valid', '');
+    assert.strictEqual(result.success, false);
+    assert.ok(result.error.includes('empty'));
+  })) passed++; else failed++;
+
+  if (test('rejects rename to reserved name', () => {
+    resetAliases();
+    aliases.setAlias('valid', '/path');
+    const result = aliases.renameAlias('valid', 'list');
+    assert.strictEqual(result.success, false);
+    assert.ok(result.error.includes('reserved'));
+  })) passed++; else failed++;
+
+  if (test('rejects rename to name exceeding 128 chars', () => {
+    resetAliases();
+    aliases.setAlias('valid', '/path');
+    const result = aliases.renameAlias('valid', 'a'.repeat(129));
+    assert.strictEqual(result.success, false);
+    assert.ok(result.error.includes('128'));
+  })) passed++; else failed++;
+
   // updateAliasTitle tests
   console.log('\nupdateAliasTitle:');
 
