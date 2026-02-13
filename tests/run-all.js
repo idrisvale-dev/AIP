@@ -17,7 +17,9 @@ const testFiles = [
   'lib/session-aliases.test.js',
   'hooks/hooks.test.js',
   'integration/hooks.test.js',
-  'ci/validators.test.js'
+  'ci/validators.test.js',
+  'scripts/setup-package-manager.test.js',
+  'scripts/skill-create-output.test.js'
 ];
 
 console.log('╔══════════════════════════════════════════════════════════╗');

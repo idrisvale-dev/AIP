@@ -38,7 +38,7 @@ const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', 
 // Helper functions
 function box(title, content, width = 60) {
   const lines = content.split('\n');
-  const top = `${BOX.topLeft}${BOX.horizontal} ${chalk.bold(chalk.cyan(title))} ${BOX.horizontal.repeat(width - title.length - 5)}${BOX.topRight}`;
+  const top = `${BOX.topLeft}${BOX.horizontal} ${chalk.bold(chalk.cyan(title))} ${BOX.horizontal.repeat(Math.max(0, width - title.length - 5))}${BOX.topRight}`;
   const bottom = `${BOX.bottomLeft}${BOX.horizontal.repeat(width - 1)}${BOX.bottomRight}`;
   const middle = lines.map(line => {
     const padding = width - 3 - stripAnsi(line).length;
