@@ -17,6 +17,7 @@ const testFiles = [
   'lib/session-aliases.test.js',
   'hooks/hooks.test.js',
   'hooks/evaluate-session.test.js',
+  'hooks/suggest-compact.test.js',
   'integration/hooks.test.js',
   'ci/validators.test.js',
   'scripts/setup-package-manager.test.js',

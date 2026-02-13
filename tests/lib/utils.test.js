@@ -880,6 +880,53 @@ function runTests() {
     // Don't await — just verify it's a Promise type
   })) passed++; else failed++;
 
+  // ── Round 28: readStdinJson maxSize truncation and edge cases ──
+  console.log('\nreadStdinJson maxSize truncation:');
+
+  if (test('readStdinJson maxSize stops accumulating after threshold (chunk-level guard)', () => {
+    const { execFileSync } = require('child_process');
+    // maxSize is a chunk-level guard: once data.length >= maxSize, no MORE chunks are added.
+    // A single small chunk that arrives when data.length < maxSize is added in full.
+    // To test multi-chunk behavior, we send >64KB (Node default highWaterMark=16KB)
+    // which should arrive in multiple chunks. With maxSize=100, only the first chunk(s)
+    // totaling under 100 bytes should be captured; subsequent chunks are dropped.
+    const script = 'const u=require("./scripts/lib/utils");u.readStdinJson({timeoutMs:2000,maxSize:100}).then(d=>{process.stdout.write(JSON.stringify(d))})';
+    // Generate 100KB of data (arrives in multiple chunks)
+    const bigInput = '{"k":"' + 'X'.repeat(100000) + '"}';
+    const result = execFileSync('node', ['-e', script], { ...stdinOpts, input: bigInput });
+    // Truncated mid-string → invalid JSON → resolves to {}
+    assert.deepStrictEqual(JSON.parse(result), {});
+  })) passed++; else failed++;
+
+  if (test('readStdinJson with maxSize large enough preserves valid JSON', () => {
+    const { execFileSync } = require('child_process');
+    const script = 'const u=require("./scripts/lib/utils");u.readStdinJson({timeoutMs:2000,maxSize:1024}).then(d=>{process.stdout.write(JSON.stringify(d))})';
+    const input = JSON.stringify({ key: 'value' });
+    const result = execFileSync('node', ['-e', script], { ...stdinOpts, input });
+    assert.deepStrictEqual(JSON.parse(result), { key: 'value' });
+  })) passed++; else failed++;
+
+  if (test('readStdinJson resolves {} for whitespace-only stdin', () => {
+    const { execFileSync } = require('child_process');
+    const result = execFileSync('node', ['-e', stdinScript], { ...stdinOpts, input: '   \n  \t  ' });
+    // data.trim() is empty → resolves {}
+    assert.deepStrictEqual(JSON.parse(result), {});
+  })) passed++; else failed++;
+
+  if (test('readStdinJson handles JSON with trailing whitespace/newlines', () => {
+    const { execFileSync } = require('child_process');
+    const result = execFileSync('node', ['-e', stdinScript], { ...stdinOpts, input: '{"a":1}  \n\n' });
+    assert.deepStrictEqual(JSON.parse(result), { a: 1 });
+  })) passed++; else failed++;
+
+  if (test('readStdinJson handles JSON with BOM prefix (returns {})', () => {
+    const { execFileSync } = require('child_process');
+    // BOM (\uFEFF) before JSON makes it invalid for JSON.parse
+    const result = execFileSync('node', ['-e', stdinScript], { ...stdinOpts, input: '\uFEFF{"a":1}' });
+    // BOM prefix makes JSON.parse fail → resolve {}
+    assert.deepStrictEqual(JSON.parse(result), {});
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
