@@ -53,7 +53,7 @@ function stripAnsi(str) {
 }
 
 function progressBar(percent, width = 30) {
-  const filled = Math.round(width * percent / 100);
+  const filled = Math.min(width, Math.max(0, Math.round(width * percent / 100)));
   const empty = width - filled;
   const bar = chalk.green('█'.repeat(filled)) + chalk.gray('░'.repeat(empty));
   return `${bar} ${chalk.bold(percent)}%`;

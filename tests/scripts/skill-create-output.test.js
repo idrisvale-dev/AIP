@@ -179,6 +179,54 @@ function runTests() {
     assert.ok(combined.includes('Everything Claude Code'), 'Should include project name');
   })) passed++; else failed++;
 
+  // progressBar edge cases (tests the clamp fix)
+  console.log('\nprogressBar edge cases:');
+
+  if (test('does not crash with confidence > 1.0 (percent > 100)', () => {
+    const output = new SkillCreateOutput('repo');
+    // confidence 1.5 => percent 150 — previously crashed with RangeError
+    const logs = captureLog(() => output.patterns([
+      { name: 'Overconfident', trigger: 'always', confidence: 1.5, evidence: 'too much' },
+    ]));
+    const combined = stripAnsi(logs.join('\n'));
+    assert.ok(combined.includes('150%'), 'Should show 150%');
+  })) passed++; else failed++;
+
+  if (test('renders 0% confidence bar without crash', () => {
+    const output = new SkillCreateOutput('repo');
+    const logs = captureLog(() => output.patterns([
+      { name: 'Zero Confidence', trigger: 'never', confidence: 0.0, evidence: 'none' },
+    ]));
+    const combined = stripAnsi(logs.join('\n'));
+    assert.ok(combined.includes('0%'), 'Should show 0%');
+  })) passed++; else failed++;
+
+  if (test('renders 100% confidence bar without crash', () => {
+    const output = new SkillCreateOutput('repo');
+    const logs = captureLog(() => output.patterns([
+      { name: 'Perfect', trigger: 'always', confidence: 1.0, evidence: 'certain' },
+    ]));
+    const combined = stripAnsi(logs.join('\n'));
+    assert.ok(combined.includes('100%'), 'Should show 100%');
+  })) passed++; else failed++;
+
+  // Empty array edge cases
+  console.log('\nempty array edge cases:');
+
+  if (test('patterns() with empty array produces header but no entries', () => {
+    const output = new SkillCreateOutput('repo');
+    const logs = captureLog(() => output.patterns([]));
+    const combined = logs.join('\n');
+    assert.ok(combined.includes('Patterns'), 'Should show header');
+  })) passed++; else failed++;
+
+  if (test('instincts() with empty array produces box but no entries', () => {
+    const output = new SkillCreateOutput('repo');
+    const logs = captureLog(() => output.instincts([]));
+    const combined = logs.join('\n');
+    assert.ok(combined.includes('Instincts'), 'Should show box title');
+  })) passed++; else failed++;
+
   // Box drawing crash fix (regression test)
   console.log('\nbox() crash prevention:');
 

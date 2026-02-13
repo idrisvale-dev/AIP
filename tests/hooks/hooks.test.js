@@ -680,6 +680,27 @@ async function runTests() {
     assert.strictEqual(result.code, 0, 'Should exit 0 for invalid JSON');
   })) passed++; else failed++;
 
+  if (await asyncTest('handles null tool_input gracefully', async () => {
+    const stdinJson = JSON.stringify({ tool_input: null });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-format.js'), stdinJson);
+    assert.strictEqual(result.code, 0, 'Should exit 0 for null tool_input');
+    assert.ok(result.stdout.includes('tool_input'), 'Should pass through data');
+  })) passed++; else failed++;
+
+  if (await asyncTest('handles missing file_path in tool_input', async () => {
+    const stdinJson = JSON.stringify({ tool_input: {} });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-format.js'), stdinJson);
+    assert.strictEqual(result.code, 0, 'Should exit 0 for missing file_path');
+    assert.ok(result.stdout.includes('tool_input'), 'Should pass through data');
+  })) passed++; else failed++;
+
+  if (await asyncTest('exits 0 and passes data when prettier is unavailable', async () => {
+    const stdinJson = JSON.stringify({ tool_input: { file_path: '/nonexistent/path/file.ts' } });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-format.js'), stdinJson);
+    assert.strictEqual(result.code, 0, 'Should exit 0 even when prettier fails');
+    assert.ok(result.stdout.includes('tool_input'), 'Should pass through original data');
+  })) passed++; else failed++;
+
   // post-edit-typecheck.js tests
   console.log('\npost-edit-typecheck.js:');
 

@@ -159,6 +159,22 @@ function runTests() {
     assert.ok(result.stdout.includes('pnpm'));
   })) passed++; else failed++;
 
+  // --detect output completeness
+  console.log('\n--detect output completeness:');
+
+  if (test('shows all three command types in detection output', () => {
+    const result = run(['--detect']);
+    assert.strictEqual(result.code, 0);
+    assert.ok(result.stdout.includes('Install:'), 'Should show Install command');
+    assert.ok(result.stdout.includes('Run script:'), 'Should show Run script command');
+    assert.ok(result.stdout.includes('Execute binary:'), 'Should show Execute binary command');
+  })) passed++; else failed++;
+
+  if (test('shows current marker for active package manager', () => {
+    const result = run(['--detect']);
+    assert.ok(result.stdout.includes('(current)'), 'Should mark current PM');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
