@@ -2234,6 +2234,110 @@ async function runTests() {
     assert.ok(runAllSource.includes('stderr'), 'Should handle stderr output');
   })) passed++; else failed++;
 
+  // ── Round 32: post-edit-typecheck special characters & check-console-log ──
+  console.log('\nRound 32: post-edit-typecheck (special character paths):');
+
+  if (await asyncTest('handles file path with spaces gracefully', async () => {
+    const testDir = createTestDir();
+    const testFile = path.join(testDir, 'my file.ts');
+    fs.writeFileSync(testFile, 'const x: number = 1;');
+
+    const stdinJson = JSON.stringify({ tool_input: { file_path: testFile } });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-typecheck.js'), stdinJson);
+    assert.strictEqual(result.code, 0, 'Should handle spaces in path');
+    assert.ok(result.stdout.includes('tool_input'), 'Should pass through data');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('handles file path with shell metacharacters safely', async () => {
+    const testDir = createTestDir();
+    // File name with characters that could be dangerous in shell contexts
+    const testFile = path.join(testDir, 'test$(echo).ts');
+    fs.writeFileSync(testFile, 'const x: number = 1;');
+
+    const stdinJson = JSON.stringify({ tool_input: { file_path: testFile } });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-typecheck.js'), stdinJson);
+    assert.strictEqual(result.code, 0, 'Should not crash on shell metacharacters');
+    // execFileSync prevents shell injection — just verify no crash
+    assert.ok(result.stdout.includes('tool_input'), 'Should pass through data safely');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('handles .tsx file extension', async () => {
+    const testDir = createTestDir();
+    const testFile = path.join(testDir, 'component.tsx');
+    fs.writeFileSync(testFile, 'const App = () => <div>Hello</div>;');
+
+    const stdinJson = JSON.stringify({ tool_input: { file_path: testFile } });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-typecheck.js'), stdinJson);
+    assert.strictEqual(result.code, 0, 'Should handle .tsx files');
+    assert.ok(result.stdout.includes('tool_input'), 'Should pass through data');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  console.log('\nRound 32: check-console-log (edge cases):');
+
+  if (await asyncTest('passes through data when git commands fail', async () => {
+    // Run from a non-git directory
+    const testDir = createTestDir();
+    const stdinData = JSON.stringify({ tool_name: 'Write', tool_input: {} });
+    const result = await runScript(path.join(scriptsDir, 'check-console-log.js'), stdinData);
+    assert.strictEqual(result.code, 0, 'Should exit 0');
+    assert.ok(result.stdout.includes('tool_name'), 'Should pass through stdin');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('handles very large stdin within limit', async () => {
+    // Send just under the 1MB limit
+    const largePayload = JSON.stringify({ tool_name: 'x'.repeat(500000) });
+    const result = await runScript(path.join(scriptsDir, 'check-console-log.js'), largePayload);
+    assert.strictEqual(result.code, 0, 'Should handle large stdin');
+  })) passed++; else failed++;
+
+  console.log('\nRound 32: post-edit-console-warn (additional edge cases):');
+
+  if (await asyncTest('handles file with only console.error (no warning)', async () => {
+    const testDir = createTestDir();
+    const testFile = path.join(testDir, 'errors-only.ts');
+    fs.writeFileSync(testFile, 'console.error("this is fine");\nconsole.warn("also fine");');
+
+    const stdinJson = JSON.stringify({ tool_input: { file_path: testFile } });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), stdinJson);
+    assert.ok(!result.stderr.includes('WARNING'), 'Should NOT warn for console.error/warn only');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('handles null tool_input gracefully', async () => {
+    const stdinJson = JSON.stringify({ tool_input: null });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), stdinJson);
+    assert.strictEqual(result.code, 0, 'Should handle null tool_input');
+    assert.ok(result.stdout.includes('tool_input'), 'Should pass through data');
+  })) passed++; else failed++;
+
+  console.log('\nRound 32: session-end.js (empty transcript):');
+
+  if (await asyncTest('handles completely empty transcript file', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'empty.jsonl');
+    fs.writeFileSync(transcriptPath, '');
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson);
+    assert.strictEqual(result.code, 0, 'Should handle empty transcript');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('handles transcript with only whitespace lines', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'whitespace.jsonl');
+    fs.writeFileSync(transcriptPath, '  \n\n  \n');
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson);
+    assert.strictEqual(result.code, 0, 'Should handle whitespace-only transcript');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

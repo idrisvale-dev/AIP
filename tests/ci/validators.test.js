@@ -1421,6 +1421,115 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  // ── Round 32: empty frontmatter & edge cases ──
+  console.log('\nRound 32: validate-agents (empty frontmatter):');
+
+  if (test('rejects agent with empty frontmatter block (no key-value pairs)', () => {
+    const testDir = createTestDir();
+    // Blank line between --- markers creates a valid but empty frontmatter block
+    fs.writeFileSync(path.join(testDir, 'empty-fm.md'), '---\n\n---\n# Agent with empty frontmatter');
+
+    const result = runValidatorWithDir('validate-agents', 'AGENTS_DIR', testDir);
+    assert.strictEqual(result.code, 1, 'Should reject empty frontmatter');
+    assert.ok(result.stderr.includes('model'), 'Should report missing model');
+    assert.ok(result.stderr.includes('tools'), 'Should report missing tools');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('rejects agent with no content between --- markers (Missing frontmatter)', () => {
+    const testDir = createTestDir();
+    // ---\n--- with no blank line → regex doesn't match → "Missing frontmatter"
+    fs.writeFileSync(path.join(testDir, 'no-fm.md'), '---\n---\n# Agent');
+
+    const result = runValidatorWithDir('validate-agents', 'AGENTS_DIR', testDir);
+    assert.strictEqual(result.code, 1, 'Should reject missing frontmatter');
+    assert.ok(result.stderr.includes('Missing frontmatter'), 'Should report missing frontmatter');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('rejects agent with partial frontmatter (only model, no tools)', () => {
+    const testDir = createTestDir();
+    fs.writeFileSync(path.join(testDir, 'partial.md'), '---\nmodel: haiku\n---\n# Partial agent');
+
+    const result = runValidatorWithDir('validate-agents', 'AGENTS_DIR', testDir);
+    assert.strictEqual(result.code, 1, 'Should reject partial frontmatter');
+    assert.ok(result.stderr.includes('tools'), 'Should report missing tools');
+    assert.ok(!result.stderr.includes('model'), 'Should NOT report model (it is present)');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('handles multiple agents where only one is invalid', () => {
+    const testDir = createTestDir();
+    fs.writeFileSync(path.join(testDir, 'good.md'), '---\nmodel: sonnet\ntools: Read\n---\n# Good');
+    fs.writeFileSync(path.join(testDir, 'bad.md'), '---\nmodel: invalid-model\ntools: Read\n---\n# Bad');
+
+    const result = runValidatorWithDir('validate-agents', 'AGENTS_DIR', testDir);
+    assert.strictEqual(result.code, 1, 'Should fail when any agent is invalid');
+    assert.ok(result.stderr.includes('bad.md'), 'Should identify the bad file');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  console.log('\nRound 32: validate-rules (non-file entries):');
+
+  if (test('skips directory entries even if named with .md extension', () => {
+    const testDir = createTestDir();
+    // Create a directory named "tricky.md" — stat.isFile() should skip it
+    fs.mkdirSync(path.join(testDir, 'tricky.md'));
+    fs.writeFileSync(path.join(testDir, 'real.md'), '# A real rule');
+
+    const result = runValidatorWithDir('validate-rules', 'RULES_DIR', testDir);
+    assert.strictEqual(result.code, 0, 'Should skip directory entries');
+    assert.ok(result.stdout.includes('Validated 1'), 'Should count only the real file');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('handles deeply nested rule in subdirectory', () => {
+    const testDir = createTestDir();
+    const deepDir = path.join(testDir, 'cat1', 'sub1');
+    fs.mkdirSync(deepDir, { recursive: true });
+    fs.writeFileSync(path.join(deepDir, 'deep-rule.md'), '# Deep nested rule');
+
+    const result = runValidatorWithDir('validate-rules', 'RULES_DIR', testDir);
+    assert.strictEqual(result.code, 0, 'Should validate deeply nested rules');
+    assert.ok(result.stdout.includes('Validated 1'), 'Should find the nested rule');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  console.log('\nRound 32: validate-commands (agent reference with valid workflow):');
+
+  if (test('passes workflow with three chained agents', () => {
+    const testDir = createTestDir();
+    const agentsDir = createTestDir();
+    const skillsDir = createTestDir();
+    fs.writeFileSync(path.join(agentsDir, 'planner.md'), '---\nmodel: sonnet\ntools: Read\n---\n# P');
+    fs.writeFileSync(path.join(agentsDir, 'tdd-guide.md'), '---\nmodel: sonnet\ntools: Read\n---\n# T');
+    fs.writeFileSync(path.join(agentsDir, 'code-reviewer.md'), '---\nmodel: sonnet\ntools: Read\n---\n# C');
+    fs.writeFileSync(path.join(testDir, 'flow.md'), '# Flow\n\nplanner -> tdd-guide -> code-reviewer');
+
+    const result = runValidatorWithDirs('validate-commands', {
+      COMMANDS_DIR: testDir, AGENTS_DIR: agentsDir, SKILLS_DIR: skillsDir
+    });
+    assert.strictEqual(result.code, 0, 'Should pass on valid 3-agent workflow');
+    cleanupTestDir(testDir); cleanupTestDir(agentsDir); cleanupTestDir(skillsDir);
+  })) passed++; else failed++;
+
+  if (test('detects broken agent in middle of workflow chain', () => {
+    const testDir = createTestDir();
+    const agentsDir = createTestDir();
+    const skillsDir = createTestDir();
+    fs.writeFileSync(path.join(agentsDir, 'planner.md'), '---\nmodel: sonnet\ntools: Read\n---\n# P');
+    fs.writeFileSync(path.join(agentsDir, 'code-reviewer.md'), '---\nmodel: sonnet\ntools: Read\n---\n# C');
+    // missing-agent is NOT created
+    fs.writeFileSync(path.join(testDir, 'flow.md'), '# Flow\n\nplanner -> missing-agent -> code-reviewer');
+
+    const result = runValidatorWithDirs('validate-commands', {
+      COMMANDS_DIR: testDir, AGENTS_DIR: agentsDir, SKILLS_DIR: skillsDir
+    });
+    assert.strictEqual(result.code, 1, 'Should detect broken agent in workflow chain');
+    assert.ok(result.stderr.includes('missing-agent'), 'Should report the missing agent');
+    cleanupTestDir(testDir); cleanupTestDir(agentsDir); cleanupTestDir(skillsDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
