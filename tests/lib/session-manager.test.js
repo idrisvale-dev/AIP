@@ -1448,6 +1448,19 @@ src/main.ts
     }
   })) passed++; else failed++;
 
+  // ── Round 91: getSessionStats with mixed Windows path separators ──
+  console.log('\nRound 91: getSessionStats (mixed Windows path separators):');
+
+  if (test('getSessionStats treats mixed Windows separators as a file path', () => {
+    // session-manager.js line 166: regex /^[A-Za-z]:[/\\]/ checks only the
+    // character right after the colon. Mixed separators like C:\Users/Mixed\session.tmp
+    // should still match because the first separator (\) satisfies the regex.
+    const stats = sessionManager.getSessionStats('C:\\Users/Mixed\\session.tmp');
+    assert.strictEqual(stats.lineCount, 0,
+      'Mixed separators should be treated as path (file does not exist → lineCount 0)');
+    assert.strictEqual(stats.totalItems, 0, 'Non-existent path should have 0 items');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

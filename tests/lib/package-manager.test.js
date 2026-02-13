@@ -1363,6 +1363,39 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  // ── Round 91: getCommandPattern with empty action string ──
+  console.log('\nRound 91: getCommandPattern (empty action):');
+
+  if (test('getCommandPattern with empty string returns valid regex pattern', () => {
+    // package-manager.js line 401-409: Empty action falls to the else branch.
+    // escapeRegex('') returns '', producing patterns like 'npm run ', 'yarn '.
+    // The resulting combined regex should be compilable (not throw).
+    const pattern = pm.getCommandPattern('');
+    assert.ok(typeof pattern === 'string', 'Should return a string');
+    assert.ok(pattern.length > 0, 'Should return non-empty pattern');
+    // Verify the pattern compiles without error
+    const regex = new RegExp(pattern);
+    assert.ok(regex instanceof RegExp, 'Pattern should compile to valid RegExp');
+    // The pattern should match package manager commands with trailing space
+    assert.ok(regex.test('npm run '), 'Should match "npm run " with trailing space');
+    assert.ok(regex.test('yarn '), 'Should match "yarn " with trailing space');
+  })) passed++; else failed++;
+
+  // ── Round 91: detectFromPackageJson with whitespace-only packageManager ──
+  console.log('\nRound 91: detectFromPackageJson (whitespace-only packageManager):');
+
+  if (test('detectFromPackageJson returns null for whitespace-only packageManager field', () => {
+    // package-manager.js line 114-119: "   " is truthy, so enters the if block.
+    // "   ".split('@')[0] = "   " which doesn't match any PACKAGE_MANAGERS key.
+    const testDir = createTestDir();
+    fs.writeFileSync(
+      path.join(testDir, 'package.json'),
+      JSON.stringify({ packageManager: '   ' }));
+    const result = pm.detectFromPackageJson(testDir);
+    assert.strictEqual(result, null, 'Whitespace-only packageManager should return null');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
