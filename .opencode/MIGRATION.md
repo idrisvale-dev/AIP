@@ -214,8 +214,8 @@ Create a detailed implementation plan for: $ARGUMENTS
 {
   "instructions": [
     ".opencode/instructions/INSTRUCTIONS.md",
-    "rules/security.md",
-    "rules/coding-style.md"
+    "rules/common/security.md",
+    "rules/common/coding-style.md"
   ]
 }
 ```
