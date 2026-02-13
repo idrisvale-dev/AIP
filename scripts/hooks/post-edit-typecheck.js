@@ -33,7 +33,6 @@ process.stdin.on("end", () => {
       if (!fs.existsSync(resolvedPath)) {
         process.stdout.write(data);
         process.exit(0);
-        return;
       }
       // Find nearest tsconfig.json by walking up (max 20 levels to prevent infinite loop)
       let dir = path.dirname(resolvedPath);
