@@ -44,7 +44,11 @@ async function main() {
       const bytesRead = fs.readSync(fd, buf, 0, 64, 0);
       if (bytesRead > 0) {
         const parsed = parseInt(buf.toString('utf8', 0, bytesRead).trim(), 10);
-        count = Number.isFinite(parsed) ? parsed + 1 : 1;
+        // Clamp to reasonable range — corrupted files could contain huge values
+        // that pass Number.isFinite() (e.g., parseInt('9'.repeat(30)) => 1e+29)
+        count = (Number.isFinite(parsed) && parsed > 0 && parsed <= 1000000)
+          ? parsed + 1
+          : 1;
       }
       // Truncate and write new value
       fs.ftruncateSync(fd, 0);

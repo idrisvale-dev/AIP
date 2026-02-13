@@ -613,6 +613,46 @@ async function runTests() {
     assert.strictEqual(result.code, 0, 'Should not crash on missing file');
   })) passed++; else failed++;
 
+  if (await asyncTest('limits console.log output to 5 matches', async () => {
+    const testDir = createTestDir();
+    const testFile = path.join(testDir, 'many-logs.js');
+    // Create a file with 8 console.log statements
+    const lines = [];
+    for (let i = 1; i <= 8; i++) {
+      lines.push(`console.log('debug ${i}');`);
+    }
+    fs.writeFileSync(testFile, lines.join('\n'));
+
+    const stdinJson = JSON.stringify({ tool_input: { file_path: testFile } });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), stdinJson);
+
+    assert.ok(result.stderr.includes('console.log'), 'Should warn about console.log');
+    // Count how many "debug N" lines appear in stderr (the line-number output)
+    const debugLines = result.stderr.split('\n').filter(l => /^\d+:/.test(l.trim()));
+    assert.ok(debugLines.length <= 5, `Should show at most 5 matches, got ${debugLines.length}`);
+    // Should include debug 1 but not debug 8 (sliced)
+    assert.ok(result.stderr.includes('debug 1'), 'Should include first match');
+    assert.ok(!result.stderr.includes('debug 8'), 'Should not include 8th match');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('ignores console.warn and console.error (only flags console.log)', async () => {
+    const testDir = createTestDir();
+    const testFile = path.join(testDir, 'other-console.ts');
+    fs.writeFileSync(testFile, [
+      'console.warn("this is a warning");',
+      'console.error("this is an error");',
+      'console.debug("this is debug");',
+      'console.info("this is info");',
+    ].join('\n'));
+
+    const stdinJson = JSON.stringify({ tool_input: { file_path: testFile } });
+    const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), stdinJson);
+
+    assert.ok(!result.stderr.includes('WARNING'), 'Should NOT warn about console.warn/error/debug/info');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   if (await asyncTest('passes through original data on stdout', async () => {
     const stdinJson = JSON.stringify({ tool_input: { file_path: '/test.py' } });
     const result = await runScript(path.join(scriptsDir, 'post-edit-console-warn.js'), stdinJson);
@@ -901,6 +941,137 @@ async function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  if (await asyncTest('omits Tools Used and Files Modified sections when empty', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'transcript.jsonl');
+
+    // Only user messages, no tool_use entries
+    const lines = [
+      '{"type":"user","content":"Just chatting"}',
+      '{"type":"user","content":"No tools used at all"}',
+    ];
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+      HOME: testDir
+    });
+    assert.strictEqual(result.code, 0);
+
+    const claudeDir = path.join(testDir, '.claude', 'sessions');
+    if (fs.existsSync(claudeDir)) {
+      const files = fs.readdirSync(claudeDir).filter(f => f.endsWith('.tmp'));
+      if (files.length > 0) {
+        const content = fs.readFileSync(path.join(claudeDir, files[0]), 'utf8');
+        assert.ok(content.includes('### Tasks'), 'Should have Tasks section');
+        assert.ok(!content.includes('### Files Modified'), 'Should NOT have Files Modified when empty');
+        assert.ok(!content.includes('### Tools Used'), 'Should NOT have Tools Used when empty');
+        assert.ok(content.includes('Total user messages: 2'), 'Should show correct message count');
+      }
+    }
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('slices user messages to last 10', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'transcript.jsonl');
+
+    // 15 user messages — should keep only last 10
+    const lines = [];
+    for (let i = 1; i <= 15; i++) {
+      lines.push(`{"type":"user","content":"UserMsg_${i}"}`);
+    }
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+      HOME: testDir
+    });
+    assert.strictEqual(result.code, 0);
+
+    const claudeDir = path.join(testDir, '.claude', 'sessions');
+    if (fs.existsSync(claudeDir)) {
+      const files = fs.readdirSync(claudeDir).filter(f => f.endsWith('.tmp'));
+      if (files.length > 0) {
+        const content = fs.readFileSync(path.join(claudeDir, files[0]), 'utf8');
+        // Should NOT contain first 5 messages (sliced to last 10)
+        assert.ok(!content.includes('UserMsg_1\n'), 'Should not include first message (sliced)');
+        assert.ok(!content.includes('UserMsg_5\n'), 'Should not include 5th message (sliced)');
+        // Should contain messages 6-15
+        assert.ok(content.includes('UserMsg_6'), 'Should include 6th message');
+        assert.ok(content.includes('UserMsg_15'), 'Should include last message');
+        assert.ok(content.includes('Total user messages: 15'), 'Should show total of 15');
+      }
+    }
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('slices tools to first 20', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'transcript.jsonl');
+
+    // 25 unique tools — should keep only first 20
+    const lines = ['{"type":"user","content":"Do stuff"}'];
+    for (let i = 1; i <= 25; i++) {
+      lines.push(`{"type":"tool_use","tool_name":"Tool${i}","tool_input":{}}`);
+    }
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+      HOME: testDir
+    });
+    assert.strictEqual(result.code, 0);
+
+    const claudeDir = path.join(testDir, '.claude', 'sessions');
+    if (fs.existsSync(claudeDir)) {
+      const files = fs.readdirSync(claudeDir).filter(f => f.endsWith('.tmp'));
+      if (files.length > 0) {
+        const content = fs.readFileSync(path.join(claudeDir, files[0]), 'utf8');
+        // Should contain Tool1 through Tool20
+        assert.ok(content.includes('Tool1'), 'Should include Tool1');
+        assert.ok(content.includes('Tool20'), 'Should include Tool20');
+        // Should NOT contain Tool21-25 (sliced)
+        assert.ok(!content.includes('Tool21'), 'Should not include Tool21 (sliced to 20)');
+        assert.ok(!content.includes('Tool25'), 'Should not include Tool25 (sliced to 20)');
+      }
+    }
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (await asyncTest('slices files modified to first 30', async () => {
+    const testDir = createTestDir();
+    const transcriptPath = path.join(testDir, 'transcript.jsonl');
+
+    // 35 unique files via Edit — should keep only first 30
+    const lines = ['{"type":"user","content":"Edit all the things"}'];
+    for (let i = 1; i <= 35; i++) {
+      lines.push(`{"type":"tool_use","tool_name":"Edit","tool_input":{"file_path":"/src/file${i}.ts"}}`);
+    }
+    fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+    const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+    const result = await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+      HOME: testDir
+    });
+    assert.strictEqual(result.code, 0);
+
+    const claudeDir = path.join(testDir, '.claude', 'sessions');
+    if (fs.existsSync(claudeDir)) {
+      const files = fs.readdirSync(claudeDir).filter(f => f.endsWith('.tmp'));
+      if (files.length > 0) {
+        const content = fs.readFileSync(path.join(claudeDir, files[0]), 'utf8');
+        // Should contain file1 through file30
+        assert.ok(content.includes('/src/file1.ts'), 'Should include file1');
+        assert.ok(content.includes('/src/file30.ts'), 'Should include file30');
+        // Should NOT contain file31-35 (sliced)
+        assert.ok(!content.includes('/src/file31.ts'), 'Should not include file31 (sliced to 30)');
+        assert.ok(!content.includes('/src/file35.ts'), 'Should not include file35 (sliced to 30)');
+      }
+    }
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   if (await asyncTest('parses Claude Code JSONL format (entry.message.content)', async () => {
     const testDir = createTestDir();
     const transcriptPath = path.join(testDir, 'transcript.jsonl');
@@ -1183,6 +1354,56 @@ async function runTests() {
       assert.strictEqual(result.code, 0);
       assert.ok(!result.stderr.includes('tool calls reached'), 'Should not suggest below threshold');
       assert.ok(!result.stderr.includes('checkpoint'), 'Should not suggest checkpoint');
+    } finally {
+      try { fs.unlinkSync(counterFile); } catch {}
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('resets counter when file contains huge overflow number', async () => {
+    const sessionId = `test-overflow-${Date.now()}`;
+    const counterFile = path.join(os.tmpdir(), `claude-tool-count-${sessionId}`);
+    try {
+      // Write a value that passes Number.isFinite() but exceeds 1000000 clamp
+      fs.writeFileSync(counterFile, '999999999999');
+      const result = await runScript(path.join(scriptsDir, 'suggest-compact.js'), '', {
+        CLAUDE_SESSION_ID: sessionId
+      });
+      assert.strictEqual(result.code, 0);
+      // Should reset to 1 because 999999999999 > 1000000
+      const newCount = parseInt(fs.readFileSync(counterFile, 'utf8').trim(), 10);
+      assert.strictEqual(newCount, 1, 'Should reset to 1 on overflow value');
+    } finally {
+      try { fs.unlinkSync(counterFile); } catch {}
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('resets counter when file contains negative number', async () => {
+    const sessionId = `test-negative-${Date.now()}`;
+    const counterFile = path.join(os.tmpdir(), `claude-tool-count-${sessionId}`);
+    try {
+      fs.writeFileSync(counterFile, '-42');
+      const result = await runScript(path.join(scriptsDir, 'suggest-compact.js'), '', {
+        CLAUDE_SESSION_ID: sessionId
+      });
+      assert.strictEqual(result.code, 0);
+      const newCount = parseInt(fs.readFileSync(counterFile, 'utf8').trim(), 10);
+      assert.strictEqual(newCount, 1, 'Should reset to 1 on negative value');
+    } finally {
+      try { fs.unlinkSync(counterFile); } catch {}
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('handles COMPACT_THRESHOLD of zero (falls back to 50)', async () => {
+    const sessionId = `test-zero-thresh-${Date.now()}`;
+    const counterFile = path.join(os.tmpdir(), `claude-tool-count-${sessionId}`);
+    try {
+      fs.writeFileSync(counterFile, '49');
+      const result = await runScript(path.join(scriptsDir, 'suggest-compact.js'), '', {
+        CLAUDE_SESSION_ID: sessionId,
+        COMPACT_THRESHOLD: '0'
+      });
+      assert.strictEqual(result.code, 0);
+      assert.ok(result.stderr.includes('50 tool calls reached'), 'Zero threshold should fall back to 50');
     } finally {
       try { fs.unlinkSync(counterFile); } catch {}
     }
