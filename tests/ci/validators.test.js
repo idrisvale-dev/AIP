@@ -217,6 +217,24 @@ function runTests() {
     assert.ok(result.stdout.includes('skipping'), 'Should say skipping');
   })) passed++; else failed++;
 
+  if (test('rejects agent with empty model value', () => {
+    const testDir = createTestDir();
+    fs.writeFileSync(path.join(testDir, 'empty.md'), '---\nmodel:\ntools: Read, Write\n---\n# Empty model');
+    const result = runValidatorWithDir('validate-agents', 'AGENTS_DIR', testDir);
+    assert.strictEqual(result.code, 1, 'Should reject empty model');
+    assert.ok(result.stderr.includes('model'), 'Should mention model field');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('rejects agent with empty tools value', () => {
+    const testDir = createTestDir();
+    fs.writeFileSync(path.join(testDir, 'empty.md'), '---\nmodel: claude-sonnet-4-5-20250929\ntools:\n---\n# Empty tools');
+    const result = runValidatorWithDir('validate-agents', 'AGENTS_DIR', testDir);
+    assert.strictEqual(result.code, 1, 'Should reject empty tools');
+    assert.ok(result.stderr.includes('tools'), 'Should mention tools field');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // ==========================================
   // validate-hooks.js
   // ==========================================
