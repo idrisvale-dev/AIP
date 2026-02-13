@@ -636,6 +636,52 @@ function runTests() {
     assert.strictEqual(result[0].name, 'partial');
   })) passed++; else failed++;
 
+  // ── Round 26 tests ──
+
+  console.log('\nsetAlias (reserved names case sensitivity):');
+
+  if (test('rejects uppercase reserved name LIST', () => {
+    resetAliases();
+    const result = aliases.setAlias('LIST', '/path');
+    assert.strictEqual(result.success, false);
+    assert.ok(result.error.includes('reserved'));
+  })) passed++; else failed++;
+
+  if (test('rejects mixed-case reserved name Help', () => {
+    resetAliases();
+    const result = aliases.setAlias('Help', '/path');
+    assert.strictEqual(result.success, false);
+    assert.ok(result.error.includes('reserved'));
+  })) passed++; else failed++;
+
+  if (test('rejects mixed-case reserved name Set', () => {
+    resetAliases();
+    const result = aliases.setAlias('Set', '/path');
+    assert.strictEqual(result.success, false);
+    assert.ok(result.error.includes('reserved'));
+  })) passed++; else failed++;
+
+  console.log('\nlistAliases (negative limit):');
+
+  if (test('negative limit does not truncate results', () => {
+    resetAliases();
+    aliases.setAlias('one', '/path1');
+    aliases.setAlias('two', '/path2');
+    const list = aliases.listAliases({ limit: -5 });
+    // -5 fails the `limit > 0` check, so no slicing happens
+    assert.strictEqual(list.length, 2, 'Negative limit should not apply');
+  })) passed++; else failed++;
+
+  console.log('\nsetAlias (undefined title):');
+
+  if (test('undefined title becomes null (same as explicit null)', () => {
+    resetAliases();
+    const result = aliases.setAlias('undef-title', '/path', undefined);
+    assert.strictEqual(result.success, true);
+    const resolved = aliases.resolveAlias('undef-title');
+    assert.strictEqual(resolved.title, null, 'undefined title should become null');
+  })) passed++; else failed++;
+
   // Cleanup — restore both HOME and USERPROFILE (Windows)
   process.env.HOME = origHome;
   if (origUserProfile !== undefined) {
