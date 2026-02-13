@@ -1488,6 +1488,22 @@ src/main.ts
       'Content without session items should have 0 totalItems');
   })) passed++; else failed++;
 
+  // ── Round 95: getAllSessions with both negative offset AND negative limit ──
+  console.log('\nRound 95: getAllSessions (both negative offset and negative limit):');
+
+  if (test('getAllSessions clamps both negative offset (to 0) and negative limit (to 1) simultaneously', () => {
+    const result = sessionManager.getAllSessions({ offset: -5, limit: -10 });
+    // offset clamped: Math.max(0, Math.floor(-5)) → 0
+    // limit clamped: Math.max(1, Math.floor(-10)) → 1
+    // slice(0, 0+1) → first session only
+    assert.strictEqual(result.offset, 0,
+      'Negative offset should be clamped to 0');
+    assert.strictEqual(result.limit, 1,
+      'Negative limit should be clamped to 1');
+    assert.ok(result.sessions.length <= 1,
+      'Should return at most 1 session (slice(0, 1))');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

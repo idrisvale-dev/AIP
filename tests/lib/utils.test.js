@@ -1282,6 +1282,24 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 95: countInFile with regex alternation (no g flag) ──
+  console.log('\nRound 95: countInFile (regex alternation without g flag):');
+
+  if (test('countInFile with /apple|banana/ (alternation, no g) counts all matches', () => {
+    const tmpDir = path.join(utils.getTempDir(), `ecc-r95-alternation-${Date.now()}`);
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const testFile = path.join(tmpDir, 'alternation.txt');
+    try {
+      utils.writeFile(testFile, 'apple banana apple cherry banana apple');
+      // /apple|banana/ has alternation but no g flag — countInFile should auto-append g
+      const count = utils.countInFile(testFile, /apple|banana/);
+      assert.strictEqual(count, 5,
+        'Should find 3 apples + 2 bananas = 5 total (g flag auto-appended to alternation regex)');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

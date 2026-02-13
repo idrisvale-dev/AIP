@@ -1272,6 +1272,28 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 95: renameAlias with same old and new name (self-rename) ──
+  console.log('\nRound 95: renameAlias (self-rename same name):');
+
+  if (test('renameAlias returns "already exists" error when renaming alias to itself', () => {
+    resetAliases();
+    // Create an alias first
+    const created = aliases.setAlias('self-rename', '/path/session', 'Self Rename');
+    assert.strictEqual(created.success, true, 'Setup: alias should be created');
+
+    // Attempt to rename to the same name
+    const result = aliases.renameAlias('self-rename', 'self-rename');
+    assert.strictEqual(result.success, false, 'Renaming to itself should fail');
+    assert.ok(result.error.includes('already exists'),
+      'Error should indicate alias already exists (line 333-334 check)');
+
+    // Verify original alias is still intact
+    const resolved = aliases.resolveAlias('self-rename');
+    assert.ok(resolved, 'Original alias should still exist after failed self-rename');
+    assert.strictEqual(resolved.sessionPath, '/path/session',
+      'Alias data should be preserved');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
