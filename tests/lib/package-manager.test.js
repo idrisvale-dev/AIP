@@ -1164,6 +1164,38 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 48: detectFromPackageJson format edge cases ──
+  console.log('\nRound 48: detectFromPackageJson (version format edge cases):');
+
+  if (test('returns null for packageManager with non-@ separator', () => {
+    const testDir = createTestDir();
+    try {
+      fs.writeFileSync(path.join(testDir, 'package.json'), JSON.stringify({
+        name: 'test',
+        packageManager: 'pnpm+8.6.0'
+      }));
+      const result = pm.detectFromPackageJson(testDir);
+      // split('@') on 'pnpm+8.6.0' returns ['pnpm+8.6.0'], which doesn't match PACKAGE_MANAGERS
+      assert.strictEqual(result, null, 'Non-@ format should not match any package manager');
+    } finally {
+      cleanupTestDir(testDir);
+    }
+  })) passed++; else failed++;
+
+  if (test('extracts package manager from caret version like yarn@^4.0.0', () => {
+    const testDir = createTestDir();
+    try {
+      fs.writeFileSync(path.join(testDir, 'package.json'), JSON.stringify({
+        name: 'test',
+        packageManager: 'yarn@^4.0.0'
+      }));
+      const result = pm.detectFromPackageJson(testDir);
+      assert.strictEqual(result, 'yarn', 'Caret version should still extract PM name');
+    } finally {
+      cleanupTestDir(testDir);
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

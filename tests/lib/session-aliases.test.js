@@ -839,6 +839,23 @@ function runTests() {
     // best-effort
   }
 
+  // ── Round 48: rapid sequential saves data integrity ──
+  console.log('\nRound 48: rapid sequential saves:');
+
+  if (test('rapid sequential setAlias calls maintain data integrity', () => {
+    resetAliases();
+    for (let i = 0; i < 5; i++) {
+      const result = aliases.setAlias(`rapid-${i}`, `/path/${i}`, `Title ${i}`);
+      assert.strictEqual(result.success, true, `setAlias rapid-${i} should succeed`);
+    }
+    const data = aliases.loadAliases();
+    for (let i = 0; i < 5; i++) {
+      assert.ok(data.aliases[`rapid-${i}`], `rapid-${i} should exist after all saves`);
+      assert.strictEqual(data.aliases[`rapid-${i}`].sessionPath, `/path/${i}`);
+    }
+    assert.strictEqual(data.metadata.totalCount, 5, 'Metadata count should match actual aliases');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
