@@ -1294,6 +1294,22 @@ function runTests() {
       'Alias data should be preserved');
   })) passed++; else failed++;
 
+  // ── Round 100: cleanupAliases callback returning falsy non-boolean 0 ──
+  console.log('\nRound 100: cleanupAliases (callback returns 0 — falsy non-boolean coercion):');
+  if (test('cleanupAliases removes alias when callback returns 0 (falsy coercion: !0 === true)', () => {
+    resetAliases();
+    aliases.setAlias('zero-test', '/sessions/some-session', '2026-01-15');
+    // callback returns 0 (a falsy value) — !0 === true → alias is removed
+    const result = aliases.cleanupAliases(() => 0);
+    assert.strictEqual(result.removed, 1,
+      'Alias should be removed because !0 === true (JavaScript falsy coercion)');
+    assert.strictEqual(result.success, true,
+      'Cleanup should succeed');
+    const resolved = aliases.resolveAlias('zero-test');
+    assert.strictEqual(resolved, null,
+      'Alias should no longer exist after removal');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

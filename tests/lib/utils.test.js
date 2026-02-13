@@ -1422,6 +1422,38 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 100: findFiles with both maxAge AND recursive (interaction test) ──
+  console.log('\nRound 100: findFiles (maxAge + recursive combined — untested interaction):');
+  if (test('findFiles with maxAge AND recursive filters age across subdirectories', () => {
+    const tmpDir = fs.mkdtempSync(path.join(utils.getTempDir(), 'r100-maxage-recur-'));
+    const subDir = path.join(tmpDir, 'nested');
+    try {
+      fs.mkdirSync(subDir);
+      // Create files: one in root, one in subdirectory
+      const rootFile = path.join(tmpDir, 'root.txt');
+      const nestedFile = path.join(subDir, 'nested.txt');
+      fs.writeFileSync(rootFile, 'root file');
+      fs.writeFileSync(nestedFile, 'nested file');
+
+      // maxAge: 1 with recursive: true — both files are fresh (ageInDays ≈ 0)
+      const results = utils.findFiles(tmpDir, '*.txt', { maxAge: 1, recursive: true });
+      assert.strictEqual(results.length, 2,
+        'Both root and nested files should match (fresh, maxAge: 1, recursive: true)');
+
+      // maxAge: -1 with recursive: true — no files should match (age always >= 0)
+      const noResults = utils.findFiles(tmpDir, '*.txt', { maxAge: -1, recursive: true });
+      assert.strictEqual(noResults.length, 0,
+        'maxAge: -1 should exclude all files even in subdirectories');
+
+      // maxAge: 1 with recursive: false — only root file
+      const rootOnly = utils.findFiles(tmpDir, '*.txt', { maxAge: 1, recursive: false });
+      assert.strictEqual(rootOnly.length, 1,
+        'recursive: false should only find root-level file');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

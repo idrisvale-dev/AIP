@@ -1606,6 +1606,28 @@ src/main.ts
       'null path should be caught by try/catch and return false');
   })) passed++; else failed++;
 
+  // ── Round 100: parseSessionMetadata with ### inside item text (premature section termination) ──
+  console.log('\nRound 100: parseSessionMetadata (### in item text — lazy regex truncation):');
+  if (test('parseSessionMetadata truncates item text at embedded ### due to lazy regex lookahead', () => {
+    const content = `# Session
+
+### Completed
+- [x] Fix issue ### with parser
+- [x] Normal task
+
+### In Progress
+- [ ] Debug output
+`;
+    const meta = sessionManager.parseSessionMetadata(content);
+    // The lazy regex ([\s\S]*?)(?=###|\n\n|$) terminates at the first ###
+    // So the Completed section captures only "- [x] Fix issue " (before the inner ###)
+    // The second item "- [x] Normal task" is lost because it's after the inner ###
+    assert.strictEqual(meta.completed.length, 1,
+      'Only 1 item extracted — second item is after the inner ### terminator');
+    assert.strictEqual(meta.completed[0], 'Fix issue',
+      'Item text truncated at embedded ### (lazy regex stops at first ### match)');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
