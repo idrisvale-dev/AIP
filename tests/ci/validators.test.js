@@ -2105,6 +2105,40 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  // ── Round 83: validate-agents whitespace-only field, validate-skills empty SKILL.md ──
+
+  console.log('\nRound 83: validate-agents (whitespace-only frontmatter field value):');
+
+  if (test('rejects agent with whitespace-only model field (trim guard)', () => {
+    const testDir = createTestDir();
+    // model has only whitespace — extractFrontmatter produces { model: '   ', tools: 'Read' }
+    // The condition: typeof frontmatter[field] === 'string' && !frontmatter[field].trim()
+    // evaluates to true for model → "Missing required field: model"
+    fs.writeFileSync(path.join(testDir, 'ws.md'), '---\nmodel:   \ntools: Read\n---\n# Whitespace model');
+
+    const result = runValidatorWithDir('validate-agents', 'AGENTS_DIR', testDir);
+    assert.strictEqual(result.code, 1, 'Should reject whitespace-only model');
+    assert.ok(result.stderr.includes('model'), 'Should report missing model field');
+    assert.ok(!result.stderr.includes('tools'), 'tools field is valid and should NOT be flagged');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  console.log('\nRound 83: validate-skills (empty SKILL.md file):');
+
+  if (test('rejects skill directory with empty SKILL.md file', () => {
+    const testDir = createTestDir();
+    const skillDir = path.join(testDir, 'empty-skill');
+    fs.mkdirSync(skillDir, { recursive: true });
+    // Create SKILL.md with only whitespace (trim to zero length)
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '   \n  \n');
+
+    const result = runValidatorWithDir('validate-skills', 'SKILLS_DIR', testDir);
+    assert.strictEqual(result.code, 1, 'Should reject empty SKILL.md');
+    assert.ok(result.stderr.includes('Empty file'),
+      `Should report "Empty file", got: ${result.stderr}`);
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

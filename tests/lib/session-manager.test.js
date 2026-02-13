@@ -1308,6 +1308,47 @@ src/main.ts
     assert.strictEqual(stats.hasContext, false, 'null input should yield hasContext false');
   })) passed++; else failed++;
 
+  // ── Round 83: getAllSessions TOCTOU statSync catch (broken symlink) ──
+  console.log('\nRound 83: getAllSessions (broken symlink — statSync catch):');
+
+  if (test('getAllSessions skips broken symlink .tmp files gracefully', () => {
+    // getAllSessions at line 241-246: statSync throws for broken symlinks,
+    // the catch causes `continue`, skipping that entry entirely.
+    const isoHome = path.join(os.tmpdir(), `ecc-r83-toctou-${Date.now()}`);
+    const sessionsDir = path.join(isoHome, '.claude', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+
+    // Create one real session file
+    const realFile = '2026-02-10-abcd1234-session.tmp';
+    fs.writeFileSync(path.join(sessionsDir, realFile), '# Real session\n');
+
+    // Create a broken symlink that matches the session filename pattern
+    const brokenSymlink = '2026-02-10-deadbeef-session.tmp';
+    fs.symlinkSync('/nonexistent/path/that/does/not/exist', path.join(sessionsDir, brokenSymlink));
+
+    const origHome = process.env.HOME;
+    const origUserProfile = process.env.USERPROFILE;
+    process.env.HOME = isoHome;
+    process.env.USERPROFILE = isoHome;
+    try {
+      delete require.cache[require.resolve('../../scripts/lib/session-manager')];
+      delete require.cache[require.resolve('../../scripts/lib/utils')];
+      const freshManager = require('../../scripts/lib/session-manager');
+      const result = freshManager.getAllSessions({ limit: 100 });
+
+      // Should have only the real session, not the broken symlink
+      assert.strictEqual(result.total, 1, 'Should find only the real session, not the broken symlink');
+      assert.ok(result.sessions[0].filename === realFile,
+        `Should return the real file, got: ${result.sessions[0].filename}`);
+    } finally {
+      process.env.HOME = origHome;
+      process.env.USERPROFILE = origUserProfile;
+      delete require.cache[require.resolve('../../scripts/lib/session-manager')];
+      delete require.cache[require.resolve('../../scripts/lib/utils')];
+      fs.rmSync(isoHome, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
