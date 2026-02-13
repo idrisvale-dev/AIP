@@ -626,6 +626,51 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // readStdinJson tests (via subprocess — safe hardcoded inputs)
+  console.log('\nreadStdinJson():');
+
+  if (test('readStdinJson parses valid JSON from stdin', () => {
+    const { execSync } = require('child_process');
+    const script = 'const u=require("./scripts/lib/utils");u.readStdinJson({timeoutMs:2000}).then(d=>{process.stdout.write(JSON.stringify(d))})';
+    const result = execSync(
+      `echo '{"tool_input":{"command":"ls"}}' | node -e '${script}'`,
+      { encoding: 'utf8', cwd: path.join(__dirname, '..', '..'), timeout: 5000 }
+    );
+    const parsed = JSON.parse(result);
+    assert.deepStrictEqual(parsed, { tool_input: { command: 'ls' } });
+  })) passed++; else failed++;
+
+  if (test('readStdinJson returns {} for invalid JSON', () => {
+    const { execSync } = require('child_process');
+    const script = 'const u=require("./scripts/lib/utils");u.readStdinJson({timeoutMs:2000}).then(d=>{process.stdout.write(JSON.stringify(d))})';
+    const result = execSync(
+      `echo 'not json' | node -e '${script}'`,
+      { encoding: 'utf8', cwd: path.join(__dirname, '..', '..'), timeout: 5000 }
+    );
+    assert.deepStrictEqual(JSON.parse(result), {});
+  })) passed++; else failed++;
+
+  if (test('readStdinJson returns {} for empty stdin', () => {
+    const { execSync } = require('child_process');
+    const script = 'const u=require("./scripts/lib/utils");u.readStdinJson({timeoutMs:2000}).then(d=>{process.stdout.write(JSON.stringify(d))})';
+    const result = execSync(
+      `echo '' | node -e '${script}'`,
+      { encoding: 'utf8', cwd: path.join(__dirname, '..', '..'), timeout: 5000 }
+    );
+    assert.deepStrictEqual(JSON.parse(result), {});
+  })) passed++; else failed++;
+
+  if (test('readStdinJson handles nested objects', () => {
+    const { execSync } = require('child_process');
+    const script = 'const u=require("./scripts/lib/utils");u.readStdinJson({timeoutMs:2000}).then(d=>{process.stdout.write(JSON.stringify(d))})';
+    const result = execSync(
+      `echo '{"a":{"b":1},"c":[1,2]}' | node -e '${script}'`,
+      { encoding: 'utf8', cwd: path.join(__dirname, '..', '..'), timeout: 5000 }
+    );
+    const parsed = JSON.parse(result);
+    assert.deepStrictEqual(parsed, { a: { b: 1 }, c: [1, 2] });
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

@@ -201,6 +201,31 @@ function runTests() {
     assert.ok(logs.length > 0, 'Should produce output without crash');
   })) passed++; else failed++;
 
+  // box() alignment regression test
+  console.log('\nbox() alignment:');
+
+  if (test('top, middle, and bottom lines have equal visual width', () => {
+    const output = new SkillCreateOutput('repo', { width: 40 });
+    const logs = captureLog(() => output.instincts([
+      { name: 'test', confidence: 0.9 },
+    ]));
+    const combined = logs.join('\n');
+    const boxLines = combined.split('\n').filter(l => stripAnsi(l).trim().length > 0);
+    // Find lines that start with box-drawing characters
+    const boxDrawn = boxLines.filter(l => {
+      const s = stripAnsi(l).trim();
+      return s.startsWith('\u256D') || s.startsWith('\u2502') || s.startsWith('\u2570');
+    });
+    if (boxDrawn.length >= 3) {
+      const widths = boxDrawn.map(l => stripAnsi(l).length);
+      const firstWidth = widths[0];
+      widths.forEach((w, i) => {
+        assert.strictEqual(w, firstWidth,
+          `Line ${i} width ${w} should match first line width ${firstWidth}`);
+      });
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
