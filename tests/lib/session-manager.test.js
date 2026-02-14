@@ -1785,6 +1785,36 @@ file.ts
     }
   })) passed++; else failed++;
 
+  // ── Round 108: getSessionSize exact boundary at 1024 bytes — B→KB transition ──
+  console.log('\nRound 108: getSessionSize (exact 1024-byte boundary — < means 1024 is KB, 1023 is B):');
+  if (test('getSessionSize returns KB at exactly 1024 bytes and B at 1023', () => {
+    const dir = createTempSessionDir();
+    try {
+      // Exactly 1024 bytes → size < 1024 is FALSE → goes to KB branch
+      const atBoundary = path.join(dir, 'exact-1024.tmp');
+      fs.writeFileSync(atBoundary, 'x'.repeat(1024));
+      const sizeAt = sessionManager.getSessionSize(atBoundary);
+      assert.strictEqual(sizeAt, '1.0 KB',
+        'Exactly 1024 bytes should return "1.0 KB" (not "1024 B")');
+
+      // 1023 bytes → size < 1024 is TRUE → stays in B branch
+      const belowBoundary = path.join(dir, 'below-1024.tmp');
+      fs.writeFileSync(belowBoundary, 'x'.repeat(1023));
+      const sizeBelow = sessionManager.getSessionSize(belowBoundary);
+      assert.strictEqual(sizeBelow, '1023 B',
+        '1023 bytes should return "1023 B" (still in bytes range)');
+
+      // Exactly 1MB boundary → 1048576 bytes
+      const atMB = path.join(dir, 'exact-1mb.tmp');
+      fs.writeFileSync(atMB, 'x'.repeat(1024 * 1024));
+      const sizeMB = sessionManager.getSessionSize(atMB);
+      assert.strictEqual(sizeMB, '1.0 MB',
+        'Exactly 1MB should return "1.0 MB" (not "1024.0 KB")');
+    } finally {
+      cleanup(dir);
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

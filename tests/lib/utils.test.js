@@ -1629,6 +1629,29 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 108: grepFile with Unicode/emoji content — UTF-16 string matching on split lines ──
+  console.log('\nRound 108: grepFile (Unicode/emoji — regex matching on UTF-16 split lines):');
+  if (test('grepFile finds Unicode emoji patterns across lines', () => {
+    const tmpDir = fs.mkdtempSync(path.join(utils.getTempDir(), 'r108-grep-unicode-'));
+    const testFile = path.join(tmpDir, 'test.txt');
+    try {
+      fs.writeFileSync(testFile, '🎉 celebration\nnormal line\n🎉 party\n日本語テスト');
+      const emojiResults = utils.grepFile(testFile, /🎉/);
+      assert.strictEqual(emojiResults.length, 2,
+        'Should find emoji on 2 lines (lines 1 and 3)');
+      assert.strictEqual(emojiResults[0].lineNumber, 1);
+      assert.strictEqual(emojiResults[1].lineNumber, 3);
+      const cjkResults = utils.grepFile(testFile, /日本語/);
+      assert.strictEqual(cjkResults.length, 1,
+        'Should find CJK characters on line 4');
+      assert.strictEqual(cjkResults[0].lineNumber, 4);
+      assert.ok(cjkResults[0].content.includes('日本語テスト'),
+        'Matched line should contain full CJK text');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
