@@ -1728,6 +1728,77 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 114: replaceInFile options.all is silently ignored for RegExp search ──
+  console.log('\nRound 114: replaceInFile (options.all silently ignored for RegExp search):');
+  if (test('replaceInFile ignores options.all when search is a RegExp — falls through to .replace()', () => {
+    const tmpDir = fs.mkdtempSync(path.join(utils.getTempDir(), 'r114-all-regex-'));
+    const testFile = path.join(tmpDir, 'test.txt');
+    try {
+      // File with repeated pattern: "foo bar foo baz foo"
+      fs.writeFileSync(testFile, 'foo bar foo baz foo');
+
+      // With options.all=true and a non-global RegExp:
+      // Line 411: (options.all && typeof search === 'string') → false (RegExp !== string)
+      // Falls through to content.replace(regex, replace) — only replaces FIRST match
+      const result = utils.replaceInFile(testFile, /foo/, 'QUX', { all: true });
+      assert.strictEqual(result, true, 'Should succeed');
+      const content = utils.readFile(testFile);
+      assert.strictEqual(content, 'QUX bar foo baz foo',
+        'Non-global RegExp with options.all=true should still only replace FIRST match');
+
+      // Contrast: global RegExp replaces all regardless of options.all
+      fs.writeFileSync(testFile, 'foo bar foo baz foo');
+      utils.replaceInFile(testFile, /foo/g, 'QUX', { all: true });
+      const globalContent = utils.readFile(testFile);
+      assert.strictEqual(globalContent, 'QUX bar QUX baz QUX',
+        'Global RegExp replaces all matches (options.all irrelevant for RegExp)');
+
+      // String with options.all=true — uses replaceAll, replaces ALL occurrences
+      fs.writeFileSync(testFile, 'foo bar foo baz foo');
+      utils.replaceInFile(testFile, 'foo', 'QUX', { all: true });
+      const allContent = utils.readFile(testFile);
+      assert.strictEqual(allContent, 'QUX bar QUX baz QUX',
+        'String with options.all=true uses replaceAll — replaces ALL occurrences');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
+  // ── Round 114: output with object containing BigInt — JSON.stringify throws ──
+  console.log('\nRound 114: output (object containing BigInt — JSON.stringify throws):');
+  if (test('output throws TypeError when object contains BigInt values (JSON.stringify cannot serialize)', () => {
+    // Capture original console.log to prevent actual output during test
+    const originalLog = console.log;
+
+    try {
+      // Plain BigInt — typeof is 'bigint', not 'object', so goes to else branch
+      // console.log can handle BigInt directly (prints "42n")
+      let captured = null;
+      console.log = (val) => { captured = val; };
+      utils.output(BigInt(42));
+      // Node.js console.log prints BigInt as-is
+      assert.strictEqual(captured, BigInt(42), 'Plain BigInt goes to else branch, logged directly');
+
+      // Object containing BigInt — typeof is 'object', so JSON.stringify is called
+      // JSON.stringify(BigInt) throws: "Do not know how to serialize a BigInt"
+      console.log = originalLog; // restore before throw test
+      assert.throws(
+        () => utils.output({ value: BigInt(42) }),
+        (err) => err instanceof TypeError && /BigInt/.test(err.message),
+        'Object with BigInt should throw TypeError from JSON.stringify'
+      );
+
+      // Array containing BigInt — also typeof 'object'
+      assert.throws(
+        () => utils.output([BigInt(1), BigInt(2)]),
+        (err) => err instanceof TypeError && /BigInt/.test(err.message),
+        'Array with BigInt should also throw TypeError from JSON.stringify'
+      );
+    } finally {
+      console.log = originalLog;
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

@@ -1452,6 +1452,37 @@ function runTests() {
       'Cyrillic homoglyph "е" (U+0435) should be rejected even though it looks like "e"');
   })) passed++; else failed++;
 
+  // ── Round 114: listAliases with non-string search (number) — TypeError on toLowerCase ──
+  console.log('\nRound 114: listAliases (non-string search — number triggers TypeError):');
+  if (test('listAliases throws TypeError when search option is a number (no toLowerCase method)', () => {
+    resetAliases();
+
+    // Set up some aliases to search through
+    aliases.setAlias('alpha-session', '/path/to/alpha');
+    aliases.setAlias('beta-session', '/path/to/beta');
+
+    // String search works fine — baseline
+    const stringResult = aliases.listAliases({ search: 'alpha' });
+    assert.strictEqual(stringResult.length, 1, 'String search should find 1 match');
+    assert.strictEqual(stringResult[0].name, 'alpha-session');
+
+    // Numeric search — search.toLowerCase() at line 261 of session-aliases.js
+    // throws TypeError because Number.prototype has no toLowerCase method.
+    // The code does NOT guard against non-string search values.
+    assert.throws(
+      () => aliases.listAliases({ search: 123 }),
+      (err) => err instanceof TypeError && /toLowerCase/.test(err.message),
+      'Numeric search value should throw TypeError from toLowerCase call'
+    );
+
+    // Boolean search — also lacks toLowerCase
+    assert.throws(
+      () => aliases.listAliases({ search: true }),
+      (err) => err instanceof TypeError && /toLowerCase/.test(err.message),
+      'Boolean search value should also throw TypeError'
+    );
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
