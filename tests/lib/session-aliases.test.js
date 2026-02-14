@@ -1310,6 +1310,23 @@ function runTests() {
       'Alias should no longer exist after removal');
   })) passed++; else failed++;
 
+  // ── Round 102: setAlias with title=0 (falsy number coercion) ──
+  console.log('\nRound 102: setAlias (title=0 — falsy coercion silently converts to null):');
+  if (test('setAlias with title=0 stores null (0 || null === null due to JavaScript falsy coercion)', () => {
+    // session-aliases.js line 221: `title: title || null` — the value 0 is falsy
+    // in JavaScript, so `0 || null` evaluates to `null`.  This means numeric
+    // titles like 0 are silently discarded.
+    resetAliases();
+    const result = aliases.setAlias('zero-title', '/sessions/test', 0);
+    assert.strictEqual(result.success, true,
+      'setAlias should succeed (0 is valid as a truthy check bypass)');
+    assert.strictEqual(result.title, null,
+      'Title should be null because 0 || null === null (falsy coercion)');
+    const resolved = aliases.resolveAlias('zero-title');
+    assert.strictEqual(resolved.title, null,
+      'Persisted title should be null after round-trip through saveAliases/loadAliases');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

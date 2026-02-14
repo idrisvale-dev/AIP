@@ -1648,6 +1648,47 @@ src/main.ts
       'null path should cause fs.appendFileSync to throw TypeError, caught by try/catch');
   })) passed++; else failed++;
 
+  // ── Round 102: getSessionStats with Unix nonexistent .tmp path (looksLikePath heuristic) ──
+  console.log('\nRound 102: getSessionStats (Unix nonexistent .tmp path — looksLikePath → null content):');
+  if (test('getSessionStats returns zeroed stats when Unix path looks like file but does not exist', () => {
+    // session-manager.js lines 163-166: looksLikePath heuristic checks typeof string,
+    // no newlines, endsWith('.tmp'), startsWith('/').  A nonexistent Unix path triggers
+    // the file-read branch → readFile returns null → parseSessionMetadata(null) returns
+    // default empty metadata → lineCount: null ? ... : 0 === 0.
+    const stats = sessionManager.getSessionStats('/nonexistent/deep/path/session.tmp');
+    assert.strictEqual(stats.totalItems, 0,
+      'No items from nonexistent file (parseSessionMetadata(null) returns empty arrays)');
+    assert.strictEqual(stats.lineCount, 0,
+      'lineCount: 0 because content is null (ternary guard at line 177)');
+    assert.strictEqual(stats.hasNotes, false,
+      'No notes section in null content');
+    assert.strictEqual(stats.hasContext, false,
+      'No context section in null content');
+  })) passed++; else failed++;
+
+  // ── Round 102: parseSessionMetadata with [x] checked items in In Progress section ──
+  console.log('\nRound 102: parseSessionMetadata ([x] items in In Progress — regex skips checked):');
+  if (test('parseSessionMetadata skips [x] checked items in In Progress section (regex only matches [ ])', () => {
+    // session-manager.js line 130: progressSection regex uses `- \[ \]\s*(.+)` which
+    // only matches unchecked checkboxes.  Checked items `- [x]` in the In Progress
+    // section are silently ignored — they don't match the regex pattern.
+    const content = `# Session
+
+### In Progress
+- [x] Already finished but placed here by mistake
+- [ ] Actually in progress
+- [x] Another misplaced completed item
+- [ ] Second active task
+`;
+    const meta = sessionManager.parseSessionMetadata(content);
+    assert.strictEqual(meta.inProgress.length, 2,
+      'Only unchecked [ ] items should be captured (2 of 4)');
+    assert.strictEqual(meta.inProgress[0], 'Actually in progress',
+      'First unchecked item');
+    assert.strictEqual(meta.inProgress[1], 'Second active task',
+      'Second unchecked item');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
