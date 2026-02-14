@@ -2442,6 +2442,113 @@ file.ts
       'CRLF notes >= LF notes length (CRLF may bleed past blank line)');
   })) passed++; else failed++;
 
+  // ── Round 124: getAllSessions with invalid date format (strict equality, no normalization) ──
+  console.log('\nRound 124: getAllSessions (invalid date format — strict !== comparison):');
+  if (test('getAllSessions date filter uses strict equality so wrong format returns empty', () => {
+    // session-manager.js line 228: `if (date && metadata.date !== date)` — strict inequality.
+    // metadata.date is always "YYYY-MM-DD" format. Passing a different format like
+    // "2026/01/15" or "Jan 15 2026" will never match, silently returning empty.
+    // No validation or normalization occurs on the date parameter.
+    const origHome = process.env.HOME;
+    const origDir = process.env.CLAUDE_DIR;
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'r124-date-format-'));
+    const homeDir = path.join(tmpDir, 'home');
+    fs.mkdirSync(path.join(homeDir, '.claude', 'sessions'), { recursive: true });
+
+    try {
+      process.env.HOME = homeDir;
+      delete process.env.CLAUDE_DIR;
+      delete require.cache[require.resolve('../../scripts/lib/utils')];
+      delete require.cache[require.resolve('../../scripts/lib/session-manager')];
+      const freshSM = require('../../scripts/lib/session-manager');
+
+      // Create a session file with valid date
+      const sessionsDir = path.join(homeDir, '.claude', 'sessions');
+      fs.writeFileSync(
+        path.join(sessionsDir, '2026-01-15-abcd1234-session.tmp'),
+        '# Test Session'
+      );
+
+      // Correct format — should find 1 session
+      const correct = freshSM.getAllSessions({ date: '2026-01-15' });
+      assert.strictEqual(correct.sessions.length, 1,
+        'Correct YYYY-MM-DD format should match');
+
+      // Wrong separator — strict !== means no match
+      const wrongSep = freshSM.getAllSessions({ date: '2026/01/15' });
+      assert.strictEqual(wrongSep.sessions.length, 0,
+        'Slash-separated date does not match (strict string equality)');
+
+      // US format — no match
+      const usFormat = freshSM.getAllSessions({ date: '01-15-2026' });
+      assert.strictEqual(usFormat.sessions.length, 0,
+        'MM-DD-YYYY format does not match YYYY-MM-DD');
+
+      // Partial date — no match
+      const partial = freshSM.getAllSessions({ date: '2026-01' });
+      assert.strictEqual(partial.sessions.length, 0,
+        'Partial YYYY-MM does not match full YYYY-MM-DD');
+
+      // null date — skips filter, returns all
+      const nullDate = freshSM.getAllSessions({ date: null });
+      assert.strictEqual(nullDate.sessions.length, 1,
+        'null date skips filter and returns all sessions');
+    } finally {
+      process.env.HOME = origHome;
+      if (origDir) process.env.CLAUDE_DIR = origDir;
+      delete require.cache[require.resolve('../../scripts/lib/utils')];
+      delete require.cache[require.resolve('../../scripts/lib/session-manager')];
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
+  // ── Round 124: parseSessionMetadata title edge cases (no space, wrong level, multiple, empty) ──
+  console.log('\nRound 124: parseSessionMetadata (title regex edge cases — /^#\\s+(.+)$/m):');
+  if (test('parseSessionMetadata title: no space after # fails, ## fails, multiple picks first, empty trims', () => {
+    // session-manager.js line 95: /^#\s+(.+)$/m
+    // \s+ requires at least one whitespace after #, (.+) captures rest of line
+
+    // No space after # — \s+ fails to match
+    const noSpace = '#NoSpaceTitle\n\nSome content';
+    const meta1 = sessionManager.parseSessionMetadata(noSpace);
+    assert.strictEqual(meta1.title, null,
+      '#NoSpaceTitle has no whitespace after # → title is null');
+
+    // ## (H2) heading — ^ anchors to line start, but # matches first char only
+    // /^#\s+/ matches the first # then \s+ would need whitespace, but ## has another #
+    // Actually: /^#\s+(.+)$/ → "##" → # then \s+ → # is not whitespace → no match
+    const h2 = '## Subtitle\n\nContent';
+    const meta2 = sessionManager.parseSessionMetadata(h2);
+    assert.strictEqual(meta2.title, null,
+      '## heading does not match /^#\\s+/ because second # is not whitespace');
+
+    // Multiple # headings — first match wins (regex .match returns first)
+    const multiple = '# First Title\n\n# Second Title\n\nContent';
+    const meta3 = sessionManager.parseSessionMetadata(multiple);
+    assert.strictEqual(meta3.title, 'First Title',
+      'Multiple H1 headings: .match() returns first occurrence');
+
+    // # followed by spaces then text — leading spaces in capture are trimmed
+    const padded = '#   Padded Title   \n\nContent';
+    const meta4 = sessionManager.parseSessionMetadata(padded);
+    assert.strictEqual(meta4.title, 'Padded Title',
+      'Extra spaces: \\s+ matches multiple spaces, (.+) captures, .trim() cleans');
+
+    // # followed by just spaces (no actual title text)
+    // Surprising: \s+ is greedy and includes \n, so it matches "    \n\n" (spaces + newlines)
+    // Then (.+) captures "Content" from the next non-empty line!
+    const spacesOnly = '#    \n\nContent';
+    const meta5 = sessionManager.parseSessionMetadata(spacesOnly);
+    assert.strictEqual(meta5.title, 'Content',
+      'Spaces-only after # → \\s+ greedily matches spaces+newlines, (.+) captures next line text');
+
+    // Tab after # — \s includes tab
+    const tabTitle = '#\tTab Title\n\nContent';
+    const meta6 = sessionManager.parseSessionMetadata(tabTitle);
+    assert.strictEqual(meta6.title, 'Tab Title',
+      'Tab after # matches \\s+ (\\s includes \\t)');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

@@ -2189,6 +2189,49 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 124: findFiles matches dotfiles (unlike shell glob where * excludes hidden files) ──
+  console.log('\nRound 124: findFiles (* glob matches dotfiles — unlike shell globbing):');
+  if (test('findFiles with * pattern matches dotfiles because .* regex includes hidden files', () => {
+    // In shell: `ls *` excludes .hidden files. In findFiles, `*` → `.*` regex which
+    // matches ANY filename including those starting with `.`. This is a behavioral
+    // difference from shell globbing that could surprise users.
+    const tmpDir = fs.mkdtempSync(path.join(utils.getTempDir(), 'r124-dotfiles-'));
+    try {
+      // Create normal and hidden files
+      fs.writeFileSync(path.join(tmpDir, 'normal.txt'), 'visible');
+      fs.writeFileSync(path.join(tmpDir, '.hidden'), 'hidden');
+      fs.writeFileSync(path.join(tmpDir, '.gitignore'), 'ignore');
+      fs.writeFileSync(path.join(tmpDir, 'README.md'), 'readme');
+
+      // * matches ALL files including dotfiles
+      const allResults = utils.findFiles(tmpDir, '*');
+      const names = allResults.map(r => path.basename(r.path)).sort();
+      assert.ok(names.includes('.hidden'),
+        '* should match .hidden (unlike shell glob)');
+      assert.ok(names.includes('.gitignore'),
+        '* should match .gitignore');
+      assert.ok(names.includes('normal.txt'),
+        '* should match normal.txt');
+      assert.strictEqual(names.length, 4,
+        'Should find all 4 files including 2 dotfiles');
+
+      // *.txt does NOT match dotfiles (because they don't end with .txt)
+      const txtResults = utils.findFiles(tmpDir, '*.txt');
+      assert.strictEqual(txtResults.length, 1,
+        '*.txt should only match normal.txt, not dotfiles');
+
+      // .* pattern specifically matches only dotfiles
+      const dotResults = utils.findFiles(tmpDir, '.*');
+      const dotNames = dotResults.map(r => path.basename(r.path)).sort();
+      assert.ok(dotNames.includes('.hidden'), '.* matches .hidden');
+      assert.ok(dotNames.includes('.gitignore'), '.* matches .gitignore');
+      assert.ok(!dotNames.includes('normal.txt'),
+        '.* should NOT match normal.txt (needs leading dot)');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);
