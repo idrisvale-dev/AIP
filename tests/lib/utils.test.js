@@ -1467,6 +1467,58 @@ function runTests() {
     );
   })) passed++; else failed++;
 
+  // ── Round 103: countInFile with boolean false pattern (non-string non-RegExp) ──
+  console.log('\nRound 103: countInFile (boolean false — explicit type guard returns 0):');
+  if (test('countInFile returns 0 for boolean false pattern (else branch at line 443)', () => {
+    // utils.js lines 438-444: countInFile checks `instanceof RegExp` then `typeof === "string"`.
+    // Boolean `false` fails both checks and falls to the `else return 0` at line 443.
+    // This is the correct rejection path for non-string non-RegExp patterns, but was
+    // previously untested with boolean specifically (only null, undefined, object tested).
+    const tmpDir = fs.mkdtempSync(path.join(utils.getTempDir(), 'r103-bool-pattern-'));
+    const testFile = path.join(tmpDir, 'test.txt');
+    try {
+      fs.writeFileSync(testFile, 'false is here\nfalse again\ntrue as well');
+      // Even though "false" appears in the content, boolean `false` is rejected by type guard
+      const count = utils.countInFile(testFile, false);
+      assert.strictEqual(count, 0,
+        'Boolean false should return 0 (typeof false === "boolean", not "string")');
+      // Contrast: string "false" should match normally
+      const stringCount = utils.countInFile(testFile, 'false');
+      assert.strictEqual(stringCount, 2,
+        'String "false" should match 2 times (proving content exists but type guard blocked boolean)');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
+  // ── Round 103: grepFile with numeric 0 pattern (implicit RegExp coercion) ──
+  console.log('\nRound 103: grepFile (numeric 0 — implicit toString via RegExp constructor):');
+  if (test('grepFile with numeric 0 implicitly coerces to /0/ via RegExp constructor', () => {
+    // utils.js line 468: grepFile's non-RegExp path does `regex = new RegExp(pattern)`.
+    // Unlike countInFile (which has explicit type guards), grepFile passes any value
+    // to the RegExp constructor, which calls toString() on it.  So new RegExp(0)
+    // becomes /0/, and grepFile actually searches for lines containing "0".
+    // This contrasts with countInFile(file, 0) which returns 0 (type-rejected).
+    const tmpDir = fs.mkdtempSync(path.join(utils.getTempDir(), 'r103-grep-numeric-'));
+    const testFile = path.join(tmpDir, 'test.txt');
+    try {
+      fs.writeFileSync(testFile, 'line with 0 zero\nno digit here\n100 bottles');
+      const matches = utils.grepFile(testFile, 0);
+      assert.strictEqual(matches.length, 2,
+        'grepFile(file, 0) should find 2 lines containing "0" (RegExp(0) → /0/)');
+      assert.strictEqual(matches[0].lineNumber, 1,
+        'First match on line 1 ("line with 0 zero")');
+      assert.strictEqual(matches[1].lineNumber, 3,
+        'Second match on line 3 ("100 bottles")');
+      // Contrast: countInFile with numeric 0 returns 0 (type-rejected)
+      const count = utils.countInFile(testFile, 0);
+      assert.strictEqual(count, 0,
+        'countInFile(file, 0) returns 0 — API inconsistency with grepFile');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

@@ -1327,6 +1327,34 @@ function runTests() {
       'Persisted title should be null after round-trip through saveAliases/loadAliases');
   })) passed++; else failed++;
 
+  // ── Round 103: loadAliases with array aliases in JSON (typeof [] === 'object' bypass) ──
+  console.log('\nRound 103: loadAliases (array aliases — typeof bypass):');
+  if (test('loadAliases accepts array aliases because typeof [] === "object" passes validation', () => {
+    // session-aliases.js line 58: `typeof data.aliases !== 'object'` is the guard.
+    // Arrays are typeof 'object' in JavaScript, so {"aliases": [1,2,3]} passes
+    // validation.  The returned data.aliases is an array, not a plain object.
+    // Downstream code (Object.keys, Object.entries, bracket access) behaves
+    // differently on arrays vs objects but doesn't crash — it just produces
+    // unexpected results like numeric string keys "0", "1", "2".
+    resetAliases();
+    const aliasesPath = aliases.getAliasesPath();
+    fs.writeFileSync(aliasesPath, JSON.stringify({
+      version: '1.0',
+      aliases: ['item0', 'item1', 'item2'],
+      metadata: { totalCount: 3, lastUpdated: new Date().toISOString() }
+    }));
+    const data = aliases.loadAliases();
+    // The array passes the typeof 'object' check and is returned as-is
+    assert.ok(Array.isArray(data.aliases),
+      'data.aliases should be an array (typeof [] === "object" bypasses guard)');
+    assert.strictEqual(data.aliases.length, 3,
+      'Array should have 3 elements');
+    // Object.keys on an array returns ["0", "1", "2"] — numeric index strings
+    const keys = Object.keys(data.aliases);
+    assert.deepStrictEqual(keys, ['0', '1', '2'],
+      'Object.keys of array returns numeric string indices, not named alias keys');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
