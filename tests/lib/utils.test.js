@@ -1833,6 +1833,70 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 116: replaceInFile with null/undefined replacement — JS coerces to string ──
+  console.log('\nRound 116: replaceInFile (null/undefined replacement — JS coerces to string "null"/"undefined"):');
+  if (test('replaceInFile with null replacement coerces to string "null" via String.replace ToString', () => {
+    const tmpDir = fs.mkdtempSync(path.join(utils.getTempDir(), 'r116-null-replace-'));
+    const testFile = path.join(tmpDir, 'test.txt');
+    try {
+      // null replacement → String.replace coerces null to "null"
+      fs.writeFileSync(testFile, 'hello world');
+      const result = utils.replaceInFile(testFile, 'world', null);
+      assert.strictEqual(result, true, 'Should succeed');
+      const content = utils.readFile(testFile);
+      assert.strictEqual(content, 'hello null',
+        'null replacement is coerced to string "null" by String.replace');
+
+      // undefined replacement → coerced to "undefined"
+      fs.writeFileSync(testFile, 'hello world');
+      utils.replaceInFile(testFile, 'world', undefined);
+      const undefinedContent = utils.readFile(testFile);
+      assert.strictEqual(undefinedContent, 'hello undefined',
+        'undefined replacement is coerced to string "undefined" by String.replace');
+
+      // Contrast: empty string replacement works as expected
+      fs.writeFileSync(testFile, 'hello world');
+      utils.replaceInFile(testFile, 'world', '');
+      const emptyContent = utils.readFile(testFile);
+      assert.strictEqual(emptyContent, 'hello ',
+        'Empty string replacement correctly removes matched text');
+
+      // options.all with null replacement
+      fs.writeFileSync(testFile, 'foo bar foo baz foo');
+      utils.replaceInFile(testFile, 'foo', null, { all: true });
+      const allContent = utils.readFile(testFile);
+      assert.strictEqual(allContent, 'null bar null baz null',
+        'replaceAll also coerces null to "null" for every occurrence');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
+  // ── Round 116: ensureDir with null path — throws wrapped TypeError ──
+  console.log('\nRound 116: ensureDir (null path — fs.existsSync(null) throws TypeError):');
+  if (test('ensureDir with null path throws wrapped Error from TypeError (ERR_INVALID_ARG_TYPE)', () => {
+    // fs.existsSync(null) throws TypeError in modern Node.js
+    // Caught by ensureDir catch block, err.code !== 'EEXIST' → re-thrown as wrapped Error
+    assert.throws(
+      () => utils.ensureDir(null),
+      (err) => {
+        // Should be a wrapped Error (not raw TypeError)
+        assert.ok(err instanceof Error, 'Should throw an Error');
+        assert.ok(err.message.includes('Failed to create directory'),
+          'Error message should include "Failed to create directory"');
+        return true;
+      },
+      'ensureDir(null) should throw wrapped Error'
+    );
+
+    // undefined path — same behavior
+    assert.throws(
+      () => utils.ensureDir(undefined),
+      (err) => err instanceof Error && err.message.includes('Failed to create directory'),
+      'ensureDir(undefined) should also throw wrapped Error'
+    );
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

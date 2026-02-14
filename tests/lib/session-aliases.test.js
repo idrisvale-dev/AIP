@@ -1517,6 +1517,52 @@ function runTests() {
     assert.strictEqual(cleared.title, null, 'null clears title');
   })) passed++; else failed++;
 
+  // ── Round 116: loadAliases with extra unknown fields — silently preserved ──
+  console.log('\nRound 116: loadAliases (extra unknown JSON fields — preserved by loose validation):');
+  if (test('loadAliases preserves extra unknown fields because only aliases key is validated', () => {
+    resetAliases();
+
+    // Manually write an aliases file with extra fields
+    const aliasesPath = aliases.getAliasesPath();
+    const customData = {
+      version: '1.0',
+      aliases: {
+        'test-session': {
+          sessionPath: '/path/to/session',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          title: 'Test'
+        }
+      },
+      metadata: {
+        totalCount: 1,
+        lastUpdated: '2026-01-01T00:00:00.000Z'
+      },
+      customField: 'extra data',
+      debugInfo: { level: 3, verbose: true },
+      tags: ['important', 'test']
+    };
+    fs.writeFileSync(aliasesPath, JSON.stringify(customData, null, 2), 'utf8');
+
+    // loadAliases only validates data.aliases — extra fields pass through
+    const loaded = aliases.loadAliases();
+    assert.ok(loaded.aliases['test-session'], 'Should load the valid alias');
+    assert.strictEqual(loaded.aliases['test-session'].title, 'Test');
+    assert.strictEqual(loaded.customField, 'extra data',
+      'Extra string field should be preserved');
+    assert.deepStrictEqual(loaded.debugInfo, { level: 3, verbose: true },
+      'Extra object field should be preserved');
+    assert.deepStrictEqual(loaded.tags, ['important', 'test'],
+      'Extra array field should be preserved');
+
+    // After saving, extra fields survive a round-trip (saveAliases only updates metadata)
+    aliases.setAlias('new-alias', '/path/to/new');
+    const reloaded = aliases.loadAliases();
+    assert.ok(reloaded.aliases['new-alias'], 'New alias should be saved');
+    assert.strictEqual(reloaded.customField, 'extra data',
+      'Extra field should survive save/load round-trip');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
