@@ -1455,6 +1455,20 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 104: detectFromLockFile with null projectDir (no input validation) ──
+  console.log('\nRound 104: detectFromLockFile (null projectDir — throws TypeError):');
+  if (test('detectFromLockFile(null) throws TypeError (path.join rejects null)', () => {
+    // package-manager.js line 95: `path.join(projectDir, pm.lockFile)` — there is no
+    // guard checking that projectDir is a string before passing it to path.join().
+    // When projectDir is null, path.join(null, 'package-lock.json') throws a TypeError
+    // because path.join only accepts string arguments.
+    assert.throws(
+      () => pm.detectFromLockFile(null),
+      { name: 'TypeError' },
+      'path.join(null, ...) should throw TypeError (no input validation in detectFromLockFile)'
+    );
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

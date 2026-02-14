@@ -1355,6 +1355,26 @@ function runTests() {
       'Object.keys of array returns numeric string indices, not named alias keys');
   })) passed++; else failed++;
 
+  // ── Round 104: resolveSessionAlias with path-traversal input (passthrough without validation) ──
+  console.log('\nRound 104: resolveSessionAlias (path-traversal input — returned unchanged):');
+  if (test('resolveSessionAlias returns path-traversal input as-is when alias lookup fails', () => {
+    // session-aliases.js lines 365-374: resolveSessionAlias first tries resolveAlias(),
+    // which rejects '../etc/passwd' because the regex /^[a-zA-Z0-9_-]+$/ fails on dots
+    // and slashes (returns null). Then the function falls through to line 373:
+    // `return aliasOrId` — returning the potentially dangerous input unchanged.
+    // Callers that blindly use this return value could be at risk.
+    resetAliases();
+    const traversal = '../etc/passwd';
+    const result = aliases.resolveSessionAlias(traversal);
+    assert.strictEqual(result, traversal,
+      'Path-traversal input should be returned as-is (resolveAlias rejects it, fallback returns input)');
+    // Also test with another invalid alias pattern
+    const dotSlash = './../../secrets';
+    const result2 = aliases.resolveSessionAlias(dotSlash);
+    assert.strictEqual(result2, dotSlash,
+      'Another path-traversal pattern also returned unchanged');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

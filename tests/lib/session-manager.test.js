@@ -1689,6 +1689,34 @@ src/main.ts
       'Second unchecked item');
   })) passed++; else failed++;
 
+  // ── Round 104: parseSessionMetadata with whitespace-only notes section ──
+  console.log('\nRound 104: parseSessionMetadata (whitespace-only notes — trim reduces to empty):');
+  if (test('parseSessionMetadata treats whitespace-only notes as absent (trim → empty string → falsy)', () => {
+    // session-manager.js line 139: `metadata.notes = notesSection[1].trim()` — when the
+    // Notes section heading exists but only contains whitespace/newlines, trim() returns "".
+    // Then getSessionStats line 178: `hasNotes: !!metadata.notes` — `!!""` is `false`.
+    // So a notes section with only whitespace is treated as "no notes."
+    const content = `# Session
+
+### Notes for Next Session
+   \t
+
+### Context to Load
+\`\`\`
+file.ts
+\`\`\`
+`;
+    const meta = sessionManager.parseSessionMetadata(content);
+    assert.strictEqual(meta.notes, '',
+      'Whitespace-only notes should trim to empty string');
+    // Verify getSessionStats reports hasNotes as false
+    const stats = sessionManager.getSessionStats(content);
+    assert.strictEqual(stats.hasNotes, false,
+      'hasNotes should be false because !!"" is false (whitespace-only notes treated as absent)');
+    assert.strictEqual(stats.hasContext, true,
+      'hasContext should be true (context section has actual content)');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
