@@ -2055,6 +2055,37 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // ── Round 121: findFiles with ? glob pattern — single character wildcard ──
+  console.log('\nRound 121: findFiles (? glob pattern — converted to . regex for single char match):');
+  if (test('findFiles with ? glob matches single character only — test?.txt matches test1 but not test12', () => {
+    const tmpDir = fs.mkdtempSync(path.join(utils.getTempDir(), 'r121-glob-question-'));
+    try {
+      // Create test files
+      fs.writeFileSync(path.join(tmpDir, 'test1.txt'), 'a');
+      fs.writeFileSync(path.join(tmpDir, 'testA.txt'), 'b');
+      fs.writeFileSync(path.join(tmpDir, 'test12.txt'), 'c');
+      fs.writeFileSync(path.join(tmpDir, 'test.txt'), 'd');
+
+      // ? matches exactly one character
+      const results = utils.findFiles(tmpDir, 'test?.txt');
+      const names = results.map(r => path.basename(r.path)).sort();
+      assert.ok(names.includes('test1.txt'), 'Should match test1.txt (? = single digit)');
+      assert.ok(names.includes('testA.txt'), 'Should match testA.txt (? = single letter)');
+      assert.ok(!names.includes('test12.txt'), 'Should NOT match test12.txt (12 is two chars)');
+      assert.ok(!names.includes('test.txt'), 'Should NOT match test.txt (no char for ?)');
+
+      // Multiple ? marks
+      fs.writeFileSync(path.join(tmpDir, 'ab.txt'), 'e');
+      fs.writeFileSync(path.join(tmpDir, 'abc.txt'), 'f');
+      const multiResults = utils.findFiles(tmpDir, '??.txt');
+      const multiNames = multiResults.map(r => path.basename(r.path));
+      assert.ok(multiNames.includes('ab.txt'), '?? should match 2-char filename');
+      assert.ok(!multiNames.includes('abc.txt'), '?? should NOT match 3-char filename');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
   // Summary
   console.log('\n=== Test Results ===');
   console.log(`Passed: ${passed}`);

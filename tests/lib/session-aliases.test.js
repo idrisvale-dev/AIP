@@ -1678,6 +1678,41 @@ function runTests() {
     assert.strictEqual(resolved.sessionPath, '/path/to/session');
   })) passed++; else failed++;
 
+  // ── Round 121: setAlias sessionPath validation — null, empty, whitespace, non-string ──
+  console.log('\nRound 121: setAlias (sessionPath validation — null, empty, whitespace, non-string):');
+  if (test('setAlias rejects invalid sessionPath: null, empty, whitespace-only, and non-string types', () => {
+    resetAliases();
+
+    // null sessionPath → falsy → rejected
+    const nullResult = aliases.setAlias('test-alias', null);
+    assert.strictEqual(nullResult.success, false, 'null path should fail');
+    assert.ok(nullResult.error.includes('empty'), 'Error should mention empty');
+
+    // undefined sessionPath → falsy → rejected
+    const undefResult = aliases.setAlias('test-alias', undefined);
+    assert.strictEqual(undefResult.success, false, 'undefined path should fail');
+
+    // empty string → falsy → rejected
+    const emptyResult = aliases.setAlias('test-alias', '');
+    assert.strictEqual(emptyResult.success, false, 'Empty string path should fail');
+
+    // whitespace-only → passes falsy check but trim().length === 0 → rejected
+    const wsResult = aliases.setAlias('test-alias', '   ');
+    assert.strictEqual(wsResult.success, false, 'Whitespace-only path should fail');
+
+    // number → typeof !== 'string' → rejected
+    const numResult = aliases.setAlias('test-alias', 42);
+    assert.strictEqual(numResult.success, false, 'Number path should fail');
+
+    // boolean → typeof !== 'string' → rejected
+    const boolResult = aliases.setAlias('test-alias', true);
+    assert.strictEqual(boolResult.success, false, 'Boolean path should fail');
+
+    // Valid path works
+    const validResult = aliases.setAlias('test-alias', '/valid/path');
+    assert.strictEqual(validResult.success, true, 'Valid string path should succeed');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

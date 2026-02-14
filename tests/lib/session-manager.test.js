@@ -2284,6 +2284,46 @@ file.ts
       'Markdown code should be preserved in notes');
   })) passed++; else failed++;
 
+  // ── Round 121: parseSessionMetadata Started/Last Updated time extraction ──
+  console.log('\nRound 121: parseSessionMetadata (Started/Last Updated time extraction):');
+  if (test('parseSessionMetadata extracts Started and Last Updated times from markdown', () => {
+    // Standard format
+    const standard = '# Session\n\n**Date:** 2026-01-15\n**Started:** 14:30\n**Last Updated:** 16:45';
+    const stdMeta = sessionManager.parseSessionMetadata(standard);
+    assert.strictEqual(stdMeta.started, '14:30', 'Should extract started time');
+    assert.strictEqual(stdMeta.lastUpdated, '16:45', 'Should extract last updated time');
+
+    // With seconds in time
+    const withSec = '# Session\n\n**Started:** 14:30:00\n**Last Updated:** 16:45:59';
+    const secMeta = sessionManager.parseSessionMetadata(withSec);
+    assert.strictEqual(secMeta.started, '14:30:00', 'Should capture seconds too ([\\d:]+)');
+    assert.strictEqual(secMeta.lastUpdated, '16:45:59');
+
+    // Missing Started but has Last Updated
+    const noStarted = '# Session\n\n**Last Updated:** 09:00';
+    const noStartMeta = sessionManager.parseSessionMetadata(noStarted);
+    assert.strictEqual(noStartMeta.started, null, 'Missing Started should be null');
+    assert.strictEqual(noStartMeta.lastUpdated, '09:00', 'Last Updated should still be extracted');
+
+    // Missing Last Updated but has Started
+    const noUpdated = '# Session\n\n**Started:** 08:15';
+    const noUpdMeta = sessionManager.parseSessionMetadata(noUpdated);
+    assert.strictEqual(noUpdMeta.started, '08:15', 'Started should be extracted');
+    assert.strictEqual(noUpdMeta.lastUpdated, null, 'Missing Last Updated should be null');
+
+    // Neither present
+    const neither = '# Session\n\nJust some text';
+    const neitherMeta = sessionManager.parseSessionMetadata(neither);
+    assert.strictEqual(neitherMeta.started, null, 'No Started in content → null');
+    assert.strictEqual(neitherMeta.lastUpdated, null, 'No Last Updated in content → null');
+
+    // Loose regex: edge case with extra colons ([\d:]+ matches any digit-colon combo)
+    const loose = '# Session\n\n**Started:** 1:2:3:4';
+    const looseMeta = sessionManager.parseSessionMetadata(loose);
+    assert.strictEqual(looseMeta.started, '1:2:3:4',
+      'Loose [\\d:]+ regex captures any digits-and-colons combination');
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
