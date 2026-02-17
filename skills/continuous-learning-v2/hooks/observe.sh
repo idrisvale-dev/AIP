@@ -144,9 +144,9 @@ observation = {
     'session': parsed['session']
 }
 
-if parsed['input']:
+if parsed['input'] is not None:
     observation['input'] = parsed['input']
-if parsed['output']:
+if parsed['output'] is not None:
     observation['output'] = parsed['output']
 
 print(json.dumps(observation))
