@@ -59,7 +59,11 @@ final class ItemListViewModel {
 
 ```swift
 struct ItemListView: View {
-    @State private var viewModel = ItemListViewModel()
+    @State private var viewModel: ItemListViewModel
+
+    init(viewModel: ItemListViewModel = ItemListViewModel()) {
+        _viewModel = State(initialValue: viewModel)
+    }
 
     var body: some View {
         List(viewModel.items) { item in
@@ -215,10 +219,10 @@ For views with expensive bodies, conform to `Equatable` to skip unnecessary re-r
 
 ```swift
 struct ExpensiveChartView: View, Equatable {
-    let dataPoints: [DataPoint]
+    let dataPoints: [DataPoint] // DataPoint must conform to Equatable
 
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.dataPoints.count == rhs.dataPoints.count
+        lhs.dataPoints == rhs.dataPoints
     }
 
     var body: some View {
@@ -233,13 +237,11 @@ Use `#Preview` macro with inline mock data for fast iteration:
 
 ```swift
 #Preview("Empty state") {
-    ItemListView()
-        .environment(ItemListViewModel(repository: EmptyMockRepository()))
+    ItemListView(viewModel: ItemListViewModel(repository: EmptyMockRepository()))
 }
 
 #Preview("Loaded") {
-    ItemListView()
-        .environment(ItemListViewModel(repository: PopulatedMockRepository()))
+    ItemListView(viewModel: ItemListViewModel(repository: PopulatedMockRepository()))
 }
 ```
 
