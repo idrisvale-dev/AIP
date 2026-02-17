@@ -214,8 +214,8 @@ Create a detailed implementation plan for: $ARGUMENTS
 {
   "instructions": [
     ".opencode/instructions/INSTRUCTIONS.md",
-    "rules/security.md",
-    "rules/coding-style.md"
+    "rules/common/security.md",
+    "rules/common/coding-style.md"
   ]
 }
 ```
@@ -285,13 +285,13 @@ The `.opencode/` directory contains everything pre-configured.
 ### Option 2: Install as npm Package
 
 ```bash
-npm install opencode-ecc
+npm install ecc-universal
 ```
 
 Then in your `opencode.json`:
 ```json
 {
-  "plugin": ["opencode-ecc"]
+  "plugin": ["ecc-universal"]
 }
 ```
 
