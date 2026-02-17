@@ -140,7 +140,7 @@ cp -r everything-claude-code/rules/golang/* ~/.claude/rules/
 /plugin list everything-claude-code@everything-claude-code
 ```
 
-✨ **完了です！** これで13のエージェント、37のスキル、31のコマンドにアクセスできます。
+✨ **完了です！** これで13のエージェント、43のスキル、31のコマンドにアクセスできます。
 
 ---
 
