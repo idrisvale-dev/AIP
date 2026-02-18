@@ -8,7 +8,7 @@ Pre-translated configurations for [Cursor IDE](https://cursor.com), part of the 
 |----------|-------|-------------|
 | Rules | 27 | Coding standards, security, testing, patterns (common + TypeScript/Python/Go) |
 | Agents | 13 | Specialized AI agents (planner, architect, code-reviewer, tdd-guide, etc.) |
-| Skills | 37 | Agent skills for backend, frontend, security, TDD, and more |
+| Skills | 43 | Agent skills for backend, frontend, security, TDD, and more |
 | Commands | 31 | Slash commands for planning, reviewing, testing, and deployment |
 | MCP Config | 1 | Pre-configured MCP servers (GitHub, Supabase, Vercel, Railway, etc.) |
 

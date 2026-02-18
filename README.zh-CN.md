@@ -95,7 +95,7 @@ cp -r everything-claude-code/rules/* ~/.claude/rules/
 /plugin list everything-claude-code@everything-claude-code
 ```
 
-✨ **完成！** 你现在可以使用 13 个代理、37 个技能和 31 个命令。
+✨ **完成！** 你现在可以使用 13 个代理、43 个技能和 31 个命令。
 
 ---
 
