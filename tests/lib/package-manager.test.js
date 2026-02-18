@@ -1632,7 +1632,7 @@ function runTests() {
   else failed++;
 
   // Round 111: getExecCommand with newline in args
-  console.log('\nRound 111: getExecCommand (newline in args — SAFE_ARGS_REGEX \\\\\\\\s matches \\\\\\n):');
+  console.log('\n' + String.raw`Round 111: getExecCommand (newline in args — SAFE_ARGS_REGEX \s matches \n):`);
 
   if (test('getExecCommand accepts newline in args because SAFE_ARGS_REGEX includes newline', () => {
     // SAFE_ARGS_REGEX = /^[@a-zA-Z0-9\\s_.\\/:=,'\"*+-\\]+$/
