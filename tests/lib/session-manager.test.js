@@ -1600,7 +1600,8 @@ src/main.ts
     );
   })) passed++; else failed++;
 
-  // Cleanup test environment for Rounds 95-98
+  // Cleanup test environment for Rounds 95-98 that needed sessions
+  // (Round 98: parseSessionFilename below doesn't need sessions)
   process.env.HOME = origHome2;
   if (origUserProfile2 !== undefined) {
     process.env.USERPROFILE = origUserProfile2;
