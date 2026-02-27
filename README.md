@@ -154,7 +154,7 @@ For manual install instructions see the README in the `rules/` folder.
 /plugin list everything-claude-code@everything-claude-code
 ```
 
-✨ **That's it!** You now have access to 13 agents, 51 skills, and 32 commands.
+✨ **That's it!** You now have access to 13 agents, 56 skills, and 32 commands.
 
 ---
 
@@ -224,6 +224,11 @@ everything-claude-code/
 |   |-- backend-patterns/           # API, database, caching patterns
 |   |-- frontend-patterns/          # React, Next.js patterns
 |   |-- frontend-slides/            # HTML slide decks and PPTX-to-web presentation workflows (NEW)
+|   |-- article-writing/            # Long-form writing in a supplied voice without generic AI tone (NEW)
+|   |-- content-engine/             # Multi-platform social content and repurposing workflows (NEW)
+|   |-- market-research/            # Source-attributed market, competitor, and investor research (NEW)
+|   |-- investor-materials/         # Pitch decks, one-pagers, memos, and financial models (NEW)
+|   |-- investor-outreach/          # Personalized fundraising outreach and follow-up (NEW)
 |   |-- continuous-learning/        # Auto-extract patterns from sessions (Longform Guide)
 |   |-- continuous-learning-v2/     # Instinct-based learning with confidence scoring
 |   |-- iterative-retrieval/        # Progressive context refinement for subagents
@@ -832,7 +837,7 @@ alwaysApply: false
 
 ## Codex CLI Support
 
-ECC provides **first-class Codex CLI support** with a reference configuration, Codex-specific AGENTS.md supplement, and 11 ported skills.
+ECC provides **first-class Codex CLI support** with a reference configuration, Codex-specific AGENTS.md supplement, and 16 ported skills.
 
 ### Quick Start (Codex)
 
@@ -850,7 +855,7 @@ codex
 |-----------|-------|---------|
 | Config | 1 | `.codex/config.toml` — model, permissions, MCP servers, persistent instructions |
 | AGENTS.md | 2 | Root (universal) + `.codex/AGENTS.md` (Codex-specific supplement) |
-| Skills | 11 | `.agents/skills/` — SKILL.md + agents/openai.yaml per skill |
+| Skills | 16 | `.agents/skills/` — SKILL.md + agents/openai.yaml per skill |
 | MCP Servers | 4 | GitHub, Context7, Memory, Sequential Thinking (command-based) |
 | Profiles | 2 | `strict` (read-only sandbox) and `yolo` (full auto-approve) |
 
@@ -865,6 +870,11 @@ Skills at `.agents/skills/` are auto-loaded by Codex:
 | coding-standards | Universal coding standards |
 | frontend-patterns | React/Next.js patterns |
 | frontend-slides | HTML presentations, PPTX conversion, visual style exploration |
+| article-writing | Long-form writing from notes and voice references |
+| content-engine | Platform-native social content and repurposing |
+| market-research | Source-attributed market and competitor research |
+| investor-materials | Decks, memos, models, and one-pagers |
+| investor-outreach | Personalized outreach, follow-ups, and intro blurbs |
 | backend-patterns | API design, database, caching |
 | e2e-testing | Playwright E2E tests |
 | eval-harness | Eval-driven development |

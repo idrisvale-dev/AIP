@@ -144,6 +144,14 @@ The default OpenCode config loads 11 curated ECC skills via the `instructions` a
 - api-design
 - e2e-testing
 
+Additional specialized skills are shipped in `skills/` but not loaded by default to keep OpenCode sessions lean:
+
+- article-writing
+- content-engine
+- market-research
+- investor-materials
+- investor-outreach
+
 ## Configuration
 
 Full configuration in `opencode.json`:

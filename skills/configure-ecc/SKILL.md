@@ -124,6 +124,16 @@ For each selected category, print the full list of skills below and ask the user
 | `tdd-workflow` | Enforces TDD with 80%+ coverage: unit, integration, E2E |
 | `verification-loop` | Verification and quality loop patterns |
 
+**Category: Business & Content (5 skills)**
+
+| Skill | Description |
+|-------|-------------|
+| `article-writing` | Long-form writing in a supplied voice using notes, examples, or source docs |
+| `content-engine` | Multi-platform social content, scripts, and repurposing workflows |
+| `market-research` | Source-attributed market, competitor, fund, and technology research |
+| `investor-materials` | Pitch decks, one-pagers, investor memos, and financial models |
+| `investor-outreach` | Personalized investor cold emails, warm intros, and follow-ups |
+
 **Standalone**
 
 | Skill | Description |

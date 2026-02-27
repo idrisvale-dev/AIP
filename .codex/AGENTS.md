@@ -23,6 +23,11 @@ Available skills:
 - coding-standards — Universal coding standards
 - frontend-patterns — React/Next.js patterns
 - frontend-slides — Viewport-safe HTML presentations and PPTX-to-web conversion
+- article-writing — Long-form writing from notes and voice references
+- content-engine — Platform-native social content and repurposing
+- market-research — Source-attributed market and competitor research
+- investor-materials — Decks, memos, models, and one-pagers
+- investor-outreach — Personalized investor outreach and follow-ups
 - backend-patterns — API design, database, caching
 - e2e-testing — Playwright E2E tests
 - eval-harness — Eval-driven development
