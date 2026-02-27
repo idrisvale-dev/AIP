@@ -9,6 +9,8 @@ version: 2.0.0
 
 An advanced learning system that turns your Claude Code sessions into reusable knowledge through atomic "instincts" - small learned behaviors with confidence scoring.
 
+Inspired in part by the Homunculus work from [humanplane](https://github.com/humanplane).
+
 ## When to Activate
 
 - Setting up automatic learning from Claude Code sessions

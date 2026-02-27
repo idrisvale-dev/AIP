@@ -22,6 +22,7 @@ Available skills:
 - security-review — Comprehensive security checklist
 - coding-standards — Universal coding standards
 - frontend-patterns — React/Next.js patterns
+- frontend-slides — Viewport-safe HTML presentations and PPTX-to-web conversion
 - backend-patterns — API design, database, caching
 - e2e-testing — Playwright E2E tests
 - eval-harness — Eval-driven development

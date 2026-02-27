@@ -126,7 +126,6 @@ Get up and running in under 2 minutes:
 
 > ⚠️ **Important:** Claude Code plugins cannot distribute `rules` automatically. Install them manually:
 
-
 ```bash
 # Clone the repo first
 git clone https://github.com/affaan-m/everything-claude-code.git
@@ -155,7 +154,7 @@ For manual install instructions see the README in the `rules/` folder.
 /plugin list everything-claude-code@everything-claude-code
 ```
 
-✨ **That's it!** You now have access to 13 agents, 48 skills, and 32 commands.
+✨ **That's it!** You now have access to 13 agents, 51 skills, and 32 commands.
 
 ---
 
@@ -224,6 +223,7 @@ everything-claude-code/
 |   |-- clickhouse-io/              # ClickHouse analytics, queries, data engineering
 |   |-- backend-patterns/           # API, database, caching patterns
 |   |-- frontend-patterns/          # React, Next.js patterns
+|   |-- frontend-slides/            # HTML slide decks and PPTX-to-web presentation workflows (NEW)
 |   |-- continuous-learning/        # Auto-extract patterns from sessions (Longform Guide)
 |   |-- continuous-learning-v2/     # Instinct-based learning with confidence scoring
 |   |-- iterative-retrieval/        # Progressive context refinement for subagents
@@ -796,7 +796,7 @@ ECC provides **full Cursor IDE support** with hooks, rules, agents, skills, comm
 | Hook Scripts | 16 | Thin Node.js scripts delegating to `scripts/hooks/` via shared adapter |
 | Rules | 29 | 9 common (alwaysApply) + 20 language-specific (TypeScript, Python, Go, Swift) |
 | Agents | Shared | Via AGENTS.md at root (read by Cursor natively) |
-| Skills | Shared | Via AGENTS.md at root |
+| Skills | Shared + Bundled | Via AGENTS.md at root and `.cursor/skills/` for translated additions |
 | Commands | Shared | `.cursor/commands/` if installed |
 | MCP Config | Shared | `.cursor/mcp.json` if installed |
 
@@ -832,7 +832,7 @@ alwaysApply: false
 
 ## Codex CLI Support
 
-ECC provides **first-class Codex CLI support** with a reference configuration, Codex-specific AGENTS.md supplement, and 10 ported skills.
+ECC provides **first-class Codex CLI support** with a reference configuration, Codex-specific AGENTS.md supplement, and 11 ported skills.
 
 ### Quick Start (Codex)
 
@@ -850,7 +850,7 @@ codex
 |-----------|-------|---------|
 | Config | 1 | `.codex/config.toml` — model, permissions, MCP servers, persistent instructions |
 | AGENTS.md | 2 | Root (universal) + `.codex/AGENTS.md` (Codex-specific supplement) |
-| Skills | 10 | `.agents/skills/` — SKILL.md + agents/openai.yaml per skill |
+| Skills | 11 | `.agents/skills/` — SKILL.md + agents/openai.yaml per skill |
 | MCP Servers | 4 | GitHub, Context7, Memory, Sequential Thinking (command-based) |
 | Profiles | 2 | `strict` (read-only sandbox) and `yolo` (full auto-approve) |
 
@@ -864,6 +864,7 @@ Skills at `.agents/skills/` are auto-loaded by Codex:
 | security-review | Comprehensive security checklist |
 | coding-standards | Universal coding standards |
 | frontend-patterns | React/Next.js patterns |
+| frontend-slides | HTML presentations, PPTX conversion, visual style exploration |
 | backend-patterns | API design, database, caching |
 | e2e-testing | Playwright E2E tests |
 | eval-harness | Eval-driven development |
