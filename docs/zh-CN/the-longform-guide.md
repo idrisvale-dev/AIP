@@ -137,7 +137,7 @@ alias claude-research='claude --system-prompt "$(cat ~/.claude/contexts/research
 用 mgrep 替换 grep——与传统 grep 或 ripgrep 相比，平均减少约 50% 的令牌：
 
 ![mgrep Benchmark](../../assets/images/longform/06-mgrep-benchmark.png)
-*在我们的 50 项任务基准测试中，mgrep + Claude Code 使用的 token 数量比基于 grep 的工作流少约 2 倍，且判断质量相似或更好。来源：https://github.com/mixedbread-ai/mgrep*
+*在我们的 50 项任务基准测试中，mgrep + Claude Code 使用的 token 数量比基于 grep 的工作流少约 2 倍，且判断质量相似或更好。来源：mgrep by @mixedbread-ai*
 
 **模块化代码库的好处：**
 

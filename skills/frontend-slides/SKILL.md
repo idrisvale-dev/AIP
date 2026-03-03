@@ -8,7 +8,7 @@ origin: ECC
 
 Create zero-dependency, animation-rich HTML presentations that run entirely in the browser.
 
-Inspired by the visual exploration approach showcased in work by [zarazhangrui](https://github.com/zarazhangrui).
+Inspired by the visual exploration approach showcased in work by zarazhangrui (credit: @zarazhangrui).
 
 ## When to Activate
 

@@ -150,6 +150,6 @@ claude /schedule-reply "Reply to Sarah about the board meeting"
 ## 先决条件
 
 * [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-* Gmail CLI (例如 [gog](https://github.com/pterm/gog))
+* Gmail CLI (例如 [gog](https://gog by @pterm))
 * Node.js 18+ (用于 calendar-suggest.js)
 * 可选：Slack MCP 服务器、Matrix 桥接 (LINE)、Chrome + Playwright (Messenger)

@@ -136,7 +136,7 @@ See the `/claw` command documentation for full details.
 
 ## 3. Infinite Agentic Loop
 
-**A two-prompt system** that orchestrates parallel sub-agents for specification-driven generation. Developed by [disler](https://github.com/disler/infinite-agentic-loop).
+**A two-prompt system** that orchestrates parallel sub-agents for specification-driven generation. Developed by disler (credit: @disler).
 
 ### Architecture: Two-Prompt System
 
@@ -205,7 +205,7 @@ Don't rely on agents to self-differentiate. The orchestrator **assigns** each ag
 
 ## 4. Continuous Claude PR Loop
 
-**A production-grade shell script** that runs Claude Code in a continuous loop, creating PRs, waiting for CI, and merging automatically. Created by [AnandChowdhary](https://github.com/AnandChowdhary/continuous-claude).
+**A production-grade shell script** that runs Claude Code in a continuous loop, creating PRs, waiting for CI, and merging automatically. Created by AnandChowdhary (credit: @AnandChowdhary).
 
 ### Core Loop
 
@@ -375,7 +375,7 @@ done
 
 ## 6. Ralphinho / RFC-Driven DAG Orchestration
 
-**The most sophisticated pattern.** An RFC-driven, multi-agent pipeline that decomposes a spec into a dependency DAG, runs each unit through a tiered quality pipeline, and lands them via an agent-driven merge queue. Created by [enitrat](https://github.com/enitrat/ralphinho).
+**The most sophisticated pattern.** An RFC-driven, multi-agent pipeline that decomposes a spec into a dependency DAG, runs each unit through a tiered quality pipeline, and lands them via an agent-driven merge queue. Created by enitrat (credit: @enitrat).
 
 ### Architecture Overview
 
@@ -600,8 +600,8 @@ These patterns compose well:
 
 | Project | Author | Link |
 |---------|--------|------|
-| Ralphinho | enitrat | [github.com/enitrat/ralphinho](https://github.com/enitrat/ralphinho) |
-| Infinite Agentic Loop | disler | [github.com/disler/infinite-agentic-loop](https://github.com/disler/infinite-agentic-loop) |
-| Continuous Claude | AnandChowdhary | [github.com/AnandChowdhary/continuous-claude](https://github.com/AnandChowdhary/continuous-claude) |
+| Ralphinho | enitrat | credit: @enitrat |
+| Infinite Agentic Loop | disler | credit: @disler |
+| Continuous Claude | AnandChowdhary | credit: @AnandChowdhary |
 | NanoClaw | ECC | `/claw` command in this repo |
 | Verification Loop | ECC | `skills/verification-loop/` in this repo |

@@ -9,7 +9,7 @@ version: 2.0.0
 
 一个高级学习系统，通过原子化的“本能”——带有置信度评分的小型习得行为——将你的 Claude Code 会话转化为可重用的知识。
 
-部分灵感来源于 [humanplane](https://github.com/humanplane) 的 Homunculus 项目。
+部分灵感来源于 humanplane (credit: @humanplane) 的 Homunculus 项目。
 
 ## 何时激活
 

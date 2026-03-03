@@ -136,7 +136,7 @@ Default to Sonnet for 90% of coding tasks. Upgrade to Opus when first attempt fa
 Replace grep with mgrep - ~50% token reduction on average compared to traditional grep or ripgrep:
 
 ![mgrep Benchmark](./assets/images/longform/06-mgrep-benchmark.png)
-*In our 50-task benchmark, mgrep + Claude Code used ~2x fewer tokens than grep-based workflows at similar or better judged quality. Source: https://github.com/mixedbread-ai/mgrep*
+*In our 50-task benchmark, mgrep + Claude Code used ~2x fewer tokens than grep-based workflows at similar or better judged quality. Source: mgrep by @mixedbread-ai*
 
 **Modular Codebase Benefits:**
 

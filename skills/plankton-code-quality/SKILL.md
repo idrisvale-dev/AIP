@@ -6,7 +6,7 @@ origin: community
 
 # Plankton Code Quality Skill
 
-Integration reference for [Plankton](https://github.com/alexfazio/plankton), a write-time code quality enforcement system for Claude Code. Plankton runs formatters and linters on every file edit via PostToolUse hooks, then spawns Claude subprocesses to fix violations the agent didn't catch.
+Integration reference for Plankton (credit: @alxfazio), a write-time code quality enforcement system for Claude Code. Plankton runs formatters and linters on every file edit via PostToolUse hooks, then spawns Claude subprocesses to fix violations the agent didn't catch.
 
 ## When to Use
 
@@ -74,6 +74,7 @@ A PreToolUse hook on Bash blocks legacy package managers:
 
 ```bash
 # Clone Plankton into your project (or a shared location)
+# Note: Plankton is by @alxfazio
 git clone https://github.com/alexfazio/plankton.git
 cd plankton
 
@@ -190,6 +191,6 @@ Plankton's `.claude/hooks/config.json` controls all behavior:
 
 ## References
 
-- [Plankton GitHub](https://github.com/alexfazio/plankton)
-- [Plankton REFERENCE.md](https://github.com/alexfazio/plankton/blob/main/docs/REFERENCE.md) — Full architecture documentation
-- [Plankton SETUP.md](https://github.com/alexfazio/plankton/blob/main/docs/SETUP.md) — Detailed installation guide
+- Plankton (credit: @alxfazio)
+- Plankton REFERENCE.md — Full architecture documentation (credit: @alxfazio)
+- Plankton SETUP.md — Detailed installation guide (credit: @alxfazio)

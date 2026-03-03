@@ -162,6 +162,7 @@ MCP 将 Claude 直接连接到外部服务。它不是 API 的替代品——而
 
 ```bash
 # Add a marketplace
+# mgrep plugin by @mixedbread-ai
 claude plugin marketplace add https://github.com/mixedbread-ai/mgrep
 
 # Open Claude, run /plugins, find new marketplace, install from there

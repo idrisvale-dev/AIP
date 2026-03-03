@@ -15,7 +15,8 @@
 claude plugin marketplace add https://github.com/anthropics/claude-plugins-official
 
 # コミュニティマーケットプレイスを追加
-claude plugin marketplace add https://github.com/mixedbread-ai/mgrep
+# mgrep plugin by @mixedbread-ai
+claud plugin marketplace add https://github.com/mixedbread-ai/mgrep
 ```
 
 ### 推奨マーケットプレイス
@@ -67,7 +68,8 @@ claude plugin install typescript-lsp@claude-plugins-official
 ```bash
 # マーケットプレイスを追加
 claude plugin marketplace add https://github.com/anthropics/claude-plugins-official
-claude plugin marketplace add https://github.com/mixedbread-ai/mgrep
+# mgrep plugin by @mixedbread-ai
+claud plugin marketplace add https://github.com/mixedbread-ai/mgrep
 
 # /pluginsを開き、必要なものをインストール
 ```
