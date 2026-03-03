@@ -245,6 +245,7 @@ everything-claude-code/
 |   |-- security-review/            # Security checklist
 |   |-- eval-harness/               # Verification loop evaluation (Longform Guide)
 |   |-- verification-loop/          # Continuous verification (Longform Guide)
+|   |-- videodb/                   # Video and audio: ingest, search, edit, generate, stream (NEW)
 |   |-- golang-patterns/            # Go idioms and best practices
 |   |-- golang-testing/             # Go testing patterns, TDD, benchmarks
 |   |-- cpp-coding-standards/         # C++ coding standards from C++ Core Guidelines (NEW)
