@@ -52,7 +52,7 @@ fi
 
 # --- Usage ---
 if [[ $# -eq 0 ]]; then
-    echo "Usage: $0 [--target <claude|cursor>] <language> [<language> ...]"
+    echo "Usage: $0 [--target <claude|cursor|antigravity>] <language> [<language> ...]"
     echo ""
     echo "Targets:"
     echo "  claude       (default) — Install rules to ~/.claude/rules/"
