@@ -101,16 +101,28 @@ function runHookCommand(command, input = {}, env = {}, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
     const isWindows = process.platform === 'win32';
     const mergedEnv = { ...process.env, CLAUDE_PLUGIN_ROOT: REPO_ROOT, ...env };
-    const resolvedCommand = isWindows
-      ? command.replace(/\$\{([A-Z_][A-Z0-9_]*)\}/g, (_, name) => String(mergedEnv[name] || ''))
-      : command;
+    const resolvedCommand = command.replace(
+      /\$\{([A-Z_][A-Z0-9_]*)\}/g,
+      (_, name) => String(mergedEnv[name] || '')
+    );
+
+    const nodeMatch = resolvedCommand.match(/^node\s+"([^"]+)"\s*(.*)$/);
+    const useDirectNodeSpawn = Boolean(nodeMatch);
     const shell = isWindows ? 'cmd' : 'bash';
     const shellArgs = isWindows ? ['/d', '/s', '/c', resolvedCommand] : ['-lc', resolvedCommand];
+    const nodeArgs = nodeMatch
+      ? [
+          nodeMatch[1],
+          ...Array.from(
+            nodeMatch[2].matchAll(/"([^"]*)"|(\S+)/g),
+            m => m[1] !== undefined ? m[1] : m[2]
+          )
+        ]
+      : [];
 
-    const proc = spawn(shell, shellArgs, {
-      env: mergedEnv,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
+    const proc = useDirectNodeSpawn
+      ? spawn('node', nodeArgs, { env: mergedEnv, stdio: ['pipe', 'pipe', 'pipe'] })
+      : spawn(shell, shellArgs, { env: mergedEnv, stdio: ['pipe', 'pipe', 'pipe'] });
 
     let stdout = '';
     let stderr = '';
