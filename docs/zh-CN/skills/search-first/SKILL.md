@@ -62,10 +62,11 @@ origin: ECC
 
 在编写实用程序或添加功能之前，在脑中过一遍：
 
-1. 这是常见问题吗？ → 搜索 npm/PyPI
-2. 有相关的 MCP 吗？ → 检查 `~/.claude/settings.json` 并搜索
-3. 有相关的技能吗？ → 检查 `~/.claude/skills/`
-4. 有 GitHub 模板吗？ → 搜索 GitHub
+0. 这已经在仓库中存在吗？ → 首先通过相关模块/测试检查 `rg`
+1. 这是一个常见问题吗？ → 搜索 npm/PyPI
+2. 有对应的 MCP 吗？ → 检查 `~/.claude/settings.json` 并进行搜索
+3. 有对应的技能吗？ → 检查 `~/.claude/skills/`
+4. 有 GitHub 上的实现/模板吗？ → 在编写全新代码之前，先运行 GitHub 代码搜索以查找维护中的开源项目
 
 ### 完整模式（代理）
 

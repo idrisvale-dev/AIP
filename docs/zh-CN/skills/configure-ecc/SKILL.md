@@ -67,7 +67,24 @@ mkdir -p $TARGET/skills $TARGET/rules
 
 ## 步骤 2：选择并安装技能
 
-### 2a：选择技能类别
+### 2a: 选择范围（核心 vs 细分领域）
+
+默认为 **核心（推荐给新用户）** — 对于研究优先的工作流，复制 `.agents/skills/*` 加上 `skills/search-first/`。此捆绑包涵盖工程、评估、验证、安全、战略压缩、前端设计以及 Anthropic 跨职能技能（文章写作、内容引擎、市场研究、前端幻灯片）。
+
+使用 `AskUserQuestion`（单选）：
+
+```
+Question: "Install core skills only, or include niche/framework packs?"
+Options:
+  - "Core only (recommended)" — "tdd, e2e, evals, verification, research-first, security, frontend patterns, compacting, cross-functional Anthropic skills"
+  - "Core + selected niche" — "Add framework/domain-specific skills after core"
+  - "Niche only" — "Skip core, install specific framework/domain skills"
+Default: Core only
+```
+
+如果用户选择细分领域或核心 + 细分领域，则继续下面的类别选择，并且仅包含他们选择的那些细分领域技能。
+
+### 2b: 选择技能类别
 
 共有 27 项技能，分为 4 个类别。使用 `AskUserQuestion` 和 `multiSelect: true`：
 
@@ -80,7 +97,7 @@ Options:
   - "All skills" — "Install every available skill"
 ```
 
-### 2b：确认单项技能
+### 2c: 确认个人技能
 
 对于每个选定的类别，打印下面的完整技能列表，并要求用户确认或取消选择特定的技能。如果列表超过 4 项，将列表打印为文本，并使用 `AskUserQuestion`，提供一个 "安装所有列出项" 的选项，以及一个 "其他" 选项供用户粘贴特定名称。
 
@@ -143,7 +160,7 @@ Options:
 |-------|-------------|
 | `project-guidelines-example` | 用于创建项目特定技能的模板 |
 
-### 2c：执行安装
+### 2d: 执行安装
 
 对于每个选定的技能，复制整个技能目录：
 

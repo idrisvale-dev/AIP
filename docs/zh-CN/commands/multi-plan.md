@@ -85,7 +85,7 @@ mcp__ace-tool__enhance_prompt({
 
 等待增强后的提示，**将所有后续阶段的原始 $ARGUMENTS 替换为增强结果**。
 
-**如果 ace-tool MCP 不可用**：跳过此步骤，在所有后续阶段中直接使用原始 `$ARGUMENTS`。
+**如果 ace-tool MCP 不可用**：跳过此步骤，并在所有后续阶段直接使用原始的 `$ARGUMENTS`。
 
 #### 1.2 上下文检索
 
@@ -98,14 +98,15 @@ mcp__ace-tool__search_context({
 })
 ```
 
-* 使用自然语言构建语义查询（Where/What/How）
-* **绝不基于假设回答**
+* 使用自然语言构建语义查询（在哪里/是什么/怎么样）
+* **切勿基于假设回答**
 
-**如果 ace-tool MCP 不可用**，使用 Claude Code 内置工具作为回退：
-1. **Glob**：按模式查找相关文件（例如 `Glob("**/*.ts")`、`Glob("src/**/*.py")`）
-2. **Grep**：搜索关键符号、函数名、类定义（例如 `Grep("className|functionName")`）
-3. **Read**：读取发现的文件以收集完整上下文
-4. **Task（Explore 代理）**：如需更深入的探索，使用 `Task` 并设置 `subagent_type: "Explore"`
+**如果 ace-tool MCP 不可用**，使用 Claude Code 内置工具作为备用方案：
+
+1. **Glob**：通过模式查找相关文件（例如，`Glob("**/*.ts")`、`Glob("src/**/*.py")`）
+2. **Grep**：搜索关键符号、函数名、类定义（例如，`Grep("className|functionName")`）
+3. **Read**：读取发现的文件以收集完整的上下文
+4. **Task (Explore agent)**：要进行更深入的探索，使用 `Task` 并配合 `subagent_type: "Explore"` 来搜索整个代码库
 
 #### 1.3 完整性检查
 

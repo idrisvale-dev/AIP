@@ -70,7 +70,7 @@ cp -r skills/my-skill ~/.claude/skills/  # for skills
 # Then test with Claude Code
 
 # 5. Submit PR
-git add . && git commit -m "feat: add my-skill" && git push
+git add . && git commit -m "feat: add my-skill" && git push -u origin feat/my-contribution
 ```
 
 ***
