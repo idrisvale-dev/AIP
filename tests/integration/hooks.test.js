@@ -251,19 +251,20 @@ async function runTests() {
     assert.ok(result.stderr.includes('[PreCompact]'), 'Should output to stderr with prefix');
   })) passed++; else failed++;
 
-  if (await asyncTest('blocking hooks output BLOCKED message', async () => {
-    // Test the dev server blocking hook — must send a matching command
-    const blockingCommand = hooks.hooks.PreToolUse[0].hooks[0].command;
-    const result = await runHookCommand(blockingCommand, {
+  if (await asyncTest('dev server hook transforms command to tmux session', async () => {
+    // Test the auto-tmux dev hook — transforms dev commands to run in tmux
+    const hookCommand = hooks.hooks.PreToolUse[0].hooks[0].command;
+    const result = await runHookCommand(hookCommand, {
       tool_input: { command: 'npm run dev' }
     });
 
-    // Hook only blocks on non-Windows platforms (tmux is Unix-only)
-    if (process.platform === 'win32') {
-      assert.strictEqual(result.code, 0, 'On Windows, hook should not block (exit 0)');
-    } else {
-      assert.ok(result.stderr.includes('BLOCKED'), 'Blocking hook should output BLOCKED');
-      assert.strictEqual(result.code, 2, 'Blocking hook should exit with code 2');
+    assert.strictEqual(result.code, 0, 'Hook should exit 0 (transforms, does not block)');
+    // On Unix with tmux, stdout contains transformed JSON with tmux command
+    // On Windows or without tmux, stdout contains original JSON passthrough
+    const output = result.stdout.trim();
+    if (output) {
+      const parsed = JSON.parse(output);
+      assert.ok(parsed.tool_input, 'Should output valid JSON with tool_input');
     }
   })) passed++; else failed++;
 
@@ -277,18 +278,20 @@ async function runTests() {
     assert.strictEqual(result.code, 0, 'Non-blocking hook should exit 0');
   })) passed++; else failed++;
 
-  if (await asyncTest('blocking hooks exit with code 2', async () => {
-    // The dev server blocker blocks when a dev server command is detected
-    const blockingCommand = hooks.hooks.PreToolUse[0].hooks[0].command;
-    const result = await runHookCommand(blockingCommand, {
+  if (await asyncTest('dev server hook transforms yarn dev to tmux session', async () => {
+    // The auto-tmux dev hook transforms dev commands (yarn dev, npm run dev, etc.)
+    const hookCommand = hooks.hooks.PreToolUse[0].hooks[0].command;
+    const result = await runHookCommand(hookCommand, {
       tool_input: { command: 'yarn dev' }
     });
 
-    // Hook only blocks on non-Windows platforms (tmux is Unix-only)
-    if (process.platform === 'win32') {
-      assert.strictEqual(result.code, 0, 'On Windows, hook should not block (exit 0)');
-    } else {
-      assert.strictEqual(result.code, 2, 'Blocking hook should exit 2');
+    // Hook always exits 0 — it transforms, never blocks
+    assert.strictEqual(result.code, 0, 'Hook should exit 0 (transforms, does not block)');
+    const output = result.stdout.trim();
+    if (output) {
+      const parsed = JSON.parse(output);
+      assert.ok(parsed.tool_input, 'Should output valid JSON with tool_input');
+      assert.ok(parsed.tool_input.command, 'Should have a command in output');
     }
   })) passed++; else failed++;
 
