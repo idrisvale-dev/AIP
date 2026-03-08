@@ -148,7 +148,7 @@ You are an expert planning specialist...
       "description": "Expert planning specialist...",
       "mode": "subagent",
       "model": "anthropic/claude-opus-4-5",
-      "prompt": "{file:prompts/agents/planner.txt}",
+      "prompt": "{file:.opencode/prompts/agents/planner.txt}",
       "tools": { "read": true, "bash": true }
     }
   }
