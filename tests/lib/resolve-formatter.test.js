@@ -9,14 +9,15 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-const {
-  findProjectRoot,
-  detectFormatter,
-  resolveFormatterBin,
-  clearCaches,
-} = require('../../scripts/lib/resolve-formatter');
+const { findProjectRoot, detectFormatter, resolveFormatterBin, clearCaches } = require('../../scripts/lib/resolve-formatter');
 
-// Test helper
+/**
+ * Run a single test case, printing pass/fail.
+ *
+ * @param {string} name - Test description
+ * @param {() => void} fn - Test body (throws on failure)
+ * @returns {boolean} Whether the test passed
+ */
 function test(name, fn) {
   try {
     fn();
@@ -29,8 +30,32 @@ function test(name, fn) {
   }
 }
 
+/** Track all created tmp dirs for cleanup */
+const tmpDirs = [];
+
+/**
+ * Create a temporary directory and track it for cleanup.
+ *
+ * @returns {string} Absolute path to the new temp directory
+ */
 function makeTmpDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'resolve-fmt-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'resolve-fmt-'));
+  tmpDirs.push(dir);
+  return dir;
+}
+
+/**
+ * Remove all tracked temporary directories.
+ */
+function cleanupTmpDirs() {
+  for (const dir of tmpDirs) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup
+    }
+  }
+  tmpDirs.length = 0;
 }
 
 function runTests() {
@@ -103,6 +128,18 @@ function runTests() {
     assert.strictEqual(detectFormatter(root), 'prettier');
   });
 
+  run('detectFormatter: detects prettier key in package.json', () => {
+    const root = makeTmpDir();
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'test', prettier: { singleQuote: true } }));
+    assert.strictEqual(detectFormatter(root), 'prettier');
+  });
+
+  run('detectFormatter: ignores package.json without prettier key', () => {
+    const root = makeTmpDir();
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'test' }));
+    assert.strictEqual(detectFormatter(root), null);
+  });
+
   run('detectFormatter: biome takes priority over prettier', () => {
     const root = makeTmpDir();
     fs.writeFileSync(path.join(root, 'biome.json'), '{}');
@@ -157,6 +194,12 @@ function runTests() {
     assert.deepStrictEqual(result.prefix, ['prettier']);
   });
 
+  run('resolveFormatterBin: returns null for unknown formatter', () => {
+    const root = makeTmpDir();
+    const result = resolveFormatterBin(root, 'unknown');
+    assert.strictEqual(result, null);
+  });
+
   run('resolveFormatterBin: caches resolved binary', () => {
     const root = makeTmpDir();
     const binDir = path.join(root, 'node_modules', '.bin');
@@ -189,9 +232,14 @@ function runTests() {
     assert.strictEqual(detectFormatter(root), null);
   });
 
-  // ── Summary ───────────────────────────────────────────────────
+  // ── Summary & Cleanup ─────────────────────────────────────────
 
-  console.log(`\n  ${passed} passed, ${failed} failed\n`);
+  cleanupTmpDirs();
+
+  console.log('\n=== Test Results ===');
+  console.log(`Passed: ${passed}`);
+  console.log(`Failed: ${failed}`);
+  console.log(`Total:  ${passed + failed}`);
   process.exit(failed > 0 ? 1 : 0);
 }
 

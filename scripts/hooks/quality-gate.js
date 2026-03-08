@@ -18,30 +18,49 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const {
-  findProjectRoot,
-  detectFormatter,
-  resolveFormatterBin,
-} = require('../lib/resolve-formatter');
+const { findProjectRoot, detectFormatter, resolveFormatterBin } = require('../lib/resolve-formatter');
 
 const MAX_STDIN = 1024 * 1024;
 
+/**
+ * Execute a command synchronously, returning the spawnSync result.
+ *
+ * @param {string} command - Executable path or name
+ * @param {string[]} args - Arguments to pass
+ * @param {string} [cwd] - Working directory (defaults to process.cwd())
+ * @returns {import('child_process').SpawnSyncReturns<string>}
+ */
 function exec(command, args, cwd = process.cwd()) {
   return spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
     env: process.env,
+    timeout: 15000
   });
 }
 
+/**
+ * Write a message to stderr for logging.
+ *
+ * @param {string} msg - Message to log
+ */
 function log(msg) {
   process.stderr.write(`${msg}\n`);
 }
 
+/**
+ * Run quality-gate checks for a single file based on its extension.
+ * Skips JS/TS files when Biome is configured (handled by post-edit-format).
+ *
+ * @param {string} filePath - Path to the edited file
+ */
 function maybeRunQualityGate(filePath) {
   if (!filePath || !fs.existsSync(filePath)) {
     return;
   }
+
+  // Resolve to absolute path so projectRoot-relative comparisons work
+  filePath = path.resolve(filePath);
 
   const ext = path.extname(filePath).toLowerCase();
   const fix = String(process.env.ECC_QUALITY_GATE_FIX || '').toLowerCase() === 'true';
@@ -59,6 +78,7 @@ function maybeRunQualityGate(filePath) {
 
       // .json / .md — still need quality gate
       const resolved = resolveFormatterBin(projectRoot, 'biome');
+      if (!resolved) return;
       const args = [...resolved.prefix, 'check', filePath];
       if (fix) args.push('--write');
       const result = exec(resolved.bin, args, projectRoot);
@@ -70,6 +90,7 @@ function maybeRunQualityGate(filePath) {
 
     if (formatter === 'prettier') {
       const resolved = resolveFormatterBin(projectRoot, 'prettier');
+      if (!resolved) return;
       const args = [...resolved.prefix, fix ? '--write' : '--check', filePath];
       const result = exec(resolved.bin, args, projectRoot);
       if (result.status !== 0 && strict) {
@@ -82,8 +103,20 @@ function maybeRunQualityGate(filePath) {
     return;
   }
 
-  if (ext === '.go' && fix) {
-    exec('gofmt', ['-w', filePath]);
+  if (ext === '.go') {
+    if (fix) {
+      const r = exec('gofmt', ['-w', filePath]);
+      if (r.status !== 0 && strict) {
+        log(`[QualityGate] gofmt failed for ${filePath}`);
+      }
+    } else if (strict) {
+      const r = exec('gofmt', ['-l', filePath]);
+      if (r.status !== 0) {
+        log(`[QualityGate] gofmt failed for ${filePath}`);
+      } else if (r.stdout && r.stdout.trim()) {
+        log(`[QualityGate] gofmt check failed for ${filePath}`);
+      }
+    }
     return;
   }
 
@@ -119,7 +152,7 @@ function run(rawInput) {
 if (require.main === module) {
   let raw = '';
   process.stdin.setEncoding('utf8');
-  process.stdin.on('data', (chunk) => {
+  process.stdin.on('data', chunk => {
     if (raw.length < MAX_STDIN) {
       const remaining = MAX_STDIN - raw.length;
       raw += chunk.substring(0, remaining);

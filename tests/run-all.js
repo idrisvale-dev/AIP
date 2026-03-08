@@ -16,6 +16,7 @@ const testFiles = [
   'lib/session-manager.test.js',
   'lib/session-aliases.test.js',
   'lib/project-detect.test.js',
+  'lib/resolve-formatter.test.js',
   'hooks/hooks.test.js',
   'hooks/evaluate-session.test.js',
   'hooks/suggest-compact.test.js',
@@ -27,7 +28,7 @@ const testFiles = [
 ];
 
 const BOX_W = 58; // inner width between ║ delimiters
-const boxLine = (s) => `║${s.padEnd(BOX_W)}║`;
+const boxLine = s => `║${s.padEnd(BOX_W)}║`;
 
 console.log('╔' + '═'.repeat(BOX_W) + '╗');
 console.log(boxLine('           Everything Claude Code - Test Suite'));

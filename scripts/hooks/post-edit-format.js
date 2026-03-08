@@ -20,11 +20,7 @@
 const { execFileSync } = require('child_process');
 const path = require('path');
 
-const {
-  findProjectRoot,
-  detectFormatter,
-  resolveFormatterBin,
-} = require('../lib/resolve-formatter');
+const { findProjectRoot, detectFormatter, resolveFormatterBin } = require('../lib/resolve-formatter');
 
 const MAX_STDIN = 1024 * 1024; // 1MB limit
 
@@ -42,23 +38,22 @@ function run(rawInput) {
 
     if (filePath && /\.(ts|tsx|js|jsx)$/.test(filePath)) {
       try {
-        const projectRoot = findProjectRoot(path.dirname(path.resolve(filePath)));
+        const resolvedFilePath = path.resolve(filePath);
+        const projectRoot = findProjectRoot(path.dirname(resolvedFilePath));
         const formatter = detectFormatter(projectRoot);
         if (!formatter) return rawInput;
 
         const resolved = resolveFormatterBin(projectRoot, formatter);
+        if (!resolved) return rawInput;
 
         // Biome: `check --write` = format + lint in one pass
         // Prettier: `--write` = format only
-        const args =
-          formatter === 'biome'
-            ? [...resolved.prefix, 'check', '--write', filePath]
-            : [...resolved.prefix, '--write', filePath];
+        const args = formatter === 'biome' ? [...resolved.prefix, 'check', '--write', resolvedFilePath] : [...resolved.prefix, '--write', resolvedFilePath];
 
         execFileSync(resolved.bin, args, {
           cwd: projectRoot,
           stdio: ['pipe', 'pipe', 'pipe'],
-          timeout: 15000,
+          timeout: 15000
         });
       } catch {
         // Formatter not installed, file missing, or failed — non-blocking
@@ -76,7 +71,7 @@ if (require.main === module) {
   let data = '';
   process.stdin.setEncoding('utf8');
 
-  process.stdin.on('data', (chunk) => {
+  process.stdin.on('data', chunk => {
     if (data.length < MAX_STDIN) {
       const remaining = MAX_STDIN - data.length;
       data += chunk.substring(0, remaining);
@@ -84,8 +79,8 @@ if (require.main === module) {
   });
 
   process.stdin.on('end', () => {
-    const result = run(data);
-    process.stdout.write(result);
+    data = run(data);
+    process.stdout.write(data);
     process.exit(0);
   });
 }
