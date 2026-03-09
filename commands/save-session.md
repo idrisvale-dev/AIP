@@ -1,5 +1,5 @@
 ---
-description: Save current session state to a dated file in ~/.claude/sessions/ so work can be resumed in a future session with full context.
+description: Save current session state to a dated file in .claude/sessions/ (project level by default) so work can be resumed in a future session with full context.
 ---
 
 # Save Session Command

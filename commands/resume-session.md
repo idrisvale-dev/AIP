@@ -56,7 +56,7 @@ Read the complete file. Do not summarize yet.
 Respond with a structured briefing in this exact format:
 
 ```
-SESSION LOADED: .claude/sessions/YYYY-MM-DD-<shortid>-session.tmp
+SESSION LOADED: [actual resolved path to the file]
 ════════════════════════════════════════════════
 
 PROJECT: [project name / topic from file]
@@ -115,7 +115,7 @@ Report: "Session file found but appears empty or unreadable. You may need to cre
 ## Example Output
 
 ```
-SESSION LOADED: ~/.claude/sessions/2024-01-15-abc123-session.tmp
+SESSION LOADED: .claude/sessions/2024-01-15-abc123-session.tmp
 ════════════════════════════════════════════════
 
 PROJECT: my-app — JWT Authentication
