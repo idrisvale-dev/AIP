@@ -26,13 +26,17 @@ Before writing the file, collect:
 
 ### Step 2: Create the sessions folder if it doesn't exist
 
+Create the folder at the **project level** by default:
+
 ```bash
-mkdir -p ~/.claude/sessions
+mkdir -p .claude/sessions
 ```
+
+If the user explicitly asks for global storage, use `~/.claude/sessions` instead.
 
 ### Step 3: Write the session file
 
-Create `~/.claude/sessions/YYYY-MM-DD-<short-id>-session.tmp` using today's actual date and a short-id that satisfies the rules enforced by `SESSION_FILENAME_REGEX` in `session-manager.js`:
+Create `.claude/sessions/YYYY-MM-DD-<short-id>-session.tmp` in the current project directory, using today's actual date and a short-id that satisfies the rules enforced by `SESSION_FILENAME_REGEX` in `session-manager.js`:
 
 - Allowed characters: lowercase `a-z`, digits `0-9`, hyphens `-`
 - Minimum length: 8 characters
@@ -54,7 +58,7 @@ Write every section honestly. Do not skip sections — write "Nothing yet" or "N
 After writing, display the full contents and ask:
 
 ```
-Session saved to ~/.claude/sessions/YYYY-MM-DD-<short-id>-session.tmp
+Session saved to .claude/sessions/YYYY-MM-DD-<short-id>-session.tmp
 
 Does this look accurate? Anything to correct or add before we close?
 ```
@@ -269,4 +273,5 @@ Then test with Postman — the response should include a `Set-Cookie` header.
 - The "What Did NOT Work" section is the most critical — future sessions will blindly retry failed approaches without it
 - If the user asks to save mid-session (not just at the end), save what's known so far and mark in-progress items clearly
 - The file is meant to be read by Claude at the start of the next session via `/resume-session`
-- Keep this file in `~/.claude/sessions/` — this is a global directory shared across all projects, so session logs are not committed to any repo by default
+- Save to `.claude/sessions/` inside the current project by default — this keeps session logs co-located with the project they belong to
+- Use `~/.claude/sessions/` only if the user explicitly requests global storage or there is no active project directory

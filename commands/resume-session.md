@@ -1,5 +1,5 @@
 ---
-description: Load the most recent session file from ~/.claude/sessions/ and resume work with full context from where the last session ended.
+description: Load the most recent session file from .claude/sessions/ in the current project (or ~/.claude/sessions/ globally) and resume work with full context from where the last session ended.
 ---
 
 # Resume Session Command
@@ -17,9 +17,10 @@ This command is the counterpart to `/save-session`.
 ## Usage
 
 ```
-/resume-session                                                    # loads most recent file in ~/.claude/sessions/
-/resume-session 2024-01-15                                         # loads most recent session for that date
-/resume-session ~/.claude/sessions/2024-01-15-abc123-session.tmp  # loads specific file path
+/resume-session                                                      # loads most recent file in .claude/sessions/ (project level)
+/resume-session 2024-01-15                                           # loads most recent session for that date
+/resume-session .claude/sessions/2024-01-15-abc123-session.tmp      # loads specific file path
+/resume-session ~/.claude/sessions/2024-01-15-abc123-session.tmp    # loads from global location
 ```
 
 ## Process
@@ -28,18 +29,19 @@ This command is the counterpart to `/save-session`.
 
 If no argument provided:
 
-1. List all `.tmp` files in `~/.claude/sessions/`
-2. Pick the most recently modified file
-3. If the folder doesn't exist or is empty, tell the user:
+1. First check `.claude/sessions/` in the current project directory
+2. If not found there, fall back to `~/.claude/sessions/`
+3. Pick the most recently modified `.tmp` file from whichever location has files
+4. If neither folder exists or both are empty, tell the user:
    ```
-   No session files found in ~/.claude/sessions/
+   No session files found in .claude/sessions/ or ~/.claude/sessions/
    Run /save-session at the end of a session to create one.
    ```
    Then stop.
 
 If an argument is provided:
 
-- If it looks like a date (`YYYY-MM-DD`), find all files in `~/.claude/sessions/` matching
+- If it looks like a date (`YYYY-MM-DD`), search `.claude/sessions/` first then `~/.claude/sessions/` for files matching
   `YYYY-MM-DD-session.tmp` (old format) or `YYYY-MM-DD-<shortid>-session.tmp` (new format)
   and load the most recently modified variant for that date
 - If it looks like a file path, read that file directly
@@ -54,7 +56,7 @@ Read the complete file. Do not summarize yet.
 Respond with a structured briefing in this exact format:
 
 ```
-SESSION LOADED: ~/.claude/sessions/YYYY-MM-DD-<shortid>-session.tmp
+SESSION LOADED: .claude/sessions/YYYY-MM-DD-<shortid>-session.tmp
 ════════════════════════════════════════════════
 
 PROJECT: [project name / topic from file]
