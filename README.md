@@ -14,9 +14,10 @@
 ![Python](https://img.shields.io/badge/-Python-3776AB?logo=python&logoColor=white)
 ![Go](https://img.shields.io/badge/-Go-00ADD8?logo=go&logoColor=white)
 ![Java](https://img.shields.io/badge/-Java-ED8B00?logo=openjdk&logoColor=white)
+![Perl](https://img.shields.io/badge/-Perl-39457E?logo=perl&logoColor=white)
 ![Markdown](https://img.shields.io/badge/-Markdown-000000?logo=markdown&logoColor=white)
 
-> **50K+ stars** | **6K+ forks** | **30 contributors** | **6 languages supported** | **Anthropic Hackathon Winner**
+> **50K+ stars** | **6K+ forks** | **30 contributors** | **7 languages supported** | **Anthropic Hackathon Winner**
 
 ---
 
@@ -109,7 +110,7 @@ This repo is the raw code only. The guides explain everything.
 
 - **Interactive installation wizard** — New `configure-ecc` skill provides guided setup with merge/overwrite detection
 - **PM2 & multi-agent orchestration** — 6 new commands (`/pm2`, `/multi-plan`, `/multi-execute`, `/multi-backend`, `/multi-frontend`, `/multi-workflow`) for managing complex multi-service workflows
-- **Multi-language rules architecture** — Rules restructured from flat files into `common/` + `typescript/` + `python/` + `golang/` directories. Install only the languages you need
+- **Multi-language rules architecture** — Rules restructured from flat files into `common/` + `typescript/` + `python/` + `golang/` + `perl/` directories. Install only the languages you need
 - **Chinese (zh-CN) translations** — Complete translation of all agents, commands, skills, and rules (80+ files)
 - **GitHub Sponsors support** — Sponsor the project via GitHub Sponsors
 - **Enhanced CONTRIBUTING.md** — Detailed PR templates for each contribution type
@@ -155,9 +156,9 @@ git clone https://github.com/affaan-m/everything-claude-code.git
 cd everything-claude-code
 
 # Recommended: use the installer (handles common + language rules safely)
-./install.sh typescript    # or python or golang
+./install.sh typescript    # or python or golang or perl
 # You can pass multiple languages:
-# ./install.sh typescript python golang
+# ./install.sh typescript python golang perl
 # or target cursor:
 # ./install.sh --target cursor typescript
 # or target antigravity:
@@ -310,6 +311,9 @@ everything-claude-code/
 |   |-- liquid-glass-design/         # iOS 26 Liquid Glass design system (NEW)
 |   |-- foundation-models-on-device/ # Apple on-device LLM with FoundationModels (NEW)
 |   |-- swift-concurrency-6-2/       # Swift 6.2 Approachable Concurrency (NEW)
+|   |-- perl-patterns/             # Modern Perl 5.36+ idioms and best practices (NEW)
+|   |-- perl-security/             # Perl security patterns, taint mode, safe I/O (NEW)
+|   |-- perl-testing/              # Perl TDD with Test2::V0, prove, Devel::Cover (NEW)
 |   |-- autonomous-loops/           # Autonomous loop patterns: sequential pipelines, PR loops, DAG orchestration (NEW)
 |   |-- plankton-code-quality/      # Write-time code quality enforcement with Plankton hooks (NEW)
 |
@@ -361,6 +365,7 @@ everything-claude-code/
 |   |-- typescript/          # TypeScript/JavaScript specific
 |   |-- python/              # Python specific
 |   |-- golang/              # Go specific
+|   |-- perl/                # Perl specific (NEW)
 |
 |-- hooks/            # Trigger-based automations
 |   |-- README.md                 # Hook documentation, recipes, and customization guide
@@ -563,6 +568,7 @@ This gives you instant access to all commands, agents, skills, and hooks.
 > cp -r everything-claude-code/rules/typescript/* ~/.claude/rules/   # pick your stack
 > cp -r everything-claude-code/rules/python/* ~/.claude/rules/
 > cp -r everything-claude-code/rules/golang/* ~/.claude/rules/
+> cp -r everything-claude-code/rules/perl/* ~/.claude/rules/
 >
 > # Option B: Project-level rules (applies to current project only)
 > mkdir -p .claude/rules
@@ -588,6 +594,7 @@ cp -r everything-claude-code/rules/common/* ~/.claude/rules/
 cp -r everything-claude-code/rules/typescript/* ~/.claude/rules/   # pick your stack
 cp -r everything-claude-code/rules/python/* ~/.claude/rules/
 cp -r everything-claude-code/rules/golang/* ~/.claude/rules/
+cp -r everything-claude-code/rules/perl/* ~/.claude/rules/
 
 # Copy commands
 cp everything-claude-code/commands/*.md ~/.claude/commands/
@@ -670,6 +677,7 @@ rules/
   typescript/      # TS/JS specific patterns and tools
   python/          # Python specific patterns and tools
   golang/          # Go specific patterns and tools
+  perl/            # Perl specific patterns and tools
 ```
 
 See [`rules/README.md`](rules/README.md) for installation and structure details.
@@ -824,7 +832,7 @@ Please contribute! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Ideas for Contributions
 
-- Language-specific skills (Rust, C#, Swift, Kotlin) — Go, Python, Java already included
+- Language-specific skills (Rust, C#, Swift, Kotlin) — Go, Python, Java, Perl already included
 - Framework-specific configs (Rails, Laravel, FastAPI, NestJS) — Django, Spring Boot already included
 - DevOps agents (Kubernetes, Terraform, AWS, Docker)
 - Testing strategies (different frameworks, visual regression)
@@ -841,7 +849,7 @@ ECC provides **full Cursor IDE support** with hooks, rules, agents, skills, comm
 ```bash
 # Install for your language(s)
 ./install.sh --target cursor typescript
-./install.sh --target cursor python golang swift
+./install.sh --target cursor python golang swift perl
 ```
 
 ### What's Included
@@ -850,7 +858,7 @@ ECC provides **full Cursor IDE support** with hooks, rules, agents, skills, comm
 |-----------|-------|---------|
 | Hook Events | 15 | sessionStart, beforeShellExecution, afterFileEdit, beforeMCPExecution, beforeSubmitPrompt, and 10 more |
 | Hook Scripts | 16 | Thin Node.js scripts delegating to `scripts/hooks/` via shared adapter |
-| Rules | 29 | 9 common (alwaysApply) + 20 language-specific (TypeScript, Python, Go, Swift) |
+| Rules | 34 | 9 common (alwaysApply) + 25 language-specific (TypeScript, Python, Go, Swift, Perl) |
 | Agents | Shared | Via AGENTS.md at root (read by Cursor natively) |
 | Skills | Shared + Bundled | Via AGENTS.md at root and `.cursor/skills/` for translated additions |
 | Commands | Shared | `.cursor/commands/` if installed |
@@ -1096,7 +1104,7 @@ ECC is the **first plugin to maximize every major AI coding tool**. Here's how e
 | **Skills** | 65 | Shared | 10 (native format) | 37 |
 | **Hook Events** | 8 types | 15 types | None yet | 11 types |
 | **Hook Scripts** | 20+ scripts | 16 scripts (DRY adapter) | N/A | Plugin hooks |
-| **Rules** | 29 (common + lang) | 29 (YAML frontmatter) | Instruction-based | 13 instructions |
+| **Rules** | 34 (common + lang) | 34 (YAML frontmatter) | Instruction-based | 13 instructions |
 | **Custom Tools** | Via hooks | Via hooks | N/A | 6 native tools |
 | **MCP Servers** | 14 | Shared (mcp.json) | 4 (command-based) | Full |
 | **Config Format** | settings.json | hooks.json + rules/ | config.toml | opencode.json |
