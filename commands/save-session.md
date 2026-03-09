@@ -1,5 +1,5 @@
 ---
-description: Save current session state to a dated file in .claude/sessions/ so work can be resumed in a future session with full context.
+description: Save current session state to a dated file in ~/.claude/sessions/ so work can be resumed in a future session with full context.
 ---
 
 # Save Session Command
@@ -27,14 +27,14 @@ Before writing the file, collect:
 ### Step 2: Create the sessions folder if it doesn't exist
 
 ```bash
-mkdir -p .claude/sessions
+mkdir -p ~/.claude/sessions
 ```
 
 ### Step 3: Write the session file
 
-Create `.claude/sessions/YYYY-MM-DD.md` using today's actual date.
+Create `~/.claude/sessions/YYYY-MM-DD-<short-id>-session.tmp` using today's actual date and a short random alphanumeric ID (e.g., `2024-01-15-abc123de-session.tmp`).
 
-If a file for today already exists (multiple sessions in one day), name it `YYYY-MM-DD-2.md`, `YYYY-MM-DD-3.md`, etc.
+Each session always gets a unique short-id, so multiple sessions on the same day never collide.
 
 ### Step 4: Populate the file with all sections below
 
@@ -45,7 +45,7 @@ Write every section honestly. Do not skip sections — write "Nothing yet" or "N
 After writing, display the full contents and ask:
 
 ```
-Session saved to .claude/sessions/YYYY-MM-DD.md
+Session saved to ~/.claude/sessions/YYYY-MM-DD-<short-id>-session.tmp
 
 Does this look accurate? Anything to correct or add before we close?
 ```
@@ -58,6 +58,7 @@ Wait for confirmation. Make edits if requested.
 
 ```markdown
 # Session: YYYY-MM-DD
+
 **Started:** [approximate time if known]
 **Last Updated:** [current time]
 **Project:** [project name or path]
@@ -116,12 +117,12 @@ If nothing is queued: "No specific untried approaches identified."
 
 [Every file touched this session. Be precise about what state each file is in.]
 
-| File | Status | Notes |
-|------|--------|-------|
-| `path/to/file.ts` | ✅ Complete | [what it does] |
+| File              | Status         | Notes                      |
+| ----------------- | -------------- | -------------------------- |
+| `path/to/file.ts` | ✅ Complete    | [what it does]             |
 | `path/to/file.ts` | 🔄 In Progress | [what's done, what's left] |
-| `path/to/file.ts` | ❌ Broken | [what's wrong] |
-| `path/to/file.ts` | 🗒️ Not Started | [planned but not touched] |
+| `path/to/file.ts` | ❌ Broken      | [what's wrong]             |
+| `path/to/file.ts` | 🗒️ Not Started | [planned but not touched]  |
 
 If no files were touched: "No files modified this session."
 
@@ -173,6 +174,7 @@ required, services that need to be running, etc. Skip if standard setup.]
 
 ```markdown
 # Session: 2024-01-15
+
 **Started:** ~2pm
 **Last Updated:** 5:30pm
 **Project:** my-app
@@ -220,13 +222,13 @@ refreshes without exposing the token to JavaScript.
 
 ## Current State of Files
 
-| File | Status | Notes |
-|------|--------|-------|
-| `app/api/auth/register/route.ts` | ✅ Complete | Works, tested |
-| `app/api/auth/login/route.ts` | 🔄 In Progress | Token generates but not setting cookie yet |
-| `lib/auth.ts` | ✅ Complete | JWT helpers, all tested |
-| `middleware.ts` | 🗒️ Not Started | Route protection, needs cookie read logic first |
-| `app/login/page.tsx` | 🗒️ Not Started | UI not started |
+| File                             | Status         | Notes                                           |
+| -------------------------------- | -------------- | ----------------------------------------------- |
+| `app/api/auth/register/route.ts` | ✅ Complete    | Works, tested                                   |
+| `app/api/auth/login/route.ts`    | 🔄 In Progress | Token generates but not setting cookie yet      |
+| `lib/auth.ts`                    | ✅ Complete    | JWT helpers, all tested                         |
+| `middleware.ts`                  | 🗒️ Not Started | Route protection, needs cookie read logic first |
+| `app/login/page.tsx`             | 🗒️ Not Started | UI not started                                  |
 
 ---
 
@@ -258,4 +260,4 @@ Then test with Postman — the response should include a `Set-Cookie` header.
 - The "What Did NOT Work" section is the most critical — future sessions will blindly retry failed approaches without it
 - If the user asks to save mid-session (not just at the end), save what's known so far and mark in-progress items clearly
 - The file is meant to be read by Claude at the start of the next session via `/resume-session`
-- Keep this file in `.claude/sessions/` — add that folder to `.gitignore` if session logs shouldn't be committed
+- Keep this file in `~/.claude/sessions/` — this is a global directory shared across all projects, so session logs are not committed to any repo by default

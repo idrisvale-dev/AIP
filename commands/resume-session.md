@@ -1,5 +1,5 @@
 ---
-description: Load the most recent session file from .claude/sessions/ and resume work with full context from where the last session ended.
+description: Load the most recent session file from ~/.claude/sessions/ and resume work with full context from where the last session ended.
 ---
 
 # Resume Session Command
@@ -17,9 +17,9 @@ This command is the counterpart to `/save-session`.
 ## Usage
 
 ```
-/resume-session                          # loads most recent file in .claude/sessions/
-/resume-session 2024-01-15               # loads specific date
-/resume-session .claude/sessions/foo.md  # loads specific file path
+/resume-session                                                    # loads most recent file in ~/.claude/sessions/
+/resume-session 2024-01-15                                         # loads most recent session for that date
+/resume-session ~/.claude/sessions/2024-01-15-abc123-session.tmp  # loads specific file path
 ```
 
 ## Process
@@ -27,17 +27,21 @@ This command is the counterpart to `/save-session`.
 ### Step 1: Find the session file
 
 If no argument provided:
-1. List all files in `.claude/sessions/`
+
+1. List all `.tmp` files in `~/.claude/sessions/`
 2. Pick the most recently modified file
 3. If the folder doesn't exist or is empty, tell the user:
    ```
-   No session files found in .claude/sessions/
+   No session files found in ~/.claude/sessions/
    Run /save-session at the end of a session to create one.
    ```
    Then stop.
 
 If an argument is provided:
-- If it looks like a date (`YYYY-MM-DD`), look for `.claude/sessions/YYYY-MM-DD.md`
+
+- If it looks like a date (`YYYY-MM-DD`), find all files in `~/.claude/sessions/` matching
+  `YYYY-MM-DD-session.tmp` (old format) or `YYYY-MM-DD-<shortid>-session.tmp` (new format)
+  and load the most recently modified variant for that date
 - If it looks like a file path, read that file directly
 - If not found, report clearly and stop
 
@@ -50,7 +54,7 @@ Read the complete file. Do not summarize yet.
 Respond with a structured briefing in this exact format:
 
 ```
-SESSION LOADED: .claude/sessions/YYYY-MM-DD.md
+SESSION LOADED: ~/.claude/sessions/YYYY-MM-DD-<shortid>-session.tmp
 ════════════════════════════════════════════════
 
 PROJECT: [project name / topic from file]
@@ -89,14 +93,14 @@ If no next step is defined — ask the user where to start, and optionally sugge
 
 ## Edge Cases
 
-**Multiple sessions for the same date** (`2024-01-15.md`, `2024-01-15-2.md`):
-Load the highest-numbered file (most recent).
+**Multiple sessions for the same date** (`2024-01-15-session.tmp`, `2024-01-15-abc123-session.tmp`):
+Load the most recently modified file for that date.
 
 **Session file references files that no longer exist:**
 Note this during the briefing — "⚠️ `path/to/file.ts` referenced in session but not found on disk."
 
-**Session file is from a very old date:**
-Note the gap — "⚠️ This session is from X days ago. Things may have changed." — then proceed normally.
+**Session file is from more than 7 days ago:**
+Note the gap — "⚠️ This session is from N days ago (threshold: 7 days). Things may have changed." — then proceed normally.
 
 **User provides a file path directly (e.g., forwarded from a teammate):**
 Read it and follow the same briefing process — the format is the same regardless of source.
@@ -109,7 +113,7 @@ Report: "Session file found but appears empty or unreadable. You may need to cre
 ## Example Output
 
 ```
-SESSION LOADED: .claude/sessions/2024-01-15.md
+SESSION LOADED: ~/.claude/sessions/2024-01-15-abc123-session.tmp
 ════════════════════════════════════════════════
 
 PROJECT: my-app — JWT Authentication
