@@ -32,7 +32,16 @@ mkdir -p ~/.claude/sessions
 
 ### Step 3: Write the session file
 
-Create `~/.claude/sessions/YYYY-MM-DD-<short-id>-session.tmp` using today's actual date and a short random alphanumeric ID (e.g., `2024-01-15-abc123de-session.tmp`).
+Create `~/.claude/sessions/YYYY-MM-DD-<short-id>-session.tmp` using today's actual date and a short-id that satisfies the rules enforced by `SESSION_FILENAME_REGEX` in `session-manager.js`:
+
+- Allowed characters: lowercase `a-z`, digits `0-9`, hyphens `-`
+- Minimum length: 8 characters
+- No uppercase letters, no underscores, no spaces
+
+Valid examples: `abc123de`, `a1b2c3d4`, `frontend-worktree-1`
+Invalid examples: `ABC123de` (uppercase), `short` (under 8 chars), `test_id1` (underscore)
+
+Full valid filename example: `2024-01-15-abc123de-session.tmp`
 
 Each session always gets a unique short-id, so multiple sessions on the same day never collide.
 
