@@ -62,16 +62,18 @@ process.stdin.on('end', () => {
     process.exit(0);
   }
 
-  if (result.stdout) process.stdout.write(result.stdout);
-  if (result.stderr) process.stderr.write(result.stderr);
-
   // result.status is null when the process was killed by a signal or
-  // timed out.  Treat that as an error rather than silently passing.
+  // timed out.  Check BEFORE writing stdout to avoid leaking partial
+  // or corrupt monitor output.  Pass through original raw input instead.
   if (!Number.isInteger(result.status)) {
     const signal = result.signal || 'unknown';
     process.stderr.write(`[InsAIts] Security monitor killed (signal: ${signal}). Tool execution continues.\n`);
+    process.stdout.write(raw);
     process.exit(0);
   }
+
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
 
   process.exit(result.status);
 });

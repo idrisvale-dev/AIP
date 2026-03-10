@@ -36,6 +36,12 @@ How it works:
   Exit code 2 = critical issue found (blocks tool execution).
   Stderr output = non-blocking warning shown to Claude.
 
+Environment variables:
+  INSAITS_DEV_MODE   Set to "true" to enable dev mode (no API key needed).
+                     Defaults to "false" (strict mode).
+  INSAITS_MODEL      LLM model identifier for fingerprinting. Default: claude-opus.
+  INSAITS_VERBOSE    Set to any value to enable debug logging.
+
 Detections include:
   - Credential exposure (API keys, tokens, passwords)
   - Prompt injection patterns
@@ -75,7 +81,11 @@ try:
 except ImportError:
     INSAITS_AVAILABLE = False
 
+# --- Constants ---
 AUDIT_FILE: str = ".insaits_audit_session.jsonl"
+MIN_CONTENT_LENGTH: int = 10
+MAX_SCAN_LENGTH: int = 4000
+DEFAULT_MODEL: str = "claude-opus"
 
 
 def extract_content(data: Dict[str, Any]) -> Tuple[str, str]:
@@ -113,14 +123,20 @@ def extract_content(data: Dict[str, Any]) -> Tuple[str, str]:
 
 
 def write_audit(event: Dict[str, Any]) -> None:
-    """Append an audit event to the JSONL audit log."""
+    """Append an audit event to the JSONL audit log.
+
+    Creates a new dict to avoid mutating the caller's *event*.
+    """
     try:
-        event["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        event["hash"] = hashlib.sha256(
-            json.dumps(event, sort_keys=True).encode()
+        enriched: Dict[str, Any] = {
+            **event,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        enriched["hash"] = hashlib.sha256(
+            json.dumps(enriched, sort_keys=True).encode()
         ).hexdigest()[:16]
         with open(AUDIT_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(event) + "\n")
+            f.write(json.dumps(enriched) + "\n")
     except OSError as exc:
         log.warning("Failed to write audit log %s: %s", AUDIT_FILE, exc)
 
@@ -166,22 +182,29 @@ def main() -> None:
     text, context = extract_content(data)
 
     # Skip very short content (e.g. "OK", empty bash results)
-    if len(text.strip()) < 10:
+    if len(text.strip()) < MIN_CONTENT_LENGTH:
         sys.exit(0)
 
     if not INSAITS_AVAILABLE:
         log.warning("Not installed. Run: pip install insa-its")
         sys.exit(0)
 
-    monitor: insAItsMonitor = insAItsMonitor(
-        session_name="claude-code-hook",
-        dev_mode=os.environ.get("INSAITS_DEV_MODE", "true").lower() in ("1", "true", "yes"),
-    )
-    result: Dict[str, Any] = monitor.send_message(
-        text=text[:4000],
-        sender_id="claude-code",
-        llm_id=os.environ.get("INSAITS_MODEL", "claude-opus"),
-    )
+    # Wrap SDK calls so an internal error does not crash the hook
+    try:
+        monitor: insAItsMonitor = insAItsMonitor(
+            session_name="claude-code-hook",
+            dev_mode=os.environ.get(
+                "INSAITS_DEV_MODE", "false"
+            ).lower() in ("1", "true", "yes"),
+        )
+        result: Dict[str, Any] = monitor.send_message(
+            text=text[:MAX_SCAN_LENGTH],
+            sender_id="claude-code",
+            llm_id=os.environ.get("INSAITS_MODEL", DEFAULT_MODEL),
+        )
+    except Exception as exc:
+        log.warning("SDK error, skipping security scan: %s", exc)
+        sys.exit(0)
 
     anomalies: List[Any] = result.get("anomalies", [])
 
