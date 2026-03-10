@@ -2,6 +2,7 @@
 'use strict';
 
 const MAX_STDIN = 1024 * 1024;
+const path = require('path');
 const { splitShellSegments } = require('../lib/shell-split');
 
 const DEV_COMMAND_WORDS = new Set([
@@ -10,13 +11,9 @@ const DEV_COMMAND_WORDS = new Set([
   'yarn',
   'bun',
   'npx',
-  'bash',
-  'sh',
-  'zsh',
-  'fish',
   'tmux'
 ]);
-const SKIPPABLE_PREFIX_WORDS = new Set(['env', 'command', 'builtin', 'exec', 'noglob', 'sudo']);
+const SKIPPABLE_PREFIX_WORDS = new Set(['env', 'command', 'builtin', 'exec', 'noglob', 'sudo', 'nohup']);
 const PREFIX_OPTION_VALUE_WORDS = {
   env: new Set(['-u', '-C', '-S', '--unset', '--chdir', '--split-string']),
   sudo: new Set([
@@ -97,6 +94,12 @@ function isOptionToken(token) {
   return token.startsWith('-') && token.length > 1;
 }
 
+function normalizeCommandWord(token) {
+  if (!token) return '';
+  const base = path.basename(token).toLowerCase();
+  return base.replace(/\.(cmd|exe|bat)$/i, '');
+}
+
 function getLeadingCommandWord(segment) {
   let index = 0;
   let activeWrapper = null;
@@ -122,8 +125,10 @@ function getLeadingCommandWord(segment) {
 
     if (/^[A-Za-z_][A-Za-z0-9_]*=.*/.test(token)) continue;
 
-    if (SKIPPABLE_PREFIX_WORDS.has(token)) {
-      activeWrapper = token;
+    const normalizedToken = normalizeCommandWord(token);
+
+    if (SKIPPABLE_PREFIX_WORDS.has(normalizedToken)) {
+      activeWrapper = normalizedToken;
       continue;
     }
 
@@ -134,7 +139,7 @@ function getLeadingCommandWord(segment) {
       continue;
     }
 
-    return token;
+    return normalizedToken;
   }
 
   return null;

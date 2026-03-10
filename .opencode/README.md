@@ -39,7 +39,7 @@ This loads the ECC OpenCode plugin module from npm:
 
 It does **not** auto-register the full ECC command/agent/instruction catalog in your project config. For the full OpenCode setup, either:
 - run OpenCode inside this repository, or
-- copy the relevant `.opencode/commands/`, `.opencode/prompts/`, `.opencode/instructions/`, and `agent` / `command` config entries into your own project
+- copy the relevant `.opencode/commands/`, `.opencode/prompts/`, `.opencode/instructions/`, and the `instructions`, `agent`, and `command` config entries into your own project
 
 After installation, the `ecc-install` CLI is also available:
 

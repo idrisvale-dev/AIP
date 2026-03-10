@@ -101,7 +101,14 @@ function readCommandLog(logFile) {
   return fs.readFileSync(logFile, 'utf8')
     .split('\n')
     .filter(Boolean)
-    .map(line => JSON.parse(line));
+    .map(line => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 }
 
 function withPrependedPath(binDir, env = {}) {
@@ -869,6 +876,32 @@ async function runTests() {
       assert.strictEqual(result.stdout, stdinJson, 'Windows path should preserve original input');
     } else {
       assert.strictEqual(result.code, 2, 'Unix path should block bare dev servers');
+      assert.ok(result.stderr.includes('BLOCKED'), 'Should explain why the command was blocked');
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('blocks env-wrapped npm run dev outside tmux on non-Windows platforms', async () => {
+    const stdinJson = JSON.stringify({ tool_input: { command: '/usr/bin/env npm run dev' } });
+    const result = await runScript(path.join(scriptsDir, 'pre-bash-dev-server-block.js'), stdinJson);
+
+    if (process.platform === 'win32') {
+      assert.strictEqual(result.code, 0, 'Windows path should pass through');
+      assert.strictEqual(result.stdout, stdinJson, 'Windows path should preserve original input');
+    } else {
+      assert.strictEqual(result.code, 2, 'Unix path should block wrapped dev servers');
+      assert.ok(result.stderr.includes('BLOCKED'), 'Should explain why the command was blocked');
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('blocks nohup-wrapped npm run dev outside tmux on non-Windows platforms', async () => {
+    const stdinJson = JSON.stringify({ tool_input: { command: 'nohup npm run dev >/tmp/dev.log 2>&1 &' } });
+    const result = await runScript(path.join(scriptsDir, 'pre-bash-dev-server-block.js'), stdinJson);
+
+    if (process.platform === 'win32') {
+      assert.strictEqual(result.code, 0, 'Windows path should pass through');
+      assert.strictEqual(result.stdout, stdinJson, 'Windows path should preserve original input');
+    } else {
+      assert.strictEqual(result.code, 2, 'Unix path should block wrapped dev servers');
       assert.ok(result.stderr.includes('BLOCKED'), 'Should explain why the command was blocked');
     }
   })) passed++; else failed++;
@@ -1659,7 +1692,14 @@ async function runTests() {
     const formatSource = fs.readFileSync(path.join(scriptsDir, 'post-edit-format.js'), 'utf8');
     // Strip comments to avoid matching "shell: true" in comment text
     const codeOnly = formatSource.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-    assert.ok(!codeOnly.includes('shell:'), 'post-edit-format.js should not pass shell option in code');
+    assert.ok(
+      !/execFileSync\([^)]*shell\s*:/.test(codeOnly),
+      'post-edit-format.js should not pass shell option to execFileSync'
+    );
+    assert.ok(
+      codeOnly.includes("process.platform === 'win32' && cmd.bin.endsWith('.cmd')"),
+      'Windows shell execution must stay gated to .cmd shims'
+    );
     assert.ok(formatSource.includes('npx.cmd'), 'Should use npx.cmd for Windows cross-platform safety');
   })) passed++; else failed++;
 
@@ -1708,6 +1748,33 @@ async function runTests() {
     assert.ok(observeSource.includes('PYTHON_CMD'), 'observe.sh should resolve Python dynamically');
     assert.ok(startObserverSource.includes('CLV2_PYTHON_CMD'), 'start-observer.sh should reuse detected Python command');
     assert.ok(detectProjectSource.includes('_clv2_resolve_python_cmd'), 'detect-project.sh should provide shared Python resolution');
+  })) passed++; else failed++;
+
+  if (await asyncTest('detect-project exports the resolved Python command for downstream scripts', async () => {
+    const detectProjectPath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2', 'scripts', 'detect-project.sh');
+    const shellCommand = [
+      `source "${detectProjectPath}" >/dev/null 2>&1`,
+      'printf "%s\\n" "${CLV2_PYTHON_CMD:-}"'
+    ].join('; ');
+
+    const shell = process.platform === 'win32' ? 'bash' : 'bash';
+    const proc = spawn(shell, ['-lc', shellCommand], {
+      env: process.env,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', data => stdout += data);
+    proc.stderr.on('data', data => stderr += data);
+
+    const code = await new Promise((resolve, reject) => {
+      proc.on('close', resolve);
+      proc.on('error', reject);
+    });
+
+    assert.strictEqual(code, 0, `detect-project.sh should source cleanly, stderr: ${stderr}`);
+    assert.ok(stdout.trim().length > 0, 'CLV2_PYTHON_CMD should export a resolved interpreter path');
   })) passed++; else failed++;
 
   if (await asyncTest('matches .tsx extension for type checking', async () => {

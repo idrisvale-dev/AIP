@@ -1055,7 +1055,7 @@ It does **not** automatically add ECC's full command/agent/instruction catalog t
 
 For the full ECC OpenCode setup, either:
 - run OpenCode inside this repository, or
-- copy the bundled `.opencode/` config assets into your project and wire the `agent` / `command` entries in `opencode.json`
+- copy the bundled `.opencode/` config assets into your project and wire the `instructions`, `agent`, and `command` entries in `opencode.json`
 
 ### Documentation
 

@@ -10,7 +10,7 @@
  * Fails silently if no formatter is found or installed.
  */
 
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { getPackageManager } = require('../lib/package-manager');
@@ -50,10 +50,15 @@ process.stdin.on('data', chunk => {
 
 function findProjectRoot(startDir) {
   let dir = startDir;
+  let fallbackDir = null;
 
   while (true) {
-    if (PROJECT_ROOT_MARKERS.some(marker => fs.existsSync(path.join(dir, marker)))) {
+    if (detectFormatter(dir)) {
       return dir;
+    }
+
+    if (!fallbackDir && PROJECT_ROOT_MARKERS.some(marker => fs.existsSync(path.join(dir, marker)))) {
+      fallbackDir = dir;
     }
 
     const parentDir = path.dirname(dir);
@@ -61,7 +66,7 @@ function findProjectRoot(startDir) {
     dir = parentDir;
   }
 
-  return startDir;
+  return fallbackDir || startDir;
 }
 
 function detectFormatter(projectRoot) {
@@ -114,6 +119,33 @@ function getFormatterCommand(formatter, filePath, projectRoot) {
   return null;
 }
 
+function runFormatterCommand(cmd, projectRoot) {
+  if (process.platform === 'win32' && cmd.bin.endsWith('.cmd')) {
+    const result = spawnSync(cmd.bin, cmd.args, {
+      cwd: projectRoot,
+      shell: true,
+      stdio: 'pipe',
+      timeout: 15000
+    });
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    if (typeof result.status === 'number' && result.status !== 0) {
+      throw new Error(result.stderr?.toString() || `Formatter exited with status ${result.status}`);
+    }
+
+    return;
+  }
+
+  execFileSync(cmd.bin, cmd.args, {
+    cwd: projectRoot,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    timeout: 15000
+  });
+}
+
 process.stdin.on('end', () => {
   try {
     const input = JSON.parse(data);
@@ -126,11 +158,7 @@ process.stdin.on('end', () => {
         const cmd = getFormatterCommand(formatter, filePath, projectRoot);
 
         if (cmd) {
-          execFileSync(cmd.bin, cmd.args, {
-            cwd: projectRoot,
-            stdio: ['pipe', 'pipe', 'pipe'],
-            timeout: 15000
-          });
+          runFormatterCommand(cmd, projectRoot);
         }
       } catch {
         // Formatter not installed, file missing, or failed — non-blocking

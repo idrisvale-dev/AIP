@@ -43,6 +43,7 @@ _clv2_resolve_python_cmd() {
 }
 
 _CLV2_PYTHON_CMD="$(_clv2_resolve_python_cmd 2>/dev/null || true)"
+CLV2_PYTHON_CMD="$_CLV2_PYTHON_CMD"
 export CLV2_PYTHON_CMD
 
 _clv2_detect_project() {
