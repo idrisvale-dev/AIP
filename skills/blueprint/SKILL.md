@@ -17,47 +17,75 @@ origin: community
 
 Turn a one-line objective into a step-by-step construction plan that any coding agent can execute cold.
 
+## When to Use
+
+- Breaking a large feature into multiple PRs with clear dependency order
+- Planning a refactor or migration that spans multiple sessions
+- Coordinating parallel workstreams across sub-agents
+- Any task where context loss between sessions would cause rework
+
+**Do not use** for tasks completable in a single PR, fewer than 3 tool calls, or when the user says "just do it."
+
+## How It Works
+
+Blueprint runs a 5-phase pipeline:
+
+1. **Research** — Pre-flight checks (git, gh auth, remote, default branch), then reads project structure, existing plans, and memory files to gather context.
+2. **Design** — Breaks the objective into one-PR-sized steps (3–12 typical). Assigns dependency edges, parallel/serial ordering, model tier (strongest vs default), and rollback strategy per step.
+3. **Draft** — Writes a self-contained Markdown plan file to `plans/`. Every step includes a context brief, task list, verification commands, and exit criteria — so a fresh agent can execute any step without reading prior steps.
+4. **Review** — Delegates adversarial review to a strongest-model sub-agent (e.g., Opus) against a checklist and anti-pattern catalog. Fixes all critical findings before finalizing.
+5. **Register** — Saves the plan, updates memory index, and presents the step count and parallelism summary to the user.
+
+Blueprint detects git/gh availability automatically. With git + GitHub CLI, it generates full branch/PR/CI workflow plans. Without them, it switches to direct mode (edit-in-place, no branches).
+
+## Examples
+
+### Basic usage
+
 ```
 /blueprint myapp "migrate database to PostgreSQL"
 ```
 
-## What You Get
+Produces `plans/myapp-migrate-database-to-postgresql.md` with steps like:
+- Step 1: Add PostgreSQL driver and connection config
+- Step 2: Create migration scripts for each table
+- Step 3: Update repository layer to use new driver
+- Step 4: Add integration tests against PostgreSQL
+- Step 5: Remove old database code and config
 
-A Markdown plan file in `plans/` where every step is independently executable — a fresh agent in a new session can pick up any step without reading prior steps or conversation history:
+### Multi-agent project
 
-- **Steps** — each one-PR sized, with task list, rollback strategy, verification commands, and exit criteria
-- **Dependency graph** — which steps can run in parallel, which must be serial
-- **Design decisions** — rationale for key choices, locked against re-litigation
-- **Invariants** — properties verified after every step
-- **Progress log** — single source of truth for execution state across sessions
-- **Review log** — findings from an adversarial review gate
+```
+/blueprint chatbot "extract LLM providers into a plugin system"
+```
+
+Produces a plan with parallel steps where possible (e.g., "implement Anthropic plugin" and "implement OpenAI plugin" run in parallel after the plugin interface step is done), model tier assignments (strongest for the interface design step, default for implementation), and invariants verified after every step (e.g., "all existing tests pass", "no provider imports in core").
+
+## Key Features
+
+- **Cold-start execution** — Every step includes a self-contained context brief. No prior context needed.
+- **Adversarial review gate** — Every plan is reviewed by a strongest-model sub-agent against a checklist covering completeness, dependency correctness, and anti-pattern detection.
+- **Branch/PR/CI workflow** — Built into every step. Degrades gracefully to direct mode when git/gh is absent.
+- **Parallel step detection** — Dependency graph identifies steps with no shared files or output dependencies.
+- **Plan mutation protocol** — Steps can be split, inserted, skipped, reordered, or abandoned with formal protocols and audit trail.
+- **Zero runtime risk** — Pure Markdown skill. The entire repository contains only `.md` files — no hooks, no shell scripts, no executable code, no `package.json`, no build step. Nothing runs on install or invocation beyond Claude Code's native Markdown skill loader.
 
 ## Installation
 
 ```bash
 mkdir -p ~/.claude/skills
 git clone https://github.com/antbotlab/blueprint.git ~/.claude/skills/blueprint
+cd ~/.claude/skills/blueprint
+git checkout e6508e9258c763b67a9486af34de84d1e3b5cc74  # pin to reviewed version
 ```
 
-## Usage
+To update later, review the [changelog](https://github.com/antbotlab/blueprint/blob/main/CHANGELOG.md) before pulling:
 
+```bash
+cd ~/.claude/skills/blueprint
+git log --oneline HEAD..origin/main  # review new commits
+git pull
 ```
-/blueprint <project> <objective>
-```
-
-## Key Features
-
-**Cold-start execution** — Every step includes a self-contained context brief. No prior context needed.
-
-**Adversarial review gate** — Every plan is reviewed by a strongest-model sub-agent (e.g., Opus) against a checklist covering completeness, dependency correctness, and anti-pattern detection.
-
-**Branch/PR/CI workflow** — Built into every step. Detects git/gh availability and degrades gracefully to direct mode when absent.
-
-**Parallel step detection** — Dependency graph identifies steps with no shared files or output dependencies.
-
-**Zero runtime risk** — Pure markdown skill. No hooks, no shell scripts, no executable code. No attack surface.
-
-**Plan mutation protocol** — Steps can be split, inserted, skipped, reordered, or abandoned with formal protocols and audit trail.
 
 ## Requirements
 
