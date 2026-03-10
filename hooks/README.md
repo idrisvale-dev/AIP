@@ -36,6 +36,7 @@ User request → Claude picks a tool → PreToolUse hook runs → Tool executes 
 | **Prettier format** | `Edit` | Auto-formats JS/TS files with Prettier after edits |
 | **TypeScript check** | `Edit` | Runs `tsc --noEmit` after editing `.ts`/`.tsx` files |
 | **console.log warning** | `Edit` | Warns about `console.log` statements in edited files |
+| **InsAIts security monitor** | `.*` | Real-time AI security: catches credential exposure, prompt injection, hallucinations, behavioral anomalies (23 types). Writes audit log to `.insaits_audit_session.jsonl`. Requires `pip install insa-its`. [Details](../scripts/hooks/insaits-security-monitor.py) |
 
 ### Lifecycle Hooks
 
