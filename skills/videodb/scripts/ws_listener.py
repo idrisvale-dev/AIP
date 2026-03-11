@@ -89,6 +89,9 @@ def parse_args() -> tuple[bool, Path]:
             output_dir = arg
     
     if output_dir is None:
+        events_dir = os.environ.get("VIDEODB_EVENTS_DIR")
+        if events_dir:
+            return clear, ensure_private_dir(Path(events_dir))
         return clear, ensure_private_dir(default_output_dir())
 
     return clear, ensure_private_dir(Path(output_dir))

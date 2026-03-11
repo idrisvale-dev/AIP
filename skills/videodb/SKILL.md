@@ -303,10 +303,11 @@ Use `ws_listener.py` to capture WebSocket events during recording sessions. Desk
 
 #### Quick Start
 
-1. **Start listener**: `python scripts/ws_listener.py --clear &`
-2. **Get WebSocket ID**: `cat "${VIDEODB_EVENTS_DIR:-$HOME/.local/state/videodb}/videodb_ws_id"`
-3. **Run capture code** (see reference/capture.md for the full workflow)
-4. **Events written to**: `${VIDEODB_EVENTS_DIR:-$HOME/.local/state/videodb}/videodb_events.jsonl`
+1. **Choose state dir**: `STATE_DIR="${VIDEODB_EVENTS_DIR:-$HOME/.local/state/videodb}"`
+2. **Start listener**: `VIDEODB_EVENTS_DIR="$STATE_DIR" python scripts/ws_listener.py --clear "$STATE_DIR" &`
+3. **Get WebSocket ID**: `cat "$STATE_DIR/videodb_ws_id"`
+4. **Run capture code** (see reference/capture.md for the full workflow)
+5. **Events written to**: `$STATE_DIR/videodb_events.jsonl`
 
 Use `--clear` whenever you start a fresh capture run so stale transcript and visual events do not leak into the new session.
 
@@ -314,10 +315,12 @@ Use `--clear` whenever you start a fresh capture run so stale transcript and vis
 
 ```python
 import json
+import os
 import time
 from pathlib import Path
 
-events_file = Path.home() / ".local" / "state" / "videodb" / "videodb_events.jsonl"
+events_dir = Path(os.environ.get("VIDEODB_EVENTS_DIR", Path.home() / ".local" / "state" / "videodb"))
+events_file = events_dir / "videodb_events.jsonl"
 events = []
 
 if events_file.exists():
