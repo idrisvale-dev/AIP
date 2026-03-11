@@ -10,7 +10,7 @@ argument-hint: "[task description]"
 
 **Perception + memory + actions for video, live streams, and desktop sessions.**
 
-## When to Use
+## When to use
 
 ### Desktop Perception
 - Start/stop a **desktop session** capturing **screen, mic, and system audio**
@@ -37,7 +37,7 @@ argument-hint: "[task description]"
 - Connect **RTSP/live feeds**
 - Run **real-time visual and spoken understanding** and emit **events/alerts** for monitoring workflows
 
-## How It Works
+## How it works
 
 ### Common inputs
 - Local **file path**, public **URL**, or **RTSP URL**

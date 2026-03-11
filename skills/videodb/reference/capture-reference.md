@@ -383,8 +383,13 @@ For RTStream methods (indexing, transcription, alerts, batch config), see [rtstr
   │    active      │ ──> Start AI pipelines
   └───────┬──────────────┐
           │              │
-          │              └──────────────┐
-          │  client.stop_capture()      │ unrecoverable capture error
+          │              v
+          │      ┌───────────────┐     WebSocket: capture_session.failed
+          │      │    failed      │ ──> Inspect error payload and retry setup
+          │      └───────────────┘
+          │      unrecoverable capture error
+          │
+          │  client.stop_capture()
           v
   ┌───────────────┐     WebSocket: capture_session.stopping
   │   stopping     │ ──> Finalize streams
@@ -398,12 +403,5 @@ For RTStream methods (indexing, transcription, alerts, batch config), see [rtstr
           v
   ┌───────────────┐     WebSocket: capture_session.exported
   │   exported     │ ──> Access video_id, stream_url, player_url
-  └───────────────┘
-  
-  unrecoverable capture error
-          │
-          v
-  ┌───────────────┐     WebSocket: capture_session.failed
-  │    failed      │ ──> Inspect error payload and retry setup
   └───────────────┘
 ```

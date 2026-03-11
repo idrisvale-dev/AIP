@@ -39,6 +39,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import videodb
+from videodb.exceptions import AuthenticationError
 
 # Retry config
 MAX_RETRIES = 10
@@ -82,6 +83,8 @@ def parse_args() -> tuple[bool, Path]:
     for arg in args:
         if arg == "--clear":
             clear = True
+        elif arg.startswith("-"):
+            raise SystemExit(f"Unknown flag: {arg}")
         elif not arg.startswith("-"):
             output_dir = arg
     
@@ -127,6 +130,17 @@ def cleanup_pid():
         LOGGER.debug("Failed to remove PID file %s: %s", PID_FILE, exc)
 
 
+def is_fatal_error(exc: Exception) -> bool:
+    """Return True when retrying would hide a permanent configuration error."""
+    if isinstance(exc, (AuthenticationError, PermissionError)):
+        return True
+    status = getattr(exc, "status_code", None)
+    if status in {401, 403}:
+        return True
+    message = str(exc).lower()
+    return "401" in message or "403" in message or "auth" in message
+
+
 async def listen_with_retry():
     """Main listen loop with auto-reconnect and exponential backoff."""
     global _first_connection
@@ -143,7 +157,12 @@ async def listen_with_retry():
         except asyncio.CancelledError:
             log("Shutdown requested")
             raise
-        except RETRYABLE_ERRORS as e:
+        except Exception as e:
+            if is_fatal_error(e):
+                log(f"Fatal configuration error: {e}")
+                raise
+            if not isinstance(e, RETRYABLE_ERRORS):
+                raise
             retry_count += 1
             log(f"Connection error: {e}")
             
@@ -182,7 +201,12 @@ async def listen_with_retry():
             except asyncio.CancelledError:
                 log("Shutdown requested")
                 raise
-            except RETRYABLE_ERRORS as e:
+            except Exception as e:
+                if is_fatal_error(e):
+                    log(f"Fatal configuration error: {e}")
+                    raise
+                if not isinstance(e, RETRYABLE_ERRORS):
+                    raise
                 retry_count += 1
                 log(f"Connection error: {e}")
 
