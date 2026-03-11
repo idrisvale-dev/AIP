@@ -1,215 +1,97 @@
-# everything-claude-code Development Patterns
+# Everything Claude Code
 
-> Auto-generated skill from repository analysis
+Use this skill when working inside the `everything-claude-code` repository and you need repo-specific guidance instead of generic coding advice.
 
-## Overview
+Optional companion instincts live at `.claude/homunculus/instincts/inherited/everything-claude-code-instincts.yaml` for teams using `continuous-learning-v2`.
 
-This skill teaches the development patterns for the everything-claude-code repository - a comprehensive multi-platform AI coding assistant system. The codebase maintains compatibility across multiple AI platforms (Claude, Cursor, Codex, OpenCode) while supporting internationalization across four languages (English, Chinese Simplified/Traditional, Japanese). The system focuses on skill-based architecture, continuous learning capabilities, and cross-platform synchronization.
+## When to Use
 
-## Coding Conventions
+Activate this skill when the task touches one or more of these areas:
+- cross-platform parity across Claude Code, Cursor, Codex, and OpenCode
+- hook scripts, hook docs, or hook tests
+- skills, commands, agents, or rules that must stay synchronized across surfaces
+- release work such as version bumps, changelog updates, or plugin metadata updates
+- continuous-learning or instinct workflows inside this repository
 
-### File Naming
-- Use **camelCase** for JavaScript files
-- Use **kebab-case** for directories and skill names
-- Test files follow pattern: `*.test.js`
+## How It Works
 
-```javascript
-// File structure examples
-skills/continuousLearningV2/SKILL.md
-tests/hooks/hookManager.test.js
-scripts/platformSync.js
+### 1. Follow the repo's development contract
+
+- Use conventional commits such as `feat:`, `fix:`, `docs:`, `test:`, `chore:`.
+- Keep commit subjects concise and close to the repo norm of about 70 characters.
+- Prefer camelCase for JavaScript and TypeScript module filenames.
+- Use kebab-case for skill directories and command filenames.
+- Keep test files on the existing `*.test.js` pattern.
+
+### 2. Treat the root repo as the source of truth
+
+Start from the root implementation, then mirror changes where they are intentionally shipped.
+
+Typical mirror targets:
+- `.cursor/`
+- `.codex/`
+- `.opencode/`
+- `.agents/`
+
+Do not assume every `.claude/` artifact needs a cross-platform copy. Only mirror files that are part of the shipped multi-platform surface.
+
+### 3. Update hooks with tests and docs together
+
+When changing hook behavior:
+1. update `hooks/hooks.json` or the relevant script in `scripts/hooks/`
+2. update matching tests in `tests/hooks/` or `tests/integration/`
+3. update `hooks/README.md` if behavior or configuration changed
+4. verify parity for `.cursor/hooks/` and `.opencode/plugins/` when applicable
+
+### 4. Keep release metadata in sync
+
+When preparing a release, verify the same version is reflected anywhere it is surfaced:
+- `package.json`
+- `.claude-plugin/plugin.json`
+- `.claude-plugin/marketplace.json`
+- `.opencode/package.json`
+- release notes or changelog entries when the release process expects them
+
+### 5. Be explicit about continuous-learning changes
+
+If the task touches `skills/continuous-learning-v2/` or imported instincts:
+- prefer accurate, low-noise instincts over auto-generated bulk output
+- keep instinct files importable by `instinct-cli.py`
+- remove duplicated or contradictory instincts instead of layering more guidance on top
+
+## Examples
+
+### Naming examples
+
+```text
+skills/continuous-learning-v2/SKILL.md
+commands/update-docs.md
+scripts/hooks/session-start.js
+tests/hooks/hooks.test.js
 ```
 
-### Import/Export Style
-- Mixed import styles (both CommonJS and ES modules supported)
-- Mixed export styles based on platform compatibility
+### Commit examples
 
-```javascript
-// CommonJS style
-const hookManager = require('./hookManager');
-module.exports = { syncPlatforms };
-
-// ES module style  
-import { translateDocs } from './translationUtils.js';
-export { processSkills };
+```text
+fix: harden session summary extraction on Stop hook
+docs: align Codex config examples with current schema
+test: cover Windows formatter fallback behavior
 ```
 
-### Commit Conventions
-- Use conventional commit prefixes: `feat:`, `fix:`, `test:`, `chore:`, `docs:`
-- Keep commit messages under 70 characters
-- Be descriptive about cross-platform impacts
+### Skill update checklist
 
-```bash
-feat: add multi-language skill sync workflow
-fix: resolve cursor platform hook integration
-docs: update zh-CN translation for continuous learning
+```text
+1. Update the root skill or command.
+2. Mirror it only where that surface is shipped.
+3. Run targeted tests first, then the broader suite if behavior changed.
+4. Review docs and release notes for user-visible changes.
 ```
 
-## Workflows
+### Release checklist
 
-### Multi-Language Documentation Sync
-**Trigger:** When core documentation or features are updated  
-**Command:** `/sync-docs`
-
-1. Update English documentation in root README.md or skill files
-2. Identify sections that need translation updates
-3. Update Chinese Simplified (`docs/zh-CN/*.md`)
-4. Update Traditional Chinese (`docs/zh-TW/*.md`) 
-5. Update Japanese (`docs/ja-JP/*.md`)
-6. Verify cross-references and links work across all languages
-7. Test that skill descriptions match across platforms
-
-```markdown
-<!-- Example translation structure -->
-# English: skills/example/SKILL.md
-# Chinese: docs/zh-CN/skills/example/SKILL.md  
-# Japanese: docs/ja-JP/skills/example/SKILL.md
+```text
+1. Bump package and plugin versions.
+2. Run npm test.
+3. Verify platform-specific manifests.
+4. Publish the release notes with a human-readable summary.
 ```
-
-### Cross-Platform Harness Sync
-**Trigger:** When adding new features or updating platform configurations  
-**Command:** `/sync-platforms`
-
-1. Update main platform files in root directory
-2. Port changes to `.cursor/` directory for Cursor IDE
-3. Port changes to `.codex/` directory for Codex integration
-4. Port changes to `.opencode/` directory for OpenCode platform
-5. Update platform-specific configuration files
-6. Test that each platform can load and execute the changes
-7. Verify skill compatibility across all platforms
-
-```javascript
-// Platform-specific config example
-// .cursor/package.json
-{
-  "name": "everything-claude-code-cursor",
-  "platform": "cursor"
-}
-
-// .opencode/package.json  
-{
-  "name": "everything-claude-code-opencode",
-  "platform": "opencode"
-}
-```
-
-### Skill Addition Workflow
-**Trigger:** When adding a new skill or capability  
-**Command:** `/add-skill`
-
-1. Create main skill directory: `skills/{skillName}/`
-2. Write comprehensive `SKILL.md` with examples and usage
-3. Add skill reference to root `README.md`
-4. Port skill to `.cursor/skills/{skillName}/SKILL.md`
-5. Port to `.agents/skills/{skillName}/` with `openai.yaml`
-6. Update `package.json` with new skill metadata
-7. Add translations for skill name and description
-8. Test skill loading across all platforms
-
-```yaml
-# .agents/skills/example/openai.yaml
-name: example-skill
-description: Example skill for demonstration
-version: 1.0.0
-compatibility: ["openai", "claude", "cursor"]
-```
-
-### Version Release Workflow  
-**Trigger:** When preparing a new release  
-**Command:** `/release`
-
-1. Update version in root `package.json`
-2. Update `.claude-plugin/plugin.json` manifest version
-3. Update `.claude-plugin/marketplace.json` with release notes
-4. Update `.opencode/package.json` version to match
-5. Update version references in `README.md`
-6. Update `CHANGELOG.md` with new features and fixes
-7. Create git tag and push release
-8. Verify plugin compatibility across platforms
-
-```json
-// package.json version sync
-{
-  "version": "2.1.0",
-  "name": "everything-claude-code"
-}
-```
-
-### Hook System Updates
-**Trigger:** When modifying hook behavior or adding new hooks  
-**Command:** `/update-hooks`
-
-1. Update `hooks/hooks.json` with new hook definitions
-2. Create or modify hook scripts in `scripts/hooks/`
-3. Port hook implementations to `.cursor/hooks/`
-4. Update tests in `tests/hooks/` or `tests/integration/`
-5. Update hook documentation in `hooks/README.md`
-6. Test hook execution across different trigger scenarios
-7. Verify platform-specific hook behaviors
-
-```json
-// hooks/hooks.json example
-{
-  "pre-commit": {
-    "script": "scripts/hooks/preCommit.js",
-    "platforms": ["cursor", "opencode"],
-    "enabled": true
-  }
-}
-```
-
-### Continuous Learning Updates
-**Trigger:** When enhancing the continuous learning capabilities  
-**Command:** `/update-learning`
-
-1. Update main `skills/continuous-learning-v2/` skill files
-2. Modify observer scripts for better learning detection  
-3. Port updates to platform-specific skill directories
-4. Update translation files for learning prompts
-5. Update related commands in `commands/evolve.md`
-6. Update instinct commands (`commands/instinct-*.md`)
-7. Test learning feedback loops across platforms
-
-```javascript
-// Learning observer example
-class LearningObserver {
-  observePatterns() {
-    // Detect coding patterns
-    // Update skill knowledge
-    // Sync across platforms
-  }
-}
-```
-
-## Testing Patterns
-
-Tests follow the `*.test.js` pattern and focus on:
-- Cross-platform compatibility verification
-- Multi-language content validation  
-- Hook execution testing
-- Skill loading and execution
-
-```javascript
-// Example test structure
-describe('Platform Sync', () => {
-  test('should sync skills across all platforms', () => {
-    const platforms = ['cursor', 'opencode', 'codex'];
-    platforms.forEach(platform => {
-      expect(skillExists(platform, 'continuous-learning-v2')).toBe(true);
-    });
-  });
-});
-```
-
-## Commands
-
-| Command | Purpose |
-|---------|---------|
-| `/sync-docs` | Synchronize documentation across all language versions |
-| `/sync-platforms` | Port changes across AI coding platforms |
-| `/add-skill` | Add new skill with full cross-platform support |
-| `/release` | Prepare and publish new version release |
-| `/update-hooks` | Modify hook system and test integration |
-| `/update-learning` | Enhance continuous learning capabilities |
-| `/test-platforms` | Run compatibility tests across all platforms |
-| `/translate` | Generate translations for new content |
