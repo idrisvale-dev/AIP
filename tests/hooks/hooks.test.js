@@ -63,6 +63,29 @@ function runScript(scriptPath, input = '', env = {}) {
   });
 }
 
+function runShellScript(scriptPath, args = [], input = '', env = {}, cwd = process.cwd()) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('bash', [scriptPath, ...args], {
+      cwd,
+      env: { ...process.env, ...env },
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    if (input) {
+      proc.stdin.write(input);
+    }
+    proc.stdin.end();
+
+    proc.stdout.on('data', data => stdout += data);
+    proc.stderr.on('data', data => stderr += data);
+    proc.on('close', code => resolve({ code, stdout, stderr }));
+    proc.on('error', reject);
+  });
+}
+
 // Create a temporary test directory
 function createTestDir() {
   const testDir = path.join(os.tmpdir(), `hooks-test-${Date.now()}`);
@@ -2070,11 +2093,47 @@ async function runTests() {
     passed++;
   else failed++;
 
-  if (
-    await asyncTest('matches .tsx extension for type checking', async () => {
-      const testDir = createTestDir();
-      const testFile = path.join(testDir, 'component.tsx');
-      fs.writeFileSync(testFile, 'const x: number = 1;');
+  if (await asyncTest('observe.sh falls back to legacy output fields when tool_response is null', async () => {
+    const homeDir = createTestDir();
+    const projectDir = createTestDir();
+    const observePath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2', 'hooks', 'observe.sh');
+    const payload = JSON.stringify({
+      tool_name: 'Bash',
+      tool_input: { command: 'echo hello' },
+      tool_response: null,
+      tool_output: 'legacy output',
+      session_id: 'session-123',
+      cwd: projectDir
+    });
+
+    try {
+      const result = await runShellScript(observePath, ['post'], payload, {
+        HOME: homeDir,
+        CLAUDE_PROJECT_DIR: projectDir
+      }, projectDir);
+
+      assert.strictEqual(result.code, 0, `observe.sh should exit successfully, stderr: ${result.stderr}`);
+
+      const projectsDir = path.join(homeDir, '.claude', 'homunculus', 'projects');
+      const projectIds = fs.readdirSync(projectsDir);
+      assert.strictEqual(projectIds.length, 1, 'observe.sh should create one project-scoped observation directory');
+
+      const observationsPath = path.join(projectsDir, projectIds[0], 'observations.jsonl');
+      const observations = fs.readFileSync(observationsPath, 'utf8').trim().split('\n').filter(Boolean);
+      assert.ok(observations.length > 0, 'observe.sh should append at least one observation');
+
+      const observation = JSON.parse(observations[0]);
+      assert.strictEqual(observation.output, 'legacy output', 'observe.sh should fall back to legacy tool_output when tool_response is null');
+    } finally {
+      cleanupTestDir(homeDir);
+      cleanupTestDir(projectDir);
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('matches .tsx extension for type checking', async () => {
+    const testDir = createTestDir();
+    const testFile = path.join(testDir, 'component.tsx');
+    fs.writeFileSync(testFile, 'const x: number = 1;');
 
       const stdinJson = JSON.stringify({ tool_input: { file_path: testFile } });
       const result = await runScript(path.join(scriptsDir, 'post-edit-typecheck.js'), stdinJson);
@@ -2986,6 +3045,7 @@ async function runTests() {
       assert.ok(!runAllSource.includes('execSync'), 'Should not use execSync');
       // Verify it shows stderr
       assert.ok(runAllSource.includes('stderr'), 'Should handle stderr output');
+      assert.ok(runAllSource.includes('result.status !== 0'), 'Should treat non-zero child exits as failures');
     })
   )
     passed++;
