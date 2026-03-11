@@ -10,7 +10,7 @@ description: >
   detection, or warranty claims.
 license: Apache-2.0
 version: 1.0.0
-homepage: https://github.com/ai-evos/agent-skills
+homepage: https://github.com/affaan-m/everything-claude-code
 origin: ECC
 metadata:
   author: evos
@@ -164,7 +164,7 @@ When a return falls outside standard policy, evaluate in this order:
 
 ## Key Edge Cases
 
-These are situations where standard workflows fail. Brief summaries — see [edge-cases.md](references/edge-cases.md) for full analysis.
+These are situations where standard workflows fail. Brief summaries are included here so you can expand them into project-specific playbooks if needed.
 
 1. **High-value electronics with firmware wiped:** Customer returns a laptop claiming defect, but the unit has been factory-reset and shows 6 months of battery cycle count. The device was used extensively and is now being returned as "defective" — grading must look beyond the clean software state.
 
@@ -194,7 +194,7 @@ These are situations where standard workflows fail. Brief summaries — see [edg
 
 ### Key Templates
 
-Brief templates below. Full versions with variables in [communication-templates.md](references/communication-templates.md).
+Brief templates appear below. Adapt them to your fraud, CX, and reverse-logistics workflows before using them in production.
 
 **RMA approval:** Subject: `Return Approved — Order #{order_id}`. Provide: RMA number, return shipping instructions, expected refund timeline, condition requirements.
 
@@ -236,6 +236,5 @@ Level 1 (Returns Associate) → Level 2 (Team Lead, 2 hours) → Level 3 (Return
 
 ## Additional Resources
 
-- For detailed disposition trees, fraud scoring, vendor recovery frameworks, and grading standards, see [decision-frameworks.md](references/decision-frameworks.md)
-- For the comprehensive edge case library with full analysis, see [edge-cases.md](references/edge-cases.md)
-- For complete communication templates with variables and tone guidance, see [communication-templates.md](references/communication-templates.md)
+- Pair this skill with your grading rubric, fraud review thresholds, and refund authority matrix before using it in production.
+- Keep restocking standards, hazmat return handling, and liquidation rules near the operating team that will execute the decisions.

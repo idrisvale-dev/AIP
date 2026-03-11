@@ -10,7 +10,7 @@ description: >
   duty optimization.
 license: Apache-2.0
 version: 1.0.0
-homepage: https://github.com/ai-evos/agent-skills
+homepage: https://github.com/affaan-m/everything-claude-code
 origin: ECC
 metadata:
   author: evos
@@ -90,7 +90,7 @@ Incoterms define the transfer of costs, risk, and responsibility between buyer a
 - **CPT/CIP (Carriage Paid To / Carriage & Insurance Paid To):** Risk transfers at first carrier, but seller pays freight to destination. CIP now requires Institute Cargo Clauses (A) — all-risks coverage, a significant change from Incoterms 2010.
 - **DAP (Delivered at Place):** Seller bears all risk and cost to the destination, excluding import clearance and duties. The seller does not clear customs in the destination country.
 - **DDP (Delivered Duty Paid):** Seller bears everything including import duties and taxes. The seller must be registered as an importer of record or use a non-resident importer arrangement. Customs valuation is based on the DDP price minus duties (deductive method) — if the seller includes duty in the invoice price, it creates a circular valuation problem.
-- **Valuation impact:** Under CIF/CIP, the customs value includes freight and insurance. Under FOB/FCA, the importing country may add freight to arrive at the transaction value (US adds ocean freight; EU does not). Getting this wrong changes the duty calculation.
+- **Valuation impact:** Incoterms affect the invoice structure, but customs valuation still follows the importing regime's rules. In the U.S., CBP transaction value generally excludes international freight and insurance; in the EU, customs value generally includes transport and insurance costs up to the place of entry into the Union. Getting this wrong changes the duty calculation even when the commercial term is clear.
 - **Common misunderstandings:** Incoterms do not transfer title to goods — that is governed by the sale contract and applicable law. Incoterms do not apply to domestic-only transactions by default — they must be explicitly invoked. Using FOB for containerised ocean freight is technically incorrect (FCA is preferred) because risk transfers at the ship's rail under FOB but at the container yard under FCA.
 
 ### Duty Optimization
@@ -140,7 +140,7 @@ Incoterms define the transfer of costs, risk, and responsibility between buyer a
 
 ### Classification Decision Logic
 
-When classifying a product, follow this sequence without shortcuts. See [decision-frameworks.md](references/decision-frameworks.md) for full decision trees.
+When classifying a product, follow this sequence without shortcuts. Convert it into an internal decision tree before automating any tariff-classification workflow.
 
 1. **Identify the good precisely.** Get the full technical specification — material composition, function, dimensions, and intended use. Never classify from a product name alone.
 2. **Determine the Section and Chapter.** Use the Section and Chapter notes to confirm or exclude. Chapter notes override heading text.
@@ -182,7 +182,7 @@ When a restricted party screening tool returns a match, do not block the transac
 
 ## Key Edge Cases
 
-These are situations where the obvious approach is wrong. Brief summaries here — see [edge-cases.md](references/edge-cases.md) for full analysis.
+These are situations where the obvious approach is wrong. Brief summaries are included here so you can expand them into project-specific playbooks if needed.
 
 1. **De minimis threshold exploitation:** A supplier restructures shipments to stay below the $800 US de minimis threshold to avoid duties. Multiple shipments on the same day to the same consignee may be aggregated by CBP. Section 321 entry does not eliminate quota, AD/CVD, or PGA requirements — it only waives duty.
 
@@ -215,7 +215,7 @@ Match communication tone to the counterparty, regulatory context, and risk level
 
 ### Key Templates
 
-Brief templates below. Full versions with variables in [communication-templates.md](references/communication-templates.md).
+Brief templates appear below. Adapt them to your broker, customs counsel, and regulatory workflows before using them in production.
 
 **Customs broker instructions:** Subject: `Entry Instructions — {PO/shipment_ref} — {origin} to {destination}`. Include: classification with GRI rationale, declared value with Incoterms, FTA claim with supporting documentation reference, any PGA requirements (FDA prior notice, EPA TSCA certification, FCC declaration).
 
@@ -259,6 +259,5 @@ Track these metrics monthly and trend quarterly:
 
 ## Additional Resources
 
-- For detailed decision frameworks, classification logic, and valuation methodology, see [decision-frameworks.md](references/decision-frameworks.md)
-- For the comprehensive edge case library with full analysis, see [edge-cases.md](references/edge-cases.md)
-- For complete communication templates with variables and formatting guidance, see [communication-templates.md](references/communication-templates.md)
+- Pair this skill with an internal HS classification log, broker escalation matrix, and a list of jurisdictions where your team has non-resident importer or FTZ coverage.
+- Record the valuation assumptions your organization uses for U.S., EU, and APAC lanes so duty calculations stay consistent across teams.

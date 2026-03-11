@@ -9,7 +9,7 @@ description: >
   carrier performance, or building freight strategies.
 license: Apache-2.0
 version: 1.0.0
-homepage: https://github.com/ai-evos/agent-skills
+homepage: https://github.com/affaan-m/everything-claude-code
 origin: ECC
 metadata:
   author: evos
@@ -72,7 +72,7 @@ Measure what matters. A scorecard that tracks 20 metrics gets ignored; one that 
 
 Your carrier portfolio is an investment portfolio — diversification manages risk, concentration drives leverage:
 
-- **Asset carriers vs. brokers:** Asset carriers own trucks. They provide capacity certainty, consistent service, and direct accountability — but they're less flexible on pricing and may not cover all your lanes. Brokers source capacity from thousands of small carriers. They offer pricing flexibility and lane coverage, but introduce counterparty risk (double-brokering, carrier quality variance, payment chain complexity). Target mix: 60-70% asset, 20-30% broker, 5-15% niche/specialty.
+- **Asset carriers vs. brokers:** Asset carriers own trucks. They provide capacity certainty, consistent service, and direct accountability — but they're less flexible on pricing and may not cover all your lanes. Brokers source capacity from thousands of small carriers. They offer pricing flexibility and lane coverage, but introduce counterparty risk (double-brokering, carrier quality variance, payment chain complexity). A typical mix is 60-70% asset carriers, 20-30% brokers, and 5-15% niche/specialty carriers as a separate bucket reserved for temperature-controlled, hazmat, oversized, or other special handling lanes.
 - **Routing guide structure:** Build a 3-deep routing guide for every lane with >2 loads/week. Primary carrier gets first tender (target: 80%+ acceptance). Secondary gets the fallback (target: 70%+ acceptance on overflow). Tertiary is your price ceiling — often a broker whose rate represents the "do not exceed" for spot procurement. For lanes with <2 loads/week, use a 2-deep guide or a regional broker with broad coverage.
 - **Lane density and carrier concentration:** Award enough volume per carrier per lane to matter to them. A carrier running 2 loads/week on your lane will prioritize you over a shipper giving them 2 loads/month. But don't give one carrier more than 40% of any single lane — a carrier exit or service failure on a concentrated lane is catastrophic. For your top 20 lanes by volume, maintain at least 3 active carriers.
 - **Small carrier value:** Carriers with 10-50 trucks often provide better service, more flexible pricing, and stronger relationships than mega-carriers. They answer the phone. Their owner-operators care about your freight. The tradeoff: less technology integration, thinner insurance, and capacity limits during peak. Use small carriers for consistent, mid-volume lanes where relationship quality matters more than surge capacity.
@@ -139,7 +139,7 @@ Remove a carrier from your active routing guide when any of these thresholds are
 
 ## Key Edge Cases
 
-These are situations where standard playbook decisions lead to poor outcomes. Brief summaries here — see [edge-cases.md](references/edge-cases.md) for full analysis.
+These are situations where standard playbook decisions lead to poor outcomes. Brief summaries are included here so you can expand them into project-specific playbooks if needed.
 
 1. **Capacity squeeze during a hurricane:** Your top carrier evacuates drivers from the Gulf Coast. Spot rates triple. The temptation is to pay any rate to move freight. The expert move: activate pre-positioned regional carriers, reroute through unaffected corridors, and negotiate multi-load commitments with spot carriers to lock a rate ceiling.
 
@@ -170,7 +170,7 @@ Rate negotiations are long-term relationship conversations, not one-time transac
 - **Positive reviews:** Be specific. "Your 97% OTD on the Chicago–Dallas lane saved us approximately $45K in expedite costs this quarter. We're increasing your allocation from 60% to 75% on that lane." Carriers invest in relationships that reward performance.
 - **Corrective reviews:** Lead with data, not accusations. Present the scorecard. Identify the specific metrics below threshold. Ask for a corrective action plan with a 30/60/90-day timeline. Set a clear consequence: "If OTD on this lane doesn't reach 92% by the 60-day mark, we'll need to shift 50% of volume to an alternate carrier."
 
-For full communication templates, see [communication-templates.md](references/communication-templates.md).
+Use the templates below as a base and adapt the language to your carrier contracts, escalation paths, and customer commitments.
 
 ## Escalation Protocols
 
@@ -208,6 +208,5 @@ Track weekly, review monthly with carrier management team, share quarterly with 
 
 ## Additional Resources
 
-- For detailed decision frameworks on rate negotiation, portfolio optimization, and RFP execution, see [decision-frameworks.md](references/decision-frameworks.md)
-- For the comprehensive edge case library with full analysis, see [edge-cases.md](references/edge-cases.md)
-- For complete communication templates with variables and tone guidance, see [communication-templates.md](references/communication-templates.md)
+- Track carrier scorecards, exception trends, and routing-guide compliance in the same operating review so pricing and service decisions stay tied together.
+- Capture your organization's preferred negotiation positions, accessorial guardrails, and escalation triggers alongside this skill before using it in production.

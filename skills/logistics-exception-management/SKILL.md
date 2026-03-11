@@ -9,7 +9,7 @@ description: >
   or carrier disputes.
 license: Apache-2.0
 version: 1.0.0
-homepage: https://github.com/ai-evos/agent-skills
+homepage: https://github.com/affaan-m/everything-claude-code
 origin: ECC
 metadata:
   author: evos
@@ -142,7 +142,7 @@ When multiple exceptions are active simultaneously (common during peak season or
 
 ## Key Edge Cases
 
-These are situations where the obvious approach is wrong. Brief summaries here — see [edge-cases.md](references/edge-cases.md) for full analysis.
+These are situations where the obvious approach is wrong. Brief summaries are included here so you can expand them into project-specific playbooks if needed.
 
 1. **Pharma reefer failure with disputed temps:** Carrier shows correct set-point; your Sensitech data shows excursion. The dispute is about sensor placement and pre-cooling. Never accept carrier's single-point reading — demand continuous data logger download.
 
@@ -174,7 +174,7 @@ Match communication tone to situation severity and relationship:
 
 ### Key Templates
 
-Brief templates below. Full versions with variables in [communication-templates.md](references/communication-templates.md).
+Brief templates appear below. Adapt them to your carrier, customer, and insurance workflows before using them in production.
 
 **Initial carrier inquiry:** Subject: `Exception Notice — PRO# {pro} / BOL# {bol}`. State: what happened, what you need (ETA update, inspection, OS&D report), and by when.
 
@@ -218,6 +218,5 @@ Track these metrics weekly and trend monthly:
 
 ## Additional Resources
 
-- For detailed decision frameworks, escalation matrices, and mode-specific workflows, see [decision-frameworks.md](references/decision-frameworks.md)
-- For the comprehensive edge case library with full analysis, see [edge-cases.md](references/edge-cases.md)
-- For complete communication templates with variables and tone guidance, see [communication-templates.md](references/communication-templates.md)
+- Pair this skill with your internal claims deadlines, mode-specific escalation matrix, and insurer notice requirements.
+- Keep carrier-specific proof-of-delivery rules and OS&D checklists near the team that will execute the playbooks.

@@ -10,7 +10,7 @@ description: >
   managing CAPAs, interpreting SPC data, or handling supplier quality issues.
 license: Apache-2.0
 version: 1.0.0
-homepage: https://github.com/ai-evos/agent-skills
+homepage: https://github.com/affaan-m/everything-claude-code
 origin: ECC
 metadata:
   author: evos
@@ -45,7 +45,7 @@ You are a senior quality engineer with 15+ years in regulated manufacturing envi
 ## Examples
 
 - **Incoming inspection failure**: A lot of 10,000 molded components fails AQL sampling at Level II. Defect is a dimensional deviation of +0.15mm on a critical-to-function feature. Walk through containment, supplier notification, root cause investigation (tooling wear), skip-lot suspension, and SCAR issuance.
-- **SPC signal interpretation**: X-bar chart on a filling line shows 7 consecutive points above the center line (Western Electric Rule 3). Process is still within specification limits. Determine whether to stop the line (assignable cause investigation) or continue production (and why "in spec" is not the same as "in control").
+- **SPC signal interpretation**: X-bar chart on a filling line shows 9 consecutive points above the center line (Western Electric Rule 2). Process is still within specification limits. Determine whether to stop the line (assignable cause investigation) or continue production (and why "in spec" is not the same as "in control").
 - **Customer complaint CAPA**: Automotive OEM customer reports 3 field failures in 500 units, all with the same failure mode. Build the 8D response, perform fault tree analysis, identify the escape point in final test, and design verification testing for the corrective action.
 
 ## Core Knowledge
@@ -180,7 +180,7 @@ Before closing any CAPA, verify:
 
 ## Key Edge Cases
 
-These are situations where the obvious approach is wrong. Brief summaries here — see [edge-cases.md](references/edge-cases.md) for full analysis.
+These are situations where the obvious approach is wrong. Brief summaries are included here so you can expand them into project-specific playbooks if needed.
 
 1. **Customer-reported field failure with no internal detection:** Your inspection and testing passed this lot, but customer field data shows failures. The instinct is to question the customer's data — resist it. Check whether your inspection plan covers the actual failure mode. Often, field failures expose gaps in test coverage rather than test execution errors.
 
@@ -212,7 +212,7 @@ Match communication tone to situation severity and audience:
 
 ### Key Templates
 
-Brief templates below. Full versions with variables in [communication-templates.md](references/communication-templates.md).
+Brief templates appear below. Adapt them to your MRB, supplier quality, and CAPA workflows before using them in production.
 
 **NCR Notification (internal):** Subject: `NCR-{number}: {part_number} — {defect_summary}`. State: what was found, specification violated, quantity affected, current containment status, and initial assessment of scope.
 
@@ -256,6 +256,5 @@ Track these metrics weekly and trend monthly:
 
 ## Additional Resources
 
-- For detailed decision frameworks, MRB processes, and SPC decision logic, see [decision-frameworks.md](references/decision-frameworks.md)
-- For the comprehensive edge case library with full analysis, see [edge-cases.md](references/edge-cases.md)
-- For complete communication templates with variables and tone guidance, see [communication-templates.md](references/communication-templates.md)
+- Pair this skill with your NCR template, disposition authority matrix, and SPC rule set so investigators use the same definitions every time.
+- Keep CAPA closure criteria and effectiveness-check evidence requirements beside the workflow before using it in production.
