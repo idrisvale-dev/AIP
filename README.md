@@ -749,6 +749,31 @@ This is the most common issue. **Do NOT add a `"hooks"` field to `.claude-plugin
 </details>
 
 <details>
+<summary><b>Can I use ECC with Claude Code on a custom API endpoint or model gateway?</b></summary>
+
+Yes. ECC does not hardcode Anthropic-hosted transport settings. It runs locally through Claude Code's normal CLI/plugin surface, so it works with:
+
+- Anthropic-hosted Claude Code
+- Official Claude Code gateway setups using `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN`
+- Compatible custom endpoints that speak the Anthropic API Claude Code expects
+
+Minimal example:
+
+```bash
+export ANTHROPIC_BASE_URL=https://your-gateway.example.com
+export ANTHROPIC_AUTH_TOKEN=your-token
+claude
+```
+
+If your gateway remaps model names, configure that in Claude Code rather than in ECC. ECC's hooks, skills, commands, and rules are model-provider agnostic once the `claude` CLI is already working.
+
+Official references:
+- [Claude Code LLM gateway docs](https://docs.anthropic.com/en/docs/claude-code/llm-gateway)
+- [Claude Code model configuration docs](https://docs.anthropic.com/en/docs/claude-code/model-config)
+
+</details>
+
+<details>
 <summary><b>My context window is shrinking / Claude is running out of context</b></summary>
 
 Too many MCP servers eat your context. Each MCP tool description consumes tokens from your 200k window, potentially reducing it to ~70k.
