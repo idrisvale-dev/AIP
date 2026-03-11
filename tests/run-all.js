@@ -71,6 +71,17 @@ for (const testFile of testFiles) {
 
   if (passedMatch) totalPassed += parseInt(passedMatch[1], 10);
   if (failedMatch) totalFailed += parseInt(failedMatch[1], 10);
+
+  if (result.error) {
+    console.log(`✗ ${testFile} failed to start: ${result.error.message}`);
+    totalFailed += failedMatch ? 0 : 1;
+    continue;
+  }
+
+  if (result.status !== 0) {
+    console.log(`✗ ${testFile} exited with status ${result.status}`);
+    totalFailed += failedMatch ? 0 : 1;
+  }
 }
 
 totalTests = totalPassed + totalFailed;

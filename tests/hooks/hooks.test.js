@@ -2561,6 +2561,7 @@ async function runTests() {
     assert.ok(!runAllSource.includes('execSync'), 'Should not use execSync');
     // Verify it shows stderr
     assert.ok(runAllSource.includes('stderr'), 'Should handle stderr output');
+    assert.ok(runAllSource.includes('result.status !== 0'), 'Should treat non-zero child exits as failures');
   })) passed++; else failed++;
 
   // ── Round 32: post-edit-typecheck special characters & check-console-log ──

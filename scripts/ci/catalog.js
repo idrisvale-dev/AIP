@@ -17,27 +17,39 @@ const SKILLS_DIR = path.join(ROOT, 'skills');
 
 function listAgents() {
   if (!fs.existsSync(AGENTS_DIR)) return [];
-  return fs.readdirSync(AGENTS_DIR)
-    .filter(f => f.endsWith('.md'))
-    .map(f => f.slice(0, -3))
-    .sort();
+  try {
+    return fs.readdirSync(AGENTS_DIR)
+      .filter(f => f.endsWith('.md'))
+      .map(f => f.slice(0, -3))
+      .sort();
+  } catch (error) {
+    throw new Error(`Failed to read agents directory (${AGENTS_DIR}): ${error.message}`);
+  }
 }
 
 function listCommands() {
   if (!fs.existsSync(COMMANDS_DIR)) return [];
-  return fs.readdirSync(COMMANDS_DIR)
-    .filter(f => f.endsWith('.md'))
-    .map(f => f.slice(0, -3))
-    .sort();
+  try {
+    return fs.readdirSync(COMMANDS_DIR)
+      .filter(f => f.endsWith('.md'))
+      .map(f => f.slice(0, -3))
+      .sort();
+  } catch (error) {
+    throw new Error(`Failed to read commands directory (${COMMANDS_DIR}): ${error.message}`);
+  }
 }
 
 function listSkills() {
   if (!fs.existsSync(SKILLS_DIR)) return [];
-  const entries = fs.readdirSync(SKILLS_DIR, { withFileTypes: true });
-  return entries
-    .filter(e => e.isDirectory() && fs.existsSync(path.join(SKILLS_DIR, e.name, 'SKILL.md')))
-    .map(e => e.name)
-    .sort();
+  try {
+    const entries = fs.readdirSync(SKILLS_DIR, { withFileTypes: true });
+    return entries
+      .filter(e => e.isDirectory() && fs.existsSync(path.join(SKILLS_DIR, e.name, 'SKILL.md')))
+      .map(e => e.name)
+      .sort();
+  } catch (error) {
+    throw new Error(`Failed to read skills directory (${SKILLS_DIR}): ${error.message}`);
+  }
 }
 
 function run() {
@@ -58,11 +70,11 @@ function run() {
     console.log(`- **Commands:** ${catalog.commands.count}`);
     console.log(`- **Skills:** ${catalog.skills.count}\n`);
     console.log('## Agents\n');
-    catalog.agents.list.forEach(a => console.log(`- ${a}`));
+    catalog.agents.list.forEach(a => { console.log(`- ${a}`); });
     console.log('\n## Commands\n');
-    catalog.commands.list.forEach(c => console.log(`- ${c}`));
+    catalog.commands.list.forEach(c => { console.log(`- ${c}`); });
     console.log('\n## Skills\n');
-    catalog.skills.list.forEach(s => console.log(`- ${s}`));
+    catalog.skills.list.forEach(s => { console.log(`- ${s}`); });
   } else {
     console.log(JSON.stringify(catalog, null, 2));
   }
