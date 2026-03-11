@@ -47,10 +47,10 @@ video.play()
 ```python
 # Index and add subtitles first
 video.index_spoken_words(force=True)
-video.add_subtitle()
+stream_url = video.add_subtitle()
 
-# Stream now includes subtitles
-stream_url = video.generate_stream()
+# Returned URL already includes subtitles
+print(f"Subtitled stream: {stream_url}")
 ```
 
 ### Specific Segments

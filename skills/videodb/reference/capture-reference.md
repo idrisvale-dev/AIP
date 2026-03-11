@@ -8,7 +8,7 @@ Code-level details for VideoDB capture sessions. For workflow guide, see [captur
 
 Real-time events from capture sessions and AI pipelines. No webhooks or polling required.
 
-Use [scripts/ws_listener.py](../scripts/ws_listener.py) to connect and dump events to `/tmp/videodb_events.jsonl`.
+Use [scripts/ws_listener.py](../scripts/ws_listener.py) to connect and dump events to `${VIDEODB_EVENTS_DIR:-$HOME/.local/state/videodb}/videodb_events.jsonl`.
 
 ### Event Channels
 
@@ -137,12 +137,12 @@ The script outputs `WS_ID=<connection_id>` on the first line, then listens indef
 
 **Get the ws_id:**
 ```bash
-cat /tmp/videodb_ws_id
+cat "${VIDEODB_EVENTS_DIR:-$HOME/.local/state/videodb}/videodb_ws_id"
 ```
 
 **Stop the listener:**
 ```bash
-kill $(cat /tmp/videodb_ws_pid)
+kill "$(cat "${VIDEODB_EVENTS_DIR:-$HOME/.local/state/videodb}/videodb_ws_pid")"
 ```
 
 **Functions that accept `ws_connection_id`:**
@@ -152,7 +152,7 @@ kill $(cat /tmp/videodb_ws_pid)
 | `conn.create_capture_session()` | Session lifecycle events |
 | RTStream methods | See [rtstream-reference.md](rtstream-reference.md) |
 
-**Output files** (in output directory, default `/tmp`):
+**Output files** (in output directory, default `${XDG_STATE_HOME:-$HOME/.local/state}/videodb`):
 - `videodb_ws_id` - WebSocket connection ID
 - `videodb_events.jsonl` - All events
 - `videodb_ws_pid` - Process ID for easy termination
@@ -176,20 +176,27 @@ Each line is a JSON object with added timestamps:
 
 ```python
 import json
-events = [json.loads(l) for l in open("/tmp/videodb_events.jsonl")]
-
-# Filter by channel
-transcripts = [e for e in events if e.get("channel") == "transcript"]
-
-# Filter by time (last 10 minutes)
 import time
-cutoff = time.time() - 600
-recent = [e for e in events if e["unix_ts"] > cutoff]
+from pathlib import Path
 
-# Filter visual events containing keyword
-visual = [e for e in events 
-          if e.get("channel") == "visual_index" 
-          and "code" in e.get("data", {}).get("text", "").lower()]
+events_path = Path.home() / ".local" / "state" / "videodb" / "videodb_events.jsonl"
+transcripts = []
+recent = []
+visual = []
+
+cutoff = time.time() - 600
+with events_path.open(encoding="utf-8") as handle:
+    for line in handle:
+        event = json.loads(line)
+        if event.get("channel") == "transcript":
+            transcripts.append(event)
+        if event.get("unix_ts", 0) > cutoff:
+            recent.append(event)
+        if (
+            event.get("channel") == "visual_index"
+            and "code" in event.get("data", {}).get("text", "").lower()
+        ):
+            visual.append(event)
 ```
 
 ---
@@ -224,7 +231,9 @@ ws_id = ws.connection_id
 ### Create a Capture Session
 
 ```python
-ws_id = open("/tmp/videodb_ws_id").read().strip()
+from pathlib import Path
+
+ws_id = (Path.home() / ".local" / "state" / "videodb" / "videodb_ws_id").read_text().strip()
 
 session = conn.create_capture_session(
     end_user_id="user-123",  # required
@@ -390,7 +399,8 @@ For RTStream methods (indexing, transcription, alerts, batch config), see [rtstr
   ┌───────────────┐     WebSocket: capture_session.exported
   │   exported     │ ──> Access video_id, stream_url, player_url
   └───────────────┘
-
+  
+  unrecoverable capture error
           │
           v
   ┌───────────────┐     WebSocket: capture_session.failed

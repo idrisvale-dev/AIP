@@ -10,59 +10,48 @@ argument-hint: "[task description]"
 
 **Perception + memory + actions for video, live streams, and desktop sessions.**
 
-Use this skill when you need to:
+## When to Use
 
-## 1) Desktop Perception
+### Desktop Perception
 - Start/stop a **desktop session** capturing **screen, mic, and system audio**
 - Stream **live context** and store **episodic session memory**
 - Run **real-time alerts/triggers** on what's spoken and what's happening on screen
 - Produce **session summaries**, a searchable timeline, and **playable evidence links**
 
-## 2) Video ingest + stream
+### Video ingest + stream
 - Ingest a **file or URL** and return a **playable web stream link**
 - Transcode/normalize: **codec, bitrate, fps, resolution, aspect ratio**
 
-## 3) Index + search (timestamps + evidence)
+### Index + search (timestamps + evidence)
 - Build **visual**, **spoken**, and **keyword** indexes
 - Search and return exact moments with **timestamps** and **playable evidence**
 - Auto-create **clips** from search results
 
-## 4) Timeline editing + generation
+### Timeline editing + generation
 - Subtitles: **generate**, **translate**, **burn-in**
 - Overlays: **text/image/branding**, motion captions
 - Audio: **background music**, **voiceover**, **dubbing**
 - Programmatic composition and exports via **timeline operations**
 
-## 5) Live streams (RTSP) + monitoring
+### Live streams (RTSP) + monitoring
 - Connect **RTSP/live feeds**
 - Run **real-time visual and spoken understanding** and emit **events/alerts** for monitoring workflows
 
----
+## How It Works
 
-## Common inputs
+### Common inputs
 - Local **file path**, public **URL**, or **RTSP URL**
 - Desktop capture request: **start / stop / summarize session**
 - Desired operations: get context for understanding, transcode spec, index spec, search query, clip ranges, timeline edits, alert rules
 
-## Common outputs
+### Common outputs
 - **Stream URL**
 - Search results with **timestamps** and **evidence links**
 - Generated assets: subtitles, audio, images, clips
 - **Event/alert payloads** for live streams
 - Desktop **session summaries** and memory entries
 
----
-
-## Canonical prompts (examples)
-- "Start desktop capture and alert when a password field appears."
-- "Record my session and produce an actionable summary when it ends."
-- "Ingest this file and return a playable stream link."
-- "Index this folder and find every scene with people, return timestamps."
-- "Generate subtitles, burn them in, and add light background music."
-- "Connect this RTSP URL and alert when a person enters the zone."
-
-
-## Running Python code
+### Running Python code
 
 Before running any VideoDB code, change to the project directory and load environment variables:
 
@@ -96,7 +85,7 @@ print(f"Videos: {len(coll.get_videos())}")
 EOF
 ```
 
-## Setup
+### Setup
 
 When the user asks to "setup videodb" or similar:
 
@@ -123,7 +112,7 @@ Get a free API key at https://console.videodb.io (50 free uploads, no credit car
 
 **Do NOT** read, write, or handle the API key yourself. Always let the user set it.
 
-## Quick Reference
+### Quick Reference
 
 ### Upload media
 
@@ -298,6 +287,55 @@ except InvalidRequestError as e:
 | Negative timestamps on Timeline | Silently produces broken stream | Always validate `start >= 0` before creating `VideoAsset` |
 | `generate_video()` / `create_collection()` fails | `Operation not allowed` or `maximum limit` | Plan-gated features — inform the user about plan limits |
 
+## Examples
+
+### Canonical prompts
+- "Start desktop capture and alert when a password field appears."
+- "Record my session and produce an actionable summary when it ends."
+- "Ingest this file and return a playable stream link."
+- "Index this folder and find every scene with people, return timestamps."
+- "Generate subtitles, burn them in, and add light background music."
+- "Connect this RTSP URL and alert when a person enters the zone."
+
+### Screen Recording (Desktop Capture)
+
+Use `ws_listener.py` to capture WebSocket events during recording sessions. Desktop capture supports **macOS** only.
+
+#### Quick Start
+
+1. **Start listener**: `python scripts/ws_listener.py --clear &`
+2. **Get WebSocket ID**: `cat "${VIDEODB_EVENTS_DIR:-$HOME/.local/state/videodb}/videodb_ws_id"`
+3. **Run capture code** (see reference/capture.md for the full workflow)
+4. **Events written to**: `${VIDEODB_EVENTS_DIR:-$HOME/.local/state/videodb}/videodb_events.jsonl`
+
+Use `--clear` whenever you start a fresh capture run so stale transcript and visual events do not leak into the new session.
+
+#### Query Events
+
+```python
+import json
+import time
+from pathlib import Path
+
+events_file = Path.home() / ".local" / "state" / "videodb" / "videodb_events.jsonl"
+events = []
+
+if events_file.exists():
+    with events_file.open(encoding="utf-8") as handle:
+        for line in handle:
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+
+transcripts = [e["data"]["text"] for e in events if e.get("channel") == "transcript"]
+cutoff = time.time() - 300
+recent_visual = [
+    e for e in events
+    if e.get("channel") == "visual_index" and e["unix_ts"] > cutoff
+]
+```
+
 ## Additional docs
 
 Reference documentation is in the `reference/` directory adjacent to this SKILL.md file. Use the Glob tool to locate it if needed.
@@ -312,50 +350,6 @@ Reference documentation is in the `reference/` directory adjacent to this SKILL.
 - [reference/capture.md](reference/capture.md) - Desktop capture workflow
 - [reference/capture-reference.md](reference/capture-reference.md) - Capture SDK and WebSocket events
 - [reference/use-cases.md](reference/use-cases.md) - Common video processing patterns and examples
-
-## Screen Recording (Desktop Capture)
-
-Use `ws_listener.py` to capture WebSocket events during recording sessions. Desktop capture supports **macOS** only.
-
-### Quick Start
-
-1. **Start listener**: `python scripts/ws_listener.py &`
-2. **Get WebSocket ID**: `cat /tmp/videodb_ws_id`
-3. **Run capture code** (see reference/capture.md for full workflow)
-4. **Events written to**: `/tmp/videodb_events.jsonl`
-
-### Query Events
-
-```python
-import json
-from pathlib import Path
-
-events_file = Path("/tmp/videodb_events.jsonl")
-events = []
-
-if events_file.exists():
-    with events_file.open(encoding="utf-8") as handle:
-        for line in handle:
-            try:
-                events.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-
-# Get all transcripts
-transcripts = [e["data"]["text"] for e in events if e.get("channel") == "transcript"]
-
-# Get visual descriptions from last 5 minutes
-import time
-cutoff = time.time() - 300
-recent_visual = [e for e in events 
-                 if e.get("channel") == "visual_index" and e["unix_ts"] > cutoff]
-```
-
-### Utility Scripts
-
-- [scripts/ws_listener.py](scripts/ws_listener.py) - WebSocket event listener (dumps to JSONL)
-
-For complete capture workflow, see [reference/capture.md](reference/capture.md).
 
 
 **Do not use ffmpeg, moviepy, or local encoding tools** when VideoDB supports the operation. The following are all handled server-side by VideoDB — trimming, combining clips, overlaying audio or music, adding subtitles, text/image overlays, transcoding, resolution changes, aspect-ratio conversion, resizing for platform requirements, transcription, and media generation. Only fall back to local tools for operations listed under Limitations in reference/editor.md (transitions, speed changes, crop/zoom, colour grading, volume mixing).
