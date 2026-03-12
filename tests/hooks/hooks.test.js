@@ -4570,10 +4570,20 @@ async function runTests() {
         const files = fs.readdirSync(sessionsDir).filter(f => f.endsWith('.tmp'));
         assert.ok(files.length > 0, 'Should create session file');
         const content = fs.readFileSync(path.join(sessionsDir, files[0]), 'utf8');
+        const summaryMatch = content.match(
+          /<!-- ECC:SUMMARY:START -->([\s\S]*?)<!-- ECC:SUMMARY:END -->/
+        );
         // The real string message should appear
         assert.ok(content.includes('Real user message'), 'Should include the string content user message');
-        // Numeric/boolean/object content should NOT appear as text
-        assert.ok(!content.includes('42'), 'Numeric content should be skipped (else branch → empty string → filtered)');
+        assert.ok(summaryMatch, 'Should include a generated summary block');
+        const summaryBlock = summaryMatch[1];
+        // Numeric/boolean/object content should NOT appear as task bullets
+        assert.ok(
+          !summaryBlock.includes('\n- 42\n'),
+          'Numeric content should be skipped (else branch → empty string → filtered)'
+        );
+        assert.ok(!summaryBlock.includes('\n- true\n'), 'Boolean content should be skipped');
+        assert.ok(!summaryBlock.includes('[object Object]'), 'Object content should be skipped');
       } finally {
         fs.rmSync(isoHome, { recursive: true, force: true });
       }

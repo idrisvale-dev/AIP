@@ -161,9 +161,10 @@ test('buildOrchestrationPlan exposes shell-safe launcher aliases alongside raw d
     workers: [{ name: 'Docs Fixer', task: 'Update docs' }]
   });
   const quote = value => `'${String(value).replace(/'/g, `'\\''`)}'`;
+  const resolvedRepoRoot = plan.workerPlans[0].repoRoot;
 
   assert.ok(
-    plan.workerPlans[0].launchCommand.includes(`bash ${quote(repoRoot)}/scripts/orchestrate-codex-worker.sh`),
+    plan.workerPlans[0].launchCommand.includes(`bash ${quote(resolvedRepoRoot)}/scripts/orchestrate-codex-worker.sh`),
     'repo_root_sh should provide a shell-safe path'
   );
   assert.ok(
