@@ -153,8 +153,9 @@ case "${1:-start}" in
       exit 1
     fi
 
-    # The observer loop — fully detached with nohup, IO redirected to log.
-    # Variables are passed via env; observer-loop.sh handles analysis/retry flow.
+    # Add strict non-interactive instruction to system prompt (if prompt file or env is used, update there as well)
+    # If observer output contains confirmation-seeking language, fail closed
+    OBSERVER_LOG_TMP="${PROJECT_DIR}/.observer.tmp.log"
     nohup env \
       CONFIG_DIR="$CONFIG_DIR" \
       PID_FILE="$PID_FILE" \
@@ -167,10 +168,18 @@ case "${1:-start}" in
       MIN_OBSERVATIONS="$MIN_OBSERVATIONS" \
       OBSERVER_INTERVAL_SECONDS="$OBSERVER_INTERVAL_SECONDS" \
       CLV2_IS_WINDOWS="$IS_WINDOWS" \
-      "$OBSERVER_LOOP_SCRIPT" >> "$LOG_FILE" 2>&1 &
+      "$OBSERVER_LOOP_SCRIPT" > "$OBSERVER_LOG_TMP" 2>&1 &
 
     # Wait for PID file
     sleep 2
+
+    # Check for confirmation-seeking output in the observer log
+    if grep -E -i -q "Can you confirm|requires permission|Awaiting|confirm I should proceed" "$OBSERVER_LOG_TMP"; then
+      echo "OBSERVER_ABORT: Confirmation or permission prompt detected in observer output. Failing closed."
+      cat "$OBSERVER_LOG_TMP" >> "$LOG_FILE"
+      rm -f "$OBSERVER_LOG_TMP"
+      exit 2
+    fi
 
     if [ -f "$PID_FILE" ]; then
       pid=$(cat "$PID_FILE")
