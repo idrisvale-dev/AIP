@@ -136,6 +136,27 @@ function pathsReferToSameLocation(leftPath, rightPath) {
   }
 }
 
+function createObservePayload(projectDir, overrides = {}) {
+  return JSON.stringify({
+    tool_name: 'Bash',
+    tool_input: { command: 'echo hello' },
+    tool_response: 'ok',
+    session_id: 'session-123',
+    cwd: projectDir,
+    ...overrides
+  });
+}
+
+function listObservationFiles(homeDir) {
+  const projectsDir = path.join(homeDir, '.claude', 'homunculus', 'projects');
+  if (!fs.existsSync(projectsDir)) return [];
+
+  return fs
+    .readdirSync(projectsDir)
+    .map(projectId => path.join(projectsDir, projectId, 'observations.jsonl'))
+    .filter(observationsPath => fs.existsSync(observationsPath));
+}
+
 function createCommandShim(binDir, baseName, logFile) {
   fs.mkdirSync(binDir, { recursive: true });
 
@@ -2408,6 +2429,143 @@ async function runTests() {
       const sentinelContent = fs.readFileSync(sentinelPath, 'utf8');
       assert.ok(/confirmation|permission/i.test(sentinelContent), 'sentinel should record the reason it was created');
       assert.ok(!sentinelContent.includes('supersecretvalue123456'), 'sentinel should not persist raw secrets from observer output');
+    } finally {
+      cleanupTestDir(homeDir);
+      cleanupTestDir(projectDir);
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('observe.sh skips non-cli entrypoints without writing observations', async () => {
+    const homeDir = createTestDir();
+    const projectDir = createTestDir();
+    const observePath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2', 'hooks', 'observe.sh');
+
+    try {
+      const result = await runShellScript(observePath, ['post'], createObservePayload(projectDir, { session_id: 'session-non-cli' }), {
+        HOME: homeDir,
+        CLAUDE_PROJECT_DIR: projectDir,
+        CLAUDE_CODE_ENTRYPOINT: 'sdk'
+      }, projectDir);
+
+      assert.strictEqual(result.code, 0, `observe.sh should exit successfully for non-cli entrypoints, stderr: ${result.stderr}`);
+      assert.ok(!fs.existsSync(path.join(homeDir, '.claude', 'homunculus', 'projects')), 'non-cli entrypoints should exit before project detection runs');
+      assert.deepStrictEqual(listObservationFiles(homeDir), [], 'non-cli entrypoints should not write observations');
+    } finally {
+      cleanupTestDir(homeDir);
+      cleanupTestDir(projectDir);
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('observe.sh skips ECC_SKIP_OBSERVE sessions without writing observations', async () => {
+    const homeDir = createTestDir();
+    const projectDir = createTestDir();
+    const observePath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2', 'hooks', 'observe.sh');
+
+    try {
+      const result = await runShellScript(observePath, ['post'], createObservePayload(projectDir, { session_id: 'session-skip-env' }), {
+        HOME: homeDir,
+        CLAUDE_PROJECT_DIR: projectDir,
+        ECC_SKIP_OBSERVE: '1'
+      }, projectDir);
+
+      assert.strictEqual(result.code, 0, `observe.sh should exit successfully when ECC_SKIP_OBSERVE=1, stderr: ${result.stderr}`);
+      assert.ok(!fs.existsSync(path.join(homeDir, '.claude', 'homunculus', 'projects')), 'ECC_SKIP_OBSERVE should exit before project detection runs');
+      assert.deepStrictEqual(listObservationFiles(homeDir), [], 'ECC_SKIP_OBSERVE should suppress observation writes');
+    } finally {
+      cleanupTestDir(homeDir);
+      cleanupTestDir(projectDir);
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('observe.sh skips subagent payloads with agent_id without writing observations', async () => {
+    const homeDir = createTestDir();
+    const projectDir = createTestDir();
+    const observePath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2', 'hooks', 'observe.sh');
+
+    try {
+      const result = await runShellScript(
+        observePath,
+        ['post'],
+        createObservePayload(projectDir, { session_id: 'session-agent', agent_id: 'agent-123' }),
+        {
+          HOME: homeDir,
+          CLAUDE_PROJECT_DIR: projectDir
+        },
+        projectDir
+      );
+
+      assert.strictEqual(result.code, 0, `observe.sh should exit successfully for subagent sessions, stderr: ${result.stderr}`);
+      assert.ok(!fs.existsSync(path.join(homeDir, '.claude', 'homunculus', 'projects')), 'subagent sessions should exit before project detection runs');
+      assert.deepStrictEqual(listObservationFiles(homeDir), [], 'subagent sessions should not write observations');
+    } finally {
+      cleanupTestDir(homeDir);
+      cleanupTestDir(projectDir);
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('observe.sh skips default observer-session paths without writing observations', async () => {
+    const homeDir = createTestDir();
+    const projectRoot = createTestDir();
+    const projectDir = path.join(projectRoot, 'observer-sessions-worker');
+    const observePath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2', 'hooks', 'observe.sh');
+    fs.mkdirSync(projectDir, { recursive: true });
+
+    try {
+      const result = await runShellScript(observePath, ['post'], createObservePayload(projectDir, { session_id: 'session-default-skip-path' }), {
+        HOME: homeDir,
+        CLAUDE_PROJECT_DIR: projectDir
+      }, projectDir);
+
+      assert.strictEqual(result.code, 0, `observe.sh should exit successfully for default skip paths, stderr: ${result.stderr}`);
+      assert.ok(!fs.existsSync(path.join(homeDir, '.claude', 'homunculus', 'projects')), 'default skip paths should exit before project detection runs');
+      assert.deepStrictEqual(listObservationFiles(homeDir), [], 'default skip paths should suppress observation writes');
+    } finally {
+      cleanupTestDir(homeDir);
+      cleanupTestDir(projectRoot);
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('observe.sh trims custom skip-path patterns before matching', async () => {
+    const homeDir = createTestDir();
+    const projectRoot = createTestDir();
+    const projectDir = path.join(projectRoot, 'custom-observer-session');
+    const observePath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2', 'hooks', 'observe.sh');
+    fs.mkdirSync(projectDir, { recursive: true });
+
+    try {
+      const result = await runShellScript(observePath, ['post'], createObservePayload(projectDir, { session_id: 'session-custom-skip-path' }), {
+        HOME: homeDir,
+        CLAUDE_PROJECT_DIR: projectDir,
+        ECC_OBSERVE_SKIP_PATHS: '  custom-observer-session  ,   ,  '
+      }, projectDir);
+
+      assert.strictEqual(result.code, 0, `observe.sh should exit successfully for custom skip paths, stderr: ${result.stderr}`);
+      assert.ok(!fs.existsSync(path.join(homeDir, '.claude', 'homunculus', 'projects')), 'custom skip paths should exit before project detection runs');
+      assert.deepStrictEqual(listObservationFiles(homeDir), [], 'trimmed custom skip paths should suppress observation writes');
+    } finally {
+      cleanupTestDir(homeDir);
+      cleanupTestDir(projectRoot);
+    }
+  })) passed++; else failed++;
+
+  if (await asyncTest('observe.sh ignores empty skip-path entries so normal paths still record observations', async () => {
+    const homeDir = createTestDir();
+    const projectDir = createTestDir();
+    const observePath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2', 'hooks', 'observe.sh');
+
+    try {
+      const result = await runShellScript(observePath, ['post'], createObservePayload(projectDir, { session_id: 'session-empty-skip-paths' }), {
+        HOME: homeDir,
+        CLAUDE_PROJECT_DIR: projectDir,
+        ECC_OBSERVE_SKIP_PATHS: '   ,   ,  '
+      }, projectDir);
+
+      assert.strictEqual(result.code, 0, `observe.sh should exit successfully when skip-path entries are empty, stderr: ${result.stderr}`);
+      const observationFiles = listObservationFiles(homeDir);
+      assert.strictEqual(observationFiles.length, 1, 'empty skip-path entries should not suppress normal observations');
+
+      const observations = fs.readFileSync(observationFiles[0], 'utf8').trim().split('\n').filter(Boolean);
+      assert.ok(observations.length > 0, 'normal sessions should still append observations when skip-path entries are empty');
     } finally {
       cleanupTestDir(homeDir);
       cleanupTestDir(projectDir);

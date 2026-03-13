@@ -83,30 +83,11 @@ if [ -n "$STDIN_CWD" ] && [ -d "$STDIN_CWD" ]; then
 fi
 
 # ─────────────────────────────────────────────
-# Project detection
-# ─────────────────────────────────────────────
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-# Source shared project detection helper
-# This sets: PROJECT_ID, PROJECT_NAME, PROJECT_ROOT, PROJECT_DIR
-source "${SKILL_ROOT}/scripts/detect-project.sh"
-PYTHON_CMD="${CLV2_PYTHON_CMD:-$PYTHON_CMD}"
-
-# ─────────────────────────────────────────────
 # Configuration
 # ─────────────────────────────────────────────
 
 CONFIG_DIR="${HOME}/.claude/homunculus"
-OBSERVATIONS_FILE="${PROJECT_DIR}/observations.jsonl"
 MAX_FILE_SIZE_MB=10
-
-SENTINEL_FILE="${CLV2_OBSERVER_SENTINEL_FILE:-${PROJECT_ROOT:-$PROJECT_DIR}/.observer.lock}"
-
-write_guard_sentinel() {
-  printf '%s\n' 'observer paused: confirmation or permission prompt detected; rerun start-observer.sh --reset after reviewing observer.log' > "$SENTINEL_FILE"
-}
 
 # Skip if disabled globally
 if [ -f "$CONFIG_DIR/disabled" ]; then
@@ -119,6 +100,8 @@ fi
 #   - ECC observing its own Haiku observer sessions (self-loop)
 #   - ECC observing other tools' automated sessions (e.g. claude-mem)
 #   - All-night Haiku usage with no human activity
+# Run these before project detection so skipped sessions cannot mutate
+# project-scoped observer state.
 # ─────────────────────────────────────────────
 
 # Env-var checks first (cheapest — no subprocess spawning):
@@ -160,6 +143,26 @@ if [ -n "$STDIN_CWD" ]; then
     case "$STDIN_CWD" in *"$_pattern"*) exit 0 ;; esac
   done
 fi
+
+# ─────────────────────────────────────────────
+# Project detection
+# ─────────────────────────────────────────────
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Source shared project detection helper
+# This sets: PROJECT_ID, PROJECT_NAME, PROJECT_ROOT, PROJECT_DIR
+source "${SKILL_ROOT}/scripts/detect-project.sh"
+PYTHON_CMD="${CLV2_PYTHON_CMD:-$PYTHON_CMD}"
+
+OBSERVATIONS_FILE="${PROJECT_DIR}/observations.jsonl"
+
+SENTINEL_FILE="${CLV2_OBSERVER_SENTINEL_FILE:-${PROJECT_ROOT:-$PROJECT_DIR}/.observer.lock}"
+
+write_guard_sentinel() {
+  printf '%s\n' 'observer paused: confirmation or permission prompt detected; rerun start-observer.sh --reset after reviewing observer.log' > "$SENTINEL_FILE"
+}
 
 # Skip if a previous run already aborted due to confirmation/permission prompt.
 # This is the circuit-breaker — stops retrying after a non-interactive failure.
