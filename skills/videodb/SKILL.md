@@ -108,7 +108,7 @@ The user must set `VIDEO_DB_API_KEY` using **either** method:
 - **Export in terminal** (before starting Claude): `export VIDEO_DB_API_KEY=your-key`
 - **Project `.env` file**: Save `VIDEO_DB_API_KEY=your-key` in the project's `.env` file
 
-Get a free API key at <https://console.videodb.io> (50 free uploads, no credit card).
+Get a free API key at [console.videodb.io](https://console.videodb.io) (50 free uploads, no credit card).
 
 **Do NOT** read, write, or handle the API key yourself. Always let the user set it.
 
