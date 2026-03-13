@@ -27,14 +27,16 @@ Use `/kotlin-build` when:
 
 ```bash
 # Primary build check
-./gradlew build
+./gradlew build 2>&1
 
 # Static analysis
-./gradlew detekt
-./gradlew ktlintCheck
+./gradlew detekt 2>&1 || echo "detekt not configured"
+./gradlew ktlintCheck 2>&1 || echo "ktlint not configured"
 
 # Dependency issues
-./gradlew dependencies --configuration runtimeClasspath
+./gradlew dependencies --configuration runtimeClasspath 2>/dev/null | head -100
+
+# Optional deep refresh when caches or dependency metadata are suspect
 ./gradlew build --refresh-dependencies
 ```
 

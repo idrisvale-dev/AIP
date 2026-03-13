@@ -9,13 +9,16 @@ alwaysApply: false
 
 ## Formatting
 
-- **ktfmt** or **ktlint** are mandatory for consistent formatting
+- Auto-formatting via **ktfmt** or **ktlint** (configured in `kotlin-hooks.md`)
 - Use trailing commas in multiline declarations
 
 ## Immutability
 
-- `val` over `var` always
-- Immutable collections by default (`List`, `Map`, `Set`)
+The global immutability requirement is enforced in the common coding style rule.
+For Kotlin specifically:
+
+- Prefer `val` over `var`
+- Use immutable collection types (`List`, `Map`, `Set`)
 - Use `data class` with `copy()` for immutable updates
 
 ## Null Safety

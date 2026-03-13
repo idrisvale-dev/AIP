@@ -38,7 +38,7 @@ The following sections contain detailed, runnable examples for each testing patt
 - **Coverage** — Kover configuration and commands in [Kover Coverage](#kover-coverage)
 - **Ktor testing** — testApplication setup in [Ktor testApplication Testing](#ktor-testapplication-testing)
 
-## TDD Workflow for Kotlin
+### TDD Workflow for Kotlin
 
 ### The RED-GREEN-REFACTOR Cycle
 
@@ -105,7 +105,7 @@ fun validateEmail(email: String): Result<String> {
 // Step 6: Refactor if needed, verify tests still pass
 ```
 
-## Kotest Spec Styles
+### Kotest Spec Styles
 
 ### StringSpec (Simplest)
 
@@ -222,7 +222,7 @@ class UserValidatorTest : DescribeSpec({
 })
 ```
 
-## Kotest Matchers
+### Kotest Matchers
 
 ### Core Matchers
 
@@ -287,7 +287,7 @@ fun beActiveUser() = object : Matcher<User> {
 user should beActiveUser()
 ```
 
-## MockK
+### MockK
 
 ### Basic Mocking
 
@@ -380,7 +380,7 @@ test("spy on real object") {
 }
 ```
 
-## Coroutine Testing
+### Coroutine Testing
 
 ### runTest for Suspend Functions
 
@@ -485,7 +485,7 @@ class DispatcherTest : FunSpec({
 })
 ```
 
-## Property-Based Testing
+### Property-Based Testing
 
 ### Kotest Property Testing
 
@@ -551,7 +551,7 @@ val moneyArb: Arb<Money> = Arb.bind(
 }
 ```
 
-## Data-Driven Testing
+### Data-Driven Testing
 
 ### withData in Kotest
 
@@ -583,7 +583,7 @@ class ParserTest : FunSpec({
 })
 ```
 
-## Test Lifecycle and Fixtures
+### Test Lifecycle and Fixtures
 
 ### BeforeTest / AfterTest
 
@@ -654,7 +654,7 @@ class UserRepositoryTest : FunSpec({
 })
 ```
 
-## Kover Coverage
+### Kover Coverage
 
 ### Gradle Configuration
 
@@ -711,7 +711,7 @@ kover {
 | General code | 80%+ |
 | Generated / config code | Exclude |
 
-## Ktor testApplication Testing
+### Ktor testApplication Testing
 
 ```kotlin
 class ApiRoutesTest : FunSpec({
@@ -748,7 +748,7 @@ class ApiRoutesTest : FunSpec({
 })
 ```
 
-## Testing Commands
+### Testing Commands
 
 ```bash
 # Run all tests
@@ -776,7 +776,7 @@ class ApiRoutesTest : FunSpec({
 ./gradlew test --continuous
 ```
 
-## Best Practices
+### Best Practices
 
 **DO:**
 - Write tests FIRST (TDD)
@@ -795,7 +795,7 @@ class ApiRoutesTest : FunSpec({
 - Test private functions directly
 - Ignore flaky tests
 
-## Integration with CI/CD
+### Integration with CI/CD
 
 ```yaml
 # GitHub Actions example
