@@ -40,7 +40,7 @@ The following sections contain detailed, runnable examples for each testing patt
 
 ### TDD Workflow for Kotlin
 
-### The RED-GREEN-REFACTOR Cycle
+#### The RED-GREEN-REFACTOR Cycle
 
 ```
 RED     -> Write a failing test first
@@ -49,7 +49,7 @@ REFACTOR -> Improve code while keeping tests green
 REPEAT  -> Continue with next requirement
 ```
 
-### Step-by-Step TDD in Kotlin
+#### Step-by-Step TDD in Kotlin
 
 ```kotlin
 // Step 1: Define the interface/signature
@@ -107,7 +107,7 @@ fun validateEmail(email: String): Result<String> {
 
 ### Kotest Spec Styles
 
-### StringSpec (Simplest)
+#### StringSpec (Simplest)
 
 ```kotlin
 class CalculatorTest : StringSpec({
@@ -125,7 +125,7 @@ class CalculatorTest : StringSpec({
 })
 ```
 
-### FunSpec (JUnit-like)
+#### FunSpec (JUnit-like)
 
 ```kotlin
 class UserServiceTest : FunSpec({
@@ -151,7 +151,7 @@ class UserServiceTest : FunSpec({
 })
 ```
 
-### BehaviorSpec (BDD Style)
+#### BehaviorSpec (BDD Style)
 
 ```kotlin
 class OrderServiceTest : BehaviorSpec({
@@ -193,7 +193,7 @@ class OrderServiceTest : BehaviorSpec({
 })
 ```
 
-### DescribeSpec (RSpec Style)
+#### DescribeSpec (RSpec Style)
 
 ```kotlin
 class UserValidatorTest : DescribeSpec({
@@ -224,7 +224,7 @@ class UserValidatorTest : DescribeSpec({
 
 ### Kotest Matchers
 
-### Core Matchers
+#### Core Matchers
 
 ```kotlin
 import io.kotest.matchers.shouldBe
@@ -272,7 +272,7 @@ shouldNotThrow<Exception> {
 }
 ```
 
-### Custom Matchers
+#### Custom Matchers
 
 ```kotlin
 fun beActiveUser() = object : Matcher<User> {
@@ -289,7 +289,7 @@ user should beActiveUser()
 
 ### MockK
 
-### Basic Mocking
+#### Basic Mocking
 
 ```kotlin
 class UserServiceTest : FunSpec({
@@ -321,7 +321,7 @@ class UserServiceTest : FunSpec({
 })
 ```
 
-### Coroutine Mocking
+#### Coroutine Mocking
 
 ```kotlin
 class AsyncUserServiceTest : FunSpec({
@@ -349,7 +349,7 @@ class AsyncUserServiceTest : FunSpec({
 })
 ```
 
-### Argument Capture
+#### Argument Capture
 
 ```kotlin
 test("save captures the user argument") {
@@ -364,7 +364,7 @@ test("save captures the user argument") {
 }
 ```
 
-### Spy and Partial Mocking
+#### Spy and Partial Mocking
 
 ```kotlin
 test("spy on real object") {
@@ -382,7 +382,7 @@ test("spy on real object") {
 
 ### Coroutine Testing
 
-### runTest for Suspend Functions
+#### runTest for Suspend Functions
 
 ```kotlin
 import kotlinx.coroutines.test.runTest
@@ -413,7 +413,7 @@ class CoroutineServiceTest : FunSpec({
 })
 ```
 
-### Testing Flows
+#### Testing Flows
 
 ```kotlin
 import io.kotest.matchers.collections.shouldContainInOrder
@@ -459,7 +459,7 @@ class FlowServiceTest : FunSpec({
 })
 ```
 
-### TestDispatcher
+#### TestDispatcher
 
 ```kotlin
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -487,7 +487,7 @@ class DispatcherTest : FunSpec({
 
 ### Property-Based Testing
 
-### Kotest Property Testing
+#### Kotest Property Testing
 
 ```kotlin
 import io.kotest.core.spec.style.FunSpec
@@ -527,7 +527,7 @@ class PropertyTest : FunSpec({
 })
 ```
 
-### Custom Generators
+#### Custom Generators
 
 ```kotlin
 val userArb: Arb<User> = Arb.bind(
@@ -553,7 +553,7 @@ val moneyArb: Arb<Money> = Arb.bind(
 
 ### Data-Driven Testing
 
-### withData in Kotest
+#### withData in Kotest
 
 ```kotlin
 class ParserTest : FunSpec({
@@ -585,7 +585,7 @@ class ParserTest : FunSpec({
 
 ### Test Lifecycle and Fixtures
 
-### BeforeTest / AfterTest
+#### BeforeTest / AfterTest
 
 ```kotlin
 class DatabaseTest : FunSpec({
@@ -627,7 +627,7 @@ class DatabaseTest : FunSpec({
 })
 ```
 
-### Kotest Extensions
+#### Kotest Extensions
 
 ```kotlin
 // Reusable test extension
@@ -656,7 +656,7 @@ class UserRepositoryTest : FunSpec({
 
 ### Kover Coverage
 
-### Gradle Configuration
+#### Gradle Configuration
 
 ```kotlin
 // build.gradle.kts
@@ -684,7 +684,7 @@ kover {
 }
 ```
 
-### Coverage Commands
+#### Coverage Commands
 
 ```bash
 # Run tests with coverage
@@ -702,7 +702,7 @@ kover {
 # Windows: start build/reports/kover/html/index.html
 ```
 
-### Coverage Targets
+#### Coverage Targets
 
 | Code Type | Target |
 |-----------|--------|

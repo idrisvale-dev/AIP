@@ -25,7 +25,7 @@ Run these in order:
 ./gradlew build 2>&1
 ./gradlew detekt 2>&1 || echo "detekt not configured"
 ./gradlew ktlintCheck 2>&1 || echo "ktlint not configured"
-./gradlew dependencies --configuration runtimeClasspath 2>/dev/null | head -100
+./gradlew dependencies --configuration runtimeClasspath 2>&1 | head -100
 ```
 
 ## Resolution Workflow

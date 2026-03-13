@@ -34,7 +34,7 @@ Use `/kotlin-build` when:
 ./gradlew ktlintCheck 2>&1 || echo "ktlint not configured"
 
 # Dependency issues
-./gradlew dependencies --configuration runtimeClasspath 2>/dev/null | head -100
+./gradlew dependencies --configuration runtimeClasspath 2>&1 | head -100
 
 # Optional deep refresh when caches or dependency metadata are suspect
 ./gradlew build --refresh-dependencies
