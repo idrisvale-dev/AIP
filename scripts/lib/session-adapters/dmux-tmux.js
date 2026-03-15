@@ -45,6 +45,8 @@ function createDmuxTmuxAdapter(options = {}) {
 
   return {
     id: 'dmux-tmux',
+    description: 'Tmux/worktree orchestration snapshots from plan files or session names',
+    targetTypes: ['plan', 'session'],
     canOpen(target, context = {}) {
       if (context.adapterId && context.adapterId !== 'dmux-tmux') {
         return false;

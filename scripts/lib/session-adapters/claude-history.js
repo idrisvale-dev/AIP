@@ -114,6 +114,8 @@ function resolveSessionRecord(target, cwd) {
 function createClaudeHistoryAdapter() {
   return {
     id: 'claude-history',
+    description: 'Claude local session history and session-file snapshots',
+    targetTypes: ['claude-history', 'claude-alias', 'session-file'],
     canOpen(target, context = {}) {
       if (context.adapterId && context.adapterId !== 'claude-history') {
         return false;

@@ -3,6 +3,14 @@
 const { createClaudeHistoryAdapter } = require('./claude-history');
 const { createDmuxTmuxAdapter } = require('./dmux-tmux');
 
+const TARGET_TYPE_TO_ADAPTER_ID = Object.freeze({
+  plan: 'dmux-tmux',
+  session: 'dmux-tmux',
+  'claude-history': 'claude-history',
+  'claude-alias': 'claude-history',
+  'session-file': 'claude-history'
+});
+
 function createDefaultAdapters() {
   return [
     createClaudeHistoryAdapter(),
@@ -10,13 +18,72 @@ function createDefaultAdapters() {
   ];
 }
 
+function coerceTargetValue(value) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error('Structured session targets require a non-empty string value');
+  }
+
+  return value.trim();
+}
+
+function normalizeStructuredTarget(target, context = {}) {
+  if (!target || typeof target !== 'object' || Array.isArray(target)) {
+    return {
+      target,
+      context: { ...context }
+    };
+  }
+
+  const value = coerceTargetValue(target.value);
+  const type = typeof target.type === 'string' ? target.type.trim() : '';
+  if (type.length === 0) {
+    throw new Error('Structured session targets require a non-empty type');
+  }
+
+  const adapterId = target.adapterId || TARGET_TYPE_TO_ADAPTER_ID[type] || context.adapterId || null;
+  const nextContext = {
+    ...context,
+    adapterId
+  };
+
+  if (type === 'claude-history' || type === 'claude-alias') {
+    return {
+      target: `claude:${value}`,
+      context: nextContext
+    };
+  }
+
+  return {
+    target: value,
+    context: nextContext
+  };
+}
+
 function createAdapterRegistry(options = {}) {
   const adapters = options.adapters || createDefaultAdapters();
 
   return {
     adapters,
+    getAdapter(id) {
+      const adapter = adapters.find(candidate => candidate.id === id);
+      if (!adapter) {
+        throw new Error(`Unknown session adapter: ${id}`);
+      }
+
+      return adapter;
+    },
+    listAdapters() {
+      return adapters.map(adapter => ({
+        id: adapter.id,
+        description: adapter.description || '',
+        targetTypes: Array.isArray(adapter.targetTypes) ? [...adapter.targetTypes] : []
+      }));
+    },
     select(target, context = {}) {
-      const adapter = adapters.find(candidate => candidate.canOpen(target, context));
+      const normalized = normalizeStructuredTarget(target, context);
+      const adapter = normalized.context.adapterId
+        ? this.getAdapter(normalized.context.adapterId)
+        : adapters.find(candidate => candidate.canOpen(normalized.target, normalized.context));
       if (!adapter) {
         throw new Error(`No session adapter matched target: ${target}`);
       }
@@ -24,8 +91,9 @@ function createAdapterRegistry(options = {}) {
       return adapter;
     },
     open(target, context = {}) {
-      const adapter = this.select(target, context);
-      return adapter.open(target, context);
+      const normalized = normalizeStructuredTarget(target, context);
+      const adapter = this.select(normalized.target, normalized.context);
+      return adapter.open(normalized.target, normalized.context);
     }
   };
 }
@@ -38,5 +106,6 @@ function inspectSessionTarget(target, options = {}) {
 module.exports = {
   createAdapterRegistry,
   createDefaultAdapters,
-  inspectSessionTarget
+  inspectSessionTarget,
+  normalizeStructuredTarget
 };

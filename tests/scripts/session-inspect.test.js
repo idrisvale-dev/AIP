@@ -56,6 +56,15 @@ function runTests() {
     assert.ok(result.stdout.includes('Usage:'));
   })) passed++; else failed++;
 
+  if (test('lists registered adapters', () => {
+    const result = run(['--list-adapters']);
+    assert.strictEqual(result.code, 0, result.stderr);
+    const payload = JSON.parse(result.stdout);
+    assert.ok(Array.isArray(payload.adapters));
+    assert.ok(payload.adapters.some(adapter => adapter.id === 'claude-history'));
+    assert.ok(payload.adapters.some(adapter => adapter.id === 'dmux-tmux'));
+  })) passed++; else failed++;
+
   if (test('prints canonical JSON for claude history targets', () => {
     const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-inspect-home-'));
     const sessionsDir = path.join(homeDir, '.claude', 'sessions');
@@ -76,6 +85,31 @@ function runTests() {
       assert.strictEqual(payload.adapterId, 'claude-history');
       assert.strictEqual(payload.session.kind, 'history');
       assert.strictEqual(payload.workers[0].branch, 'feat/session-inspect');
+    } finally {
+      fs.rmSync(homeDir, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
+  if (test('supports explicit target types for structured registry routing', () => {
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-inspect-home-'));
+    const sessionsDir = path.join(homeDir, '.claude', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+
+    try {
+      fs.writeFileSync(
+        path.join(sessionsDir, '2026-03-13-a1b2c3d4-session.tmp'),
+        '# Inspect Session\n\n**Branch:** feat/typed-inspect\n'
+      );
+
+      const result = run(['latest', '--target-type', 'claude-history'], {
+        env: { HOME: homeDir }
+      });
+
+      assert.strictEqual(result.code, 0, result.stderr);
+      const payload = JSON.parse(result.stdout);
+      assert.strictEqual(payload.adapterId, 'claude-history');
+      assert.strictEqual(payload.session.sourceTarget.type, 'claude-history');
+      assert.strictEqual(payload.workers[0].branch, 'feat/typed-inspect');
     } finally {
       fs.rmSync(homeDir, { recursive: true, force: true });
     }

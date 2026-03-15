@@ -210,5 +210,76 @@ test('adapter registry routes plan files to dmux and explicit claude targets to 
   }
 });
 
+test('adapter registry resolves structured target types into the correct adapter', () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-typed-repo-'));
+  const planPath = path.join(repoRoot, 'workflow.json');
+  fs.writeFileSync(planPath, JSON.stringify({
+    sessionName: 'workflow-typed-proof',
+    repoRoot,
+    coordinationRoot: path.join(repoRoot, '.claude', 'orchestration')
+  }));
+
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-typed-home-'));
+  const sessionsDir = path.join(homeDir, '.claude', 'sessions');
+  fs.mkdirSync(sessionsDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(sessionsDir, '2026-03-13-z9y8x7w6-session.tmp'),
+    '# Typed History Session\n\n**Branch:** feat/typed-targets\n'
+  );
+
+  try {
+    withHome(homeDir, () => {
+      const registry = createAdapterRegistry({
+        adapters: [
+          createDmuxTmuxAdapter({
+            collectSessionSnapshotImpl: () => ({
+              sessionName: 'workflow-typed-proof',
+              coordinationDir: path.join(repoRoot, '.claude', 'orchestration', 'workflow-typed-proof'),
+              repoRoot,
+              targetType: 'plan',
+              sessionActive: true,
+              paneCount: 0,
+              workerCount: 0,
+              workerStates: {},
+              panes: [],
+              workers: []
+            })
+          }),
+          createClaudeHistoryAdapter()
+        ]
+      });
+
+      const dmuxSnapshot = registry.open({ type: 'plan', value: planPath }, { cwd: repoRoot }).getSnapshot();
+      const claudeSnapshot = registry.open({ type: 'claude-history', value: 'latest' }, { cwd: repoRoot }).getSnapshot();
+
+      assert.strictEqual(dmuxSnapshot.adapterId, 'dmux-tmux');
+      assert.strictEqual(dmuxSnapshot.session.sourceTarget.type, 'plan');
+      assert.strictEqual(claudeSnapshot.adapterId, 'claude-history');
+      assert.strictEqual(claudeSnapshot.session.sourceTarget.type, 'claude-history');
+      assert.strictEqual(claudeSnapshot.workers[0].branch, 'feat/typed-targets');
+    });
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+    fs.rmSync(homeDir, { recursive: true, force: true });
+  }
+});
+
+test('adapter registry lists adapter metadata and target types', () => {
+  const registry = createAdapterRegistry();
+  const adapters = registry.listAdapters();
+  const ids = adapters.map(adapter => adapter.id);
+
+  assert.ok(ids.includes('claude-history'));
+  assert.ok(ids.includes('dmux-tmux'));
+  assert.ok(
+    adapters.some(adapter => adapter.id === 'claude-history' && adapter.targetTypes.includes('claude-history')),
+    'claude-history should advertise its canonical target type'
+  );
+  assert.ok(
+    adapters.some(adapter => adapter.id === 'dmux-tmux' && adapter.targetTypes.includes('plan')),
+    'dmux-tmux should advertise plan targets'
+  );
+});
+
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);

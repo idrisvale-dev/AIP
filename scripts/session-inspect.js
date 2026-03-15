@@ -4,12 +4,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const { inspectSessionTarget } = require('./lib/session-adapters/registry');
+const { createAdapterRegistry, inspectSessionTarget } = require('./lib/session-adapters/registry');
 
 function usage() {
   console.log([
     'Usage:',
-    '  node scripts/session-inspect.js <target> [--adapter <id>] [--write <output.json>]',
+    '  node scripts/session-inspect.js <target> [--adapter <id>] [--target-type <type>] [--write <output.json>]',
+    '  node scripts/session-inspect.js --list-adapters',
     '',
     'Targets:',
     '  <plan.json>          Dmux/orchestration plan file',
@@ -22,6 +23,7 @@ function usage() {
     '  node scripts/session-inspect.js .claude/plan/workflow.json',
     '  node scripts/session-inspect.js workflow-visual-proof',
     '  node scripts/session-inspect.js claude:latest',
+    '  node scripts/session-inspect.js latest --target-type claude-history',
     '  node scripts/session-inspect.js claude:a1b2c3d4 --write /tmp/session.json'
   ].join('\n'));
 }
@@ -29,25 +31,36 @@ function usage() {
 function parseArgs(argv) {
   const args = argv.slice(2);
   const target = args.find(argument => !argument.startsWith('--'));
+  const listAdapters = args.includes('--list-adapters');
 
   const adapterIndex = args.indexOf('--adapter');
   const adapterId = adapterIndex >= 0 ? args[adapterIndex + 1] : null;
 
+  const targetTypeIndex = args.indexOf('--target-type');
+  const targetType = targetTypeIndex >= 0 ? args[targetTypeIndex + 1] : null;
+
   const writeIndex = args.indexOf('--write');
   const writePath = writeIndex >= 0 ? args[writeIndex + 1] : null;
 
-  return { target, adapterId, writePath };
+  return { target, adapterId, targetType, writePath, listAdapters };
 }
 
 function main() {
-  const { target, adapterId, writePath } = parseArgs(process.argv);
+  const { target, adapterId, targetType, writePath, listAdapters } = parseArgs(process.argv);
+
+  if (listAdapters) {
+    const registry = createAdapterRegistry();
+    console.log(JSON.stringify({ adapters: registry.listAdapters() }, null, 2));
+    return;
+  }
 
   if (!target) {
     usage();
     process.exit(1);
   }
 
-  const snapshot = inspectSessionTarget(target, {
+  const inspectTarget = targetType ? { type: targetType, value: target } : target;
+  const snapshot = inspectSessionTarget(inspectTarget, {
     cwd: process.cwd(),
     adapterId
   });
