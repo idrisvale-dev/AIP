@@ -34,7 +34,9 @@ function test(name, fn) {
 
 function withHome(homeDir, fn) {
   const previousHome = process.env.HOME;
+  const previousUserProfile = process.env.USERPROFILE;
   process.env.HOME = homeDir;
+  process.env.USERPROFILE = homeDir;
 
   try {
     fn();
@@ -43,6 +45,12 @@ function withHome(homeDir, fn) {
       process.env.HOME = previousHome;
     } else {
       delete process.env.HOME;
+    }
+
+    if (typeof previousUserProfile === 'string') {
+      process.env.USERPROFILE = previousUserProfile;
+    } else {
+      delete process.env.USERPROFILE;
     }
   }
 }

@@ -4,7 +4,6 @@ const path = require('path');
 const { resolveInstallPlan, loadInstallManifests } = require('./install-manifests');
 const { readInstallState, writeInstallState } = require('./install-state');
 const {
-  createLegacyInstallPlan,
   createManifestInstallPlan,
 } = require('./install-executor');
 const {

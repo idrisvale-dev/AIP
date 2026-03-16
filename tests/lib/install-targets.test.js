@@ -11,6 +11,10 @@ const {
   planInstallTargetScaffold,
 } = require('../../scripts/lib/install-targets/registry');
 
+function normalizedRelativePath(value) {
+  return String(value || '').replace(/\\/g, '/');
+}
+
 function test(name, fn) {
   try {
     fn();
@@ -86,7 +90,7 @@ function runTests() {
 
     const flattened = plan.operations.find(operation => operation.sourceRelativePath === '.cursor');
     const preserved = plan.operations.find(operation => (
-      operation.sourceRelativePath === path.join('rules', 'common', 'coding-style.md')
+      normalizedRelativePath(operation.sourceRelativePath) === 'rules/common/coding-style.md'
     ));
 
     assert.ok(flattened, 'Should include .cursor scaffold operation');
@@ -119,14 +123,14 @@ function runTests() {
 
     assert.ok(
       plan.operations.some(operation => (
-        operation.sourceRelativePath === path.join('rules', 'common', 'coding-style.md')
+        normalizedRelativePath(operation.sourceRelativePath) === 'rules/common/coding-style.md'
         && operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'common-coding-style.md')
       )),
       'Should flatten common rules into namespaced files'
     );
     assert.ok(
       plan.operations.some(operation => (
-        operation.sourceRelativePath === path.join('rules', 'typescript', 'testing.md')
+        normalizedRelativePath(operation.sourceRelativePath) === 'rules/typescript/testing.md'
         && operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'typescript-testing.md')
       )),
       'Should flatten language rules into namespaced files'
@@ -179,7 +183,7 @@ function runTests() {
     );
     assert.ok(
       plan.operations.some(operation => (
-        operation.sourceRelativePath === path.join('rules', 'common', 'coding-style.md')
+        normalizedRelativePath(operation.sourceRelativePath) === 'rules/common/coding-style.md'
         && operation.destinationPath === path.join(projectRoot, '.agent', 'rules', 'common-coding-style.md')
       )),
       'Should flatten common rules for antigravity'

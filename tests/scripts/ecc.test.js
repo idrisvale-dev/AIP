@@ -11,13 +11,25 @@ const { spawnSync } = require('child_process');
 const SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'ecc.js');
 
 function runCli(args, options = {}) {
+  const envOverrides = {
+    ...(options.env || {}),
+  };
+
+  if (typeof envOverrides.HOME === 'string' && !('USERPROFILE' in envOverrides)) {
+    envOverrides.USERPROFILE = envOverrides.HOME;
+  }
+
+  if (typeof envOverrides.USERPROFILE === 'string' && !('HOME' in envOverrides)) {
+    envOverrides.HOME = envOverrides.USERPROFILE;
+  }
+
   return spawnSync('node', [SCRIPT, ...args], {
     encoding: 'utf8',
     cwd: options.cwd || process.cwd(),
     maxBuffer: 10 * 1024 * 1024,
     env: {
       ...process.env,
-      ...(options.env || {}),
+      ...envOverrides,
     },
   });
 }

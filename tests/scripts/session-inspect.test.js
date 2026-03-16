@@ -13,6 +13,18 @@ const { getFallbackSessionRecordingPath } = require('../../scripts/lib/session-a
 const SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'session-inspect.js');
 
 function run(args = [], options = {}) {
+  const envOverrides = {
+    ...(options.env || {})
+  };
+
+  if (typeof envOverrides.HOME === 'string' && !('USERPROFILE' in envOverrides)) {
+    envOverrides.USERPROFILE = envOverrides.HOME;
+  }
+
+  if (typeof envOverrides.USERPROFILE === 'string' && !('HOME' in envOverrides)) {
+    envOverrides.HOME = envOverrides.USERPROFILE;
+  }
+
   try {
     const stdout = execFileSync('node', [SCRIPT, ...args], {
       encoding: 'utf8',
@@ -21,7 +33,7 @@ function run(args = [], options = {}) {
       cwd: options.cwd || process.cwd(),
       env: {
         ...process.env,
-        ...(options.env || {})
+        ...envOverrides
       }
     });
     return { code: 0, stdout, stderr: '' };

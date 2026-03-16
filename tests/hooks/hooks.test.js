@@ -10,6 +10,20 @@ const fs = require('fs');
 const os = require('os');
 const { spawn, spawnSync } = require('child_process');
 
+function toBashPath(filePath) {
+  if (process.platform !== 'win32') {
+    return filePath;
+  }
+
+  return String(filePath)
+    .replace(/^([A-Za-z]):/, (_, driveLetter) => `/mnt/${driveLetter.toLowerCase()}`)
+    .replace(/\\/g, '/');
+}
+
+function sleepMs(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 // Test helper
 function test(name, fn) {
   try {
@@ -65,7 +79,7 @@ function runScript(scriptPath, input = '', env = {}) {
 
 function runShellScript(scriptPath, args = [], input = '', env = {}, cwd = process.cwd()) {
   return new Promise((resolve, reject) => {
-    const proc = spawn('bash', [scriptPath, ...args], {
+    const proc = spawn('bash', [toBashPath(scriptPath), ...args], {
       cwd,
       env: { ...process.env, ...env },
       stdio: ['pipe', 'pipe', 'pipe']
@@ -93,7 +107,19 @@ function createTestDir() {
 
 // Clean up test directory
 function cleanupTestDir(testDir) {
-  fs.rmSync(testDir, { recursive: true, force: true });
+  const retryableCodes = new Set(['EPERM', 'EBUSY', 'ENOTEMPTY']);
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      fs.rmSync(testDir, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (!retryableCodes.has(error.code) || attempt === 4) {
+        throw error;
+      }
+      sleepMs(50 * (attempt + 1));
+    }
+  }
 }
 
 function createCommandShim(binDir, baseName, logFile) {
@@ -2253,7 +2279,7 @@ async function runTests() {
   if (
     await asyncTest('detect-project exports the resolved Python command for downstream scripts', async () => {
       const detectProjectPath = path.join(__dirname, '..', '..', 'skills', 'continuous-learning-v2', 'scripts', 'detect-project.sh');
-      const shellCommand = [`source "${detectProjectPath}" >/dev/null 2>&1`, 'printf "%s\\n" "${CLV2_PYTHON_CMD:-}"'].join('; ');
+      const shellCommand = [`source "${toBashPath(detectProjectPath)}" >/dev/null 2>&1`, 'printf "%s\\n" "${CLV2_PYTHON_CMD:-}"'].join('; ');
 
       const shell = process.platform === 'win32' ? 'bash' : 'bash';
       const proc = spawn(shell, ['-lc', shellCommand], {
@@ -2292,14 +2318,14 @@ async function runTests() {
         spawnSync('git', ['remote', 'add', 'origin', 'https://github.com/example/ecc-test.git'], { cwd: repoDir, stdio: 'ignore' });
 
         const shellCommand = [
-          `cd "${repoDir}"`,
-          `source "${detectProjectPath}" >/dev/null 2>&1`,
+          `cd "${toBashPath(repoDir)}"`,
+          `source "${toBashPath(detectProjectPath)}" >/dev/null 2>&1`,
           'printf "%s\\n" "$PROJECT_ID"',
           'printf "%s\\n" "$PROJECT_DIR"'
         ].join('; ');
 
         const proc = spawn('bash', ['-lc', shellCommand], {
-          env: { ...process.env, HOME: homeDir },
+          env: { ...process.env, HOME: homeDir, USERPROFILE: homeDir },
           stdio: ['ignore', 'pipe', 'pipe']
         });
 
@@ -2357,6 +2383,7 @@ async function runTests() {
     try {
       const result = await runShellScript(observePath, ['post'], payload, {
         HOME: homeDir,
+        USERPROFILE: homeDir,
         CLAUDE_PROJECT_DIR: projectDir
       }, projectDir);
 

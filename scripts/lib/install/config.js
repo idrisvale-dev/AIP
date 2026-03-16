@@ -44,7 +44,7 @@ function resolveInstallConfigPath(configPath, options = {}) {
   const cwd = options.cwd || process.cwd();
   return path.isAbsolute(configPath)
     ? configPath
-    : path.resolve(cwd, configPath);
+    : path.normalize(path.join(cwd, configPath));
 }
 
 function loadInstallConfig(configPath, options = {}) {

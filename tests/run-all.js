@@ -64,13 +64,14 @@ let totalTests = 0;
 
 for (const testFile of testFiles) {
   const testPath = path.join(testsDir, testFile);
+  const displayPath = testFile.split(path.sep).join('/');
 
   if (!fs.existsSync(testPath)) {
-    console.log(`⚠ Skipping ${testFile} (file not found)`);
+    console.log(`⚠ Skipping ${displayPath} (file not found)`);
     continue;
   }
 
-  console.log(`\n━━━ Running ${testFile} ━━━`);
+  console.log(`\n━━━ Running ${displayPath} ━━━`);
 
   const result = spawnSync('node', [testPath], {
     encoding: 'utf8',
@@ -93,13 +94,13 @@ for (const testFile of testFiles) {
   if (failedMatch) totalFailed += parseInt(failedMatch[1], 10);
 
   if (result.error) {
-    console.log(`✗ ${testFile} failed to start: ${result.error.message}`);
+    console.log(`✗ ${displayPath} failed to start: ${result.error.message}`);
     totalFailed += failedMatch ? 0 : 1;
     continue;
   }
 
   if (result.status !== 0) {
-    console.log(`✗ ${testFile} exited with status ${result.status}`);
+    console.log(`✗ ${displayPath} exited with status ${result.status}`);
     totalFailed += failedMatch ? 0 : 1;
   }
 }
