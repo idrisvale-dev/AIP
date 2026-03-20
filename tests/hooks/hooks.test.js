@@ -2356,17 +2356,25 @@ async function runTests() {
         assert.strictEqual(code, 0, `detect-project should source cleanly, stderr: ${stderr}`);
 
         const [projectId, projectDir] = stdout.trim().split(/\r?\n/);
-        const nativeProjectDir = fromBashPath(projectDir);
         const registryPath = path.join(homeDir, '.claude', 'homunculus', 'projects.json');
-        const projectMetadataPath = path.join(nativeProjectDir, 'project.json');
+        const expectedProjectDir = path.join(
+          homeDir,
+          '.claude',
+          'homunculus',
+          'projects',
+          projectId
+        );
+        const projectMetadataPath = path.join(expectedProjectDir, 'project.json');
 
         assert.ok(projectId, 'detect-project should emit a project id');
+        assert.ok(projectDir, 'detect-project should emit a project directory');
         assert.ok(fs.existsSync(registryPath), 'projects.json should be created');
         assert.ok(fs.existsSync(projectMetadataPath), 'project.json should be written in the project directory');
 
         const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
         const metadata = JSON.parse(fs.readFileSync(projectMetadataPath, 'utf8'));
         const nativeMetadataRoot = fromBashPath(metadata.root);
+        const nativeProjectDir = fromBashPath(projectDir);
 
         assert.ok(registry[projectId], 'registry should contain the detected project');
         assert.strictEqual(metadata.id, projectId, 'project.json should include the detected id');
@@ -2375,6 +2383,10 @@ async function runTests() {
         assert.strictEqual(metadata.remote, 'https://github.com/example/ecc-test.git', 'project.json should include the sanitized remote');
         assert.ok(metadata.created_at, 'project.json should include created_at');
         assert.ok(metadata.last_seen, 'project.json should include last_seen');
+        assert.ok(
+          nativeProjectDir.endsWith(path.join('projects', projectId)),
+          `PROJECT_DIR should point at the project storage directory, got: ${projectDir}`
+        );
       } finally {
         cleanupTestDir(testRoot);
       }

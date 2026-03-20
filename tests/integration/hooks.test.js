@@ -171,6 +171,16 @@ function cleanupTestDir(testDir) {
   fs.rmSync(testDir, { recursive: true, force: true });
 }
 
+function getHookCommandByDescription(hooks, lifecycle, descriptionText) {
+  const hookGroup = hooks.hooks[lifecycle]?.find(
+    entry => entry.description && entry.description.includes(descriptionText)
+  );
+
+  assert.ok(hookGroup, `Expected ${lifecycle} hook matching "${descriptionText}"`);
+  assert.ok(hookGroup.hooks?.[0]?.command, `Expected ${lifecycle} hook command for "${descriptionText}"`);
+  return hookGroup.hooks[0].command;
+}
+
 // Test suite
 async function runTests() {
   console.log('\n=== Hook Integration Tests ===\n');
@@ -253,7 +263,11 @@ async function runTests() {
 
   if (await asyncTest('dev server hook transforms command to tmux session', async () => {
     // Test the auto-tmux dev hook — transforms dev commands to run in tmux
-    const hookCommand = hooks.hooks.PreToolUse[0].hooks[0].command;
+    const hookCommand = getHookCommandByDescription(
+      hooks,
+      'PreToolUse',
+      'Auto-start dev servers in tmux'
+    );
     const result = await runHookCommand(hookCommand, {
       tool_input: { command: 'npm run dev' }
     });
@@ -280,7 +294,11 @@ async function runTests() {
 
   if (await asyncTest('dev server hook transforms yarn dev to tmux session', async () => {
     // The auto-tmux dev hook transforms dev commands (yarn dev, npm run dev, etc.)
-    const hookCommand = hooks.hooks.PreToolUse[0].hooks[0].command;
+    const hookCommand = getHookCommandByDescription(
+      hooks,
+      'PreToolUse',
+      'Auto-start dev servers in tmux'
+    );
     const result = await runHookCommand(hookCommand, {
       tool_input: { command: 'yarn dev' }
     });
