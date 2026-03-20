@@ -53,7 +53,13 @@ function writeInstallComponentsManifest(testDir, components) {
 }
 
 function stripShebang(source) {
-  return source.replace(/^#![^\r\n]*(?:\r?\n)?/, '');
+  let s = source;
+  if (s.charCodeAt(0) === 0xFEFF) s = s.slice(1);
+  if (s.startsWith('#!')) {
+    const nl = s.indexOf('\n');
+    s = nl === -1 ? '' : s.slice(nl + 1);
+  }
+  return s;
 }
 
 /**

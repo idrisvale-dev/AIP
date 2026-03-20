@@ -8,6 +8,12 @@
  * Run with: node tests/hooks/detect-project-worktree.test.js
  */
 
+
+// Skip on Windows — these tests invoke bash scripts directly
+if (process.platform === 'win32') {
+  console.log('Skipping bash-dependent worktree tests on Windows\n');
+  process.exit(0);
+}
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');

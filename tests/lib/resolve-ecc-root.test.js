@@ -50,15 +50,6 @@ function setupPluginCache(homeDir, orgName, version) {
   return cacheDir;
 }
 
-function withHomeEnv(homeDir, extraEnv = {}) {
-  return {
-    PATH: process.env.PATH,
-    HOME: homeDir,
-    USERPROFILE: homeDir,
-    ...extraEnv,
-  };
-}
-
 function runTests() {
   console.log('\n=== Testing resolve-ecc-root.js ===\n');
 
@@ -224,7 +215,7 @@ function runTests() {
       const result = execFileSync('node', [
         '-e', `console.log(${INLINE_RESOLVE})`,
       ], {
-        env: withHomeEnv(homeDir),
+        env: { PATH: process.env.PATH, HOME: homeDir, USERPROFILE: homeDir },
         encoding: 'utf8',
       }).trim();
       assert.strictEqual(result, expected);
@@ -240,7 +231,7 @@ function runTests() {
       const result = execFileSync('node', [
         '-e', `console.log(${INLINE_RESOLVE})`,
       ], {
-        env: withHomeEnv(homeDir),
+        env: { PATH: process.env.PATH, HOME: homeDir, USERPROFILE: homeDir },
         encoding: 'utf8',
       }).trim();
       assert.strictEqual(result, path.join(homeDir, '.claude'));
