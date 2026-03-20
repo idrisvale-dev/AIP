@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Sync Everything Claude Code (ECC) assets into a local Codex CLI setup.
 # - Backs up ~/.codex config and AGENTS.md
-# - Replaces AGENTS.md with ECC AGENTS.md
+# - Merges ECC AGENTS.md into existing AGENTS.md (marker-based, preserves user content)
 # - Syncs Codex-ready skills from .agents/skills
 # - Generates prompt files from commands/*.md
 # - Generates Codex QA wrappers and optional language rule-pack prompts
@@ -143,16 +143,68 @@ if [[ -f "$AGENTS_FILE" ]]; then
   run_or_echo "cp \"$AGENTS_FILE\" \"$BACKUP_DIR/AGENTS.md\""
 fi
 
-log "Replacing global AGENTS.md with ECC AGENTS + Codex supplement"
+ECC_BEGIN_MARKER="<!-- BEGIN ECC -->"
+ECC_END_MARKER="<!-- END ECC -->"
+
+compose_ecc_block() {
+  printf '%s\n' "$ECC_BEGIN_MARKER"
+  cat "$AGENTS_ROOT_SRC"
+  printf '\n\n---\n\n'
+  printf '# Codex Supplement (From ECC .codex/AGENTS.md)\n\n'
+  cat "$AGENTS_CODEX_SUPP_SRC"
+  printf '\n%s\n' "$ECC_END_MARKER"
+}
+
+log "Merging ECC AGENTS into $AGENTS_FILE (preserving user content)"
 if [[ "$MODE" == "dry-run" ]]; then
-  printf '[dry-run] compose %s from %s + %s\n' "$AGENTS_FILE" "$AGENTS_ROOT_SRC" "$AGENTS_CODEX_SUPP_SRC"
+  printf '[dry-run] merge ECC block into %s from %s + %s\n' "$AGENTS_FILE" "$AGENTS_ROOT_SRC" "$AGENTS_CODEX_SUPP_SRC"
 else
-  {
-    cat "$AGENTS_ROOT_SRC"
-    printf '\n\n---\n\n'
-    printf '# Codex Supplement (From ECC .codex/AGENTS.md)\n\n'
-    cat "$AGENTS_CODEX_SUPP_SRC"
-  } > "$AGENTS_FILE"
+  replace_ecc_section() {
+    # Replace the ECC block between markers in $AGENTS_FILE with fresh content.
+    # Uses awk to correctly handle all positions including line 1.
+    local tmp
+    tmp="$(mktemp)"
+    local ecc_tmp
+    ecc_tmp="$(mktemp)"
+    compose_ecc_block > "$ecc_tmp"
+    awk -v begin="$ECC_BEGIN_MARKER" -v end="$ECC_END_MARKER" -v ecc="$ecc_tmp" '
+      { gsub(/\r$/, "") }
+      $0 == begin { skip = 1; while ((getline line < ecc) > 0) print line; close(ecc); next }
+      $0 == end   { skip = 0; next }
+      !skip        { print }
+    ' "$AGENTS_FILE" > "$tmp"
+    # Write through the path (preserves symlinks) instead of mv
+    cat "$tmp" > "$AGENTS_FILE"
+    rm -f "$tmp" "$ecc_tmp"
+  }
+
+  if [[ ! -f "$AGENTS_FILE" ]]; then
+    # No existing file — create fresh with markers
+    compose_ecc_block > "$AGENTS_FILE"
+  elif awk -v b="$ECC_BEGIN_MARKER" -v e="$ECC_END_MARKER" '
+        { gsub(/\r$/, "") }
+        $0 == b { found_b = NR } $0 == e { found_e = NR }
+        END { exit !(found_b && found_e && found_b < found_e) }
+      ' "$AGENTS_FILE"; then
+    # Existing file with matched, correctly ordered ECC markers — replace only the ECC section
+    replace_ecc_section
+  elif grep -qF "$ECC_BEGIN_MARKER" "$AGENTS_FILE"; then
+    # BEGIN marker exists but END marker is missing (corrupted). Warn and
+    # replace the file entirely to restore a valid state. Backup was saved.
+    log "WARNING: found BEGIN marker but no END marker — replacing file (backup saved)"
+    compose_ecc_block > "$AGENTS_FILE"
+  else
+    # Existing file without markers — append ECC block, preserve user content.
+    # Note: legacy ECC-only files (from old '>' overwrite) will get a second copy
+    # on this first run. This is intentional — the alternative (heading-match
+    # heuristic) risks false-positive overwrites of user-authored files. The next
+    # run deduplicates via markers, and a timestamped backup was saved above.
+    log "No ECC markers found — appending managed block (backup saved)"
+    {
+      printf '\n\n'
+      compose_ecc_block
+    } >> "$AGENTS_FILE"
+  fi
 fi
 
 log "Syncing ECC Codex skills"
