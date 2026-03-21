@@ -96,11 +96,10 @@ Agent (planner):
 **CRITICAL**: O agente planner **NÃO** vai escrever código até você confirmar explicitamente o plano com "yes", "proceed" ou resposta afirmativa similar.
 
 Se quiser mudanças, responda com:
-- "modify: [your changes]"
-- "different approach: [alternative]"
-- "skip phase 2 and do phase 3 first"
-
-## Integração com Outros Comandos
+Se quiser mudanças, responda com:
+- "modificar: [suas alterações]"
+- "abordagem diferente: [alternativa]"
+- "pular fase 2 e fazer fase 3 primeiro"
 
 Após planejar:
 - Use `/tdd` para implementar com test-driven development
