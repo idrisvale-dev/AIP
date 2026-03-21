@@ -151,7 +151,7 @@ node scripts/orchestrate-worktrees.js plan.json --execute
 {
   "sessionName": "skill-audit",
   "baseRef": "HEAD",
-  "launcherCommand": "codex exec --cwd {worktree_path_sh} --task-file {task_file_sh}",
+  "launcherCommand": "codex exec --cwd {worktree_path} --task-file {task_file}",
   "workers": [
     { "name": "docs-a", "task": "Fix skills 1-4 and write handoff notes." },
     { "name": "docs-b", "task": "Fix skills 5-8 and write handoff notes." }
@@ -178,7 +178,7 @@ node scripts/orchestrate-worktrees.js plan.json --execute
     "scripts/lib/tmux-worktree-orchestrator.js",
     ".claude/plan/workflow-e2e-test.json"
   ],
-  "launcherCommand": "bash {repo_root_sh}/scripts/orchestrate-codex-worker.sh {task_file_sh} {handoff_file_sh} {status_file_sh}",
+  "launcherCommand": "bash {repo_root}/scripts/orchestrate-codex-worker.sh {task_file} {handoff_file} {status_file}",
   "workers": [
     { "name": "seed-check", "task": "Verify seeded files are present before starting work." }
   ]
