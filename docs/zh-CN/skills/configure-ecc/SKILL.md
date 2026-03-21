@@ -86,15 +86,14 @@ Default: Core only
 
 ### 2b: 选择技能类别
 
-共有41项技能，分为8个类别。使用 `AskUserQuestion` 配合 `multiSelect: true`：
+下方有7个可选的类别组。后续的详细确认列表涵盖了8个类别中的45项技能，外加1个独立模板。使用 `AskUserQuestion` 与 `multiSelect: true`：
 
 ```
 Question: "Which skill categories do you want to install?"
 Options:
-  - "Framework & Language" — "Django, Spring Boot, Go, Python, Java, Frontend, Backend patterns"
+  - "Framework & Language" — "Django, Laravel, Spring Boot, Go, Python, Java, Frontend, Backend patterns"
   - "Database" — "PostgreSQL, ClickHouse, JPA/Hibernate patterns"
   - "Workflow & Quality" — "TDD, verification, learning, security review, compaction"
-  - "Business & Content" — "Article writing, content engine, market research, investor materials, outreach"
   - "Research & APIs" — "Deep research, Exa search, Claude API patterns"
   - "Social & Content Distribution" — "X/Twitter API, crossposting alongside content-engine"
   - "Media Generation" — "fal.ai image/video/audio alongside VideoDB"
@@ -106,25 +105,29 @@ Options:
 
 对于每个选定的类别，打印下面的完整技能列表，并要求用户确认或取消选择特定的技能。如果列表超过 4 项，将列表打印为文本，并使用 `AskUserQuestion`，提供一个 "安装所有列出项" 的选项，以及一个 "其他" 选项供用户粘贴特定名称。
 
-**类别：框架与语言（17 项技能）**
+**类别：框架与语言（21项技能）**
 
 | 技能 | 描述 |
 |-------|-------------|
 | `backend-patterns` | Node.js/Express/Next.js 的后端架构、API 设计、服务器端最佳实践 |
 | `coding-standards` | TypeScript、JavaScript、React、Node.js 的通用编码标准 |
 | `django-patterns` | Django 架构、使用 DRF 的 REST API、ORM、缓存、信号、中间件 |
-| `django-security` | Django 安全性：身份验证、CSRF、SQL 注入、XSS 防护 |
+| `django-security` | Django 安全性：认证、CSRF、SQL 注入、XSS 防护 |
 | `django-tdd` | 使用 pytest-django、factory\_boy、模拟、覆盖率进行 Django 测试 |
 | `django-verification` | Django 验证循环：迁移、代码检查、测试、安全扫描 |
+| `laravel-patterns` | Laravel 架构模式：路由、控制器、Eloquent、队列、缓存 |
+| `laravel-security` | Laravel 安全性：认证、策略、CSRF、批量赋值、速率限制 |
+| `laravel-tdd` | 使用 PHPUnit 和 Pest、工厂、假对象、覆盖率进行 Laravel 测试 |
+| `laravel-verification` | Laravel 验证：代码检查、静态分析、测试、安全扫描 |
 | `frontend-patterns` | React、Next.js、状态管理、性能、UI 模式 |
 | `frontend-slides` | 零依赖的 HTML 演示文稿、样式预览以及 PPTX 到网页的转换 |
-| `golang-patterns` | 地道的 Go 模式、构建健壮 Go 应用程序的约定 |
+| `golang-patterns` | 地道的 Go 模式、构建稳健 Go 应用程序的约定 |
 | `golang-testing` | Go 测试：表驱动测试、子测试、基准测试、模糊测试 |
 | `java-coding-standards` | Spring Boot 的 Java 编码标准：命名、不可变性、Optional、流 |
 | `python-patterns` | Pythonic 惯用法、PEP 8、类型提示、最佳实践 |
-| `python-testing` | 使用 pytest、TDD、固件、模拟、参数化进行 Python 测试 |
-| `springboot-patterns` | Spring Boot 架构、REST API、分层服务、缓存、异步 |
-| `springboot-security` | Spring Security：身份验证/授权、验证、CSRF、密钥、速率限制 |
+| `python-testing` | 使用 pytest、TDD、夹具、模拟、参数化进行 Python 测试 |
+| `springboot-patterns` | Spring Boot 架构、REST API、分层服务、缓存、异步处理 |
+| `springboot-security` | Spring Security：认证/授权、验证、CSRF、密钥、速率限制 |
 | `springboot-tdd` | 使用 JUnit 5、Mockito、MockMvc、Testcontainers 进行 Spring Boot TDD |
 | `springboot-verification` | Spring Boot 验证：构建、静态分析、测试、安全扫描 |
 
@@ -269,16 +272,17 @@ grep -rn "skills/" $TARGET/skills/
 
 有些技能会引用其他技能。验证这些依赖关系：
 
-* `django-tdd` 可能引用 `django-patterns`
-* `springboot-tdd` 可能引用 `springboot-patterns`
+* `django-tdd` 可能会引用 `django-patterns`
+* `laravel-tdd` 可能会引用 `laravel-patterns`
+* `springboot-tdd` 可能会引用 `springboot-patterns`
 * `continuous-learning-v2` 引用 `~/.claude/homunculus/` 目录
-* `python-testing` 可能引用 `python-patterns`
-* `golang-testing` 可能引用 `golang-patterns`
+* `python-testing` 可能会引用 `python-patterns`
+* `golang-testing` 可能会引用 `golang-patterns`
 * `crosspost` 引用 `content-engine` 和 `x-api`
-* `deep-research` 引用 `exa-search`（互补的 MCP 工具）
-* `fal-ai-media` 引用 `videodb`（互补的媒体技能）
+* `deep-research` 引用 `exa-search`（补充的 MCP 工具）
+* `fal-ai-media` 引用 `videodb`（补充的媒体技能）
 * `x-api` 引用 `content-engine` 和 `crosspost`
-* 语言特定规则引用 `common/` 对应项
+* 特定语言的规则引用 `common/` 的对应内容
 
 ### 4d：报告问题
 
