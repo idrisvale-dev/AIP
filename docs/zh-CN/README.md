@@ -47,17 +47,17 @@
 <tr>
 <td width="33%">
 <a href="https://x.com/affaanmustafa/status/2012378465664745795">
-<img src="./assets/images/guides/shorthand-guide.png" alt="Claude代码简明指南/>
+<img src="../../assets/images/guides/shorthand-guide.png" alt="Claude代码简明指南/>
 </a>
 </td>
 <td width="33%">
 <a href="https://x.com/affaanmustafa/status/2014040193557471352">
-<img src="./assets/images/guides/longform-guide.png" alt="Claude代码详细指南" />
+<img src="../../assets/images/guides/longform-guide.png" alt="Claude代码详细指南" />
 </a>
 </td>
 <td width="33%">
 <a href="https://x.com/affaanmustafa/status/2033263813387223421">
-<img src="./assets/images/security/security-guide-header.png" alt="Agentic安全简明指南" />
+<img src="../../assets/images/security/security-guide-header.png" alt="Agentic安全简明指南" />
 </a>
 </td>
 </tr>
