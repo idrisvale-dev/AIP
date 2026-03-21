@@ -129,12 +129,11 @@ Recommendation: ❌ Block merge until CRITICAL issue is fixed
 
 ## Critérios de Aprovação
 
-| Status | Condition |
-|--------|-----------|
-| ✅ Approve | No CRITICAL or HIGH issues |
-| ⚠️ Warning | Only MEDIUM issues (merge with caution) |
-| ❌ Block | CRITICAL or HIGH issues found |
-
+| Status | Condição |
+|--------|----------|
+| ✅ Aprovado | Sem problemas CRÍTICO ou ALTO |
+| ⚠️ Aviso | Apenas problemas MÉDIOS (merge com cautela) |
+| ❌ Bloqueado | Problemas CRÍTICO ou ALTO encontrados |
 ## Integração com Outros Comandos
 
 - Use `/go-test` primeiro para garantir que os testes passam
