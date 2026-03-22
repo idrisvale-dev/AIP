@@ -212,7 +212,7 @@ For manual install instructions see the README in the `rules/` folder.
 /plugin list everything-claude-code@everything-claude-code
 ```
 
-✨ **That's it!** You now have access to 28 agents, 116 skills, and 59 commands.
+✨ **That's it!** You now have access to 28 agents, 116 skills, and 60 commands.
 
 ---
 
@@ -388,6 +388,7 @@ everything-claude-code/
 |   |-- instinct-import.md  # /instinct-import - Import instincts (NEW)
 |   |-- instinct-export.md  # /instinct-export - Export instincts (NEW)
 |   |-- evolve.md           # /evolve - Cluster instincts into skills
+|   |-- prune.md            # /prune - Delete expired pending instincts (NEW)
 |   |-- pm2.md              # /pm2 - PM2 service lifecycle management (NEW)
 |   |-- multi-plan.md       # /multi-plan - Multi-agent task decomposition (NEW)
 |   |-- multi-execute.md    # /multi-execute - Orchestrated multi-agent workflows (NEW)
@@ -1083,7 +1084,7 @@ The configuration is automatically detected from `.opencode/opencode.json`.
 | Feature | Claude Code | OpenCode | Status |
 |---------|-------------|----------|--------|
 | Agents | ✅ 28 agents | ✅ 12 agents | **Claude Code leads** |
-| Commands | ✅ 59 commands | ✅ 31 commands | **Claude Code leads** |
+| Commands | ✅ 60 commands | ✅ 31 commands | **Claude Code leads** |
 | Skills | ✅ 116 skills | ✅ 37 skills | **Claude Code leads** |
 | Hooks | ✅ 8 event types | ✅ 11 events | **OpenCode has more!** |
 | Rules | ✅ 29 rules | ✅ 13 instructions | **Claude Code leads** |
@@ -1140,6 +1141,7 @@ OpenCode's plugin system is MORE sophisticated than Claude Code with 20+ event t
 | `/evolve` | Cluster instincts into skills |
 | `/promote` | Promote project instincts to global scope |
 | `/projects` | List known projects and instinct stats |
+| `/prune` | Delete expired pending instincts (30d TTL) |
 | `/learn-eval` | Extract and evaluate patterns before saving |
 | `/setup-pm` | Configure package manager |
 | `/harness-audit` | Audit harness reliability, eval readiness, and risk posture |
