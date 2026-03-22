@@ -90,7 +90,7 @@ This repo is the raw code only. The guides explain everything.
 - **Orchestration overhaul** — Harness audit scoring made deterministic, orchestration status and launcher compatibility hardened, observer loop prevention with 5-layer guard.
 - **Observer reliability** — Memory explosion fix with throttling and tail sampling, sandbox access fix, lazy-start logic, and re-entrancy guard.
 - **12 language ecosystems** — New rules for Java, PHP, Perl, Kotlin/Android/KMP, C++, and Rust join existing TypeScript, Python, Go, and common rules.
-- **Community contributions** — Korean and Chinese translations, InsAIts security hook, biome hook optimization, VideoDB skills, Evos operational skills, PowerShell installer, Antigravity IDE support.
+- **Community contributions** — Korean and Chinese translations, security hook, biome hook optimization, video processing skills, operational skills, PowerShell installer, Antigravity IDE support.
 - **CI hardening** — 19 test failure fixes, catalog count enforcement, install manifest validation, and full test suite green.
 
 ### v1.8.0 — Harness Performance System (Mar 2026)
@@ -122,7 +122,7 @@ This repo is the raw code only. The guides explain everything.
 
 ### v1.4.1 — Bug Fix (Feb 2026)
 
-- **Fixed instinct import content loss** — `parse_instinct_file()` was silently dropping all content after frontmatter (Action, Evidence, Examples sections) during `/instinct-import`. Fixed by community contributor @ericcai0814 ([#148](https://github.com/affaan-m/everything-claude-code/issues/148), [#161](https://github.com/affaan-m/everything-claude-code/pull/161))
+- **Fixed instinct import content loss** — `parse_instinct_file()` was silently dropping all content after frontmatter (Action, Evidence, Examples sections) during `/instinct-import`. ([#148](https://github.com/affaan-m/everything-claude-code/issues/148), [#161](https://github.com/affaan-m/everything-claude-code/pull/161))
 
 ### v1.4.0 — Multi-Language Rules, Installation Wizard & PM2 (Feb 2026)
 
@@ -525,10 +525,6 @@ npx ecc-agentshield init
 Use `/security-scan` in Claude Code to run it, or add to CI with the [GitHub Action](https://github.com/affaan-m/agentshield).
 
 [GitHub](https://github.com/affaan-m/agentshield) | [npm](https://www.npmjs.com/package/ecc-agentshield)
-
-### 🔬 Plankton — Write-Time Code Quality Enforcement
-
-Plankton (credit: @alxfazio) is a recommended companion for write-time code quality enforcement. It runs formatters and 20+ linters on every file edit via PostToolUse hooks, then spawns Claude subprocesses (routed to Haiku/Sonnet/Opus by violation complexity) to fix issues the main agent missed. Three-phase architecture: auto-format silently (40-50% of issues), collect remaining violations as structured JSON, delegate fixes to a subprocess. Includes config protection hooks that prevent agents from modifying linter configs to pass instead of fixing code. Supports Python, TypeScript, Shell, YAML, JSON, TOML, Markdown, and Dockerfile. Use alongside AgentShield for security + quality coverage. See `skills/plankton-code-quality/` for full integration guide.
 
 ### 🧠 Continuous Learning v2
 
@@ -1207,14 +1203,9 @@ ECC is the **first plugin to maximize every major AI coding tool**. Here's how e
 
 ## 📖 Background
 
-I've been using Claude Code since the experimental rollout. Won the Anthropic x Forum Ventures hackathon in Sep 2025 building [zenith.chat](https://zenith.chat) with [@DRodriguezFX](https://x.com/DRodriguezFX) - entirely using Claude Code.
+I've been using Claude Code since the experimental rollout. Won the Anthropic x Forum Ventures hackathon in Sep 2025 - entirely using Claude Code.
 
 These configs are battle-tested across multiple production applications.
-
-## Inspiration Credits
-
-- inspired by [zarazhangrui](https://github.com/zarazhangrui)
-- homunculus-inspired by [humanplane](https://github.com/humanplane)
 
 ---
 
@@ -1334,9 +1325,8 @@ This project is free and open source. Sponsors help keep it maintained and growi
 
 - **Shorthand Guide (Start Here):** [The Shorthand Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2012378465664745795)
 - **Longform Guide (Advanced):** [The Longform Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2014040193557471352)
+- **Security Guide:** [Security Guide](./the-security-guide.md) | [Thread](https://x.com/affaanmustafa/status/2033263813387223421)
 - **Follow:** [@affaanmustafa](https://x.com/affaanmustafa)
-- **zenith.chat:** [zenith.chat](https://zenith.chat)
-- **Skills Directory:** awesome-agent-skills (community-maintained directory of agent skills)
 
 ---
 
