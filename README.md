@@ -1203,7 +1203,7 @@ ECC is the **first plugin to maximize every major AI coding tool**. Here's how e
 
 ## 📖 Background
 
-I've been using Claude Code since the experimental rollout. Won the Anthropic x Forum Ventures hackathon in Sep 2025 - entirely using Claude Code.
+I've been using Claude Code since the experimental rollout. Won the Anthropic x Forum Ventures hackathon in Sep 2025 with [@DRodriguezFX](https://x.com/DRodriguezFX) — built [zenith.chat](https://zenith.chat) entirely using Claude Code.
 
 These configs are battle-tested across multiple production applications.
 
