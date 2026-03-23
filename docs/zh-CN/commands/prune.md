@@ -28,3 +28,8 @@ python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py prune
 /prune --max-age 60       # 自定义年龄阈值（天）
 /prune --dry-run          # 仅预览，不实际删除
 ```
+---
+name: prune
+description: 删除超过 30 天且从未被提升的待处理本能
+command: true
+---
