@@ -22,7 +22,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cl
 python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py prune
 ```
 
-## 使用方法
+## 用法
 
 ```
 /prune                    # 删除超过 30 天的 instinct
