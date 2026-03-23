@@ -25,7 +25,7 @@ python3 ~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py prune
 ## 用法
 
 ```
-/prune                    # 删除超过 30 天的 instinct
+/prune                    # 删除超过 30 天的本能
 /prune --max-age 60       # 自定义年龄阈值（天）
 /prune --dry-run          # 仅预览，不实际删除
 ```
