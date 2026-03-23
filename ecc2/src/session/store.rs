@@ -236,7 +236,6 @@ impl StateStore {
             .into_iter()
             .find(|s| s.id == id || s.id.starts_with(id)))
     }
-
     pub fn send_message(&self, from: &str, to: &str, content: &str, msg_type: &str) -> Result<()> {
         self.conn.execute(
             "INSERT INTO messages (from_session, to_session, content, msg_type, timestamp)
