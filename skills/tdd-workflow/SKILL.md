@@ -154,7 +154,7 @@ Improve code quality while keeping tests green:
 
 If the repository is under Git, create a checkpoint commit immediately after refactoring is complete and tests remain green.
 Recommended commit message format:
-- `refactor: clean up after <bug> fix`
+- `refactor: clean up after <feature or bug> implementation`
 
 ### Step 7: Verify Coverage
 ```bash
