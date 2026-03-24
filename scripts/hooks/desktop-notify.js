@@ -47,7 +47,10 @@ function notifyMacOS(title, body) {
   const safeBody = body.replace(/\\/g, '').replace(/"/g, '\u201C');
   const safeTitle = title.replace(/\\/g, '').replace(/"/g, '\u201C');
   const script = `display notification "${safeBody}" with title "${safeTitle}"`;
-  spawnSync('osascript', ['-e', script], { stdio: 'ignore', timeout: 3000 });
+  const result = spawnSync('osascript', ['-e', script], { stdio: 'ignore', timeout: 5000 });
+  if (result.error || result.status !== 0) {
+    log(`[DesktopNotify] osascript failed: ${result.error ? result.error.message : `exit ${result.status}`}`);
+  }
 }
 
 // TODO: future platform support
