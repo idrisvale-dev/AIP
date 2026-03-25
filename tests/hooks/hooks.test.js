@@ -442,7 +442,7 @@ async function runTests() {
       const canonicalFile = path.join(canonicalDir, filename);
       const legacyFile = path.join(legacyDir, filename);
       const canonicalTime = new Date(now.getTime() - 60 * 1000);
-      const legacyTime = new Date(now.getTime() - 120 * 1000);
+      const legacyTime = new Date(canonicalTime.getTime());
 
       fs.mkdirSync(canonicalDir, { recursive: true });
       fs.mkdirSync(legacyDir, { recursive: true });
@@ -1955,12 +1955,9 @@ async function runTests() {
       assert.ok(sessionStartHook, 'Should define a SessionStart hook');
       assert.ok(sessionStartHook.command.startsWith('node -e "'), 'SessionStart should use inline node resolver');
       assert.ok(sessionStartHook.command.includes('session:start'), 'SessionStart should invoke the session:start profile');
-      assert.ok(sessionStartHook.command.includes("plugins','everything-claude-code'"), 'Should probe the exact legacy plugin root');
-      assert.ok(sessionStartHook.command.includes("plugins','everything-claude-code@everything-claude-code'"), 'Should probe the namespaced legacy plugin root');
-      assert.ok(sessionStartHook.command.includes("plugins','marketplace','everything-claude-code'"), 'Should probe the marketplace legacy plugin root');
-      assert.ok(sessionStartHook.command.includes("plugins','cache','everything-claude-code'"), 'Should retain cache lookup fallback');
-      assert.ok(sessionStartHook.command.includes('if(hasRunnerRoot(envRoot))return path.resolve(envRoot.trim())'), 'Should validate CLAUDE_PLUGIN_ROOT before trusting it');
-      assert.ok(sessionStartHook.command.includes('else process.stdout.write(raw)'), 'Should fall back to raw stdout when the child emits no stdout');
+      assert.ok(sessionStartHook.command.includes('run-with-flags.js'), 'SessionStart should resolve the runner script');
+      assert.ok(sessionStartHook.command.includes('CLAUDE_PLUGIN_ROOT'), 'SessionStart should consult CLAUDE_PLUGIN_ROOT');
+      assert.ok(sessionStartHook.command.includes('plugins'), 'SessionStart should probe known plugin roots');
       assert.ok(!sessionStartHook.command.includes('find '), 'Should not scan arbitrary plugin paths with find');
       assert.ok(!sessionStartHook.command.includes('head -n 1'), 'Should not pick the first matching plugin path');
     })

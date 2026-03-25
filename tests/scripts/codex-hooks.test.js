@@ -68,9 +68,9 @@ if (
 else failed++;
 
 if (
-  test('install-global-git-hooks.sh handles quoted hook paths without shell injection', () => {
+  test('install-global-git-hooks.sh handles shell-sensitive hook paths without shell injection', () => {
     const homeDir = createTempDir('codex-hooks-home-');
-    const weirdHooksDir = path.join(homeDir, 'git-hooks "quoted"');
+    const weirdHooksDir = path.join(homeDir, "git-hooks 'quoted' & spaced");
 
     try {
       const result = runBash(installScript, [], {

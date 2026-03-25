@@ -3,6 +3,7 @@
  */
 
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
@@ -27,6 +28,28 @@ function runHook(input, env = {}) {
     encoding: 'utf8',
     env: {
       ...process.env,
+      ECC_HOOK_PROFILE: 'standard',
+      ...env
+    },
+    timeout: 15000,
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+
+  return {
+    code: Number.isInteger(result.status) ? result.status : 1,
+    stdout: result.stdout || '',
+    stderr: result.stderr || ''
+  };
+}
+
+function runCustomHook(pluginRoot, hookId, relScriptPath, input, env = {}) {
+  const rawInput = typeof input === 'string' ? input : JSON.stringify(input);
+  const result = spawnSync('node', [runner, hookId, relScriptPath, 'standard,strict'], {
+    input: rawInput,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      CLAUDE_PLUGIN_ROOT: pluginRoot,
       ECC_HOOK_PROFILE: 'standard',
       ...env
     },
@@ -92,6 +115,39 @@ function runTests() {
     assert.strictEqual(result.stdout, '', 'Blocked truncated payload should not echo raw input');
     assert.ok(result.stderr.includes('Hook input exceeded 1048576 bytes'), `Expected size warning, got: ${result.stderr}`);
     assert.ok(result.stderr.includes('truncated payload'), `Expected truncated payload warning, got: ${result.stderr}`);
+  })) passed++; else failed++;
+
+  if (test('legacy hooks do not echo raw input when they fail without stdout', () => {
+    const pluginRoot = path.join(__dirname, '..', `tmp-runner-plugin-${Date.now()}`);
+    const scriptDir = path.join(pluginRoot, 'scripts', 'hooks');
+    const scriptPath = path.join(scriptDir, 'legacy-block.js');
+
+    try {
+      fs.mkdirSync(scriptDir, { recursive: true });
+      fs.writeFileSync(
+        scriptPath,
+        '#!/usr/bin/env node\nprocess.stderr.write("blocked by legacy hook\\n");\nprocess.exit(2);\n'
+      );
+
+      const rawInput = JSON.stringify({
+        tool_name: 'Write',
+        tool_input: {
+          file_path: '.eslintrc.js',
+          content: 'module.exports = {};'
+        }
+      });
+
+      const result = runCustomHook(pluginRoot, 'pre:legacy-block', 'scripts/hooks/legacy-block.js', rawInput);
+      assert.strictEqual(result.code, 2, 'Expected failing legacy hook exit code to propagate');
+      assert.strictEqual(result.stdout, '', 'Expected failing legacy hook to avoid raw passthrough');
+      assert.ok(result.stderr.includes('blocked by legacy hook'), `Expected legacy hook stderr, got: ${result.stderr}`);
+    } finally {
+      try {
+        fs.rmSync(pluginRoot, { recursive: true, force: true });
+      } catch {
+        // best-effort cleanup
+      }
+    }
   })) passed++; else failed++;
 
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);

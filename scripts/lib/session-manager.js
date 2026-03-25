@@ -85,7 +85,8 @@ function getSessionCandidates(options = {}) {
     let entries;
     try {
       entries = fs.readdirSync(sessionsDir, { withFileTypes: true });
-    } catch {
+    } catch (error) {
+      log(`[SessionManager] Error reading sessions directory ${sessionsDir}: ${error.message}`);
       continue;
     }
 
@@ -104,7 +105,8 @@ function getSessionCandidates(options = {}) {
       let stats;
       try {
         stats = fs.statSync(sessionPath);
-      } catch {
+      } catch (error) {
+        log(`[SessionManager] Error stating session ${sessionPath}: ${error.message}`);
         continue;
       }
 
@@ -119,8 +121,6 @@ function getSessionCandidates(options = {}) {
     }
   }
 
-  candidates.sort((a, b) => b.modifiedTime - a.modifiedTime);
-
   const deduped = [];
   const seenFilenames = new Set();
 
@@ -132,7 +132,80 @@ function getSessionCandidates(options = {}) {
     deduped.push(session);
   }
 
+  deduped.sort((a, b) => b.modifiedTime - a.modifiedTime);
   return deduped;
+}
+
+function buildSessionRecord(sessionPath, metadata) {
+  let stats;
+  try {
+    stats = fs.statSync(sessionPath);
+  } catch (error) {
+    log(`[SessionManager] Error stating session ${sessionPath}: ${error.message}`);
+    return null;
+  }
+
+  return {
+    ...metadata,
+    sessionPath,
+    hasContent: stats.size > 0,
+    size: stats.size,
+    modifiedTime: stats.mtime,
+    createdTime: stats.birthtime || stats.ctime
+  };
+}
+
+function sessionMatchesId(metadata, normalizedSessionId) {
+  const filename = metadata.filename;
+  const shortIdMatch = metadata.shortId !== 'no-id' && metadata.shortId.startsWith(normalizedSessionId);
+  const filenameMatch = filename === normalizedSessionId || filename === `${normalizedSessionId}.tmp`;
+  const noIdMatch = metadata.shortId === 'no-id' && filename === `${normalizedSessionId}-session.tmp`;
+
+  return shortIdMatch || filenameMatch || noIdMatch;
+}
+
+function getMatchingSessionCandidates(normalizedSessionId) {
+  const matches = [];
+  const seenFilenames = new Set();
+
+  for (const sessionsDir of getSessionSearchDirs()) {
+    if (!fs.existsSync(sessionsDir)) {
+      continue;
+    }
+
+    let entries;
+    try {
+      entries = fs.readdirSync(sessionsDir, { withFileTypes: true });
+    } catch (error) {
+      log(`[SessionManager] Error reading sessions directory ${sessionsDir}: ${error.message}`);
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.tmp')) continue;
+
+      const metadata = parseSessionFilename(entry.name);
+      if (!metadata || !sessionMatchesId(metadata, normalizedSessionId)) {
+        continue;
+      }
+
+      if (seenFilenames.has(metadata.filename)) {
+        continue;
+      }
+
+      const sessionPath = path.join(sessionsDir, metadata.filename);
+      const sessionRecord = buildSessionRecord(sessionPath, metadata);
+      if (!sessionRecord) {
+        continue;
+      }
+
+      seenFilenames.add(metadata.filename);
+      matches.push(sessionRecord);
+    }
+  }
+
+  matches.sort((a, b) => b.modifiedTime - a.modifiedTime);
+  return matches;
 }
 
 /**
@@ -331,26 +404,9 @@ function getSessionById(sessionId, includeContent = false) {
     return null;
   }
 
-  const sessions = getSessionCandidates();
+  const sessions = getMatchingSessionCandidates(normalizedSessionId);
 
   for (const session of sessions) {
-    const filename = session.filename;
-    const metadata = {
-      filename: session.filename,
-      shortId: session.shortId,
-      date: session.date,
-      datetime: session.datetime
-    };
-
-    // Check if session ID matches (short ID or full filename without .tmp)
-    const shortIdMatch = metadata.shortId !== 'no-id' && metadata.shortId.startsWith(normalizedSessionId);
-    const filenameMatch = filename === normalizedSessionId || filename === `${normalizedSessionId}.tmp`;
-    const noIdMatch = metadata.shortId === 'no-id' && filename === `${normalizedSessionId}-session.tmp`;
-
-    if (!shortIdMatch && !filenameMatch && !noIdMatch) {
-      continue;
-    }
-
     const sessionRecord = { ...session };
 
     if (includeContent) {

@@ -146,7 +146,7 @@ function runTests() {
     assert.strictEqual(utils.sanitizeSessionId('my-project_123'), 'my-project_123');
   })) passed++; else failed++;
 
-  if (test('sanitizeSessionId avoids Windows reserved device names', () => {
+  if (test('sanitizeSessionId appends hash suffix for all Windows reserved device names', () => {
     for (const reservedName of ['CON', 'prn', 'Aux', 'nul', 'COM1', 'lpt9']) {
       const sanitized = utils.sanitizeSessionId(reservedName);
       assert.ok(sanitized, `Expected sanitized output for ${reservedName}`);
@@ -193,7 +193,7 @@ function runTests() {
     }
   })) passed++; else failed++;
 
-  if (test('sanitizeSessionId avoids Windows reserved device names', () => {
+  if (test('sanitizeSessionId preserves readable prefixes for Windows reserved device names', () => {
     const con = utils.sanitizeSessionId('CON');
     const aux = utils.sanitizeSessionId('aux');
     assert.ok(con.startsWith('CON-'), `Expected CON to get a suffix, got: ${con}`);

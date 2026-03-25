@@ -73,7 +73,9 @@ function writeLegacySpawnOutput(raw, result) {
     return;
   }
 
-  process.stdout.write(raw);
+  if (Number.isInteger(result.status) && result.status === 0) {
+    process.stdout.write(raw);
+  }
 }
 
 function getPluginRoot() {

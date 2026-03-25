@@ -9,8 +9,32 @@ const path = require('path');
 const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'sync-ecc-to-codex.sh');
 const source = fs.readFileSync(scriptPath, 'utf8');
 const normalizedSource = source.replace(/\r\n/g, '\n');
-const runOrEchoMatch = normalizedSource.match(/^run_or_echo\(\)\s*\{[\s\S]*?^}/m);
-const runOrEchoSource = runOrEchoMatch ? runOrEchoMatch[0] : '';
+const runOrEchoSource = (() => {
+  const start = normalizedSource.indexOf('run_or_echo() {');
+  if (start < 0) {
+    return '';
+  }
+
+  let depth = 0;
+  let bodyStart = normalizedSource.indexOf('{', start);
+  if (bodyStart < 0) {
+    return '';
+  }
+
+  for (let i = bodyStart; i < normalizedSource.length; i++) {
+    const char = normalizedSource[i];
+    if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return normalizedSource.slice(start, i + 1);
+      }
+    }
+  }
+
+  return '';
+})();
 
 function test(name, fn) {
   try {
