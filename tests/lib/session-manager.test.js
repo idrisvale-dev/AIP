@@ -404,6 +404,23 @@ src/main.ts
     assert.strictEqual(result.sessions[0].shortId, 'abcd1234');
   })) passed++; else failed++;
 
+  if (test('getAllSessions prefers canonical session-data duplicates over newer legacy copies', () => {
+    const duplicateName = '2026-01-15-abcd1234-session.tmp';
+    const legacyDuplicatePath = path.join(tmpLegacySessionsDir, duplicateName);
+    const legacyMtime = new Date(Date.now() + 60000);
+
+    try {
+      fs.writeFileSync(legacyDuplicatePath, '# Legacy duplicate');
+      fs.utimesSync(legacyDuplicatePath, legacyMtime, legacyMtime);
+
+      const result = sessionManager.getAllSessions({ search: 'abcd', limit: 100 });
+      assert.strictEqual(result.total, 1, 'Duplicate filenames should be deduped');
+      assert.ok(result.sessions[0].sessionPath.includes('session-data'), 'Canonical session-data copy should win');
+    } finally {
+      fs.rmSync(legacyDuplicatePath, { force: true });
+    }
+  })) passed++; else failed++;
+
   if (test('getAllSessions returns sorted by newest first', () => {
     const result = sessionManager.getAllSessions({ limit: 100 });
     for (let i = 1; i < result.sessions.length; i++) {
@@ -447,6 +464,23 @@ src/main.ts
     const result = sessionManager.getSessionById('abcd');
     assert.ok(result, 'Should find session by short ID prefix');
     assert.strictEqual(result.shortId, 'abcd1234');
+  })) passed++; else failed++;
+
+  if (test('getSessionById prefers canonical session-data duplicates over newer legacy copies', () => {
+    const duplicateName = '2026-01-15-abcd1234-session.tmp';
+    const legacyDuplicatePath = path.join(tmpLegacySessionsDir, duplicateName);
+    const legacyMtime = new Date(Date.now() + 120000);
+
+    try {
+      fs.writeFileSync(legacyDuplicatePath, '# Legacy duplicate');
+      fs.utimesSync(legacyDuplicatePath, legacyMtime, legacyMtime);
+
+      const result = sessionManager.getSessionById('abcd1234');
+      assert.ok(result, 'Should still resolve the duplicate session');
+      assert.ok(result.sessionPath.includes('session-data'), 'Canonical session-data copy should win');
+    } finally {
+      fs.rmSync(legacyDuplicatePath, { force: true });
+    }
   })) passed++; else failed++;
 
   if (test('getSessionById finds by full filename', () => {
