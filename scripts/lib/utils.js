@@ -135,7 +135,7 @@ function getProjectName() {
 function sanitizeSessionId(raw) {
   if (!raw || typeof raw !== 'string') return null;
 
-  const hasNonAscii = /[^\x00-\x7F]/.test(raw);
+  const hasNonAscii = Array.from(raw).some(char => char.codePointAt(0) > 0x7f);
   const normalized = raw.replace(/^\.+/, '');
   const sanitized = normalized
     .replace(/[^a-zA-Z0-9_-]/g, '-')

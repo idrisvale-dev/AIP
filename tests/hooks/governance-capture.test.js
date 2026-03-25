@@ -335,8 +335,8 @@ async function runTests() {
     }
 
     const combined = stderr.join('');
-    assert.ok(combined.includes('\"eventType\":\"hook_input_truncated\"'), 'Should emit truncation event');
-    assert.ok(combined.includes('\"sizeLimitBytes\":1024'), 'Should record the truncation limit');
+    assert.ok(combined.includes('"eventType":"hook_input_truncated"'), 'Should emit truncation event');
+    assert.ok(combined.includes('"sizeLimitBytes":1024'), 'Should record the truncation limit');
     assert.ok(!combined.includes('rm -rf /tmp/important'), 'Should not leak raw command text to governance logs');
   })) passed += 1; else failed += 1;
   if (await test('run() can detect multiple event types in one input', async () => {
