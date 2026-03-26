@@ -90,6 +90,10 @@ Main patterns and guidelines.
 // Practical, tested examples
 \`\`\`
 
+## Anti-Patterns
+
+Show what NOT to do with concrete examples.
+
 ## Best Practices
 
 - Actionable guidelines
@@ -602,14 +606,14 @@ description: Quick reference for [API/Library].
 Test all code examples:
 
 ```bash
-# For TypeScript
-npx tsc --noEmit examples/*.ts
+# For TypeScript (run from inside the skill directory or specify the path)
+npx tsc --noEmit skills/your-skill-name/examples/*.ts
 
 # For Python
-python -m py_compile examples/*.py
+python -m py_compile skills/your-skill-name/examples/*.py
 
 # For Go
-go build ./examples/...
+go build ./skills/your-skill-name/examples/...
 ```
 
 ---

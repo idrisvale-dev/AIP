@@ -14,7 +14,9 @@ rules/
 │   ├── patterns.md
 │   ├── hooks.md
 │   ├── agents.md
-│   └── security.md
+│   ├── security.md
+│   ├── code-review.md
+│   └── development-workflow.md
 ├── zh/              # 中文翻译版本
 │   ├── coding-style.md
 │   ├── git-workflow.md
@@ -24,6 +26,7 @@ rules/
 │   ├── hooks.md
 │   ├── agents.md
 │   ├── security.md
+│   ├── code-review.md
 │   └── development-workflow.md
 ├── typescript/      # TypeScript/JavaScript 特定
 ├── python/          # Python 特定
@@ -60,6 +63,9 @@ rules/
 > 并破坏语言特定文件使用的 `../common/` 相对引用。
 
 ```bash
+# 创建目标目录
+mkdir -p ~/.claude/rules
+
 # 安装通用规则（所有项目必需）
 cp -r rules/common ~/.claude/rules/common
 

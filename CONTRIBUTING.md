@@ -142,6 +142,7 @@ Link to complementary skills (e.g., `related-skill-1`, `related-skill-2`).
 | **Workflow** | Step-by-step processes | `tdd-workflow`, `refactoring-workflow` |
 | **Domain Knowledge** | Specialized domains | `security-review`, `api-design` |
 | **Tool Integration** | Tool/library usage | `docker-patterns`, `supabase-patterns` |
+| **Template** | Project-specific skill templates | `project-guidelines-example` |
 
 ### Skill Checklist
 

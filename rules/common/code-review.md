@@ -14,6 +14,14 @@ Code review ensures quality, security, and maintainability before code is merged
 - When architectural changes are made
 - Before merging pull requests
 
+**Pre-Review Requirements:**
+
+Before requesting review, ensure:
+
+- All automated checks (CI/CD) are passing
+- Merge conflicts are resolved
+- Branch is up to date with target branch
+
 ## Review Checklist
 
 Before marking code complete:
