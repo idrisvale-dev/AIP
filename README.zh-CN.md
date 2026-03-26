@@ -82,13 +82,16 @@
 # 首先克隆仓库
 git clone https://github.com/affaan-m/everything-claude-code.git
 
-# 复制规则（通用 + 语言特定）
-cp -r everything-claude-code/rules/common/* ~/.claude/rules/
-cp -r everything-claude-code/rules/typescript/* ~/.claude/rules/   # 选择你的技术栈
-cp -r everything-claude-code/rules/python/* ~/.claude/rules/
-cp -r everything-claude-code/rules/golang/* ~/.claude/rules/
-cp -r everything-claude-code/rules/perl/* ~/.claude/rules/
+# 复制规则目录（通用 + 语言特定）
+mkdir -p ~/.claude/rules
+cp -r everything-claude-code/rules/common ~/.claude/rules/
+cp -r everything-claude-code/rules/typescript ~/.claude/rules/   # 选择你的技术栈
+cp -r everything-claude-code/rules/python ~/.claude/rules/
+cp -r everything-claude-code/rules/golang ~/.claude/rules/
+cp -r everything-claude-code/rules/perl ~/.claude/rules/
 ```
+
+复制规则时，请复制整个目录（例如 `rules/common`、`rules/golang`），而不是复制目录内的文件；这样可以保留相对引用，并避免不同规则集中的同名文件互相覆盖。
 
 ### 第三步：开始使用
 
@@ -372,12 +375,13 @@ git clone https://github.com/affaan-m/everything-claude-code.git
 # 将代理复制到你的 Claude 配置
 cp everything-claude-code/agents/*.md ~/.claude/agents/
 
-# 复制规则（通用 + 语言特定）
-cp -r everything-claude-code/rules/common/* ~/.claude/rules/
-cp -r everything-claude-code/rules/typescript/* ~/.claude/rules/   # 选择你的技术栈
-cp -r everything-claude-code/rules/python/* ~/.claude/rules/
-cp -r everything-claude-code/rules/golang/* ~/.claude/rules/
-cp -r everything-claude-code/rules/perl/* ~/.claude/rules/
+# 复制规则目录（通用 + 语言特定）
+mkdir -p ~/.claude/rules
+cp -r everything-claude-code/rules/common ~/.claude/rules/
+cp -r everything-claude-code/rules/typescript ~/.claude/rules/   # 选择你的技术栈
+cp -r everything-claude-code/rules/python ~/.claude/rules/
+cp -r everything-claude-code/rules/golang ~/.claude/rules/
+cp -r everything-claude-code/rules/perl ~/.claude/rules/
 
 # 复制命令
 cp everything-claude-code/commands/*.md ~/.claude/commands/
