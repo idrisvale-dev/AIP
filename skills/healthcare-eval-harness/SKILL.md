@@ -12,7 +12,7 @@ rollback: "git revert"
 
 Automated verification system for healthcare application deployments. A single CRITICAL failure blocks deployment. Patient safety is non-negotiable.
 
-## When to Activate
+## When to Use
 
 - Before any deployment of EMR/EHR applications
 - After modifying CDSS logic (drug interactions, dose validation, scoring)
@@ -21,83 +21,65 @@ Automated verification system for healthcare application deployments. A single C
 - During CI/CD pipeline configuration for healthcare apps
 - After resolving merge conflicts in clinical modules
 
-## Eval Categories
+## How It Works
 
-### 1. CDSS Accuracy (CRITICAL — 100% required)
+The eval harness runs five test categories in order. The first three (CDSS Accuracy, PHI Exposure, Data Integrity) are CRITICAL gates requiring 100% pass rate — a single failure blocks deployment. The remaining two (Clinical Workflow, Integration) are HIGH gates requiring 95%+ pass rate.
 
-Tests all clinical decision support logic:
+Each category maps to a Jest test path pattern. The CI pipeline runs CRITICAL gates with `--bail` (stop on first failure) and enforces coverage thresholds with `--coverage --coverageThreshold`.
 
-- Drug interaction pairs: every known pair must fire an alert
-- Dose validation: out-of-range doses must be flagged
-- Clinical scoring: results must match published specifications
-- No false negatives: a missed alert is a patient safety event
-- No silent failures: malformed input must error, not silently pass
+### Eval Categories
+
+**1. CDSS Accuracy (CRITICAL — 100% required)**
+
+Tests all clinical decision support logic: drug interaction pairs (both directions), dose validation rules, clinical scoring vs published specs, no false negatives, no silent failures.
 
 ```bash
-npx jest --testPathPattern='tests/cdss' --bail --ci
+npx jest --testPathPattern='tests/cdss' --bail --ci --coverage
 ```
 
-### 2. PHI Exposure (CRITICAL — 100% required)
+**2. PHI Exposure (CRITICAL — 100% required)**
 
-Tests for protected health information leaks:
-
-- API error responses contain no PHI
-- Console output contains no patient data
-- URL parameters contain no PHI
-- Browser storage contains no PHI
-- Cross-facility data isolation works (multi-tenant)
-- Unauthenticated requests return zero patient rows
-- Service role keys absent from client bundles
+Tests for protected health information leaks: API error responses, console output, URL parameters, browser storage, cross-facility isolation, unauthenticated access, service role key absence.
 
 ```bash
 npx jest --testPathPattern='tests/security/phi' --bail --ci
 ```
 
-### 3. Data Integrity (CRITICAL — 100% required)
+**3. Data Integrity (CRITICAL — 100% required)**
 
-Tests for clinical data safety:
-
-- Locked encounters cannot be modified
-- Audit trail entries exist for every write operation
-- Cascade deletes are blocked on patient records
-- Concurrent edits trigger conflict resolution
-- No orphaned records across related tables
+Tests clinical data safety: locked encounters, audit trail entries, cascade delete protection, concurrent edit handling, no orphaned records.
 
 ```bash
 npx jest --testPathPattern='tests/data-integrity' --bail --ci
 ```
 
-### 4. Clinical Workflow (HIGH — 95%+ required)
+**4. Clinical Workflow (HIGH — 95%+ required)**
 
-Tests end-to-end clinical workflows:
-
-- Complete encounter flow (complaint → exam → diagnosis → Rx → lock)
-- Template rendering and submission for all clinical templates
-- Medication set population and interaction checking
-- Drug/diagnosis search functionality
-- Prescription PDF generation
-- Red flag alert triggering
+Tests end-to-end flows: encounter lifecycle, template rendering, medication sets, drug/diagnosis search, prescription PDF, red flag alerts.
 
 ```bash
-npx jest --testPathPattern='tests/clinical' --ci
+npx jest --testPathPattern='tests/clinical' --ci 2>&1 | node scripts/check-pass-rate.js 95
 ```
 
-### 5. Integration Compliance (HIGH — 95%+ required)
+**5. Integration Compliance (HIGH — 95%+ required)**
 
-Tests external system integrations:
-
-- HL7 message parsing (v2.x)
-- FHIR resource validation (if applicable)
-- Lab result mapping to correct patients
-- Malformed message handling (no crashes)
+Tests external systems: HL7 message parsing (v2.x), FHIR validation, lab result mapping, malformed message handling.
 
 ```bash
-npx jest --testPathPattern='tests/integration' --ci
+npx jest --testPathPattern='tests/integration' --ci 2>&1 | node scripts/check-pass-rate.js 95
 ```
 
-## CI/CD Integration
+### Pass/Fail Matrix
 
-### GitHub Actions Example
+| Category | Threshold | On Failure |
+|----------|-----------|------------|
+| CDSS Accuracy | 100% | **BLOCK deployment** |
+| PHI Exposure | 100% | **BLOCK deployment** |
+| Data Integrity | 100% | **BLOCK deployment** |
+| Clinical Workflow | 95%+ | WARN, allow with review |
+| Integration | 95%+ | WARN, allow with review |
+
+### CI/CD Integration
 
 ```yaml
 name: Healthcare Safety Gate
@@ -113,9 +95,9 @@ jobs:
           node-version: '20'
       - run: npm ci
 
-      # CRITICAL gates — must pass 100%
+      # CRITICAL gates — 100% required, bail on first failure
       - name: CDSS Accuracy
-        run: npx jest --testPathPattern='tests/cdss' --bail --ci
+        run: npx jest --testPathPattern='tests/cdss' --bail --ci --coverage --coverageThreshold='{"global":{"branches":80,"functions":80,"lines":80}}'
 
       - name: PHI Exposure Check
         run: npx jest --testPathPattern='tests/security/phi' --bail --ci
@@ -123,47 +105,72 @@ jobs:
       - name: Data Integrity
         run: npx jest --testPathPattern='tests/data-integrity' --bail --ci
 
-      # HIGH gates — must pass 95%+
+      # HIGH gates — 95%+ required, custom threshold check
       - name: Clinical Workflows
-        run: npx jest --testPathPattern='tests/clinical' --ci
+        run: |
+          RESULT=$(npx jest --testPathPattern='tests/clinical' --ci --json 2>/dev/null)
+          PASSED=$(echo $RESULT | jq '.numPassedTests')
+          TOTAL=$(echo $RESULT | jq '.numTotalTests')
+          RATE=$(echo "scale=2; $PASSED * 100 / $TOTAL" | bc)
+          echo "Pass rate: ${RATE}%"
+          if (( $(echo "$RATE < 95" | bc -l) )); then
+            echo "::warning::Clinical workflow pass rate ${RATE}% below 95% threshold"
+          fi
 
       - name: Integration Compliance
-        run: npx jest --testPathPattern='tests/integration' --ci
+        run: |
+          RESULT=$(npx jest --testPathPattern='tests/integration' --ci --json 2>/dev/null)
+          PASSED=$(echo $RESULT | jq '.numPassedTests')
+          TOTAL=$(echo $RESULT | jq '.numTotalTests')
+          RATE=$(echo "scale=2; $PASSED * 100 / $TOTAL" | bc)
+          echo "Pass rate: ${RATE}%"
+          if (( $(echo "$RATE < 95" | bc -l) )); then
+            echo "::warning::Integration pass rate ${RATE}% below 95% threshold"
+          fi
 ```
 
-## Pass/Fail Matrix
+### Anti-Patterns
 
-| Category | Threshold | On Failure |
-|----------|-----------|------------|
-| CDSS Accuracy | 100% | **BLOCK deployment** |
-| PHI Exposure | 100% | **BLOCK deployment** |
-| Data Integrity | 100% | **BLOCK deployment** |
-| Clinical Workflow | 95%+ | WARN, allow with review |
-| Integration | 95%+ | WARN, allow with review |
+- Skipping CDSS tests "because they passed last time"
+- Setting CRITICAL thresholds below 100%
+- Using `--no-bail` on CRITICAL test suites
+- Mocking the CDSS engine in integration tests (must test real logic)
+- Allowing deployments when safety gate is red
+- Running tests without `--coverage` on CDSS suites
 
-## Eval Report Format
+## Examples
+
+### Example 1: Run All Critical Gates Locally
+
+```bash
+npx jest --testPathPattern='tests/cdss' --bail --ci --coverage && \
+npx jest --testPathPattern='tests/security/phi' --bail --ci && \
+npx jest --testPathPattern='tests/data-integrity' --bail --ci
+```
+
+### Example 2: Check HIGH Gate Pass Rate
+
+```bash
+npx jest --testPathPattern='tests/clinical' --ci --json | \
+  jq '{passed: .numPassedTests, total: .numTotalTests, rate: (.numPassedTests/.numTotalTests*100)}'
+# Expected: { "passed": 21, "total": 22, "rate": 95.45 }
+```
+
+### Example 3: Eval Report
 
 ```
-## Healthcare Eval: [date] [commit]
+## Healthcare Eval: 2026-03-27 [commit abc1234]
 
-### Patient Safety: PASS / FAIL
+### Patient Safety: PASS
 
 | Category | Tests | Pass | Fail | Status |
 |----------|-------|------|------|--------|
-| CDSS Accuracy | N | N | 0 | PASS |
-| PHI Exposure | N | N | 0 | PASS |
-| Data Integrity | N | N | 0 | PASS |
-| Clinical Workflow | N | N | N | 95%+ |
-| Integration | N | N | N | 95%+ |
+| CDSS Accuracy | 39 | 39 | 0 | PASS |
+| PHI Exposure | 8 | 8 | 0 | PASS |
+| Data Integrity | 12 | 12 | 0 | PASS |
+| Clinical Workflow | 22 | 21 | 1 | 95.5% PASS |
+| Integration | 6 | 6 | 0 | PASS |
 
-### Coverage: X% (target: 80%+)
-### Verdict: SAFE TO DEPLOY / BLOCKED
+### Coverage: 84% (target: 80%+)
+### Verdict: SAFE TO DEPLOY
 ```
-
-## Anti-Patterns
-
-- ❌ Skipping CDSS tests "because they passed last time"
-- ❌ Setting CRITICAL thresholds below 100%
-- ❌ Using `--no-bail` on CRITICAL test suites
-- ❌ Mocking the CDSS engine in integration tests (must test real logic)
-- ❌ Allowing deployments when safety gate is red
