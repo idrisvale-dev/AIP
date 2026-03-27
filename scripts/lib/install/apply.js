@@ -49,6 +49,9 @@ function mergeHooksIntoSettings(plan) {
   if (fs.existsSync(settingsPath)) {
     try {
       settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+      if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+        throw new Error('root value must be a JSON object');
+      }
     } catch (error) {
       throw new Error(`Failed to parse existing settings at ${settingsPath}: ${error.message}`);
     }

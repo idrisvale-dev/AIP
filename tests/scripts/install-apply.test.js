@@ -441,6 +441,27 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('fails when existing settings.json root is not an object', () => {
+    const homeDir = createTempDir('install-apply-home-');
+    const projectDir = createTempDir('install-apply-project-');
+
+    try {
+      const claudeRoot = path.join(homeDir, '.claude');
+      fs.mkdirSync(claudeRoot, { recursive: true });
+      const settingsPath = path.join(claudeRoot, 'settings.json');
+      fs.writeFileSync(settingsPath, '[]\n');
+
+      const result = run(['--profile', 'core'], { cwd: projectDir, homeDir });
+      assert.strictEqual(result.code, 1);
+      assert.ok(result.stderr.includes('Failed to parse existing settings at'));
+      assert.ok(result.stderr.includes('root value must be a JSON object'));
+      assert.strictEqual(fs.readFileSync(settingsPath, 'utf8'), '[]\n');
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectDir);
+    }
+  })) passed++; else failed++;
+
   if (test('installs from ecc-install.json and persists component selections', () => {
     const homeDir = createTempDir('install-apply-home-');
     const projectDir = createTempDir('install-apply-project-');
