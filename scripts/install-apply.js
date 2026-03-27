@@ -142,7 +142,7 @@ function main() {
       printHumanPlan(result, false);
     }
   } catch (error) {
-    process.stderr.write(`Error: ${error.message}\n${getHelpText()}`);
+    process.stderr.write(`Error: ${error.message}${getHelpText()}`);
     process.exit(1);
   }
 }
