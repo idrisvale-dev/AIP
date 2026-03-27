@@ -127,21 +127,21 @@ The untested modules are the ones doing I/O (spawning processes, writing to SQLi
 
 ### P1 — Feature Completions
 
-3. **Implement `comms::receive()` / `comms::poll()`** — read unread messages from the `messages` table, optionally with a `broadcast` channel for real-time delivery. Wire it into the dashboard.
-4. **Build the new-session dialog in the TUI** — modal form with task input, agent selector, worktree toggle. Should call `session::manager::create_session()`.
-5. **Add aggregate metrics** — total cost, average session duration, tool call frequency, cost per session. Show in the Metrics pane.
+2. **Implement `comms::receive()` / `comms::poll()`** — read unread messages from the `messages` table, optionally with a `broadcast` channel for real-time delivery. Wire it into the dashboard.
+3. **Build the new-session dialog in the TUI** — modal form with task input, agent selector, worktree toggle. Should call `session::manager::create_session()`.
+4. **Add aggregate metrics** — total cost, average session duration, tool call frequency, cost per session. Show in the Metrics pane.
 
 ### P2 — Robustness
 
-6. **Add integration tests for `manager.rs` and `runtime.rs`** — these modules do process spawning and I/O. Test with mock agents (`/bin/echo`, `/bin/false`).
-7. **Add daemon health reporting** — PID file, structured logging, graceful shutdown via signal handler.
-8. **Task string security audit** — The session task uses `claude --print` via `tokio::process::Command`. Verify arguments are never shell-interpreted. Checklist: confirm `Command` arg usage, threat-model metacharacter injection, input validation/escaping strategy, logging of raw inputs, and automated tests. Re-audit if invocation code changes.
-9. **Break up `dashboard.rs`** — extract SessionsPane, OutputPane, MetricsPane, LogPane into separate files under `tui/panes/`.
+5. **Add integration tests for `manager.rs` and `runtime.rs`** — these modules do process spawning and I/O. Test with mock agents (`/bin/echo`, `/bin/false`).
+6. **Add daemon health reporting** — PID file, structured logging, graceful shutdown via signal handler.
+7. **Task string security audit** — The session task uses `claude --print` via `tokio::process::Command`. Verify arguments are never shell-interpreted. Checklist: confirm `Command` arg usage, threat-model metacharacter injection, input validation/escaping strategy, logging of raw inputs, and automated tests. Re-audit if invocation code changes.
+8. **Break up `dashboard.rs`** — extract SessionsPane, OutputPane, MetricsPane, LogPane into separate files under `tui/panes/`.
 
 ### P3 — Extensibility
 
-10. **Multi-agent support** — make `agent_program()` pluggable. Add `codex`, `opencode`, `custom` agent types.
-11. **Config validation** — validate risk thresholds sum correctly, budget values are positive, paths exist.
+9. **Multi-agent support** — make `agent_program()` pluggable. Add `codex`, `opencode`, `custom` agent types.
+10. **Config validation** — validate risk thresholds sum correctly, budget values are positive, paths exist.
 
 ## 8. Comparison with Ratatui 0.29 Best Practices
 
