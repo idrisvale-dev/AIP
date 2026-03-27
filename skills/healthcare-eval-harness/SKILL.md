@@ -3,14 +3,13 @@ name: healthcare-eval-harness
 description: Patient safety evaluation harness for healthcare application deployments. Automated test suites for CDSS accuracy, PHI exposure, clinical workflow integrity, and integration compliance. Blocks deployments on safety failures.
 origin: Health1 Super Speciality Hospitals — contributed by Dr. Keyur Patel
 version: "1.0.0"
-observe: "PostToolUse"
-feedback: "manual"
-rollback: "git revert"
 ---
 
 # Healthcare Eval Harness — Patient Safety Verification
 
 Automated verification system for healthcare application deployments. A single CRITICAL failure blocks deployment. Patient safety is non-negotiable.
+
+> **Note:** Examples use Jest as the reference test runner. Adapt commands for your framework (Vitest, pytest, PHPUnit, etc.) — the test categories and pass thresholds are framework-agnostic.
 
 ## When to Use
 
@@ -106,26 +105,33 @@ jobs:
         run: npx jest --testPathPattern='tests/data-integrity' --bail --ci
 
       # HIGH gates — 95%+ required, custom threshold check
+      # HIGH gates — 95%+ required
       - name: Clinical Workflows
         run: |
-          RESULT=$(npx jest --testPathPattern='tests/clinical' --ci --json 2>/dev/null)
-          PASSED=$(echo $RESULT | jq '.numPassedTests')
-          TOTAL=$(echo $RESULT | jq '.numTotalTests')
+          RESULT=$(npx jest --testPathPattern='tests/clinical' --ci --json 2>&1) || true
+          TOTAL=$(echo "$RESULT" | jq '.numTotalTests // 0')
+          PASSED=$(echo "$RESULT" | jq '.numPassedTests // 0')
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "::error::No clinical tests found"; exit 1
+          fi
           RATE=$(echo "scale=2; $PASSED * 100 / $TOTAL" | bc)
-          echo "Pass rate: ${RATE}%"
+          echo "Pass rate: ${RATE}% ($PASSED/$TOTAL)"
           if (( $(echo "$RATE < 95" | bc -l) )); then
-            echo "::warning::Clinical workflow pass rate ${RATE}% below 95% threshold"
+            echo "::warning::Clinical pass rate ${RATE}% below 95%"
           fi
 
       - name: Integration Compliance
         run: |
-          RESULT=$(npx jest --testPathPattern='tests/integration' --ci --json 2>/dev/null)
-          PASSED=$(echo $RESULT | jq '.numPassedTests')
-          TOTAL=$(echo $RESULT | jq '.numTotalTests')
+          RESULT=$(npx jest --testPathPattern='tests/integration' --ci --json 2>&1) || true
+          TOTAL=$(echo "$RESULT" | jq '.numTotalTests // 0')
+          PASSED=$(echo "$RESULT" | jq '.numPassedTests // 0')
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "::error::No integration tests found"; exit 1
+          fi
           RATE=$(echo "scale=2; $PASSED * 100 / $TOTAL" | bc)
-          echo "Pass rate: ${RATE}%"
+          echo "Pass rate: ${RATE}% ($PASSED/$TOTAL)"
           if (( $(echo "$RATE < 95" | bc -l) )); then
-            echo "::warning::Integration pass rate ${RATE}% below 95% threshold"
+            echo "::warning::Integration pass rate ${RATE}% below 95%"
           fi
 ```
 
