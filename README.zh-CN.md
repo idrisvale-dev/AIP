@@ -355,11 +355,20 @@ everything-claude-code/
 > git clone https://github.com/affaan-m/everything-claude-code.git
 >
 > # 选项 A：用户级规则（应用于所有项目）
-> cp -r everything-claude-code/rules/* ~/.claude/rules/
+> mkdir -p ~/.claude/rules
+> cp -r everything-claude-code/rules/common ~/.claude/rules/
+> cp -r everything-claude-code/rules/typescript ~/.claude/rules/
+> cp -r everything-claude-code/rules/python ~/.claude/rules/
+> cp -r everything-claude-code/rules/golang ~/.claude/rules/
+> cp -r everything-claude-code/rules/perl ~/.claude/rules/
 >
 > # 选项 B：项目级规则（仅应用于当前项目）
 > mkdir -p .claude/rules
-> cp -r everything-claude-code/rules/* .claude/rules/
+> cp -r everything-claude-code/rules/common .claude/rules/
+> cp -r everything-claude-code/rules/typescript .claude/rules/
+> cp -r everything-claude-code/rules/python .claude/rules/
+> cp -r everything-claude-code/rules/golang .claude/rules/
+> cp -r everything-claude-code/rules/perl .claude/rules/
 > ```
 
 ---

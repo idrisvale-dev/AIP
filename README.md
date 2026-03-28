@@ -851,7 +851,8 @@ Yes. Use Option 2 (manual installation) and copy only what you need:
 cp everything-claude-code/agents/*.md ~/.claude/agents/
 
 # Just rules
-cp -r everything-claude-code/rules/common/* ~/.claude/rules/
+mkdir -p ~/.claude/rules/
+cp -r everything-claude-code/rules/common ~/.claude/rules/
 ```
 
 Each component is fully independent.
