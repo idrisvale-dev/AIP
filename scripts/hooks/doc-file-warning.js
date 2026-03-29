@@ -28,8 +28,8 @@ function isSuspiciousDocPath(filePath) {
   const normalized = filePath.replace(/\\/g, '/');
   const basename = path.basename(normalized);
 
-  // Only inspect .md and .txt files
-  if (!/\.(md|txt)$/i.test(basename)) return false;
+  // Only inspect .md and .txt files (case-sensitive, consistent with ADHOC_FILENAMES)
+  if (!/\.(md|txt)$/.test(basename)) return false;
 
   // Only flag known ad-hoc filenames
   if (!ADHOC_FILENAMES.test(basename)) return false;
@@ -44,7 +44,7 @@ function isSuspiciousDocPath(filePath) {
  * Exportable run() for in-process execution via run-with-flags.js.
  * Avoids the ~50-100ms spawnSync overhead when available.
  */
-function run(inputOrRaw) {
+function run(inputOrRaw, options = {}) {
   let input;
   try {
     input = typeof inputOrRaw === 'string'
@@ -61,7 +61,7 @@ function run(inputOrRaw) {
       stderr:
         '[Hook] WARNING: Ad-hoc documentation filename detected\n' +
         `[Hook] File: ${filePath}\n` +
-        '[Hook] Consider using structured paths: docs/, .claude/commands/, skills/',
+        '[Hook] Consider using a structured path (e.g. docs/, .claude/, skills/, .github/, benchmarks/, templates/)',
     };
   }
 

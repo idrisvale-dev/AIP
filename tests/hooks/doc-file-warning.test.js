@@ -102,7 +102,7 @@ function runTests() {
     }) ? passed++ : failed++);
   }
 
-  // 5. Lowercase and partial-match filenames - NOT on denylist, no warning
+  // 5. Lowercase, partial-match, and non-standard extension case - NOT on denylist
   const allowedNonDenylist = [
     'random-notes.md',
     'notes.txt',
@@ -111,6 +111,8 @@ function runTests() {
     'todo-list.md',
     'my-draft.md',
     'meeting-notes.txt',
+    'TODO.MD',
+    'NOTES.TXT',
   ];
   for (const file of allowedNonDenylist) {
     (test(`allows non-denylist doc file: ${file}`, () => {
