@@ -95,7 +95,7 @@ for (const post of allPosts) {
 <Button onClick={() => handleClick(id)}>Submit</Button>
 
 // GOOD: Stable callback with useCallback
-const handleButtonClick = useCallback(() => handleClick(id), [id]);
+const handleButtonClick = useCallback(() => handleClick(id), [handleClick, id]);
 <Button onClick={handleButtonClick}>Submit</Button>
 
 // BAD: Object creation in render
@@ -110,7 +110,7 @@ const sortedItems = items.sort((a, b) => a.name.localeCompare(b.name));
 
 // GOOD: Memoize expensive computations
 const sortedItems = useMemo(
-  () => items.sort((a, b) => a.name.localeCompare(b.name)),
+  () => [...items].sort((a, b) => a.name.localeCompare(b.name)),
   [items]
 );
 
@@ -297,10 +297,11 @@ useEffect(() => {
 }, [largeData]);
 
 useEffect(() => {
-  eventEmitter.on('update', () => {
+  const handleUpdate = () => {
     console.log(largeDataRef.current);
-  });
-  return () => eventEmitter.off('update');
+  };
+  eventEmitter.on('update', handleUpdate);
+  return () => eventEmitter.off('update', handleUpdate);
 }, []);
 ```
 
@@ -364,7 +365,7 @@ getTTFB(console.log); // Time to First Byte
 
 ## Performance Report Template
 
-```markdown
+````markdown
 # Performance Audit Report
 
 ## Executive Summary
@@ -413,7 +414,7 @@ const fastCode = ...;
 - Bundle size reduction: XX KB (XX%)
 - LCP improvement: XXms
 - Time to Interactive improvement: XXms
-```
+````
 
 ## When to Run
 

@@ -15,7 +15,7 @@
  *   2 - Block commit (quality issues found)
  */
 
-const { execSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -26,15 +26,25 @@ const MAX_STDIN = 1024 * 1024; // 1MB limit
  * @returns {string[]} Array of staged file paths
  */
 function getStagedFiles() {
-  try {
-    const output = execSync('git diff --cached --name-only --diff-filter=ACMR', {
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-    return output.trim().split('\n').filter(f => f.length > 0);
-  } catch {
+  const result = spawnSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], {
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+  if (result.status !== 0) {
     return [];
   }
+  return result.stdout.trim().split('\n').filter(f => f.length > 0);
+}
+
+function getStagedFileContent(filePath) {
+  const result = spawnSync('git', ['show', `:${filePath}`], {
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+  if (result.status !== 0) {
+    return null;
+  }
+  return result.stdout;
 }
 
 /**
@@ -56,7 +66,10 @@ function findFileIssues(filePath) {
   const issues = [];
   
   try {
-    const content = fs.readFileSync(filePath, 'utf8');
+    const content = getStagedFileContent(filePath);
+    if (content == null) {
+      return issues;
+    }
     const lines = content.split('\n');
     
     lines.forEach((line, index) => {
@@ -152,9 +165,9 @@ function validateCommitMessage(command) {
   }
   
   // Check for lowercase first letter (conventional)
-  if (message.charAt(0) === message.charAt(0).toUpperCase() && conventionalCommit.test(message)) {
+  if (conventionalCommit.test(message)) {
     const afterColon = message.split(':')[1];
-    if (afterColon && afterColon.trim().charAt(0) === afterColon.trim().charAt(0).toUpperCase()) {
+    if (afterColon && /^[A-Z]/.test(afterColon.trim())) {
       issues.push({
         type: 'capitalization',
         message: 'Subject should start with lowercase after type',
@@ -193,21 +206,18 @@ function runLinter(files) {
   
   // Run ESLint if available
   if (jsFiles.length > 0) {
-    try {
-      const eslintPath = path.join(process.cwd(), 'node_modules', '.bin', 'eslint');
-      if (fs.existsSync(eslintPath)) {
-        const result = spawnSync(eslintPath, ['--format', 'compact', ...jsFiles], {
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-          timeout: 30000
-        });
-        results.eslint = {
-          success: result.status === 0,
-          output: result.stdout || result.stderr
-        };
-      }
-    } catch {
-      // ESLint not available
+    const eslintBin = process.platform === 'win32' ? 'eslint.cmd' : 'eslint';
+    const eslintPath = path.join(process.cwd(), 'node_modules', '.bin', eslintBin);
+    if (fs.existsSync(eslintPath)) {
+      const result = spawnSync(eslintPath, ['--format', 'compact', ...jsFiles], {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 30000
+      });
+      results.eslint = {
+        success: result.status === 0,
+        output: result.stdout || result.stderr
+      };
     }
   }
   
@@ -219,10 +229,14 @@ function runLinter(files) {
         stdio: ['pipe', 'pipe', 'pipe'],
         timeout: 30000
       });
-      results.pylint = {
-        success: result.status === 0,
-        output: result.stdout || result.stderr
-      };
+      if (result.error && result.error.code === 'ENOENT') {
+        results.pylint = null;
+      } else {
+        results.pylint = {
+          success: result.status === 0,
+          output: result.stdout || result.stderr
+        };
+      }
     } catch {
       // Pylint not available
     }
@@ -236,10 +250,14 @@ function runLinter(files) {
         stdio: ['pipe', 'pipe', 'pipe'],
         timeout: 30000
       });
-      results.golint = {
-        success: !result.stdout || result.stdout.trim() === '',
-        output: result.stdout
-      };
+      if (result.error && result.error.code === 'ENOENT') {
+        results.golint = null;
+      } else {
+        results.golint = {
+          success: !result.stdout || result.stdout.trim() === '',
+          output: result.stdout
+        };
+      }
     } catch {
       // golint not available
     }
@@ -251,32 +269,29 @@ function runLinter(files) {
 /**
  * Core logic — exported for direct invocation
  * @param {string} rawInput - Raw JSON string from stdin
- * @returns {string} The original input (pass-through)
+ * @returns {{output:string, exitCode:number}} Pass-through output and exit code
  */
-function run(rawInput) {
+function evaluate(rawInput) {
   try {
     const input = JSON.parse(rawInput);
     const command = input.tool_input?.command || '';
     
     // Only run for git commit commands
     if (!command.includes('git commit')) {
-      return rawInput;
+      return { output: rawInput, exitCode: 0 };
     }
     
     // Check if this is an amend (skip checks for amends to avoid blocking)
     if (command.includes('--amend')) {
-      return rawInput;
+      return { output: rawInput, exitCode: 0 };
     }
-    
-    const issues = [];
-    const warnings = [];
     
     // Get staged files
     const stagedFiles = getStagedFiles();
     
     if (stagedFiles.length === 0) {
       console.error('[Hook] No staged files found. Use "git add" to stage files first.');
-      return rawInput;
+      return { output: rawInput, exitCode: 0 };
     }
     
     console.error(`[Hook] Checking ${stagedFiles.length} staged file(s)...`);
@@ -285,6 +300,8 @@ function run(rawInput) {
     const filesToCheck = stagedFiles.filter(shouldCheckFile);
     let totalIssues = 0;
     let errorCount = 0;
+    let warningCount = 0;
+    let infoCount = 0;
     
     for (const file of filesToCheck) {
       const fileIssues = findFileIssues(file);
@@ -295,6 +312,8 @@ function run(rawInput) {
           console.error(`  ${icon} Line ${issue.line}: ${issue.message}`);
           totalIssues++;
           if (issue.severity === 'error') errorCount++;
+          if (issue.severity === 'warning') warningCount++;
+          if (issue.severity === 'info') infoCount++;
         }
       }
     }
@@ -308,6 +327,8 @@ function run(rawInput) {
         if (issue.suggestion) {
           console.error(`     💡 ${issue.suggestion}`);
         }
+        totalIssues++;
+        warningCount++;
       }
     }
     
@@ -317,25 +338,31 @@ function run(rawInput) {
     if (lintResults.eslint && !lintResults.eslint.success) {
       console.error('\n🔍 ESLint Issues:');
       console.error(lintResults.eslint.output);
+      totalIssues++;
+      errorCount++;
     }
     
     if (lintResults.pylint && !lintResults.pylint.success) {
       console.error('\n🔍 Pylint Issues:');
       console.error(lintResults.pylint.output);
+      totalIssues++;
+      errorCount++;
     }
     
     if (lintResults.golint && !lintResults.golint.success) {
       console.error('\n🔍 golint Issues:');
       console.error(lintResults.golint.output);
+      totalIssues++;
+      errorCount++;
     }
     
     // Summary
     if (totalIssues > 0) {
-      console.error(`\n📊 Summary: ${totalIssues} issue(s) found (${errorCount} error(s), ${totalIssues - errorCount} warning(s))`);
+      console.error(`\n📊 Summary: ${totalIssues} issue(s) found (${errorCount} error(s), ${warningCount} warning(s), ${infoCount} info)`);
       
       if (errorCount > 0) {
         console.error('\n[Hook] ❌ Commit blocked due to critical issues. Fix them before committing.');
-        process.exit(2);
+        return { output: rawInput, exitCode: 2 };
       } else {
         console.error('\n[Hook] ⚠️ Warnings found. Consider fixing them, but commit is allowed.');
         console.error('[Hook] To bypass these checks, use: git commit --no-verify');
@@ -349,7 +376,11 @@ function run(rawInput) {
     // Non-blocking on error
   }
   
-  return rawInput;
+  return { output: rawInput, exitCode: 0 };
+}
+
+function run(rawInput) {
+  return evaluate(rawInput).output;
 }
 
 // ── stdin entry point ────────────────────────────────────────────
@@ -365,10 +396,10 @@ if (require.main === module) {
   });
   
   process.stdin.on('end', () => {
-    data = run(data);
-    process.stdout.write(data);
-    process.exit(0);
+    const result = evaluate(data);
+    process.stdout.write(result.output);
+    process.exit(result.exitCode);
   });
 }
 
-module.exports = { run };
+module.exports = { run, evaluate };
