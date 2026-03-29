@@ -39,7 +39,13 @@ $nodeModules = Join-Path -Path $scriptDir -ChildPath 'node_modules'
 if (-not (Test-Path -LiteralPath $nodeModules)) {
     Write-Host '[ECC] Installing dependencies...'
     Push-Location $scriptDir
-    try { & npm install --no-audit --no-fund --loglevel=error }
+    try {
+        & npm install --no-audit --no-fund --loglevel=error
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "npm install failed with exit code $LASTEXITCODE"
+            exit $LASTEXITCODE
+        }
+    }
     finally { Pop-Location }
 }
 
