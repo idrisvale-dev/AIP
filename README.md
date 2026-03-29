@@ -207,7 +207,7 @@ npm install        # or: pnpm install | yarn install | bun install
 npx ecc-install typescript
 ```
 
-For manual install instructions see the README in the `rules/` folder.
+For manual install instructions see the README in the `rules/` folder. When copying rules manually, copy the whole language directory (for example `rules/common` or `rules/golang`), not the files inside it, so relative references keep working and filenames do not collide.
 
 ### Step 3: Start Using
 
@@ -222,7 +222,7 @@ For manual install instructions see the README in the `rules/` folder.
 /plugin list everything-claude-code@everything-claude-code
 ```
 
-✨ **That's it!** You now have access to 28 agents, 125 skills, and 60 commands.
+✨ **That's it!** You now have access to 28 agents, 126 skills, and 60 commands.
 
 ### Multi-model commands require additional setup
 
@@ -638,16 +638,16 @@ This gives you instant access to all commands, agents, skills, and hooks.
 >
 > # Option A: User-level rules (applies to all projects)
 > mkdir -p ~/.claude/rules
-> cp -r everything-claude-code/rules/common/* ~/.claude/rules/
-> cp -r everything-claude-code/rules/typescript/* ~/.claude/rules/   # pick your stack
-> cp -r everything-claude-code/rules/python/* ~/.claude/rules/
-> cp -r everything-claude-code/rules/golang/* ~/.claude/rules/
-> cp -r everything-claude-code/rules/php/* ~/.claude/rules/
+> cp -r everything-claude-code/rules/common ~/.claude/rules/
+> cp -r everything-claude-code/rules/typescript ~/.claude/rules/   # pick your stack
+> cp -r everything-claude-code/rules/python ~/.claude/rules/
+> cp -r everything-claude-code/rules/golang ~/.claude/rules/
+> cp -r everything-claude-code/rules/php ~/.claude/rules/
 >
 > # Option B: Project-level rules (applies to current project only)
 > mkdir -p .claude/rules
-> cp -r everything-claude-code/rules/common/* .claude/rules/
-> cp -r everything-claude-code/rules/typescript/* .claude/rules/     # pick your stack
+> cp -r everything-claude-code/rules/common .claude/rules/
+> cp -r everything-claude-code/rules/typescript .claude/rules/     # pick your stack
 > ```
 
 ---
@@ -663,12 +663,13 @@ git clone https://github.com/affaan-m/everything-claude-code.git
 # Copy agents to your Claude config
 cp everything-claude-code/agents/*.md ~/.claude/agents/
 
-# Copy rules (common + language-specific)
-cp -r everything-claude-code/rules/common/* ~/.claude/rules/
-cp -r everything-claude-code/rules/typescript/* ~/.claude/rules/   # pick your stack
-cp -r everything-claude-code/rules/python/* ~/.claude/rules/
-cp -r everything-claude-code/rules/golang/* ~/.claude/rules/
-cp -r everything-claude-code/rules/php/* ~/.claude/rules/
+# Copy rules directories (common + language-specific)
+mkdir -p ~/.claude/rules
+cp -r everything-claude-code/rules/common ~/.claude/rules/
+cp -r everything-claude-code/rules/typescript ~/.claude/rules/   # pick your stack
+cp -r everything-claude-code/rules/python ~/.claude/rules/
+cp -r everything-claude-code/rules/golang ~/.claude/rules/
+cp -r everything-claude-code/rules/php ~/.claude/rules/
 
 # Copy commands
 cp everything-claude-code/commands/*.md ~/.claude/commands/
@@ -874,7 +875,8 @@ Yes. Use Option 2 (manual installation) and copy only what you need:
 cp everything-claude-code/agents/*.md ~/.claude/agents/
 
 # Just rules
-cp -r everything-claude-code/rules/common/* ~/.claude/rules/
+mkdir -p ~/.claude/rules/
+cp -r everything-claude-code/rules/common ~/.claude/rules/
 ```
 
 Each component is fully independent.
@@ -1023,6 +1025,8 @@ cp .codex/config.toml ~/.codex/config.toml
 
 The sync script safely merges ECC MCP servers into your existing `~/.codex/config.toml` using an **add-only** strategy — it never removes or modifies your existing servers. Run with `--dry-run` to preview changes, or `--update-mcp` to force-refresh ECC servers to the latest recommended config.
 
+For Context7, ECC uses the canonical Codex section name `[mcp_servers.context7]` while still launching the `@upstash/context7-mcp` package. If you already have a legacy `[mcp_servers.context7-mcp]` entry, `--update-mcp` migrates it to the canonical section name.
+
 Codex macOS app:
 - Open this repository as your workspace.
 - The root `AGENTS.md` is auto-detected.
@@ -1109,7 +1113,7 @@ The configuration is automatically detected from `.opencode/opencode.json`.
 |---------|-------------|----------|--------|
 | Agents | ✅ 28 agents | ✅ 12 agents | **Claude Code leads** |
 | Commands | ✅ 60 commands | ✅ 31 commands | **Claude Code leads** |
-| Skills | ✅ 125 skills | ✅ 37 skills | **Claude Code leads** |
+| Skills | ✅ 126 skills | ✅ 37 skills | **Claude Code leads** |
 | Hooks | ✅ 8 event types | ✅ 11 events | **OpenCode has more!** |
 | Rules | ✅ 29 rules | ✅ 13 instructions | **Claude Code leads** |
 | MCP Servers | ✅ 14 servers | ✅ Full | **Full parity** |
