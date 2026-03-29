@@ -5,10 +5,13 @@ description: >-
   how much depth/tokens to consume — BEFORE responding. Use this skill
   when the user wants to control token consumption, adjust response depth,
   choose between short/long answers, or optimize their prompt.
-  TRIGGER when: "token budget", "token count", "token usage", "token limit",
+  TRIGGER when: "token budget", "response token budget", "token count",
+  "token usage", "response length", "response depth", "brief answer",
+  "short answer", "detailed answer", "full answer",
   "respuesta corta vs larga", "cuántos tokens", "ahorrar tokens",
   "responde al 50%", "dame la versión corta", "quiero controlar cuánto usas",
-  "75%", "100%", "at 25%", "at 50%", "at 75%", "at 100%", "exhaustive", or any variant where the user wants
+  "75%", "100%", "at 25%", "at 50%", "at 75%", "at 100%",
+  "give me the full answer", or any variant where the user wants
   to control length, depth, or token usage — even without mentioning tokens.
   DO NOT TRIGGER when: user has already specified a level in the current
   session (maintain it) or the request is clearly a one-word answer.
@@ -28,25 +31,16 @@ Intercept the response flow to offer the user a choice about response depth **be
 
 **Do not trigger** when: user already set a level this session (maintain it silently), or the answer is trivially one line.
 
-## Workflow
+## How It Works
 
 ### Step 1 — Estimate input tokens
 
-Use the calibration tables below to estimate the prompt's token count mentally.
+Use the repository's canonical estimation guidance from `skills/context-budget`.
 
-**Chars-per-token by content type:**
+- Prose-first prompts: `input_tokens ≈ word_count × 1.3`
+- Code-heavy or mixed prompts: `input_tokens ≈ char_count / 4`
 
-| Content type      | Chars / Token |
-|-------------------|---------------|
-| English natural   | ~4.0          |
-| Spanish natural   | ~3.5          |
-| Code              | ~3.0          |
-| JSON              | ~2.8          |
-| Markdown          | ~3.3          |
-
-Formula: `input_tokens ≈ char_count / chars_per_token`
-
-For mixed content, use the dominant type's ratio.
+For mixed content, prefer the code-heavy estimate as the conservative default.
 
 ### Step 2 — Estimate response size by complexity
 
@@ -104,10 +98,10 @@ If the user already signals a level, respond at that level immediately without a
 
 | What they say                                      | Level |
 |----------------------------------------------------|-------|
-| "25%" / "short" / "brief" / "tldr" / "one-liner"  | 25%   |
-| "50%" / "moderate" / "normal"                      | 50%   |
-| "75%" / "detailed" / "thorough" / "complete"       | 75%   |
-| "100%" / "exhaustive" / "everything" / "full"      | 100%  |
+| "1" / "25%" / "short answer" / "brief" / "tldr" / "one-liner" | 25% |
+| "2" / "50%" / "moderate detail" / "balanced answer" | 50% |
+| "3" / "75%" / "detailed answer" / "thorough explanation" | 75% |
+| "4" / "100%" / "exhaustive" / "everything" / "full answer" | 100% |
 
 If the user set a level earlier in the session, **maintain it silently** for subsequent responses unless they change it.
 
@@ -115,7 +109,23 @@ If the user set a level earlier in the session, **maintain it silently** for sub
 
 This skill uses heuristic estimation — no real tokenizer. Accuracy ~85-90%, variance ±15%. Always show the disclaimer.
 
+## Examples
+
+### Triggers
+
+- "Give me the brief answer first."
+- "How many tokens will your response use?"
+- "Respond at 50% depth."
+- "I want the full answer."
+- "Dame la version corta."
+
+### Does Not Trigger
+
+- "Explain OAuth token refresh flow." (`token` here is domain language, not a budget request)
+- "Why is this JWT token invalid?" (security/domain usage, not response sizing)
+- "What is 2 + 2?" (trivially short answer)
+
 ## Source
 
 Standalone skill from [TBA — Token Budget Advisor for Claude Code](https://github.com/Xabilimon1/Token-Budget-Advisor-Claude-Code-).
-Full version includes a Python estimator script for exact counts: `npx token-budget-advisor`.
+The upstream project includes an optional estimator script, but this ECC skill intentionally stays zero-dependency and heuristic-only.
