@@ -3,9 +3,9 @@
 ## コミットメッセージフォーマット
 
 ```
-<type>: <説明>
+<type>: <description>
 
-<任意の本文>
+<optional body>
 ```
 
 タイプ: feat, fix, refactor, docs, test, chore, perf, ci

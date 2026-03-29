@@ -163,15 +163,15 @@ test.describe('Market Search and View Flow', () => {
 # 生成されたテストを実行
 npx playwright test tests/e2e/markets/search-and-view.spec.ts
 
-3つのテストを3ワーカーで実行中
+Running 3 tests using 3 workers
 
   ✓  [chromium] › search-and-view.spec.ts:5:3 › user can search markets and view details (4.2s)
   ✓  [chromium] › search-and-view.spec.ts:52:3 › search with no results shows empty state (1.8s)
   ✓  [chromium] › search-and-view.spec.ts:67:3 › can clear search and see all markets again (2.9s)
 
-  3件合格 (9.1s)
+  3 passed (9.1s)
 
-生成されたアーティファクト:
+Artifacts generated:
 - artifacts/search-results.png
 - artifacts/market-details.png
 - playwright-report/index.html
