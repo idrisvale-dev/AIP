@@ -18,10 +18,14 @@ origin: community
 ## Installation
 
 ```bash
-# Clone at a pinned commit for reproducibility
-git clone https://github.com/haibindev/repo-scan.git
-cd repo-scan && git checkout 2742664
-cp -r ../repo-scan ~/.claude/skills/repo-scan
+# Fetch only the pinned commit for reproducibility
+mkdir -p ~/.claude/skills/repo-scan
+git init repo-scan
+cd repo-scan
+git remote add origin https://github.com/haibindev/repo-scan.git
+git fetch --depth 1 origin 2742664
+git checkout --detach FETCH_HEAD
+cp -r . ~/.claude/skills/repo-scan
 ```
 
 > Review the source before installing any agent skill.
@@ -48,9 +52,11 @@ cp -r ../repo-scan ~/.claude/skills/repo-scan
 
 ## How It Works
 
-1. **Scan**: `/repo-scan` runs a pre-scan pass to classify files and detect dependencies
-2. **Analyze**: AI reviews the structured data and assigns verdicts per module
-3. **Report**: Interactive HTML report generated with verdict distribution and drill-down
+1. **Classify the repo surface**: enumerate files, then tag each as project code, embedded third-party code, or build artifact.
+2. **Detect embedded libraries**: inspect directory names, headers, license files, and version markers to identify bundled dependencies and likely versions.
+3. **Score each module**: group files by module or subsystem, then assign one of the four verdicts based on ownership, duplication, and maintenance cost.
+4. **Highlight structural risks**: call out dead-weight artifacts, duplicated wrappers, outdated vendored code, and modules that should be extracted, rebuilt, or deprecated.
+5. **Produce the report**: return a concise summary plus the interactive HTML output with per-module drill-down so the audit can be reviewed asynchronously.
 
 ## Examples
 
