@@ -39,6 +39,40 @@ ensure_manifest_entry() {
     fi
 }
 
+manifest_has_entry() {
+    local manifest="$1"
+    local entry="$2"
+
+    [ -f "$manifest" ] && grep -Fqx "$entry" "$manifest"
+}
+
+copy_managed_file() {
+    local source_path="$1"
+    local target_path="$2"
+    local manifest="$3"
+    local manifest_entry="$4"
+    local make_executable="${5:-0}"
+
+    local already_managed=0
+    if manifest_has_entry "$manifest" "$manifest_entry"; then
+        already_managed=1
+    fi
+
+    if [ -f "$target_path" ]; then
+        if [ "$already_managed" -eq 1 ]; then
+            ensure_manifest_entry "$manifest" "$manifest_entry"
+        fi
+        return 1
+    fi
+
+    cp "$source_path" "$target_path"
+    if [ "$make_executable" -eq 1 ]; then
+        chmod +x "$target_path"
+    fi
+    ensure_manifest_entry "$manifest" "$manifest_entry"
+    return 0
+}
+
 # Install function
 do_install() {
     local target_dir="$PWD"
@@ -95,12 +129,8 @@ do_install() {
             [ -f "$f" ] || continue
             local_name=$(basename "$f")
             target_path="$trae_full_path/commands/$local_name"
-            if [ ! -f "$target_path" ]; then
-                cp "$f" "$target_path"
-                ensure_manifest_entry "$MANIFEST" "commands/$local_name"
+            if copy_managed_file "$f" "$target_path" "$MANIFEST" "commands/$local_name"; then
                 commands=$((commands + 1))
-            else
-                ensure_manifest_entry "$MANIFEST" "commands/$local_name"
             fi
         done
     fi
@@ -111,12 +141,8 @@ do_install() {
             [ -f "$f" ] || continue
             local_name=$(basename "$f")
             target_path="$trae_full_path/agents/$local_name"
-            if [ ! -f "$target_path" ]; then
-                cp "$f" "$target_path"
-                ensure_manifest_entry "$MANIFEST" "agents/$local_name"
+            if copy_managed_file "$f" "$target_path" "$MANIFEST" "agents/$local_name"; then
                 agents=$((agents + 1))
-            else
-                ensure_manifest_entry "$MANIFEST" "agents/$local_name"
             fi
         done
     fi
@@ -134,11 +160,9 @@ do_install() {
                 target_path="$target_skill_dir/$relative_path"
 
                 mkdir -p "$(dirname "$target_path")"
-                if [ ! -f "$target_path" ]; then
-                    cp "$source_file" "$target_path"
+                if copy_managed_file "$source_file" "$target_path" "$MANIFEST" "skills/$skill_name/$relative_path"; then
                     skill_copied=1
                 fi
-                ensure_manifest_entry "$MANIFEST" "skills/$skill_name/$relative_path"
             done < <(find "$d" -type f | sort)
 
             if [ "$skill_copied" -eq 1 ]; then
@@ -154,11 +178,9 @@ do_install() {
             target_path="$trae_full_path/rules/$relative_path"
 
             mkdir -p "$(dirname "$target_path")"
-            if [ ! -f "$target_path" ]; then
-                cp "$rule_file" "$target_path"
+            if copy_managed_file "$rule_file" "$target_path" "$MANIFEST" "rules/$relative_path"; then
                 rules=$((rules + 1))
             fi
-            ensure_manifest_entry "$MANIFEST" "rules/$relative_path"
         done < <(find "$REPO_ROOT/rules" -type f | sort)
     fi
 
@@ -167,12 +189,8 @@ do_install() {
         if [ -f "$readme_file" ]; then
             local_name=$(basename "$readme_file")
             target_path="$trae_full_path/$local_name"
-            if [ ! -f "$target_path" ]; then
-                cp "$readme_file" "$target_path"
-                ensure_manifest_entry "$MANIFEST" "$local_name"
+            if copy_managed_file "$readme_file" "$target_path" "$MANIFEST" "$local_name"; then
                 other=$((other + 1))
-            else
-                ensure_manifest_entry "$MANIFEST" "$local_name"
             fi
         fi
     done
@@ -182,13 +200,8 @@ do_install() {
         if [ -f "$script_file" ]; then
             local_name=$(basename "$script_file")
             target_path="$trae_full_path/$local_name"
-            if [ ! -f "$target_path" ]; then
-                cp "$script_file" "$target_path"
-                chmod +x "$target_path"
-                ensure_manifest_entry "$MANIFEST" "$local_name"
+            if copy_managed_file "$script_file" "$target_path" "$MANIFEST" "$local_name" 1; then
                 other=$((other + 1))
-            else
-                ensure_manifest_entry "$MANIFEST" "$local_name"
             fi
         fi
     done
