@@ -50,9 +50,7 @@ const writeModeSkip = new Set([
   path.normalize('tests/scripts/check-unicode-safety.test.js'),
 ]);
 
-const dangerousInvisibleRe =
-  /[\u200B-\u200D\u2060\uFEFF\u202A-\u202E\u2066-\u2069\uFE00-\uFE0F\u{E0100}-\u{E01EF}]/gu;
-const emojiRe = /[\p{Extended_Pictographic}\p{Regional_Indicator}]/gu;
+const emojiRe = /(?:\p{Extended_Pictographic}|\p{Regional_Indicator})/gu;
 const allowedSymbolCodePoints = new Set([
   0x00A9,
   0x00AE,
@@ -106,9 +104,31 @@ function isAllowedEmojiLikeSymbol(char) {
   return allowedSymbolCodePoints.has(char.codePointAt(0));
 }
 
+function isDangerousInvisibleCodePoint(codePoint) {
+  return (
+    (codePoint >= 0x200B && codePoint <= 0x200D) ||
+    codePoint === 0x2060 ||
+    codePoint === 0xFEFF ||
+    (codePoint >= 0x202A && codePoint <= 0x202E) ||
+    (codePoint >= 0x2066 && codePoint <= 0x2069) ||
+    (codePoint >= 0xFE00 && codePoint <= 0xFE0F) ||
+    (codePoint >= 0xE0100 && codePoint <= 0xE01EF)
+  );
+}
+
+function stripDangerousInvisibleChars(text) {
+  let next = '';
+  for (const char of text) {
+    if (!isDangerousInvisibleCodePoint(char.codePointAt(0))) {
+      next += char;
+    }
+  }
+  return next;
+}
+
 function sanitizeText(text) {
   let next = text;
-  next = next.replace(dangerousInvisibleRe, '');
+  next = stripDangerousInvisibleChars(next);
 
   for (const [pattern, replacement] of targetedReplacements) {
     next = next.replace(pattern, replacement);
@@ -146,6 +166,28 @@ function collectMatches(text, regex, kind) {
   return matches;
 }
 
+function collectDangerousInvisibleMatches(text) {
+  const matches = [];
+  let index = 0;
+
+  for (const char of text) {
+    const codePoint = char.codePointAt(0);
+    if (isDangerousInvisibleCodePoint(codePoint)) {
+      const { line, column } = lineAndColumn(text, index);
+      matches.push({
+        kind: 'dangerous-invisible',
+        char,
+        codePoint: `U+${codePoint.toString(16).toUpperCase()}`,
+        line,
+        column,
+      });
+    }
+    index += char.length;
+  }
+
+  return matches;
+}
+
 const changedFiles = [];
 const violations = [];
 
@@ -172,7 +214,7 @@ for (const filePath of listFiles(repoRoot)) {
   }
 
   const fileViolations = [
-    ...collectMatches(text, dangerousInvisibleRe, 'dangerous-invisible'),
+    ...collectDangerousInvisibleMatches(text),
     ...collectMatches(text, emojiRe, 'emoji'),
   ];
 
