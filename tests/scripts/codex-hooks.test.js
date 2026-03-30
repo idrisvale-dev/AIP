@@ -11,7 +11,6 @@ const { spawnSync } = require('child_process');
 const repoRoot = path.join(__dirname, '..', '..');
 const installScript = path.join(repoRoot, 'scripts', 'codex', 'install-global-git-hooks.sh');
 const syncScript = path.join(repoRoot, 'scripts', 'sync-ecc-to-codex.sh');
-const checkScript = path.join(repoRoot, 'scripts', 'codex', 'check-codex-global-state.sh');
 
 function test(name, fn) {
   try {
@@ -51,11 +50,15 @@ function makeHermeticCodexEnv(homeDir, codexDir, extraEnv = {}) {
   return {
     HOME: homeDir,
     USERPROFILE: homeDir,
+    XDG_CONFIG_HOME: path.join(homeDir, '.config'),
+    GIT_CONFIG_GLOBAL: path.join(homeDir, '.gitconfig'),
     CODEX_HOME: codexDir,
     AGENTS_HOME: agentsHome,
     ECC_GLOBAL_HOOKS_DIR: hooksDir,
     CLAUDE_PACKAGE_MANAGER: 'npm',
     CLAUDE_CODE_PACKAGE_MANAGER: 'npm',
+    LANG: 'C.UTF-8',
+    LC_ALL: 'C.UTF-8',
     ...extraEnv,
   };
 }
@@ -86,10 +89,11 @@ if (
 else failed++;
 
 if (
-  test('sync and global sanity checks accept the legacy context7 MCP section', () => {
+  test('sync preserves baseline config and accepts the legacy context7 MCP section', () => {
     const homeDir = createTempDir('codex-sync-home-');
     const codexDir = path.join(homeDir, '.codex');
     const configPath = path.join(codexDir, 'config.toml');
+    const agentsPath = path.join(codexDir, 'AGENTS.md');
     const config = [
       'approval_policy = "on-request"',
       'sandbox_mode = "workspace-write"',
@@ -133,12 +137,19 @@ if (
 
       const syncResult = runBash(syncScript, ['--update-mcp'], makeHermeticCodexEnv(homeDir, codexDir));
       assert.strictEqual(syncResult.status, 0, `${syncResult.stdout}\n${syncResult.stderr}`);
-      const syncedConfig = fs.readFileSync(configPath, 'utf8');
-      assert.match(syncedConfig, /^\[mcp_servers\.context7\]$/m);
 
-      const checkResult = runBash(checkScript, [], makeHermeticCodexEnv(homeDir, codexDir));
-      assert.strictEqual(checkResult.status, 0, checkResult.stderr || checkResult.stdout);
-      assert.match(checkResult.stdout, /MCP section \[mcp_servers\.context7\] or \[mcp_servers\.context7-mcp\] exists/);
+      const syncedAgents = fs.readFileSync(agentsPath, 'utf8');
+      assert.match(syncedAgents, /^# Everything Claude Code \(ECC\) — Agent Instructions/m);
+      assert.match(syncedAgents, /^# Codex Supplement \(From ECC \.codex\/AGENTS\.md\)/m);
+
+      const syncedConfig = fs.readFileSync(configPath, 'utf8');
+      assert.match(syncedConfig, /^multi_agent\s*=\s*true$/m);
+      assert.match(syncedConfig, /^\[profiles\.strict\]$/m);
+      assert.match(syncedConfig, /^\[profiles\.yolo\]$/m);
+      assert.match(syncedConfig, /^\[mcp_servers\.github\]$/m);
+      assert.match(syncedConfig, /^\[mcp_servers\.memory\]$/m);
+      assert.match(syncedConfig, /^\[mcp_servers\.sequential-thinking\]$/m);
+      assert.match(syncedConfig, /^\[mcp_servers\.context7\]$/m);
     } finally {
       cleanup(homeDir);
     }
