@@ -306,10 +306,10 @@ function evaluate(rawInput) {
     for (const file of filesToCheck) {
       const fileIssues = findFileIssues(file);
       if (fileIssues.length > 0) {
-        console.error(`\n📁 ${file}`);
+        console.error(`\n[FILE] ${file}`);
         for (const issue of fileIssues) {
-          const icon = issue.severity === 'error' ? '❌' : issue.severity === 'warning' ? '⚠️' : 'ℹ️';
-          console.error(`  ${icon} Line ${issue.line}: ${issue.message}`);
+          const label = issue.severity === 'error' ? 'ERROR' : issue.severity === 'warning' ? 'WARNING' : 'INFO';
+          console.error(`  ${label} Line ${issue.line}: ${issue.message}`);
           totalIssues++;
           if (issue.severity === 'error') errorCount++;
           if (issue.severity === 'warning') warningCount++;
@@ -321,11 +321,11 @@ function evaluate(rawInput) {
     // Validate commit message if provided
     const messageValidation = validateCommitMessage(command);
     if (messageValidation && messageValidation.issues.length > 0) {
-      console.error('\n📝 Commit Message Issues:');
+      console.error('\nCommit Message Issues:');
       for (const issue of messageValidation.issues) {
-        console.error(`  ⚠️ ${issue.message}`);
+        console.error(`  WARNING ${issue.message}`);
         if (issue.suggestion) {
-          console.error(`     💡 ${issue.suggestion}`);
+          console.error(`     TIP ${issue.suggestion}`);
         }
         totalIssues++;
         warningCount++;
@@ -336,21 +336,21 @@ function evaluate(rawInput) {
     const lintResults = runLinter(filesToCheck);
     
     if (lintResults.eslint && !lintResults.eslint.success) {
-      console.error('\n🔍 ESLint Issues:');
+      console.error('\nESLint Issues:');
       console.error(lintResults.eslint.output);
       totalIssues++;
       errorCount++;
     }
     
     if (lintResults.pylint && !lintResults.pylint.success) {
-      console.error('\n🔍 Pylint Issues:');
+      console.error('\nPylint Issues:');
       console.error(lintResults.pylint.output);
       totalIssues++;
       errorCount++;
     }
     
     if (lintResults.golint && !lintResults.golint.success) {
-      console.error('\n🔍 golint Issues:');
+      console.error('\ngolint Issues:');
       console.error(lintResults.golint.output);
       totalIssues++;
       errorCount++;
@@ -358,17 +358,17 @@ function evaluate(rawInput) {
     
     // Summary
     if (totalIssues > 0) {
-      console.error(`\n📊 Summary: ${totalIssues} issue(s) found (${errorCount} error(s), ${warningCount} warning(s), ${infoCount} info)`);
+      console.error(`\nSummary: ${totalIssues} issue(s) found (${errorCount} error(s), ${warningCount} warning(s), ${infoCount} info)`);
       
       if (errorCount > 0) {
-        console.error('\n[Hook] ❌ Commit blocked due to critical issues. Fix them before committing.');
+        console.error('\n[Hook] ERROR: Commit blocked due to critical issues. Fix them before committing.');
         return { output: rawInput, exitCode: 2 };
       } else {
-        console.error('\n[Hook] ⚠️ Warnings found. Consider fixing them, but commit is allowed.');
+        console.error('\n[Hook] WARNING: Warnings found. Consider fixing them, but commit is allowed.');
         console.error('[Hook] To bypass these checks, use: git commit --no-verify');
       }
     } else {
-      console.error('\n[Hook] ✅ All checks passed!');
+      console.error('\n[Hook] PASS: All checks passed!');
     }
     
   } catch (error) {
