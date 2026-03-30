@@ -310,7 +310,7 @@
             "timeout": 10
           }
         ],
-        "description": "Send macOS desktop notification with task summary when Claude responds"
+        "description": "Send desktop notification (macOS/WSL) with task summary when Claude responds"
       }
     ],
     "SessionEnd": [
