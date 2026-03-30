@@ -45,6 +45,21 @@ function runBash(scriptPath, args = [], env = {}, cwd = repoRoot) {
   });
 }
 
+function makeHermeticCodexEnv(homeDir, codexDir, extraEnv = {}) {
+  const agentsHome = path.join(homeDir, '.agents');
+  const hooksDir = path.join(codexDir, 'git-hooks');
+  return {
+    HOME: homeDir,
+    USERPROFILE: homeDir,
+    CODEX_HOME: codexDir,
+    AGENTS_HOME: agentsHome,
+    ECC_GLOBAL_HOOKS_DIR: hooksDir,
+    CLAUDE_PACKAGE_MANAGER: 'npm',
+    CLAUDE_CODE_PACKAGE_MANAGER: 'npm',
+    ...extraEnv,
+  };
+}
+
 let passed = 0;
 let failed = 0;
 
@@ -116,12 +131,12 @@ if (
       fs.mkdirSync(codexDir, { recursive: true });
       fs.writeFileSync(configPath, config);
 
-      const syncResult = runBash(syncScript, ['--update-mcp'], { HOME: homeDir, CODEX_HOME: codexDir });
+      const syncResult = runBash(syncScript, ['--update-mcp'], makeHermeticCodexEnv(homeDir, codexDir));
       assert.strictEqual(syncResult.status, 0, `${syncResult.stdout}\n${syncResult.stderr}`);
       const syncedConfig = fs.readFileSync(configPath, 'utf8');
       assert.match(syncedConfig, /^\[mcp_servers\.context7\]$/m);
 
-      const checkResult = runBash(checkScript, [], { HOME: homeDir, CODEX_HOME: codexDir });
+      const checkResult = runBash(checkScript, [], makeHermeticCodexEnv(homeDir, codexDir));
       assert.strictEqual(checkResult.status, 0, checkResult.stderr || checkResult.stdout);
       assert.match(checkResult.stdout, /MCP section \[mcp_servers\.context7\] or \[mcp_servers\.context7-mcp\] exists/);
     } finally {
