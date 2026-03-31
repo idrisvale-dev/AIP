@@ -158,6 +158,26 @@
         "hooks": [
           {
             "type": "command",
+            "command": "#!/bin/bash\nmkdir -p ~/.claude; INPUT=$(cat);\necho \"$INPUT\" | jq -r '\"[\" + (now | todate) + \"] \" + ((.tool_input.command // \"?\") | gsub(\"\n\"; \" \") | gsub(\"--token[= ][^ ]*\"; \"--token=<REDACTED>\") | gsub(\"Authorization:[: ]*[^ ]*[: ]*[^ ]*\"; \"Authorization:<REDACTED>\") | gsub(\"AKIA[A-Z0-9]{16}\"; \"<REDACTED>\") | gsub(\"ASIA[A-Z0-9]{16}\"; \"<REDACTED>\") | gsub(\"password[= ][^ ]*\"; \"password=<REDACTED>\") | gsub(\"ghp_[A-Za-z0-9_]+\"; \"<REDACTED>\") | gsub(\"gho_[A-Za-z0-9_]+\"; \"<REDACTED>\") | gsub(\"ghs_[A-Za-z0-9_]+\"; \"<REDACTED>\") | gsub(\"github_pat_[A-Za-z0-9_]+\"; \"<REDACTED>\"))' >> ~/.claude/bash-commands.log 2>/dev/null || true;\nprintf '%s\n' \"$INPUT\""
+          }
+        ],
+        "description": "Audit log all bash commands to ~/.claude/bash-commands.log"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\nmkdir -p ~/.claude; INPUT=$(cat);\necho \"$INPUT\" | jq -r '\"[\" + (now | todate) + \"] tool=Bash command=\" + ((.tool_input.command // \"?\") | gsub(\"\n\"; \" \") | gsub(\"--token[= ][^ ]*\"; \"--token=<REDACTED>\") | gsub(\"Authorization:[: ]*[^ ]*[: ]*[^ ]*\"; \"Authorization:<REDACTED>\") | gsub(\"AKIA[A-Z0-9]{16}\"; \"<REDACTED>\") | gsub(\"ASIA[A-Z0-9]{16}\"; \"<REDACTED>\") | gsub(\"password[= ][^ ]*\"; \"password=<REDACTED>\") | gsub(\"ghp_[A-Za-z0-9_]+\"; \"<REDACTED>\") | gsub(\"gho_[A-Za-z0-9_]+\"; \"<REDACTED>\") | gsub(\"ghs_[A-Za-z0-9_]+\"; \"<REDACTED>\") | gsub(\"github_pat_[A-Za-z0-9_]+\"; \"<REDACTED>\"))' >> ~/.claude/cost-tracker.log 2>/dev/null || true;\nprintf '%s\n' \"$INPUT\""
+          }
+        ],
+        "description": "Cost tracker - log bash tool usage with timestamps"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"post:bash:pr-created\" \"scripts/hooks/post-bash-pr-created.js\" \"standard,strict\""
           }
         ],
