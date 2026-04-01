@@ -34,6 +34,7 @@ Public ECC plugin repo for agents, skills, commands, hooks, rules, install surfa
   - rewrite content-facing skills to use source-backed voice modeling
   - remove generic LLM rhetoric, canned CTA patterns, and forced platform stereotypes
   - continue one-by-one audit of overlapping or low-signal skill content
+  - move repo guidance and contribution flow to skills-first, leaving commands only as explicit compatibility shims
 - Security:
   - keep dependency posture clean
   - preserve self-contained hook and MCP behavior
@@ -65,6 +66,7 @@ Public ECC plugin repo for agents, skills, commands, hooks, rules, install surfa
   - `ECC-206` ecosystem CI baseline
   - `ECC-207` PR backlog audit and merge-policy enforcement
   - `ECC-208` context hygiene
+  - `ECC-210` skills-first workflow migration and command compatibility retirement
 
 ## Update Rule
 
@@ -84,3 +86,4 @@ Keep this file detailed for only the current sprint, blockers, and next actions.
 - 2026-04-01: The remaining self-contained piece of `#834`, `docs/zh-CN/skills/browser-qa/SKILL.md`, was ported directly into the repo. After commit, `#834` should be closed as superseded-by-direct-port.
 - 2026-04-01: Content skill cleanup started with `content-engine`, `crosspost`, `article-writing`, and `investor-outreach`. The new direction is source-first voice capture, explicit anti-trope bans, and no forced platform persona shifts.
 - 2026-04-01: `node scripts/ci/check-unicode-safety.js --write` sanitized the remaining emoji-bearing Markdown files, including several `remotion-video-creation` rule docs and an old local plan note.
+- 2026-04-01: Core English repo surfaces were shifted to a skills-first posture. README, AGENTS, plugin metadata, and contributor instructions now treat `skills/` as canonical and `commands/` as legacy slash-entry compatibility during migration.
