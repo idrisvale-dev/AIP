@@ -44,6 +44,8 @@ Public ECC plugin repo for agents, skills, commands, hooks, rules, install surfa
 - Closed on 2026-04-01 under backlog hygiene / merge policy:
   - `#1069` `feat: add everything-claude-code ECC bundle`
   - `#1068` `feat: add everything-claude-code-conventions ECC bundle`
+  - `#1080` `feat: add everything-claude-code ECC bundle`
+  - `#1079` `feat: add everything-claude-code-conventions ECC bundle`
   - `#1064` `chore(deps-dev): bump @eslint/js from 9.39.2 to 10.0.1`
   - `#1063` `chore(deps-dev): bump eslint from 9.39.2 to 10.1.0`
 - Closed on 2026-04-01 because the content is sourced from external ecosystems and should only land via manual ECC-native re-port:
@@ -87,3 +89,4 @@ Keep this file detailed for only the current sprint, blockers, and next actions.
 - 2026-04-01: Content skill cleanup started with `content-engine`, `crosspost`, `article-writing`, and `investor-outreach`. The new direction is source-first voice capture, explicit anti-trope bans, and no forced platform persona shifts.
 - 2026-04-01: `node scripts/ci/check-unicode-safety.js --write` sanitized the remaining emoji-bearing Markdown files, including several `remotion-video-creation` rule docs and an old local plan note.
 - 2026-04-01: Core English repo surfaces were shifted to a skills-first posture. README, AGENTS, plugin metadata, and contributor instructions now treat `skills/` as canonical and `commands/` as legacy slash-entry compatibility during migration.
+- 2026-04-01: Follow-up bundle cleanup closed `#1080` and `#1079`, which were generated `.claude/` bundle PRs duplicating command-first scaffolding instead of shipping canonical ECC source changes.
