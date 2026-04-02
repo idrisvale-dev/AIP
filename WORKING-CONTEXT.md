@@ -36,6 +36,7 @@ Public ECC plugin repo for agents, skills, commands, hooks, rules, install surfa
   - continue one-by-one audit of overlapping or low-signal skill content
   - move repo guidance and contribution flow to skills-first, leaving commands only as explicit compatibility shims
   - add operator skills that wrap connected surfaces instead of exposing only raw APIs or disconnected primitives
+  - land the canonical voice system, network-optimization lane, and reusable Manim explainer lane
 - Security:
   - keep dependency posture clean
   - preserve self-contained hook and MCP behavior
@@ -106,3 +107,6 @@ Keep this file detailed for only the current sprint, blockers, and next actions.
 - 2026-04-01: Targeted regression suite after the direct ports is green: `tests/scripts/install-apply.test.js`, `tests/scripts/sync-ecc-to-codex.test.js`, and `tests/scripts/codex-hooks.test.js`.
 - 2026-04-01: Ported the useful core of `#1107` directly into `main` as an add-only Codex baseline merge. `scripts/sync-ecc-to-codex.sh` now fills missing non-MCP defaults from `.codex/config.toml`, syncs sample agent role files into `~/.codex/agents`, and preserves user config instead of replacing it. Added regression coverage for sparse configs and implicit parent tables.
 - 2026-04-01: Ported the safe low-risk cleanup from `#1119` directly into `main` instead of keeping an obsolete CI PR open. This included `.mjs` eslint handling, stricter null checks, Windows home-dir coverage in bash-log tests, and longer Trae shell-test timeouts.
+- 2026-04-01: Added `brand-voice` as the canonical source-derived writing-style system and wired the content lane to treat it as the shared voice source of truth instead of duplicating partial style heuristics across skills.
+- 2026-04-01: Added `connections-optimizer` as the review-first social-graph reorganization workflow for X and LinkedIn, with explicit pruning modes, browser fallback expectations, and Apple Mail drafting guidance.
+- 2026-04-01: Added `manim-video` as the reusable technical explainer lane and seeded it with a starter network-graph scene so launch and systems animations do not depend on one-off scratch scripts.

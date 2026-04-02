@@ -21,7 +21,7 @@ Agent-powered lead intelligence pipeline that finds, scores, and reaches high-va
 
 ### Required
 - **Exa MCP** — Deep web search for people, companies, and signals (`web_search_exa`)
-- **X API** — Follower/following graph, mutual analysis, recent activity (`X_BEARER_TOKEN`, `X_ACCESS_TOKEN`)
+- **X API** — Follower/following graph, mutual analysis, recent activity (`X_BEARER_TOKEN`, plus write-context credentials such as `X_CONSUMER_KEY`, `X_CONSUMER_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`)
 
 ### Optional (enhance results)
 - **LinkedIn** — Direct API if available, otherwise browser control for search, profile inspection, and drafting
@@ -43,35 +43,9 @@ Agent-powered lead intelligence pipeline that finds, scores, and reaches high-va
 
 Do not draft outbound from generic sales copy.
 
-Before writing a message, build a voice profile from real source material. Prefer:
-
-- recent X posts and threads
-- published articles, memos, or launch notes
-- prior outreach emails that actually worked
-- docs, changelogs, or product writing if those are the strongest signals
+Run `brand-voice` first whenever the user's voice matters. Reuse its `VOICE PROFILE` instead of re-deriving style ad hoc inside this skill.
 
 If live X access is available, pull recent original posts before drafting. If not, use supplied examples or the best repo/site material available.
-
-Extract:
-
-- sentence length and rhythm
-- how compressed or explanatory the writing is
-- how parentheses are used
-- whether capitalization is conventional or situational
-- how often questions are used
-- phrases or transitions the author never uses
-
-For Affaan / ECC style specifically:
-
-- direct, compressed, concrete
-- strong preference for specifics, mechanisms, and receipts
-- parentheticals are for qualification or over-clarification, not jokes
-- lowercase is optional, not mandatory
-- no fake curiosity hooks
-- no "not X, just Y"
-- no "no fluff"
-- no LinkedIn thought-leader cadence
-- no bait question at the end
 
 ## Stage 1: Signal Scoring
 
@@ -333,8 +307,8 @@ Users should set these environment variables:
 export X_BEARER_TOKEN="..."
 export X_ACCESS_TOKEN="..."
 export X_ACCESS_TOKEN_SECRET="..."
-export X_API_KEY="..."
-export X_API_SECRET="..."
+export X_CONSUMER_KEY="..."
+export X_CONSUMER_SECRET="..."
 export EXA_API_KEY="..."
 
 # Optional
@@ -364,3 +338,8 @@ Agent workflow:
 
 Output: Ranked list with warm paths, voice profile summary, and channel-specific outreach drafts or drafts-in-app
 ```
+
+## Related Skills
+
+- `brand-voice` for canonical voice capture
+- `connections-optimizer` for review-first network pruning and expansion before outreach
