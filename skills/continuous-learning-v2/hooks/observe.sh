@@ -386,6 +386,9 @@ fi
 # which caused runaway parallel Claude analysis processes.
 SIGNAL_EVERY_N="${ECC_OBSERVER_SIGNAL_EVERY_N:-20}"
 SIGNAL_COUNTER_FILE="${PROJECT_DIR}/.observer-signal-counter"
+ACTIVITY_FILE="${PROJECT_DIR}/.observer-last-activity"
+
+touch "$ACTIVITY_FILE" 2>/dev/null || true
 
 should_signal=0
 if [ -f "$SIGNAL_COUNTER_FILE" ]; then
