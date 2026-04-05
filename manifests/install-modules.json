@@ -315,6 +315,7 @@
       "paths": [
         "skills/connections-optimizer",
         "skills/customer-billing-ops",
+        "skills/ecc-tools-cost-audit",
         "skills/github-ops",
         "skills/google-workspace-ops",
         "skills/jira-integration",
