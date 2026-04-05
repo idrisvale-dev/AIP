@@ -10,6 +10,7 @@
  */
 
 const {
+  getClaudeDir,
   getSessionsDir,
   getSessionSearchDirs,
   getLearnedSkillsDir,
@@ -26,6 +27,9 @@ const { listAliases } = require('../lib/session-aliases');
 const { detectProjectType } = require('../lib/project-detect');
 const path = require('path');
 const fs = require('fs');
+
+const INSTINCT_CONFIDENCE_THRESHOLD = 0.7;
+const MAX_INJECTED_INSTINCTS = 6;
 
 /**
  * Resolve a filesystem path to its canonical (real) form.
@@ -155,10 +159,151 @@ function selectMatchingSession(sessions, cwd, currentProject) {
   return null;
 }
 
+function parseInstinctFile(content) {
+  const instincts = [];
+  let current = null;
+  let inFrontmatter = false;
+  let contentLines = [];
+
+  for (const line of String(content).split('\n')) {
+    if (line.trim() === '---') {
+      if (inFrontmatter) {
+        inFrontmatter = false;
+      } else {
+        if (current && current.id) {
+          current.content = contentLines.join('\n').trim();
+          instincts.push(current);
+        }
+        current = {};
+        contentLines = [];
+        inFrontmatter = true;
+      }
+      continue;
+    }
+
+    if (inFrontmatter) {
+      const separatorIndex = line.indexOf(':');
+      if (separatorIndex === -1) continue;
+      const key = line.slice(0, separatorIndex).trim();
+      let value = line.slice(separatorIndex + 1).trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      if (key === 'confidence') {
+        const parsed = Number.parseFloat(value);
+        current[key] = Number.isFinite(parsed) ? parsed : 0.5;
+      } else {
+        current[key] = value;
+      }
+    } else if (current) {
+      contentLines.push(line);
+    }
+  }
+
+  if (current && current.id) {
+    current.content = contentLines.join('\n').trim();
+    instincts.push(current);
+  }
+
+  return instincts;
+}
+
+function readInstinctsFromDir(directory, scope) {
+  if (!directory || !fs.existsSync(directory)) return [];
+
+  const entries = fs.readdirSync(directory, { withFileTypes: true })
+    .filter(entry => entry.isFile() && /\.(ya?ml|md)$/i.test(entry.name))
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  const instincts = [];
+  for (const entry of entries) {
+    const filePath = path.join(directory, entry.name);
+    try {
+      const parsed = parseInstinctFile(fs.readFileSync(filePath, 'utf8'));
+      for (const instinct of parsed) {
+        instincts.push({
+          ...instinct,
+          _scopeLabel: scope,
+          _sourceFile: filePath,
+        });
+      }
+    } catch (error) {
+      log(`[SessionStart] Warning: failed to parse instinct file ${filePath}: ${error.message}`);
+    }
+  }
+
+  return instincts;
+}
+
+function extractInstinctAction(content) {
+  const actionMatch = String(content || '').match(/## Action\s*\n+([\s\S]+?)(?:\n## |\n---|$)/);
+  const actionBlock = (actionMatch ? actionMatch[1] : String(content || '')).trim();
+  const firstLine = actionBlock
+    .split('\n')
+    .map(line => line.trim())
+    .find(Boolean);
+
+  return firstLine || '';
+}
+
+function summarizeActiveInstincts(observerContext) {
+  const homunculusDir = path.join(getClaudeDir(), 'homunculus');
+  const globalDirs = [
+    { dir: path.join(homunculusDir, 'instincts', 'personal'), scope: 'global' },
+    { dir: path.join(homunculusDir, 'instincts', 'inherited'), scope: 'global' },
+  ];
+  const projectDirs = observerContext.isGlobal ? [] : [
+    { dir: path.join(observerContext.projectDir, 'instincts', 'personal'), scope: 'project' },
+    { dir: path.join(observerContext.projectDir, 'instincts', 'inherited'), scope: 'project' },
+  ];
+
+  const scopedInstincts = [
+    ...projectDirs.flatMap(({ dir, scope }) => readInstinctsFromDir(dir, scope)),
+    ...globalDirs.flatMap(({ dir, scope }) => readInstinctsFromDir(dir, scope)),
+  ];
+
+  const deduped = new Map();
+  for (const instinct of scopedInstincts) {
+    if (!instinct.id || instinct.confidence < INSTINCT_CONFIDENCE_THRESHOLD) continue;
+    const existing = deduped.get(instinct.id);
+    if (!existing || (existing._scopeLabel !== 'project' && instinct._scopeLabel === 'project')) {
+      deduped.set(instinct.id, instinct);
+    }
+  }
+
+  const ranked = Array.from(deduped.values())
+    .map(instinct => ({
+      ...instinct,
+      action: extractInstinctAction(instinct.content),
+    }))
+    .filter(instinct => instinct.action)
+    .sort((left, right) => {
+      if (right.confidence !== left.confidence) return right.confidence - left.confidence;
+      if (left._scopeLabel !== right._scopeLabel) return left._scopeLabel === 'project' ? -1 : 1;
+      return String(left.id).localeCompare(String(right.id));
+    })
+    .slice(0, MAX_INJECTED_INSTINCTS);
+
+  if (ranked.length === 0) {
+    return '';
+  }
+
+  log(`[SessionStart] Injecting ${ranked.length} instinct(s) into session context`);
+
+  const lines = ranked.map(instinct => {
+    const scope = instinct._scopeLabel === 'project' ? 'project' : 'global';
+    const confidence = `${Math.round(instinct.confidence * 100)}%`;
+    return `- [${scope} ${confidence}] ${instinct.action}`;
+  });
+
+  return `Active instincts:\n${lines.join('\n')}`;
+}
+
 async function main() {
   const sessionsDir = getSessionsDir();
   const learnedDir = getLearnedSkillsDir();
   const additionalContextParts = [];
+  const observerContext = resolveProjectContext();
 
   // Ensure directories exist
   ensureDir(sessionsDir);
@@ -166,7 +311,6 @@ async function main() {
 
   const observerSessionId = resolveSessionId();
   if (observerSessionId) {
-    const observerContext = resolveProjectContext();
     writeSessionLease(observerContext, observerSessionId, {
       hook: 'SessionStart',
       projectRoot: observerContext.projectRoot
@@ -174,6 +318,11 @@ async function main() {
     log(`[SessionStart] Registered observer lease for ${observerSessionId}`);
   } else {
     log('[SessionStart] No CLAUDE_SESSION_ID available; skipping observer lease registration');
+  }
+
+  const instinctSummary = summarizeActiveInstincts(observerContext);
+  if (instinctSummary) {
+    additionalContextParts.push(instinctSummary);
   }
 
   // Check for recent session files (last 7 days)
