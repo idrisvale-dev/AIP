@@ -10,7 +10,7 @@ Public ECC plugin repo for agents, skills, commands, hooks, rules, install surfa
 
 - Default branch: `main`
 - Public release surface is aligned at `v1.10.0`
-- Public catalog truth is `38` agents, `72` commands, and `159` skills
+- Public catalog truth is `38` agents, `72` commands, and `160` skills
 - Public plugin slug is now `ecc`; legacy `everything-claude-code` install paths remain supported for compatibility
 - Release discussion: `#1272`
 - ECC 2.0 exists in-tree and builds, but it is still alpha rather than GA
@@ -27,7 +27,7 @@ Public ECC plugin repo for agents, skills, commands, hooks, rules, install surfa
 
 ## Active Queues
 
-- PR backlog: currently cleared on the public queue; new work should land through direct mainline fixes or fresh narrowly scoped PRs
+- PR backlog: reduced but active; keep direct-porting only safe ECC-native changes and close overlap, stale generators, and unaudited external-runtime lanes
 - Upstream branch backlog still needs selective mining and cleanup:
   - `origin/feat/hermes-generated-ops-skills` still has three unique commits, but only reusable ECC-native skills should be salvaged from it
   - multiple `origin/ecc-tools/*` automation branches are stale and should be pruned after confirming they carry no unique value
@@ -140,3 +140,7 @@ Keep this file detailed for only the current sprint, blockers, and next actions.
 - 2026-04-05: Fixed the remaining OpenCode npm-publish gap in `db6d52e`. The root package now builds `.opencode/dist` during `prepack`, includes the compiled OpenCode plugin assets in the published tarball, and carries a dedicated regression test (`tests/scripts/build-opencode.test.js`) so the package no longer ships only raw TypeScript source for that surface.
 - 2026-04-05: Fixed the stale-row bug in `.github/workflows/monthly-metrics.yml` with `bf5961e`. The workflow now refreshes the current month row in issue `#1087` instead of early-returning when the month already exists, and the dispatched run updated the April snapshot to the current star/fork/release counts.
 - 2026-04-05: Recovered the useful cost-control workflow from the divergent Hermes branch as a small ECC-native operator skill instead of replaying the branch. `skills/ecc-tools-cost-audit/SKILL.md` is now wired into `operator-workflows` and focused on webhook -> queue -> worker tracing, burn containment, quota bypass, premium-model leakage, and retry fanout in the sibling `ECC-Tools` repo.
+- 2026-04-05: Added `skills/council/SKILL.md` in `753da37` as an ECC-native four-voice decision workflow. The useful protocol from PR `#1254` was retained, but the shadow `~/.claude/notes` write path was explicitly removed in favor of `knowledge-ops`, `/save-session`, or direct GitHub/Linear updates when a decision delta matters.
+- 2026-04-05: Direct-ported the safe `globals` bump from PR `#1243` into `main` as part of the council lane and closed the PR as superseded.
+- 2026-04-05: Closed PR `#1232` after full audit. The proposed `skill-scout` workflow overlaps current `search-first`, `/skill-create`, and `skill-stocktake`; if a dedicated marketplace-discovery layer returns later it should be rebuilt on top of the current install/catalog model rather than landing as a parallel discovery path.
+- 2026-04-05: Ported the safe localized README switcher fixes from PR `#1209` directly into `main` rather than merging the docs PR wholesale. The navigation now consistently includes `Português (Brasil)` and `Türkçe` across the localized README switchers, while newer localized body copy stays intact.
