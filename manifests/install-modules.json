@@ -322,6 +322,7 @@
         "skills/jira-integration",
         "skills/knowledge-ops",
         "skills/project-flow-ops",
+        "skills/unified-notifications-ops",
         "skills/workspace-surface-audit"
       ],
       "targets": [
