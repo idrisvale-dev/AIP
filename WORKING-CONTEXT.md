@@ -10,7 +10,7 @@ Public ECC plugin repo for agents, skills, commands, hooks, rules, install surfa
 
 - Default branch: `main`
 - Public release surface is aligned at `v1.10.0`
-- Public catalog truth is `38` agents, `72` commands, and `160` skills
+- Public catalog truth is `38` agents, `72` commands, and `162` skills
 - Public plugin slug is now `ecc`; legacy `everything-claude-code` install paths remain supported for compatibility
 - Release discussion: `#1272`
 - ECC 2.0 exists in-tree and builds, but it is still alpha rather than GA
@@ -138,6 +138,8 @@ Keep this file detailed for only the current sprint, blockers, and next actions.
 - 2026-04-05: Shipped `846ffb7` (`chore: ship v1.10.0 release surface refresh`). This updated README/plugin metadata/package versions, synced the explicit plugin agent inventory, bumped stale star/fork/contributor counts, created `docs/releases/1.10.0/*`, tagged and released `v1.10.0`, and posted the announcement discussion at `#1272`.
 - 2026-04-05: Salvaged the reusable Hermes-branch operator skills in `6eba30f` without replaying the full branch. Added `skills/github-ops`, `skills/knowledge-ops`, and `skills/hookify-rules`, wired them into install modules, and re-synced the repo to `159` skills. `knowledge-ops` was explicitly adapted to the current workspace model: live code in cloned repos, active truth in GitHub/Linear, broader non-code context in the KB/archive layers.
 - 2026-04-05: Fixed the remaining OpenCode npm-publish gap in `db6d52e`. The root package now builds `.opencode/dist` during `prepack`, includes the compiled OpenCode plugin assets in the published tarball, and carries a dedicated regression test (`tests/scripts/build-opencode.test.js`) so the package no longer ships only raw TypeScript source for that surface.
+- 2026-04-05: Added `skills/council`, direct-ported the safe `code-tour` lane from `#1193`, and re-synced the repo to `162` skills. `code-tour` stays self-contained and only produces `.tours/*.tour` artifacts with real file/line anchors; no external runtime or extension install is assumed inside the skill.
+- 2026-04-05: Closed the latest auto-generated ECC bundle PR wave (`#1275`-`#1281`) after deploying `ECC-Tools/main` fix `f615905`, which now blocks repo-level issue-comment `/analyze` requests from opening repeated bundle PRs while still allowing PR-thread retry analysis to run against immutable head SHAs.
 - 2026-04-05: Fixed the stale-row bug in `.github/workflows/monthly-metrics.yml` with `bf5961e`. The workflow now refreshes the current month row in issue `#1087` instead of early-returning when the month already exists, and the dispatched run updated the April snapshot to the current star/fork/release counts.
 - 2026-04-05: Recovered the useful cost-control workflow from the divergent Hermes branch as a small ECC-native operator skill instead of replaying the branch. `skills/ecc-tools-cost-audit/SKILL.md` is now wired into `operator-workflows` and focused on webhook -> queue -> worker tracing, burn containment, quota bypass, premium-model leakage, and retry fanout in the sibling `ECC-Tools` repo.
 - 2026-04-05: Added `skills/council/SKILL.md` in `753da37` as an ECC-native four-voice decision workflow. The useful protocol from PR `#1254` was retained, but the shadow `~/.claude/notes` write path was explicitly removed in favor of `knowledge-ops`, `/save-session`, or direct GitHub/Linear updates when a decision delta matters.
