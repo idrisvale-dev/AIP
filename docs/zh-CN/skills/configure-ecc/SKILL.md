@@ -194,7 +194,7 @@ mkdir -p $TARGET/skills $TARGET/rules
 
 | 技能 | 描述 |
 |-------|-------------|
-| `project-guidelines-example` | 用于创建项目特定技能的模板 |
+| `docs/examples/project-guidelines-template.md` | 用于创建项目特定技能的模板 |
 
 ### 2d: 执行安装
 

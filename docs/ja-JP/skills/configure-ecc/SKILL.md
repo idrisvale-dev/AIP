@@ -126,7 +126,7 @@ Options:
 
 | スキル | 説明 |
 |-------|-------------|
-| `project-guidelines-example` | プロジェクト固有のスキルを作成するためのテンプレート |
+| `docs/examples/project-guidelines-template.md` | プロジェクト固有のスキルを作成するためのテンプレート |
 
 ### 2c: インストールの実行
 

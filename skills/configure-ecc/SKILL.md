@@ -190,7 +190,7 @@ For each selected category, print the full list of skills below and ask the user
 
 | Skill | Description |
 |-------|-------------|
-| `project-guidelines-example` | Template for creating project-specific skills |
+| `docs/examples/project-guidelines-template.md` | Template for creating project-specific skills |
 
 ### 2d: Execute Installation
 
