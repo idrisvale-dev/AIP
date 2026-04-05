@@ -4281,6 +4281,42 @@ async function runTests() {
     passed++;
   else failed++;
 
+  if (
+    await asyncTest('prunes session files older than the retention window', async () => {
+      const isoHome = path.join(os.tmpdir(), `ecc-start-prune-${Date.now()}`);
+      const sessionsDir = getCanonicalSessionsDir(isoHome);
+      fs.mkdirSync(sessionsDir, { recursive: true });
+      fs.mkdirSync(path.join(isoHome, '.claude', 'skills', 'learned'), { recursive: true });
+
+      const recentFile = path.join(sessionsDir, '2026-02-10-keepme-session.tmp');
+      fs.writeFileSync(recentFile, '# Recent Session\n\nKEEP ME');
+      const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+      fs.utimesSync(recentFile, fiveDaysAgo, fiveDaysAgo);
+
+      const expiredFile = path.join(sessionsDir, '2026-01-01-pruneme-session.tmp');
+      fs.writeFileSync(expiredFile, '# Expired Session\n\nDELETE ME');
+      const thirtyOneDaysAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+      fs.utimesSync(expiredFile, thirtyOneDaysAgo, thirtyOneDaysAgo);
+
+      try {
+        const result = await runScript(path.join(scriptsDir, 'session-start.js'), '', {
+          HOME: isoHome,
+          USERPROFILE: isoHome,
+          ECC_SESSION_RETENTION_DAYS: '30',
+        });
+
+        assert.strictEqual(result.code, 0);
+        assert.ok(!fs.existsSync(expiredFile), 'Should delete expired session files beyond retention');
+        assert.ok(fs.existsSync(recentFile), 'Should keep recent session files inside retention');
+        assert.ok(result.stderr.includes('Pruned 1 expired session'), `Should report pruning activity, stderr: ${result.stderr}`);
+      } finally {
+        fs.rmSync(isoHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
   console.log('\nRound 55: session-start.js (newest session selection):');
 
   if (

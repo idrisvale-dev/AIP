@@ -30,6 +30,7 @@ const fs = require('fs');
 
 const INSTINCT_CONFIDENCE_THRESHOLD = 0.7;
 const MAX_INJECTED_INSTINCTS = 6;
+const DEFAULT_SESSION_RETENTION_DAYS = 30;
 
 /**
  * Resolve a filesystem path to its canonical (real) form.
@@ -76,6 +77,53 @@ function dedupeRecentSessions(searchDirs) {
 
   return Array.from(recentSessionsByName.values())
     .sort((left, right) => right.mtime - left.mtime || left.dirIndex - right.dirIndex);
+}
+
+function getSessionRetentionDays() {
+  const raw = process.env.ECC_SESSION_RETENTION_DAYS;
+  if (!raw) return DEFAULT_SESSION_RETENTION_DAYS;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_SESSION_RETENTION_DAYS;
+}
+
+function pruneExpiredSessions(searchDirs, retentionDays) {
+  const uniqueDirs = Array.from(new Set(searchDirs.filter(dir => typeof dir === 'string' && dir.length > 0)));
+  let removed = 0;
+
+  for (const dir of uniqueDirs) {
+    if (!fs.existsSync(dir)) continue;
+
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('-session.tmp')) continue;
+
+      const fullPath = path.join(dir, entry.name);
+      let stats;
+      try {
+        stats = fs.statSync(fullPath);
+      } catch {
+        continue;
+      }
+
+      const ageInDays = (Date.now() - stats.mtimeMs) / (1000 * 60 * 60 * 24);
+      if (ageInDays <= retentionDays) continue;
+
+      try {
+        fs.rmSync(fullPath, { force: true });
+        removed += 1;
+      } catch (error) {
+        log(`[SessionStart] Warning: failed to prune expired session ${fullPath}: ${error.message}`);
+      }
+    }
+  }
+
+  return removed;
 }
 
 /**
@@ -301,6 +349,7 @@ function summarizeActiveInstincts(observerContext) {
 
 async function main() {
   const sessionsDir = getSessionsDir();
+  const sessionSearchDirs = getSessionSearchDirs();
   const learnedDir = getLearnedSkillsDir();
   const additionalContextParts = [];
   const observerContext = resolveProjectContext();
@@ -308,6 +357,12 @@ async function main() {
   // Ensure directories exist
   ensureDir(sessionsDir);
   ensureDir(learnedDir);
+
+  const retentionDays = getSessionRetentionDays();
+  const prunedSessions = pruneExpiredSessions(sessionSearchDirs, retentionDays);
+  if (prunedSessions > 0) {
+    log(`[SessionStart] Pruned ${prunedSessions} expired session(s) older than ${retentionDays} day(s)`);
+  }
 
   const observerSessionId = resolveSessionId();
   if (observerSessionId) {
@@ -326,7 +381,7 @@ async function main() {
   }
 
   // Check for recent session files (last 7 days)
-  const recentSessions = dedupeRecentSessions(getSessionSearchDirs());
+  const recentSessions = dedupeRecentSessions(sessionSearchDirs);
 
   if (recentSessions.length > 0) {
     log(`[SessionStart] Found ${recentSessions.length} recent session(s)`);
