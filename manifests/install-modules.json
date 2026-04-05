@@ -234,14 +234,18 @@
       "kind": "skills",
       "description": "Security review and security-focused framework guidance.",
       "paths": [
+        "skills/defi-amm-security",
         "skills/django-security",
         "skills/healthcare-phi-compliance",
         "skills/hipaa-compliance",
         "skills/laravel-security",
+        "skills/llm-trading-agent-security",
+        "skills/nodejs-keccak256",
         "skills/perl-security",
         "skills/security-review",
         "skills/security-scan",
         "skills/springboot-security",
+        "skills/evm-token-decimals",
         "the-security-guide.md"
       ],
       "targets": [
