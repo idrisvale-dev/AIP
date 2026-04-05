@@ -30,6 +30,9 @@ codex plugin install ./
 Run this from the repository root so `./` points to the repo root and `.mcp.json` resolves correctly.
 ```
 
+The installed plugin registers under the short slug `ecc` so tool and command names
+stay below provider length limits.
+
 ## MCP Servers Included
 
 | Server | Purpose |

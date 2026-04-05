@@ -370,7 +370,7 @@ chmod -R u+rwX,go+rX ~/.claude/homunculus
 
 ```bash
 # Eklenti bağımlılıklarını kur
-cd ~/.claude/plugins/cache/everything-claude-code
+cd ~/.claude/plugins/cache/ecc
 npm install
 
 # Veya manuel kurulum için

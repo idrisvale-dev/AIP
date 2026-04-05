@@ -161,7 +161,7 @@
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Install plugin
-/plugin install everything-claude-code@everything-claude-code
+/plugin install ecc@ecc
 ```
 
 ### 步骤 2：安装规则（必需）
@@ -200,13 +200,13 @@ npx ecc-install typescript
 
 ```bash
 # Try a command (plugin install uses namespaced form)
-/everything-claude-code:plan "Add user authentication"
+/ecc:plan "Add user authentication"
 
 # Manual install (Option 2) uses the shorter form:
 # /plan "Add user authentication"
 
 # Check available commands
-/plugin list everything-claude-code@everything-claude-code
+/plugin list ecc@ecc
 ```
 
 **搞定！** 你现在可以使用 38 个智能体、159 项技能和 72 个命令了。
@@ -585,7 +585,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Install the plugin
-/plugin install everything-claude-code@everything-claude-code
+/plugin install ecc@ecc
 ```
 
 或者直接添加到您的 `~/.claude/settings.json`：
@@ -593,7 +593,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 ```json
 {
   "extraKnownMarketplaces": {
-    "everything-claude-code": {
+    "ecc": {
       "source": {
         "source": "github",
         "repo": "affaan-m/everything-claude-code"
@@ -601,7 +601,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
     }
   },
   "enabledPlugins": {
-    "everything-claude-code@everything-claude-code": true
+    "ecc@ecc": true
   }
 }
 ```
@@ -744,8 +744,8 @@ rules/
 
 | 我想要... | 使用此命令 | 使用的智能体 |
 |--------------|-----------------|------------|
-| 规划新功能 | `/everything-claude-code:plan "Add auth"` | planner |
-| 设计系统架构 | `/everything-claude-code:plan` + architect agent | architect |
+| 规划新功能 | `/ecc:plan "Add auth"` | planner |
+| 设计系统架构 | `/ecc:plan` + architect agent | architect |
 | 先写测试再写代码 | `/tdd` | tdd-guide |
 | 评审我刚写的代码 | `/code-review` | code-reviewer |
 | 修复失败的构建 | `/build-fix` | build-error-resolver |
@@ -763,7 +763,7 @@ rules/
 **开始新功能：**
 
 ```
-/everything-claude-code:plan "使用 OAuth 添加用户身份验证"
+/ecc:plan "使用 OAuth 添加用户身份验证"
                                               → 规划器创建实现蓝图
 /tdd                                          → tdd-guide 强制执行先写测试
 /code-review                                  → 代码审查员检查你的工作
@@ -793,7 +793,7 @@ rules/
 <summary><b>如何检查已安装的代理/命令？</b></summary>
 
 ```bash
-/plugin list everything-claude-code@everything-claude-code
+/plugin list ecc@ecc
 ```
 
 这会显示插件中所有可用的代理、命令和技能。

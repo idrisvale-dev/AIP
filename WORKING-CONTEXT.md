@@ -11,6 +11,7 @@ Public ECC plugin repo for agents, skills, commands, hooks, rules, install surfa
 - Default branch: `main`
 - Public release surface is aligned at `v1.10.0`
 - Public catalog truth is `38` agents, `72` commands, and `159` skills
+- Public plugin slug is now `ecc`; legacy `everything-claude-code` install paths remain supported for compatibility
 - Release discussion: `#1272`
 - ECC 2.0 exists in-tree and builds, but it is still alpha rather than GA
 - Main active operational work:

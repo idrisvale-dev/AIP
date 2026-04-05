@@ -173,7 +173,7 @@ Get up and running in under 2 minutes:
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Install plugin
-/plugin install everything-claude-code@everything-claude-code
+/plugin install ecc@ecc
 ```
 
 ### Step 2: Install Rules (Required)
@@ -227,13 +227,13 @@ For manual install instructions see the README in the `rules/` folder. When copy
 # Existing slash-style command names still work while ECC migrates off commands/.
 
 # Plugin install uses the namespaced form
-/everything-claude-code:plan "Add user authentication"
+/ecc:plan "Add user authentication"
 
 # Manual install keeps the shorter slash form:
 # /plan "Add user authentication"
 
 # Check available commands
-/plugin list everything-claude-code@everything-claude-code
+/plugin list ecc@ecc
 ```
 
 **That's it!** You now have access to 38 agents, 159 skills, and 72 legacy command shims.
@@ -621,7 +621,7 @@ The easiest way to use this repo - install as a Claude Code plugin:
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Install the plugin
-/plugin install everything-claude-code@everything-claude-code
+/plugin install ecc@ecc
 ```
 
 Or add directly to your `~/.claude/settings.json`:
@@ -629,7 +629,7 @@ Or add directly to your `~/.claude/settings.json`:
 ```json
 {
   "extraKnownMarketplaces": {
-    "everything-claude-code": {
+    "ecc": {
       "source": {
         "source": "github",
         "repo": "affaan-m/everything-claude-code"
@@ -637,7 +637,7 @@ Or add directly to your `~/.claude/settings.json`:
     }
   },
   "enabledPlugins": {
-    "everything-claude-code@everything-claude-code": true
+    "ecc@ecc": true
   }
 }
 ```
@@ -781,8 +781,8 @@ Not sure where to start? Use this quick reference. Skills are the canonical work
 
 | I want to... | Use this command | Agent used |
 |--------------|-----------------|------------|
-| Plan a new feature | `/everything-claude-code:plan "Add auth"` | planner |
-| Design system architecture | `/everything-claude-code:plan` + architect agent | architect |
+| Plan a new feature | `/ecc:plan "Add auth"` | planner |
+| Design system architecture | `/ecc:plan` + architect agent | architect |
 | Write code with tests first | `/tdd` | tdd-guide |
 | Review code I just wrote | `/code-review` | code-reviewer |
 | Fix a failing build | `/build-fix` | build-error-resolver |
@@ -801,7 +801,7 @@ Slash forms below are shown because they are still the fastest familiar entrypoi
 
 **Starting a new feature:**
 ```
-/everything-claude-code:plan "Add user authentication with OAuth"
+/ecc:plan "Add user authentication with OAuth"
                                               → planner creates implementation blueprint
 /tdd                                          → tdd-guide enforces write-tests-first
 /code-review                                  → code-reviewer checks your work
@@ -829,7 +829,7 @@ Slash forms below are shown because they are still the fastest familiar entrypoi
 <summary><b>How do I check which agents/commands are installed?</b></summary>
 
 ```bash
-/plugin list everything-claude-code@everything-claude-code
+/plugin list ecc@ecc
 ```
 
 This shows all available agents, commands, and skills from the plugin.
