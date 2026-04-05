@@ -235,6 +235,8 @@
       "description": "Security review and security-focused framework guidance.",
       "paths": [
         "skills/django-security",
+        "skills/healthcare-phi-compliance",
+        "skills/hipaa-compliance",
         "skills/laravel-security",
         "skills/perl-security",
         "skills/security-review",
