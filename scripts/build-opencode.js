@@ -10,15 +10,17 @@ const distDir = path.join(opencodeDir, "dist")
 
 fs.rmSync(distDir, { recursive: true, force: true })
 
-const tscBin = path.join(rootDir, "node_modules", ".bin", process.platform === "win32" ? "tsc.cmd" : "tsc")
+let tscEntrypoint
 
-if (!fs.existsSync(tscBin)) {
+try {
+  tscEntrypoint = require.resolve("typescript/bin/tsc", { paths: [rootDir] })
+} catch {
   throw new Error(
     "TypeScript compiler not found. Install root dev dependencies before publishing so .opencode/dist can be built."
   )
 }
 
-execFileSync(tscBin, ["-p", path.join(opencodeDir, "tsconfig.json")], {
+execFileSync(process.execPath, [tscEntrypoint, "-p", path.join(opencodeDir, "tsconfig.json")], {
   cwd: rootDir,
   stdio: "inherit",
 })
