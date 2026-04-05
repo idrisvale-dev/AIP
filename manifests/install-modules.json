@@ -325,8 +325,10 @@
       "description": "Connected-app operator workflows for setup audits, billing operations, program tracking, Google Workspace, and network optimization.",
       "paths": [
         "skills/automation-audit-ops",
+        "skills/api-connector-builder",
         "skills/connections-optimizer",
         "skills/customer-billing-ops",
+        "skills/dashboard-builder",
         "skills/ecc-tools-cost-audit",
         "skills/email-ops",
         "skills/finance-billing-ops",
