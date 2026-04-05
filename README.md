@@ -708,6 +708,14 @@ Copy the hooks from `hooks/hooks.json` to your `~/.claude/settings.json`.
 
 Copy desired MCP server definitions from `mcp-configs/mcp-servers.json` into your official Claude Code config in `~/.claude/settings.json`, or into a project-scoped `.mcp.json` if you want repo-local MCP access.
 
+If you already run your own copies of ECC-bundled MCPs, set:
+
+```bash
+export ECC_DISABLED_MCPS="github,context7,exa,playwright,sequential-thinking,memory"
+```
+
+ECC-managed install and Codex sync flows will skip or remove those bundled servers instead of re-adding duplicates.
+
 **Important:** Replace `YOUR_*_HERE` placeholders with your actual API keys.
 
 ---
