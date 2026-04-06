@@ -100,7 +100,7 @@ This repo is the raw code only. The guides explain everything.
 - **Orchestration overhaul** — Harness audit scoring made deterministic, orchestration status and launcher compatibility hardened, observer loop prevention with 5-layer guard.
 - **Observer reliability** — Memory explosion fix with throttling and tail sampling, sandbox access fix, lazy-start logic, and re-entrancy guard.
 - **12 language ecosystems** — New rules for Java, PHP, Perl, Kotlin/Android/KMP, C++, and Rust join existing TypeScript, Python, Go, and common rules.
-- **Community contributions** — Korean and Chinese translations, security hook, biome hook optimization, video processing skills, operational skills, PowerShell installer, Antigravity IDE support.
+- **Community contributions** — Korean and Chinese translations, biome hook optimization, video processing skills, operational skills, PowerShell installer, Antigravity IDE support.
 - **CI hardening** — 19 test failure fixes, catalog count enforcement, install manifest validation, and full test suite green.
 
 ### v1.8.0 — Harness Performance System (Mar 2026)
