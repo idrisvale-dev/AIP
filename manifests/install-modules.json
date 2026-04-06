@@ -198,6 +198,7 @@
       "kind": "skills",
       "description": "Evaluation, TDD, verification, learning, and compaction skills.",
       "paths": [
+        "skills/agent-sort",
         "skills/ai-regression-testing",
         "skills/configure-ecc",
         "skills/code-tour",

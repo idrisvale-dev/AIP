@@ -10,7 +10,7 @@ Public ECC plugin repo for agents, skills, commands, hooks, rules, install surfa
 
 - Default branch: `main`
 - Public release surface is aligned at `v1.10.0`
-- Public catalog truth is `39` agents, `72` commands, and `163` skills
+- Public catalog truth is `39` agents, `73` commands, and `179` skills
 - Public plugin slug is now `ecc`; legacy `everything-claude-code` install paths remain supported for compatibility
 - Release discussion: `#1272`
 - ECC 2.0 exists in-tree and builds, but it is still alpha rather than GA
@@ -158,4 +158,5 @@ Keep this file detailed for only the current sprint, blockers, and next actions.
 - 2026-04-05: Continued `#1213` cleanup by removing stale references to the deleted `project-guidelines-example` skill from exported inventory/docs and marking `continuous-learning` v1 as a supported legacy path with an explicit handoff to `continuous-learning-v2`.
 - 2026-04-05: Removed the last orphaned localized `project-guidelines-example` docs from `docs/ko-KR` and `docs/zh-CN`. The template now lives only in `docs/examples/project-guidelines-template.md`, which matches the current repo surface and avoids shipping translated docs for a deleted skill.
 - 2026-04-05: Added `docs/HERMES-OPENCLAW-MIGRATION.md` as the current public migration guide for issue `#1051`. It reframes Hermes/OpenClaw as source systems to distill from, not the final runtime, and maps scheduler, dispatch, memory, skill, and service layers onto the ECC-native surfaces and ECC 2.0 backlog that already exist.
+- 2026-04-05: Landed `skills/agent-sort` and the legacy `/agent-sort` shim from issue `#916` as an ECC-native selective-install workflow. It classifies agents, skills, commands, rules, hooks, and extras into DAILY vs LIBRARY buckets using concrete repo evidence, then hands off installation changes to `configure-ecc` instead of inventing a parallel installer. Catalog truth is now `39` agents, `73` commands, and `179` skills.
 - 2026-04-05: Direct-ported the safe README-only `#1285` slice into `main` instead of merging the branch: added a small `Community Projects` section so downstream teams can link public work built on ECC without changing install, security, or runtime surfaces. Rejected `#1286` at review because it adds an external third-party GitHub Action (`hashgraph-online/codex-plugin-scanner`) that does not meet the current supply-chain policy.
