@@ -90,7 +90,7 @@
 * **编排系统大修** — 使治理审核评分具有确定性，强化编排状态和启动器兼容性，通过 5 层防护防止观察者循环。
 * **观察者可靠性** — 通过节流和尾部采样修复内存爆炸问题，修复沙箱访问，实现延迟启动逻辑，并增加重入防护。
 * **12 个语言生态系统** — 新增 Java、PHP、Perl、Kotlin/Android/KMP、C++ 和 Rust 规则，与现有的 TypeScript、Python、Go 及通用规则并列。
-* **社区贡献** — 韩语和中文翻译，InsAIts 安全钩子，biome 钩子优化，VideoDB 技能，Evos 操作技能，PowerShell 安装程序，Antigravity IDE 支持。
+* **社区贡献** — 韩语和中文翻译，biome 钩子优化，VideoDB 技能，Evos 操作技能，PowerShell 安装程序，Antigravity IDE 支持。
 * **CI 强化** — 修复 19 个测试失败问题，强制执行目录计数，验证安装清单，并使完整测试套件通过。
 
 ### v1.8.0 — 平台性能系统（2026 年 3 月）
