@@ -545,6 +545,39 @@ impl Dashboard {
             }
         };
 
+        if let Some(source_session) = self.sessions.get(self.selected_session) {
+            let context = format!(
+                "Dashboard handoff from {} [{}] | cwd {}{}",
+                format_session_id(&source_session.id),
+                source_session.agent_type,
+                source_session.working_dir.display(),
+                source_session
+                    .worktree
+                    .as_ref()
+                    .map(|worktree| format!(
+                        " | worktree {} ({})",
+                        worktree.branch,
+                        worktree.path.display()
+                    ))
+                    .unwrap_or_default()
+            );
+            if let Err(error) = comms::send(
+                &self.db,
+                &source_session.id,
+                &session_id,
+                &comms::MessageType::TaskHandoff {
+                    task: source_session.task.clone(),
+                    context,
+                },
+            ) {
+                tracing::warn!(
+                    "Failed to send handoff from session {} to {}: {error}",
+                    source_session.id,
+                    session_id
+                );
+            }
+        }
+
         self.refresh();
         self.sync_selection_by_id(Some(&session_id));
         self.reset_output_view();

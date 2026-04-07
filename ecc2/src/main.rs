@@ -32,6 +32,9 @@ enum Commands {
         /// Create a dedicated worktree for this session
         #[arg(short, long)]
         worktree: bool,
+        /// Source session to delegate from
+        #[arg(long)]
+        from_session: Option<String>,
     },
     /// List active sessions
     Sessions,
@@ -123,9 +126,14 @@ async fn main() -> Result<()> {
             task,
             agent,
             worktree: use_worktree,
+            from_session,
         }) => {
             let session_id =
                 session::manager::create_session(&db, &cfg, &task, &agent, use_worktree).await?;
+            if let Some(from_session) = from_session {
+                let from_id = resolve_session_id(&db, &from_session)?;
+                send_handoff_message(&db, &from_id, &session_id)?;
+            }
             println!("Session started: {session_id}");
         }
         Some(Commands::Sessions) => {
@@ -254,6 +262,41 @@ fn short_session(session_id: &str) -> String {
     session_id.chars().take(8).collect()
 }
 
+fn send_handoff_message(
+    db: &session::store::StateStore,
+    from_id: &str,
+    to_id: &str,
+) -> Result<()> {
+    let from_session = db
+        .get_session(from_id)?
+        .ok_or_else(|| anyhow::anyhow!("Session not found: {from_id}"))?;
+    let context = format!(
+        "Delegated from {} [{}] | cwd {}{}",
+        short_session(&from_session.id),
+        from_session.agent_type,
+        from_session.working_dir.display(),
+        from_session
+            .worktree
+            .as_ref()
+            .map(|worktree| format!(
+                " | worktree {} ({})",
+                worktree.branch,
+                worktree.path.display()
+            ))
+            .unwrap_or_default()
+    );
+
+    comms::send(
+        db,
+        &from_session.id,
+        to_id,
+        &comms::MessageType::TaskHandoff {
+            task: from_session.task,
+            context,
+        },
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,6 +346,35 @@ mod tests {
                 assert_eq!(text, "Need context");
             }
             _ => panic!("expected messages send subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_start_with_handoff_source() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "start",
+            "--task",
+            "Follow up",
+            "--agent",
+            "claude",
+            "--from-session",
+            "planner",
+        ])
+        .expect("start with handoff source should parse");
+
+        match cli.command {
+            Some(Commands::Start {
+                from_session,
+                task,
+                agent,
+                ..
+            }) => {
+                assert_eq!(task, "Follow up");
+                assert_eq!(agent, "claude");
+                assert_eq!(from_session.as_deref(), Some("planner"));
+            }
+            _ => panic!("expected start subcommand"),
         }
     }
 }
