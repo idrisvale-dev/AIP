@@ -133,6 +133,39 @@ pub async fn drain_inbox(
     Ok(outcomes)
 }
 
+pub async fn auto_dispatch_backlog(
+    db: &StateStore,
+    cfg: &Config,
+    agent_type: &str,
+    use_worktree: bool,
+    lead_limit: usize,
+) -> Result<Vec<LeadDispatchOutcome>> {
+    let targets = db.unread_task_handoff_targets(lead_limit)?;
+    let mut outcomes = Vec::new();
+
+    for (lead_id, unread_count) in targets {
+        let routed = drain_inbox(
+            db,
+            cfg,
+            &lead_id,
+            agent_type,
+            use_worktree,
+            cfg.auto_dispatch_limit_per_session,
+        )
+        .await?;
+
+        if !routed.is_empty() {
+            outcomes.push(LeadDispatchOutcome {
+                lead_session_id: lead_id,
+                unread_count,
+                routed,
+            });
+        }
+    }
+
+    Ok(outcomes)
+}
+
 pub async fn stop_session(db: &StateStore, id: &str) -> Result<()> {
     stop_session_with_options(db, id, true).await
 }
@@ -811,6 +844,12 @@ pub struct InboxDrainOutcome {
     pub action: AssignmentAction,
 }
 
+pub struct LeadDispatchOutcome {
+    pub lead_session_id: String,
+    pub unread_count: usize,
+    pub routed: Vec<InboxDrainOutcome>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AssignmentAction {
     Spawned,
@@ -964,6 +1003,8 @@ mod tests {
             session_timeout_secs: 60,
             heartbeat_interval_secs: 5,
             default_agent: "claude".to_string(),
+            auto_dispatch_unread_handoffs: false,
+            auto_dispatch_limit_per_session: 5,
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             theme: Theme::Dark,
@@ -1636,6 +1677,65 @@ mod tests {
             message.msg_type == "task_handoff"
                 && message.content.contains("Review auth changes")
         }));
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn auto_dispatch_backlog_routes_multiple_lead_inboxes() -> Result<()> {
+        let tempdir = TestDir::new("manager-auto-dispatch")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.auto_dispatch_limit_per_session = 5;
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        for lead_id in ["lead-a", "lead-b"] {
+            db.insert_session(&Session {
+                id: lead_id.to_string(),
+                task: format!("{lead_id} task"),
+                agent_type: "claude".to_string(),
+                working_dir: repo_root.clone(),
+                state: SessionState::Running,
+                pid: Some(42),
+                worktree: None,
+                created_at: now - Duration::minutes(3),
+                updated_at: now - Duration::minutes(3),
+                metrics: SessionMetrics::default(),
+            })?;
+        }
+
+        db.send_message(
+            "planner",
+            "lead-a",
+            "{\"task\":\"Review auth\",\"context\":\"Inbound\"}",
+            "task_handoff",
+        )?;
+        db.send_message(
+            "planner",
+            "lead-b",
+            "{\"task\":\"Review billing\",\"context\":\"Inbound\"}",
+            "task_handoff",
+        )?;
+
+        let outcomes = auto_dispatch_backlog(&db, &cfg, "claude", true, 10).await?;
+        assert_eq!(outcomes.len(), 2);
+        assert!(outcomes.iter().any(|outcome| {
+            outcome.lead_session_id == "lead-a"
+                && outcome.unread_count == 1
+                && outcome.routed.len() == 1
+        }));
+        assert!(outcomes.iter().any(|outcome| {
+            outcome.lead_session_id == "lead-b"
+                && outcome.unread_count == 1
+                && outcome.routed.len() == 1
+        }));
+
+        let unread = db.unread_task_handoff_targets(10)?;
+        assert!(!unread.iter().any(|(session_id, _)| session_id == "lead-a"));
+        assert!(!unread.iter().any(|(session_id, _)| session_id == "lead-b"));
 
         Ok(())
     }

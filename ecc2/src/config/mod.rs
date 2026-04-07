@@ -29,6 +29,8 @@ pub struct Config {
     pub session_timeout_secs: u64,
     pub heartbeat_interval_secs: u64,
     pub default_agent: String,
+    pub auto_dispatch_unread_handoffs: bool,
+    pub auto_dispatch_limit_per_session: usize,
     pub cost_budget_usd: f64,
     pub token_budget: u64,
     pub theme: Theme,
@@ -53,6 +55,8 @@ impl Default for Config {
             session_timeout_secs: 3600,
             heartbeat_interval_secs: 30,
             default_agent: "claude".to_string(),
+            auto_dispatch_unread_handoffs: false,
+            auto_dispatch_limit_per_session: 5,
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             theme: Theme::Dark,
@@ -123,6 +127,14 @@ theme = "Dark"
         assert_eq!(config.token_budget, defaults.token_budget);
         assert_eq!(config.pane_layout, defaults.pane_layout);
         assert_eq!(config.risk_thresholds, defaults.risk_thresholds);
+        assert_eq!(
+            config.auto_dispatch_unread_handoffs,
+            defaults.auto_dispatch_unread_handoffs
+        );
+        assert_eq!(
+            config.auto_dispatch_limit_per_session,
+            defaults.auto_dispatch_limit_per_session
+        );
     }
 
     #[test]

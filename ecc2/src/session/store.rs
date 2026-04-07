@@ -436,6 +436,25 @@ impl StateStore {
             .map_err(Into::into)
     }
 
+    pub fn unread_task_handoff_targets(&self, limit: usize) -> Result<Vec<(String, usize)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT to_session, COUNT(*) as unread_count
+             FROM messages
+             WHERE msg_type = 'task_handoff' AND read = 0
+             GROUP BY to_session
+             ORDER BY unread_count DESC, MAX(id) ASC
+             LIMIT ?1",
+        )?;
+
+        let targets = stmt.query_map(rusqlite::params![limit as i64], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+        })?;
+
+        targets
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(Into::into)
+    }
+
     pub fn mark_messages_read(&self, session_id: &str) -> Result<usize> {
         let updated = self.conn.execute(
             "UPDATE messages SET read = 1 WHERE to_session = ?1 AND read = 0",
@@ -824,6 +843,13 @@ mod tests {
             vec![
                 "worker-3".to_string(),
                 "worker-2".to_string(),
+            ]
+        );
+        assert_eq!(
+            db.unread_task_handoff_targets(10)?,
+            vec![
+                ("worker-2".to_string(), 1),
+                ("worker-3".to_string(), 1),
             ]
         );
 

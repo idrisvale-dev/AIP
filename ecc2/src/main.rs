@@ -78,6 +78,18 @@ enum Commands {
         #[arg(long, default_value_t = 5)]
         limit: usize,
     },
+    /// Sweep unread task handoffs across lead sessions and route them through the assignment policy
+    AutoDispatch {
+        /// Agent type for routed delegates
+        #[arg(short, long, default_value = "claude")]
+        agent: String,
+        /// Create a dedicated worktree if new delegates must be spawned
+        #[arg(short, long, default_value_t = true)]
+        worktree: bool,
+        /// Maximum lead sessions to sweep in one pass
+        #[arg(long, default_value_t = 10)]
+        lead_limit: usize,
+    },
     /// List active sessions
     Sessions,
     /// Show session details
@@ -275,6 +287,38 @@ async fn main() -> Result<()> {
                             session::manager::AssignmentAction::ReusedActive => "reused-active",
                         },
                         outcome.task
+                    );
+                }
+            }
+        }
+        Some(Commands::AutoDispatch {
+            agent,
+            worktree: use_worktree,
+            lead_limit,
+        }) => {
+            let outcomes = session::manager::auto_dispatch_backlog(
+                &db,
+                &cfg,
+                &agent,
+                use_worktree,
+                lead_limit,
+            )
+            .await?;
+            if outcomes.is_empty() {
+                println!("No unread task handoff backlog found");
+            } else {
+                let total_routed: usize = outcomes.iter().map(|outcome| outcome.routed.len()).sum();
+                println!(
+                    "Auto-dispatched {} task handoff(s) across {} lead session(s)",
+                    total_routed,
+                    outcomes.len()
+                );
+                for outcome in outcomes {
+                    println!(
+                        "- {} | unread {} | routed {}",
+                        short_session(&outcome.lead_session_id),
+                        outcome.unread_count,
+                        outcome.routed.len()
                     );
                 }
             }
@@ -621,6 +665,31 @@ mod tests {
                 assert_eq!(limit, 3);
             }
             _ => panic!("expected drain-inbox subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_auto_dispatch_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "auto-dispatch",
+            "--agent",
+            "claude",
+            "--lead-limit",
+            "4",
+        ])
+        .expect("auto-dispatch should parse");
+
+        match cli.command {
+            Some(Commands::AutoDispatch {
+                agent,
+                lead_limit,
+                ..
+            }) => {
+                assert_eq!(agent, "claude");
+                assert_eq!(lead_limit, 4);
+            }
+            _ => panic!("expected auto-dispatch subcommand"),
         }
     }
 }
