@@ -16,6 +16,7 @@ use crate::session::output::{OutputEvent, OutputLine, SessionOutputStore, Output
 use crate::session::store::StateStore;
 use crate::session::manager;
 use crate::session::{Session, SessionMetrics, SessionState, WorktreeInfo};
+use crate::worktree;
 
 const DEFAULT_PANE_SIZE_PERCENT: u16 = 35;
 const DEFAULT_GRID_SIZE_PERCENT: u16 = 50;
@@ -33,6 +34,7 @@ pub struct Dashboard {
     sessions: Vec<Session>,
     session_output_cache: HashMap<String, Vec<OutputLine>>,
     logs: Vec<ToolLogEntry>,
+    selected_diff_summary: Option<String>,
     selected_pane: Pane,
     selected_session: usize,
     show_help: bool,
@@ -104,6 +106,7 @@ impl Dashboard {
             sessions,
             session_output_cache: HashMap::new(),
             logs: Vec::new(),
+            selected_diff_summary: None,
             selected_pane: Pane::Sessions,
             selected_session: 0,
             show_help: false,
@@ -114,6 +117,7 @@ impl Dashboard {
             session_table_state,
         };
         dashboard.sync_selected_output();
+        dashboard.sync_selected_diff();
         dashboard.refresh_logs();
         dashboard
     }
@@ -449,6 +453,7 @@ impl Dashboard {
                 self.sync_selection();
                 self.reset_output_view();
                 self.sync_selected_output();
+                self.sync_selected_diff();
                 self.refresh_logs();
             }
             Pane::Output => {
@@ -480,6 +485,7 @@ impl Dashboard {
                 self.sync_selection();
                 self.reset_output_view();
                 self.sync_selected_output();
+                self.sync_selected_diff();
                 self.refresh_logs();
             }
             Pane::Output => {
@@ -578,6 +584,7 @@ impl Dashboard {
         self.sync_selection_by_id(selected_id.as_deref());
         self.ensure_selected_pane_visible();
         self.sync_selected_output();
+        self.sync_selected_diff();
         self.refresh_logs();
     }
 
@@ -622,6 +629,14 @@ impl Dashboard {
                 tracing::warn!("Failed to load session output: {error}");
             }
         }
+    }
+
+    fn sync_selected_diff(&mut self) {
+        self.selected_diff_summary = self
+            .sessions
+            .get(self.selected_session)
+            .and_then(|session| session.worktree.as_ref())
+            .and_then(|worktree| worktree::diff_summary(worktree).ok().flatten());
     }
 
     fn selected_session_id(&self) -> Option<&str> {
@@ -715,6 +730,9 @@ impl Dashboard {
                     worktree.branch, worktree.base_branch
                 ));
                 lines.push(format!("Worktree {}", worktree.path.display()));
+                if let Some(diff_summary) = self.selected_diff_summary.as_ref() {
+                    lines.push(format!("Diff {diff_summary}"));
+                }
             }
 
             lines.push(format!(
@@ -1155,10 +1173,12 @@ mod tests {
                     text: "last useful output".to_string(),
                 }],
             );
+        dashboard.selected_diff_summary = Some("1 file changed, 2 insertions(+)".to_string());
 
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Branch ecc/focus | Base main"));
         assert!(text.contains("Worktree /tmp/ecc/focus"));
+        assert!(text.contains("Diff 1 file changed, 2 insertions(+)"));
         assert!(text.contains("Last output last useful output"));
         assert!(text.contains("Needs attention:"));
         assert!(text.contains("Failed failed-8 | Render dashboard rows"));
@@ -1466,6 +1486,7 @@ mod tests {
             sessions,
             session_output_cache: HashMap::new(),
             logs: Vec::new(),
+            selected_diff_summary: None,
             selected_pane: Pane::Sessions,
             selected_session,
             show_help: false,
