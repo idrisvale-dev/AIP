@@ -402,10 +402,53 @@ impl StateStore {
         Ok(counts)
     }
 
+    pub fn unread_task_handoffs_for_session(
+        &self,
+        session_id: &str,
+        limit: usize,
+    ) -> Result<Vec<SessionMessage>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, from_session, to_session, content, msg_type, read, timestamp
+             FROM messages
+             WHERE to_session = ?1 AND msg_type = 'task_handoff' AND read = 0
+             ORDER BY id ASC
+             LIMIT ?2",
+        )?;
+
+        let messages = stmt.query_map(rusqlite::params![session_id, limit as i64], |row| {
+            let timestamp: String = row.get(6)?;
+
+            Ok(SessionMessage {
+                id: row.get(0)?,
+                from_session: row.get(1)?,
+                to_session: row.get(2)?,
+                content: row.get(3)?,
+                msg_type: row.get(4)?,
+                read: row.get::<_, i64>(5)? != 0,
+                timestamp: chrono::DateTime::parse_from_rfc3339(&timestamp)
+                    .unwrap_or_default()
+                    .with_timezone(&chrono::Utc),
+            })
+        })?;
+
+        messages
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(Into::into)
+    }
+
     pub fn mark_messages_read(&self, session_id: &str) -> Result<usize> {
         let updated = self.conn.execute(
             "UPDATE messages SET read = 1 WHERE to_session = ?1 AND read = 0",
             rusqlite::params![session_id],
+        )?;
+
+        Ok(updated)
+    }
+
+    pub fn mark_message_read(&self, message_id: i64) -> Result<usize> {
+        let updated = self.conn.execute(
+            "UPDATE messages SET read = 1 WHERE id = ?1 AND read = 0",
+            rusqlite::params![message_id],
         )?;
 
         Ok(updated)

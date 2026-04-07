@@ -9,6 +9,7 @@ use super::output::SessionOutputStore;
 use super::runtime::capture_command_output;
 use super::store::StateStore;
 use super::{Session, SessionMetrics, SessionState};
+use crate::comms::{self, MessageType};
 use crate::config::Config;
 use crate::observability::{log_tool_call, ToolCallEvent, ToolLogEntry, ToolLogPage, ToolLogger};
 use crate::worktree;
@@ -84,6 +85,52 @@ pub async fn assign_session(
         &std::env::current_exe().context("Failed to resolve ECC executable path")?,
     )
     .await
+}
+
+pub async fn drain_inbox(
+    db: &StateStore,
+    cfg: &Config,
+    lead_id: &str,
+    agent_type: &str,
+    use_worktree: bool,
+    limit: usize,
+) -> Result<Vec<InboxDrainOutcome>> {
+    let repo_root =
+        std::env::current_dir().context("Failed to resolve current working directory")?;
+    let runner_program = std::env::current_exe().context("Failed to resolve ECC executable path")?;
+    let lead = resolve_session(db, lead_id)?;
+    let messages = db.unread_task_handoffs_for_session(&lead.id, limit)?;
+    let mut outcomes = Vec::new();
+
+    for message in messages {
+        let task = match comms::parse(&message.content) {
+            Some(MessageType::TaskHandoff { task, .. }) => task,
+            _ => extract_legacy_handoff_task(&message.content)
+                .unwrap_or_else(|| message.content.clone()),
+        };
+
+        let outcome = assign_session_in_dir_with_runner_program(
+            db,
+            cfg,
+            &lead.id,
+            &task,
+            agent_type,
+            use_worktree,
+            &repo_root,
+            &runner_program,
+        )
+        .await?;
+
+        let _ = db.mark_message_read(message.id)?;
+        outcomes.push(InboxDrainOutcome {
+            message_id: message.id,
+            task,
+            session_id: outcome.session_id,
+            action: outcome.action,
+        });
+    }
+
+    Ok(outcomes)
 }
 
 pub async fn stop_session(db: &StateStore, id: &str) -> Result<()> {
@@ -599,6 +646,14 @@ fn send_task_handoff(
     )
 }
 
+fn extract_legacy_handoff_task(content: &str) -> Option<String> {
+    let value: serde_json::Value = serde_json::from_str(content).ok()?;
+    value
+        .get("task")
+        .and_then(|task| task.as_str())
+        .map(ToOwned::to_owned)
+}
+
 async fn spawn_session_runner_for_program(
     task: &str,
     session_id: &str,
@@ -745,6 +800,13 @@ pub struct TeamStatus {
 }
 
 pub struct AssignmentOutcome {
+    pub session_id: String,
+    pub action: AssignmentAction,
+}
+
+pub struct InboxDrainOutcome {
+    pub message_id: i64,
+    pub task: String,
     pub session_id: String,
     pub action: AssignmentAction,
 }
@@ -1526,6 +1588,53 @@ mod tests {
         assert!(messages.iter().any(|message| {
             message.msg_type == "task_handoff"
                 && message.content.contains("New delegated task")
+        }));
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn drain_inbox_routes_unread_task_handoffs_and_marks_them_read() -> Result<()> {
+        let tempdir = TestDir::new("manager-drain-inbox")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "lead task".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(42),
+            worktree: None,
+            created_at: now - Duration::minutes(3),
+            updated_at: now - Duration::minutes(3),
+            metrics: SessionMetrics::default(),
+        })?;
+
+        db.send_message(
+            "planner",
+            "lead",
+            "{\"task\":\"Review auth changes\",\"context\":\"Inbound request\"}",
+            "task_handoff",
+        )?;
+
+        let outcomes = drain_inbox(&db, &cfg, "lead", "claude", true, 5).await?;
+        assert_eq!(outcomes.len(), 1);
+        assert_eq!(outcomes[0].task, "Review auth changes");
+        assert_eq!(outcomes[0].action, AssignmentAction::Spawned);
+
+        let unread = db.unread_message_counts()?;
+        assert_eq!(unread.get("lead"), None);
+
+        let messages = db.list_messages_for_session(&outcomes[0].session_id, 10)?;
+        assert!(messages.iter().any(|message| {
+            message.msg_type == "task_handoff"
+                && message.content.contains("Review auth changes")
         }));
 
         Ok(())

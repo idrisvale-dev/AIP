@@ -64,6 +64,20 @@ enum Commands {
         #[arg(short, long, default_value_t = true)]
         worktree: bool,
     },
+    /// Route unread task handoffs from a lead session inbox through the assignment policy
+    DrainInbox {
+        /// Lead session ID or alias
+        session_id: String,
+        /// Agent type for routed delegates
+        #[arg(short, long, default_value = "claude")]
+        agent: String,
+        /// Create a dedicated worktree if new delegates must be spawned
+        #[arg(short, long, default_value_t = true)]
+        worktree: bool,
+        /// Maximum unread task handoffs to route
+        #[arg(long, default_value_t = 5)]
+        limit: usize,
+    },
     /// List active sessions
     Sessions,
     /// Show session details
@@ -225,6 +239,45 @@ async fn main() -> Result<()> {
                     session::manager::AssignmentAction::ReusedActive => "reused-active",
                 }
             );
+        }
+        Some(Commands::DrainInbox {
+            session_id,
+            agent,
+            worktree: use_worktree,
+            limit,
+        }) => {
+            let lead_id = resolve_session_id(&db, &session_id)?;
+            let outcomes = session::manager::drain_inbox(
+                &db,
+                &cfg,
+                &lead_id,
+                &agent,
+                use_worktree,
+                limit,
+            )
+            .await?;
+            if outcomes.is_empty() {
+                println!("No unread task handoffs for {}", short_session(&lead_id));
+            } else {
+                println!(
+                    "Routed {} inbox task handoff(s) from {}",
+                    outcomes.len(),
+                    short_session(&lead_id)
+                );
+                for outcome in outcomes {
+                    println!(
+                        "- {} -> {} ({}) | {}",
+                        outcome.message_id,
+                        short_session(&outcome.session_id),
+                        match outcome.action {
+                            session::manager::AssignmentAction::Spawned => "spawned",
+                            session::manager::AssignmentAction::ReusedIdle => "reused-idle",
+                            session::manager::AssignmentAction::ReusedActive => "reused-active",
+                        },
+                        outcome.task
+                    );
+                }
+            }
         }
         Some(Commands::Sessions) => {
             let sessions = session::manager::list_sessions(&db)?;
@@ -540,6 +593,34 @@ mod tests {
                 assert_eq!(agent, "claude");
             }
             _ => panic!("expected assign subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_drain_inbox_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "drain-inbox",
+            "lead",
+            "--agent",
+            "claude",
+            "--limit",
+            "3",
+        ])
+        .expect("drain-inbox should parse");
+
+        match cli.command {
+            Some(Commands::DrainInbox {
+                session_id,
+                agent,
+                limit,
+                ..
+            }) => {
+                assert_eq!(session_id, "lead");
+                assert_eq!(agent, "claude");
+                assert_eq!(limit, 3);
+            }
+            _ => panic!("expected drain-inbox subcommand"),
         }
     }
 }
