@@ -37,7 +37,7 @@ pub struct Dashboard {
     unread_message_counts: HashMap<String, usize>,
     selected_messages: Vec<SessionMessage>,
     selected_parent_session: Option<String>,
-    selected_child_sessions: Vec<String>,
+    selected_child_sessions: Vec<DelegatedChildSummary>,
     logs: Vec<ToolLogEntry>,
     selected_diff_summary: Option<String>,
     selected_pane: Pane,
@@ -86,6 +86,13 @@ struct AggregateUsage {
     token_state: BudgetState,
     cost_state: BudgetState,
     overall_state: BudgetState,
+}
+
+#[derive(Debug, Clone)]
+struct DelegatedChildSummary {
+    session_id: String,
+    state: SessionState,
+    unread_messages: usize,
 }
 
 impl Dashboard {
@@ -794,7 +801,25 @@ impl Dashboard {
         };
 
         self.selected_child_sessions = match self.db.delegated_children(&session_id, 3) {
-            Ok(children) => children,
+            Ok(children) => children
+                .into_iter()
+                .filter_map(|child_id| match self.db.get_session(&child_id) {
+                    Ok(Some(session)) => Some(DelegatedChildSummary {
+                        unread_messages: self
+                            .unread_message_counts
+                            .get(&child_id)
+                            .copied()
+                            .unwrap_or(0),
+                        state: session.state,
+                        session_id: child_id,
+                    }),
+                    Ok(None) => None,
+                    Err(error) => {
+                        tracing::warn!("Failed to load delegated child session {}: {error}", child_id);
+                        None
+                    }
+                })
+                .collect(),
             Err(error) => {
                 tracing::warn!("Failed to load delegated child sessions: {error}");
                 Vec::new()
@@ -892,14 +917,15 @@ impl Dashboard {
             }
 
             if !self.selected_child_sessions.is_empty() {
-                lines.push(format!(
-                    "Delegates {}",
-                    self.selected_child_sessions
-                        .iter()
-                        .map(|session_id| format_session_id(session_id))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ));
+                lines.push("Delegates".to_string());
+                for child in &self.selected_child_sessions {
+                    lines.push(format!(
+                        "- {} [{}] | inbox {}",
+                        format_session_id(&child.session_id),
+                        session_state_label(&child.state),
+                        child.unread_messages
+                    ));
+                }
             }
 
             if let Some(worktree) = session.worktree.as_ref() {
