@@ -393,7 +393,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  dra[i]n inbox  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -439,6 +439,7 @@ impl Dashboard {
             "",
             "  n       New session",
             "  a       Assign follow-up work from selected session",
+            "  i       Drain unread task handoffs from selected session inbox",
             "  s       Stop selected session",
             "  u       Resume selected session",
             "  x       Cleanup selected worktree",
@@ -666,6 +667,60 @@ impl Dashboard {
         self.sync_selected_messages();
         self.sync_selected_lineage();
         self.refresh_logs();
+    }
+
+    pub async fn drain_inbox_selected(&mut self) {
+        let Some(source_session) = self.sessions.get(self.selected_session) else {
+            return;
+        };
+
+        let agent = self.cfg.default_agent.clone();
+        let source_session_id = source_session.id.clone();
+
+        let outcomes = match manager::drain_inbox(
+            &self.db,
+            &self.cfg,
+            &source_session_id,
+            &agent,
+            true,
+            self.cfg.max_parallel_sessions,
+        )
+        .await
+        {
+            Ok(outcomes) => outcomes,
+            Err(error) => {
+                tracing::warn!(
+                    "Failed to drain inbox for session {}: {error}",
+                    source_session_id
+                );
+                self.set_operator_note(format!(
+                    "drain inbox failed for {}: {error}",
+                    format_session_id(&source_session_id)
+                ));
+                return;
+            }
+        };
+
+        self.refresh();
+        self.sync_selection_by_id(Some(&source_session_id));
+        self.sync_selected_output();
+        self.sync_selected_diff();
+        self.sync_selected_messages();
+        self.sync_selected_lineage();
+        self.refresh_logs();
+
+        if outcomes.is_empty() {
+            self.set_operator_note(format!(
+                "no unread handoffs for {}",
+                format_session_id(&source_session_id)
+            ));
+        } else {
+            self.set_operator_note(format!(
+                "drained {} handoff(s) from {}",
+                outcomes.len(),
+                format_session_id(&source_session_id)
+            ));
+        }
     }
 
     pub async fn stop_selected(&mut self) {
