@@ -41,6 +41,7 @@ pub struct Dashboard {
     selected_parent_session: Option<String>,
     selected_child_sessions: Vec<DelegatedChildSummary>,
     selected_team_summary: Option<TeamSummary>,
+    selected_route_preview: Option<String>,
     logs: Vec<ToolLogEntry>,
     selected_diff_summary: Option<String>,
     selected_pane: Pane,
@@ -140,6 +141,7 @@ impl Dashboard {
             selected_parent_session: None,
             selected_child_sessions: Vec::new(),
             selected_team_summary: None,
+            selected_route_preview: None,
             logs: Vec::new(),
             selected_diff_summary: None,
             selected_pane: Pane::Sessions,
@@ -995,6 +997,7 @@ impl Dashboard {
             self.selected_parent_session = None;
             self.selected_child_sessions.clear();
             self.selected_team_summary = None;
+            self.selected_route_preview = None;
             return;
         };
 
@@ -1010,12 +1013,19 @@ impl Dashboard {
             Ok(children) => {
                 let mut delegated = Vec::new();
                 let mut team = TeamSummary::default();
+                let mut route_candidates = Vec::new();
 
                 for child_id in children {
                     match self.db.get_session(&child_id) {
                         Ok(Some(session)) => {
                             team.total += 1;
-                            match session.state {
+                            let unread_messages = self
+                                .unread_message_counts
+                                .get(&child_id)
+                                .copied()
+                                .unwrap_or(0);
+                            let state = session.state.clone();
+                            match state {
                                 SessionState::Idle => team.idle += 1,
                                 SessionState::Running => team.running += 1,
                                 SessionState::Pending => team.pending += 1,
@@ -1024,13 +1034,14 @@ impl Dashboard {
                                 SessionState::Completed => {}
                             }
 
+                            route_candidates.push(DelegatedChildSummary {
+                                unread_messages,
+                                state: state.clone(),
+                                session_id: child_id.clone(),
+                            });
                             delegated.push(DelegatedChildSummary {
-                                unread_messages: self
-                                    .unread_message_counts
-                                    .get(&child_id)
-                                    .copied()
-                                    .unwrap_or(0),
-                                state: session.state,
+                                unread_messages,
+                                state,
                                 session_id: child_id,
                             });
                         }
@@ -1045,15 +1056,69 @@ impl Dashboard {
                 }
 
                 self.selected_team_summary = if team.total > 0 { Some(team) } else { None };
+                self.selected_route_preview =
+                    self.build_route_preview(team.total, &route_candidates);
                 delegated.truncate(3);
                 delegated
             }
             Err(error) => {
                 tracing::warn!("Failed to load delegated child sessions: {error}");
                 self.selected_team_summary = None;
+                self.selected_route_preview = None;
                 Vec::new()
             }
         };
+    }
+
+    fn build_route_preview(
+        &self,
+        delegate_count: usize,
+        delegates: &[DelegatedChildSummary],
+    ) -> Option<String> {
+        if let Some(idle_clear) = delegates
+            .iter()
+            .filter(|delegate| delegate.state == SessionState::Idle && delegate.unread_messages == 0)
+            .min_by_key(|delegate| delegate.session_id.as_str())
+        {
+            return Some(format!(
+                "reuse idle {}",
+                format_session_id(&idle_clear.session_id)
+            ));
+        }
+
+        if delegate_count < self.cfg.max_parallel_sessions {
+            return Some("spawn new delegate".to_string());
+        }
+
+        if let Some(idle_backed_up) = delegates
+            .iter()
+            .filter(|delegate| delegate.state == SessionState::Idle)
+            .min_by_key(|delegate| (delegate.unread_messages, delegate.session_id.as_str()))
+        {
+            return Some(format!(
+                "reuse idle {} with inbox {}",
+                format_session_id(&idle_backed_up.session_id),
+                idle_backed_up.unread_messages
+            ));
+        }
+
+        if let Some(active_delegate) = delegates
+            .iter()
+            .filter(|delegate| matches!(delegate.state, SessionState::Running | SessionState::Pending))
+            .min_by_key(|delegate| (delegate.unread_messages, delegate.session_id.as_str()))
+        {
+            return Some(format!(
+                "reuse active {} with inbox {}",
+                format_session_id(&active_delegate.session_id),
+                active_delegate.unread_messages
+            ));
+        }
+
+        if delegate_count == 0 {
+            Some("spawn new delegate".to_string())
+        } else {
+            Some("spawn fallback delegate".to_string())
+        }
     }
 
     fn selected_session_id(&self) -> Option<&str> {
@@ -1164,6 +1229,10 @@ impl Dashboard {
                 self.global_handoff_backlog_messages,
                 if self.cfg.auto_dispatch_unread_handoffs { "on" } else { "off" }
             ));
+
+            if let Some(route_preview) = self.selected_route_preview.as_ref() {
+                lines.push(format!("Next route {route_preview}"));
+            }
 
             if !self.selected_child_sessions.is_empty() {
                 lines.push("Delegates".to_string());
@@ -1752,10 +1821,12 @@ mod tests {
         });
         dashboard.global_handoff_backlog_leads = 2;
         dashboard.global_handoff_backlog_messages = 5;
+        dashboard.selected_route_preview = Some("reuse idle worker-1".to_string());
 
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Team 3/8 | idle 1 | running 1 | pending 1 | failed 0 | stopped 0"));
         assert!(text.contains("Global handoff backlog 2 lead(s) / 5 handoff(s) | Auto-dispatch off"));
+        assert!(text.contains("Next route reuse idle worker-1"));
     }
 
     #[test]
@@ -2171,6 +2242,7 @@ mod tests {
             selected_parent_session: None,
             selected_child_sessions: Vec::new(),
             selected_team_summary: None,
+            selected_route_preview: None,
             logs: Vec::new(),
             selected_diff_summary: None,
             selected_pane: Pane::Sessions,
