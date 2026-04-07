@@ -44,6 +44,7 @@ pub struct Dashboard {
     selected_pane: Pane,
     selected_session: usize,
     show_help: bool,
+    operator_note: Option<String>,
     output_follow: bool,
     output_scroll_offset: usize,
     last_output_height: usize,
@@ -140,6 +141,7 @@ impl Dashboard {
             selected_pane: Pane::Sessions,
             selected_session: 0,
             show_help: false,
+            operator_note: None,
             output_follow: true,
             output_scroll_offset: 0,
             last_output_height: 0,
@@ -394,6 +396,11 @@ impl Dashboard {
             " [n]ew session  [a]ssign  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
+        let text = if let Some(note) = self.operator_note.as_ref() {
+            format!(" {} |{}", truncate_for_dashboard(note, 96), text)
+        } else {
+            text
+        };
         let aggregate = self.aggregate_usage();
         let (summary_text, summary_style) = self.aggregate_cost_summary();
         let block = Block::default()
@@ -568,6 +575,7 @@ impl Dashboard {
             Ok(session_id) => session_id,
             Err(error) => {
                 tracing::warn!("Failed to create new session from dashboard: {error}");
+                self.set_operator_note(format!("new session failed: {error}"));
                 return;
             }
         };
@@ -607,6 +615,7 @@ impl Dashboard {
 
         self.refresh();
         self.sync_selection_by_id(Some(&session_id));
+        self.set_operator_note(format!("spawned session {}", format_session_id(&session_id)));
         self.reset_output_view();
         self.sync_selected_output();
         self.sync_selected_diff();
@@ -639,12 +648,18 @@ impl Dashboard {
                     "Failed to assign follow-up work from session {}: {error}",
                     source_session.id
                 );
+                self.set_operator_note(format!("assignment failed: {error}"));
                 return;
             }
         };
 
         self.refresh();
         self.sync_selection_by_id(Some(&outcome.session_id));
+        self.set_operator_note(format!(
+            "assigned via {} -> {}",
+            assignment_action_label(outcome.action),
+            format_session_id(&outcome.session_id)
+        ));
         self.reset_output_view();
         self.sync_selected_output();
         self.sync_selected_diff();
@@ -658,12 +673,15 @@ impl Dashboard {
             return;
         };
 
-        if let Err(error) = manager::stop_session(&self.db, &session.id).await {
+        let session_id = session.id.clone();
+        if let Err(error) = manager::stop_session(&self.db, &session_id).await {
             tracing::warn!("Failed to stop session {}: {error}", session.id);
+            self.set_operator_note(format!("stop failed for {}: {error}", format_session_id(&session_id)));
             return;
         }
 
         self.refresh();
+        self.set_operator_note(format!("stopped session {}", format_session_id(&session_id)));
     }
 
     pub async fn resume_selected(&mut self) {
@@ -671,12 +689,15 @@ impl Dashboard {
             return;
         };
 
-        if let Err(error) = manager::resume_session(&self.db, &self.cfg, &session.id).await {
+        let session_id = session.id.clone();
+        if let Err(error) = manager::resume_session(&self.db, &self.cfg, &session_id).await {
             tracing::warn!("Failed to resume session {}: {error}", session.id);
+            self.set_operator_note(format!("resume failed for {}: {error}", format_session_id(&session_id)));
             return;
         }
 
         self.refresh();
+        self.set_operator_note(format!("resumed session {}", format_session_id(&session_id)));
     }
 
     pub async fn cleanup_selected_worktree(&mut self) {
@@ -688,12 +709,18 @@ impl Dashboard {
             return;
         }
 
-        if let Err(error) = manager::cleanup_session_worktree(&self.db, &session.id).await {
+        let session_id = session.id.clone();
+        if let Err(error) = manager::cleanup_session_worktree(&self.db, &session_id).await {
             tracing::warn!("Failed to cleanup session {} worktree: {error}", session.id);
+            self.set_operator_note(format!(
+                "cleanup failed for {}: {error}",
+                format_session_id(&session_id)
+            ));
             return;
         }
 
         self.refresh();
+        self.set_operator_note(format!("cleaned worktree for {}", format_session_id(&session_id)));
     }
 
     pub async fn delete_selected_session(&mut self) {
@@ -701,12 +728,15 @@ impl Dashboard {
             return;
         };
 
-        if let Err(error) = manager::delete_session(&self.db, &session.id).await {
+        let session_id = session.id.clone();
+        if let Err(error) = manager::delete_session(&self.db, &session_id).await {
             tracing::warn!("Failed to delete session {}: {error}", session.id);
+            self.set_operator_note(format!("delete failed for {}: {error}", format_session_id(&session_id)));
             return;
         }
 
         self.refresh();
+        self.set_operator_note(format!("deleted session {}", format_session_id(&session_id)));
     }
 
     pub fn refresh(&mut self) {
@@ -1146,6 +1176,10 @@ impl Dashboard {
         items
     }
 
+    fn set_operator_note(&mut self, note: String) {
+        self.operator_note = Some(note);
+    }
+
     fn active_session_count(&self) -> usize {
         self.sessions
             .iter()
@@ -1451,6 +1485,14 @@ fn session_state_color(state: &SessionState) -> Color {
 
 fn format_session_id(id: &str) -> String {
     id.chars().take(8).collect()
+}
+
+fn assignment_action_label(action: manager::AssignmentAction) -> &'static str {
+    match action {
+        manager::AssignmentAction::Spawned => "spawned",
+        manager::AssignmentAction::ReusedIdle => "reused idle",
+        manager::AssignmentAction::ReusedActive => "reused active",
+    }
 }
 
 fn session_branch(session: &Session) -> String {
@@ -1966,6 +2008,7 @@ mod tests {
             selected_pane: Pane::Sessions,
             selected_session,
             show_help: false,
+            operator_note: None,
             output_follow: true,
             output_scroll_offset: 0,
             last_output_height: 0,
