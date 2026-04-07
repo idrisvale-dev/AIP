@@ -411,6 +411,40 @@ impl StateStore {
         Ok(updated)
     }
 
+    pub fn latest_task_handoff_source(&self, session_id: &str) -> Result<Option<String>> {
+        self.conn
+            .query_row(
+                "SELECT from_session
+                 FROM messages
+                 WHERE to_session = ?1 AND msg_type = 'task_handoff'
+                 ORDER BY id DESC
+                 LIMIT 1",
+                rusqlite::params![session_id],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    pub fn delegated_children(&self, session_id: &str, limit: usize) -> Result<Vec<String>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT to_session
+             FROM messages
+             WHERE from_session = ?1 AND msg_type = 'task_handoff'
+             GROUP BY to_session
+             ORDER BY MAX(id) DESC
+             LIMIT ?2",
+        )?;
+
+        let children = stmt
+            .query_map(rusqlite::params![session_id, limit as i64], |row| {
+                row.get::<_, String>(0)
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(children)
+    }
+
     pub fn append_output_line(
         &self,
         session_id: &str,
@@ -724,6 +758,31 @@ mod tests {
         let unread_after = db.unread_message_counts()?;
         assert_eq!(unread_after.get("worker"), None);
         assert_eq!(unread_after.get("planner"), Some(&1));
+
+        db.send_message(
+            "planner",
+            "worker-2",
+            "{\"task\":\"Review auth flow\",\"context\":\"Delegated from planner\"}",
+            "task_handoff",
+        )?;
+        db.send_message(
+            "planner",
+            "worker-3",
+            "{\"task\":\"Check billing\",\"context\":\"Delegated from planner\"}",
+            "task_handoff",
+        )?;
+
+        assert_eq!(
+            db.latest_task_handoff_source("worker-2")?,
+            Some("planner".to_string())
+        );
+        assert_eq!(
+            db.delegated_children("planner", 10)?,
+            vec![
+                "worker-3".to_string(),
+                "worker-2".to_string(),
+            ]
+        );
 
         Ok(())
     }

@@ -30,7 +30,12 @@ pub fn list_sessions(db: &StateStore) -> Result<Vec<Session>> {
 
 pub fn get_status(db: &StateStore, id: &str) -> Result<SessionStatus> {
     let session = resolve_session(db, id)?;
-    Ok(SessionStatus(session))
+    let session_id = session.id.clone();
+    Ok(SessionStatus {
+        session,
+        parent_session: db.latest_task_handoff_source(&session_id)?,
+        delegated_children: db.delegated_children(&session_id, 5)?,
+    })
 }
 
 pub async fn stop_session(db: &StateStore, id: &str) -> Result<()> {
@@ -449,15 +454,22 @@ async fn kill_process(pid: u32) -> Result<()> {
     }
 }
 
-pub struct SessionStatus(Session);
+pub struct SessionStatus {
+    session: Session,
+    parent_session: Option<String>,
+    delegated_children: Vec<String>,
+}
 
 impl fmt::Display for SessionStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = &self.0;
+        let s = &self.session;
         writeln!(f, "Session: {}", s.id)?;
         writeln!(f, "Task:    {}", s.task)?;
         writeln!(f, "Agent:   {}", s.agent_type)?;
         writeln!(f, "State:   {}", s.state)?;
+        if let Some(parent) = self.parent_session.as_ref() {
+            writeln!(f, "Parent:  {}", parent)?;
+        }
         if let Some(pid) = s.pid {
             writeln!(f, "PID:     {}", pid)?;
         }
@@ -469,6 +481,9 @@ impl fmt::Display for SessionStatus {
         writeln!(f, "Tools:   {}", s.metrics.tool_calls)?;
         writeln!(f, "Files:   {}", s.metrics.files_changed)?;
         writeln!(f, "Cost:    ${:.4}", s.metrics.cost_usd)?;
+        if !self.delegated_children.is_empty() {
+            writeln!(f, "Children: {}", self.delegated_children.join(", "))?;
+        }
         writeln!(f, "Created: {}", s.created_at)?;
         write!(f, "Updated: {}", s.updated_at)
     }
@@ -848,7 +863,44 @@ mod tests {
         db.insert_session(&build_session("newer", SessionState::Idle, newer))?;
 
         let status = get_status(&db, "latest")?;
-        assert_eq!(status.0.id, "newer");
+        assert_eq!(status.session.id, "newer");
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_status_surfaces_handoff_lineage() -> Result<()> {
+        let tempdir = TestDir::new("manager-status-lineage")?;
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&build_session("parent", SessionState::Running, now - Duration::minutes(2)))?;
+        db.insert_session(&build_session("child", SessionState::Pending, now - Duration::minutes(1)))?;
+        db.insert_session(&build_session("sibling", SessionState::Idle, now))?;
+
+        db.send_message(
+            "parent",
+            "child",
+            "{\"task\":\"Review auth flow\",\"context\":\"Delegated from parent\"}",
+            "task_handoff",
+        )?;
+        db.send_message(
+            "parent",
+            "sibling",
+            "{\"task\":\"Check billing\",\"context\":\"Delegated from parent\"}",
+            "task_handoff",
+        )?;
+
+        let status = get_status(&db, "parent")?;
+        let rendered = status.to_string();
+
+        assert!(rendered.contains("Children:"));
+        assert!(rendered.contains("child"));
+        assert!(rendered.contains("sibling"));
+
+        let child_status = get_status(&db, "child")?;
+        assert_eq!(child_status.parent_session.as_deref(), Some("parent"));
 
         Ok(())
     }

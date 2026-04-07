@@ -36,6 +36,8 @@ pub struct Dashboard {
     session_output_cache: HashMap<String, Vec<OutputLine>>,
     unread_message_counts: HashMap<String, usize>,
     selected_messages: Vec<SessionMessage>,
+    selected_parent_session: Option<String>,
+    selected_child_sessions: Vec<String>,
     logs: Vec<ToolLogEntry>,
     selected_diff_summary: Option<String>,
     selected_pane: Pane,
@@ -112,6 +114,8 @@ impl Dashboard {
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
             selected_messages: Vec::new(),
+            selected_parent_session: None,
+            selected_child_sessions: Vec::new(),
             logs: Vec::new(),
             selected_diff_summary: None,
             selected_pane: Pane::Sessions,
@@ -127,6 +131,7 @@ impl Dashboard {
         dashboard.sync_selected_output();
         dashboard.sync_selected_diff();
         dashboard.sync_selected_messages();
+        dashboard.sync_selected_lineage();
         dashboard.refresh_logs();
         dashboard
     }
@@ -474,6 +479,7 @@ impl Dashboard {
                 self.sync_selected_output();
                 self.sync_selected_diff();
                 self.sync_selected_messages();
+                self.sync_selected_lineage();
                 self.refresh_logs();
             }
             Pane::Output => {
@@ -507,6 +513,7 @@ impl Dashboard {
                 self.sync_selected_output();
                 self.sync_selected_diff();
                 self.sync_selected_messages();
+                self.sync_selected_lineage();
                 self.refresh_logs();
             }
             Pane::Output => {
@@ -584,6 +591,7 @@ impl Dashboard {
         self.sync_selected_output();
         self.sync_selected_diff();
         self.sync_selected_messages();
+        self.sync_selected_lineage();
         self.refresh_logs();
     }
 
@@ -685,6 +693,7 @@ impl Dashboard {
         self.sync_selected_output();
         self.sync_selected_diff();
         self.sync_selected_messages();
+        self.sync_selected_lineage();
         self.refresh_logs();
     }
 
@@ -764,6 +773,30 @@ impl Dashboard {
             Ok(messages) => messages,
             Err(error) => {
                 tracing::warn!("Failed to load session messages: {error}");
+                Vec::new()
+            }
+        };
+    }
+
+    fn sync_selected_lineage(&mut self) {
+        let Some(session_id) = self.selected_session_id().map(ToOwned::to_owned) else {
+            self.selected_parent_session = None;
+            self.selected_child_sessions.clear();
+            return;
+        };
+
+        self.selected_parent_session = match self.db.latest_task_handoff_source(&session_id) {
+            Ok(parent) => parent,
+            Err(error) => {
+                tracing::warn!("Failed to load session parent linkage: {error}");
+                None
+            }
+        };
+
+        self.selected_child_sessions = match self.db.delegated_children(&session_id, 3) {
+            Ok(children) => children,
+            Err(error) => {
+                tracing::warn!("Failed to load delegated child sessions: {error}");
                 Vec::new()
             }
         };
@@ -853,6 +886,21 @@ impl Dashboard {
                 ),
                 format!("Task {}", session.task),
             ];
+
+            if let Some(parent) = self.selected_parent_session.as_ref() {
+                lines.push(format!("Delegated from {}", format_session_id(parent)));
+            }
+
+            if !self.selected_child_sessions.is_empty() {
+                lines.push(format!(
+                    "Delegates {}",
+                    self.selected_child_sessions
+                        .iter()
+                        .map(|session_id| format_session_id(session_id))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+            }
 
             if let Some(worktree) = session.worktree.as_ref() {
                 lines.push(format!(
@@ -1770,6 +1818,8 @@ mod tests {
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
             selected_messages: Vec::new(),
+            selected_parent_session: None,
+            selected_child_sessions: Vec::new(),
             logs: Vec::new(),
             selected_diff_summary: None,
             selected_pane: Pane::Sessions,
