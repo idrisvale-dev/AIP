@@ -400,7 +400,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  dra[i]n inbox  [g]lobal dispatch  toggle [p]olicy  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  dra[i]n inbox  [g]lobal dispatch  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -450,6 +450,7 @@ impl Dashboard {
             "  i       Drain unread task handoffs from selected session inbox",
             "  g       Auto-dispatch unread handoffs across lead sessions",
             "  p       Toggle daemon auto-dispatch policy and persist config",
+            "  ,/.     Decrease/increase auto-dispatch limit per lead",
             "  s       Stop selected session",
             "  u       Resume selected session",
             "  x       Cleanup selected worktree",
@@ -932,6 +933,31 @@ impl Dashboard {
         }
     }
 
+    pub fn adjust_auto_dispatch_limit(&mut self, delta: isize) {
+        let next = (self.cfg.auto_dispatch_limit_per_session as isize + delta).clamp(1, 50) as usize;
+        if next == self.cfg.auto_dispatch_limit_per_session {
+            self.set_operator_note(format!(
+                "auto-dispatch limit unchanged at {} handoff(s) per lead",
+                self.cfg.auto_dispatch_limit_per_session
+            ));
+            return;
+        }
+
+        let previous = self.cfg.auto_dispatch_limit_per_session;
+        self.cfg.auto_dispatch_limit_per_session = next;
+        match self.cfg.save() {
+            Ok(()) => self.set_operator_note(format!(
+                "auto-dispatch limit set to {} handoff(s) per lead | saved to {}",
+                self.cfg.auto_dispatch_limit_per_session,
+                crate::config::Config::config_path().display()
+            )),
+            Err(error) => {
+                self.cfg.auto_dispatch_limit_per_session = previous;
+                self.set_operator_note(format!("failed to persist auto-dispatch limit: {error}"));
+            }
+        }
+    }
+
     pub async fn tick(&mut self) {
         loop {
             match self.output_rx.try_recv() {
@@ -1300,10 +1326,11 @@ impl Dashboard {
             }
 
             lines.push(format!(
-                "Global handoff backlog {} lead(s) / {} handoff(s) | Auto-dispatch {}",
+                "Global handoff backlog {} lead(s) / {} handoff(s) | Auto-dispatch {} @ {}/lead",
                 self.global_handoff_backlog_leads,
                 self.global_handoff_backlog_messages,
-                if self.cfg.auto_dispatch_unread_handoffs { "on" } else { "off" }
+                if self.cfg.auto_dispatch_unread_handoffs { "on" } else { "off" },
+                self.cfg.auto_dispatch_limit_per_session
             ));
 
             if let Some(route_preview) = self.selected_route_preview.as_ref() {
@@ -1901,7 +1928,7 @@ mod tests {
 
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Team 3/8 | idle 1 | running 1 | pending 1 | failed 0 | stopped 0"));
-        assert!(text.contains("Global handoff backlog 2 lead(s) / 5 handoff(s) | Auto-dispatch off"));
+        assert!(text.contains("Global handoff backlog 2 lead(s) / 5 handoff(s) | Auto-dispatch off @ 5/lead"));
         assert!(text.contains("Next route reuse idle worker-1"));
     }
 
