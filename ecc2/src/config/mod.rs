@@ -73,11 +73,15 @@ impl Config {
         block: 0.85,
     };
 
-    pub fn load() -> Result<Self> {
-        let config_path = dirs::home_dir()
+    pub fn config_path() -> PathBuf {
+        dirs::home_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join(".claude")
-            .join("ecc2.toml");
+            .join("ecc2.toml")
+    }
+
+    pub fn load() -> Result<Self> {
+        let config_path = Self::config_path();
 
         if config_path.exists() {
             let content = std::fs::read_to_string(&config_path)?;
@@ -86,6 +90,20 @@ impl Config {
         } else {
             Ok(Config::default())
         }
+    }
+
+    pub fn save(&self) -> Result<()> {
+        self.save_to_path(&Self::config_path())
+    }
+
+    pub fn save_to_path(&self, path: &std::path::Path) -> Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let content = toml::to_string_pretty(self)?;
+        std::fs::write(path, content)?;
+        Ok(())
     }
 }
 
@@ -98,6 +116,7 @@ impl Default for RiskThresholds {
 #[cfg(test)]
 mod tests {
     use super::{Config, PaneLayout};
+    use uuid::Uuid;
 
     #[test]
     fn default_includes_positive_budget_thresholds() {
@@ -152,5 +171,22 @@ theme = "Dark"
     #[test]
     fn default_risk_thresholds_are_applied() {
         assert_eq!(Config::default().risk_thresholds, Config::RISK_THRESHOLDS);
+    }
+
+    #[test]
+    fn save_round_trips_auto_dispatch_settings() {
+        let path = std::env::temp_dir().join(format!("ecc2-config-{}.toml", Uuid::new_v4()));
+        let mut config = Config::default();
+        config.auto_dispatch_unread_handoffs = true;
+        config.auto_dispatch_limit_per_session = 9;
+
+        config.save_to_path(&path).unwrap();
+        let content = std::fs::read_to_string(&path).unwrap();
+        let loaded: Config = toml::from_str(&content).unwrap();
+
+        assert!(loaded.auto_dispatch_unread_handoffs);
+        assert_eq!(loaded.auto_dispatch_limit_per_session, 9);
+
+        let _ = std::fs::remove_file(path);
     }
 }

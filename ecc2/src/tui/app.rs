@@ -43,6 +43,7 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
                     (_, KeyCode::Char('b')) => dashboard.rebalance_selected_team().await,
                     (_, KeyCode::Char('i')) => dashboard.drain_inbox_selected().await,
                     (_, KeyCode::Char('g')) => dashboard.auto_dispatch_backlog().await,
+                    (_, KeyCode::Char('p')) => dashboard.toggle_auto_dispatch_policy(),
                     (_, KeyCode::Char('s')) => dashboard.stop_selected().await,
                     (_, KeyCode::Char('u')) => dashboard.resume_selected().await,
                     (_, KeyCode::Char('x')) => dashboard.cleanup_selected_worktree().await,

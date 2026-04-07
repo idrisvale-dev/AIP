@@ -400,7 +400,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  dra[i]n inbox  [g]lobal dispatch  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  dra[i]n inbox  [g]lobal dispatch  toggle [p]olicy  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -449,6 +449,7 @@ impl Dashboard {
             "  b       Rebalance backed-up delegate inboxes for selected lead",
             "  i       Drain unread task handoffs from selected session inbox",
             "  g       Auto-dispatch unread handoffs across lead sessions",
+            "  p       Toggle daemon auto-dispatch policy and persist config",
             "  s       Stop selected session",
             "  u       Resume selected session",
             "  x       Cleanup selected worktree",
@@ -908,6 +909,27 @@ impl Dashboard {
 
     pub fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
+    }
+
+    pub fn toggle_auto_dispatch_policy(&mut self) {
+        self.cfg.auto_dispatch_unread_handoffs = !self.cfg.auto_dispatch_unread_handoffs;
+        match self.cfg.save() {
+            Ok(()) => {
+                let state = if self.cfg.auto_dispatch_unread_handoffs {
+                    "enabled"
+                } else {
+                    "disabled"
+                };
+                self.set_operator_note(format!(
+                    "daemon auto-dispatch {state} | saved to {}",
+                    crate::config::Config::config_path().display()
+                ));
+            }
+            Err(error) => {
+                self.cfg.auto_dispatch_unread_handoffs = !self.cfg.auto_dispatch_unread_handoffs;
+                self.set_operator_note(format!("failed to persist auto-dispatch policy: {error}"));
+            }
+        }
     }
 
     pub async fn tick(&mut self) {
