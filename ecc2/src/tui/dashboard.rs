@@ -35,6 +35,8 @@ pub struct Dashboard {
     sessions: Vec<Session>,
     session_output_cache: HashMap<String, Vec<OutputLine>>,
     unread_message_counts: HashMap<String, usize>,
+    global_handoff_backlog_leads: usize,
+    global_handoff_backlog_messages: usize,
     selected_messages: Vec<SessionMessage>,
     selected_parent_session: Option<String>,
     selected_child_sessions: Vec<DelegatedChildSummary>,
@@ -132,6 +134,8 @@ impl Dashboard {
             sessions,
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
+            global_handoff_backlog_leads: 0,
+            global_handoff_backlog_messages: 0,
             selected_messages: Vec::new(),
             selected_parent_session: None,
             selected_child_sessions: Vec::new(),
@@ -149,6 +153,7 @@ impl Dashboard {
             session_table_state,
         };
         dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap_or_default();
+        dashboard.sync_global_handoff_backlog();
         dashboard.sync_selected_output();
         dashboard.sync_selected_diff();
         dashboard.sync_selected_messages();
@@ -878,6 +883,7 @@ impl Dashboard {
                 HashMap::new()
             }
         };
+        self.sync_global_handoff_backlog();
         self.sync_selection_by_id(selected_id.as_deref());
         self.ensure_selected_pane_visible();
         self.sync_selected_output();
@@ -909,6 +915,22 @@ impl Dashboard {
     fn ensure_selected_pane_visible(&mut self) {
         if !self.visible_panes().contains(&self.selected_pane) {
             self.selected_pane = Pane::Sessions;
+        }
+    }
+
+    fn sync_global_handoff_backlog(&mut self) {
+        let limit = self.sessions.len().max(1);
+        match self.db.unread_task_handoff_targets(limit) {
+            Ok(targets) => {
+                self.global_handoff_backlog_leads = targets.len();
+                self.global_handoff_backlog_messages =
+                    targets.iter().map(|(_, unread_count)| *unread_count).sum();
+            }
+            Err(error) => {
+                tracing::warn!("Failed to refresh global handoff backlog: {error}");
+                self.global_handoff_backlog_leads = 0;
+                self.global_handoff_backlog_messages = 0;
+            }
         }
     }
 
@@ -1135,6 +1157,13 @@ impl Dashboard {
                     team.stopped
                 ));
             }
+
+            lines.push(format!(
+                "Global handoff backlog {} lead(s) / {} handoff(s) | Auto-dispatch {}",
+                self.global_handoff_backlog_leads,
+                self.global_handoff_backlog_messages,
+                if self.cfg.auto_dispatch_unread_handoffs { "on" } else { "off" }
+            ));
 
             if !self.selected_child_sessions.is_empty() {
                 lines.push("Delegates".to_string());
@@ -1721,9 +1750,12 @@ mod tests {
             failed: 0,
             stopped: 0,
         });
+        dashboard.global_handoff_backlog_leads = 2;
+        dashboard.global_handoff_backlog_messages = 5;
 
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Team 3/8 | idle 1 | running 1 | pending 1 | failed 0 | stopped 0"));
+        assert!(text.contains("Global handoff backlog 2 lead(s) / 5 handoff(s) | Auto-dispatch off"));
     }
 
     #[test]
@@ -2133,6 +2165,8 @@ mod tests {
             sessions,
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
+            global_handoff_backlog_leads: 0,
+            global_handoff_backlog_messages: 0,
             selected_messages: Vec::new(),
             selected_parent_session: None,
             selected_child_sessions: Vec::new(),
