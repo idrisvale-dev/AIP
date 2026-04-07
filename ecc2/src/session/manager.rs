@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -35,6 +36,30 @@ pub fn get_status(db: &StateStore, id: &str) -> Result<SessionStatus> {
         session,
         parent_session: db.latest_task_handoff_source(&session_id)?,
         delegated_children: db.delegated_children(&session_id, 5)?,
+    })
+}
+
+pub fn get_team_status(db: &StateStore, id: &str, depth: usize) -> Result<TeamStatus> {
+    let root = resolve_session(db, id)?;
+    let unread_counts = db.unread_message_counts()?;
+    let mut visited = HashSet::new();
+    visited.insert(root.id.clone());
+
+    let mut descendants = Vec::new();
+    collect_delegation_descendants(
+        db,
+        &root.id,
+        depth,
+        1,
+        &unread_counts,
+        &mut visited,
+        &mut descendants,
+    )?;
+
+    Ok(TeamStatus {
+        root,
+        unread_messages: unread_counts,
+        descendants,
     })
 }
 
@@ -114,6 +139,48 @@ async fn resume_session_with_program(
     .await
     .with_context(|| format!("Failed to resume session {}", session.id))?;
     Ok(session.id)
+}
+
+fn collect_delegation_descendants(
+    db: &StateStore,
+    session_id: &str,
+    remaining_depth: usize,
+    current_depth: usize,
+    unread_counts: &std::collections::HashMap<String, usize>,
+    visited: &mut HashSet<String>,
+    descendants: &mut Vec<DelegatedSessionSummary>,
+) -> Result<()> {
+    if remaining_depth == 0 {
+        return Ok(());
+    }
+
+    for child_id in db.delegated_children(session_id, 50)? {
+        if !visited.insert(child_id.clone()) {
+            continue;
+        }
+
+        let Some(session) = db.get_session(&child_id)? else {
+            continue;
+        };
+
+        descendants.push(DelegatedSessionSummary {
+            depth: current_depth,
+            unread_messages: unread_counts.get(&child_id).copied().unwrap_or(0),
+            session,
+        });
+
+        collect_delegation_descendants(
+            db,
+            &child_id,
+            remaining_depth.saturating_sub(1),
+            current_depth + 1,
+            unread_counts,
+            visited,
+            descendants,
+        )?;
+    }
+
+    Ok(())
 }
 
 pub async fn cleanup_session_worktree(db: &StateStore, id: &str) -> Result<()> {
@@ -460,6 +527,18 @@ pub struct SessionStatus {
     delegated_children: Vec<String>,
 }
 
+pub struct TeamStatus {
+    root: Session,
+    unread_messages: std::collections::HashMap<String, usize>,
+    descendants: Vec<DelegatedSessionSummary>,
+}
+
+struct DelegatedSessionSummary {
+    depth: usize,
+    unread_messages: usize,
+    session: Session,
+}
+
 impl fmt::Display for SessionStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = &self.session;
@@ -486,6 +565,71 @@ impl fmt::Display for SessionStatus {
         }
         writeln!(f, "Created: {}", s.created_at)?;
         write!(f, "Updated: {}", s.updated_at)
+    }
+}
+
+impl fmt::Display for TeamStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Lead:    {} [{}]", self.root.id, self.root.state)?;
+        writeln!(f, "Task:    {}", self.root.task)?;
+        writeln!(f, "Agent:   {}", self.root.agent_type)?;
+        if let Some(worktree) = self.root.worktree.as_ref() {
+            writeln!(f, "Branch:  {}", worktree.branch)?;
+        }
+
+        let lead_unread = self.unread_messages.get(&self.root.id).copied().unwrap_or(0);
+        writeln!(f, "Inbox:   {}", lead_unread)?;
+
+        if self.descendants.is_empty() {
+            return write!(f, "Board:   no delegated sessions");
+        }
+
+        writeln!(f, "Board:")?;
+        let mut lanes: BTreeMap<&'static str, Vec<&DelegatedSessionSummary>> = BTreeMap::new();
+        for summary in &self.descendants {
+            lanes.entry(session_state_label(&summary.session.state))
+                .or_default()
+                .push(summary);
+        }
+
+        for lane in [
+            "Running",
+            "Idle",
+            "Pending",
+            "Failed",
+            "Stopped",
+            "Completed",
+        ] {
+            let Some(items) = lanes.get(lane) else {
+                continue;
+            };
+
+            writeln!(f, "  {lane}:")?;
+            for item in items {
+                writeln!(
+                    f,
+                    "    - {}{} [{}] | inbox {} | {}",
+                    "  ".repeat(item.depth.saturating_sub(1)),
+                    item.session.id,
+                    item.session.agent_type,
+                    item.unread_messages,
+                    item.session.task
+                )?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+fn session_state_label(state: &SessionState) -> &'static str {
+    match state {
+        SessionState::Pending => "Pending",
+        SessionState::Running => "Running",
+        SessionState::Idle => "Idle",
+        SessionState::Completed => "Completed",
+        SessionState::Failed => "Failed",
+        SessionState::Stopped => "Stopped",
     }
 }
 
@@ -901,6 +1045,51 @@ mod tests {
 
         let child_status = get_status(&db, "child")?;
         assert_eq!(child_status.parent_session.as_deref(), Some("parent"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_team_status_groups_delegated_children() -> Result<()> {
+        let tempdir = TestDir::new("manager-team-status")?;
+        let _cfg = build_config(tempdir.path());
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&build_session("lead", SessionState::Running, now - Duration::minutes(3)))?;
+        db.insert_session(&build_session("worker-a", SessionState::Running, now - Duration::minutes(2)))?;
+        db.insert_session(&build_session("worker-b", SessionState::Pending, now - Duration::minutes(1)))?;
+        db.insert_session(&build_session("reviewer", SessionState::Completed, now))?;
+
+        db.send_message(
+            "lead",
+            "worker-a",
+            "{\"task\":\"Implement auth\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+        db.send_message(
+            "lead",
+            "worker-b",
+            "{\"task\":\"Check billing\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+        db.send_message(
+            "worker-a",
+            "reviewer",
+            "{\"task\":\"Review auth\",\"context\":\"Delegated from worker-a\"}",
+            "task_handoff",
+        )?;
+
+        let team = get_team_status(&db, "lead", 2)?;
+        let rendered = team.to_string();
+
+        assert!(rendered.contains("Lead:    lead [running]"));
+        assert!(rendered.contains("Running:"));
+        assert!(rendered.contains("Pending:"));
+        assert!(rendered.contains("Completed:"));
+        assert!(rendered.contains("worker-a"));
+        assert!(rendered.contains("worker-b"));
+        assert!(rendered.contains("reviewer"));
 
         Ok(())
     }

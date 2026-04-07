@@ -57,6 +57,14 @@ enum Commands {
         /// Session ID or alias
         session_id: Option<String>,
     },
+    /// Show delegated team board for a session
+    Team {
+        /// Lead session ID or alias
+        session_id: Option<String>,
+        /// Delegation depth to traverse
+        #[arg(long, default_value_t = 2)]
+        depth: usize,
+    },
     /// Stop a running session
     Stop {
         /// Session ID or alias
@@ -187,6 +195,11 @@ async fn main() -> Result<()> {
             let id = session_id.unwrap_or_else(|| "latest".to_string());
             let status = session::manager::get_status(&db, &id)?;
             println!("{status}");
+        }
+        Some(Commands::Team { session_id, depth }) => {
+            let id = session_id.unwrap_or_else(|| "latest".to_string());
+            let team = session::manager::get_team_status(&db, &id, depth)?;
+            println!("{team}");
         }
         Some(Commands::Stop { session_id }) => {
             session::manager::stop_session(&db, &session_id).await?;
@@ -444,6 +457,20 @@ mod tests {
                 assert_eq!(agent, "codex");
             }
             _ => panic!("expected delegate subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_team_command() {
+        let cli = Cli::try_parse_from(["ecc", "team", "planner", "--depth", "3"])
+            .expect("team should parse");
+
+        match cli.command {
+            Some(Commands::Team { session_id, depth }) => {
+                assert_eq!(session_id.as_deref(), Some("planner"));
+                assert_eq!(depth, 3);
+            }
+            _ => panic!("expected team subcommand"),
         }
     }
 }
