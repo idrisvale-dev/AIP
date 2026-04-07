@@ -202,6 +202,21 @@ impl StateStore {
         Ok(())
     }
 
+    pub fn clear_worktree(&self, session_id: &str) -> Result<()> {
+        let updated = self.conn.execute(
+            "UPDATE sessions
+             SET worktree_path = NULL, worktree_branch = NULL, worktree_base = NULL, updated_at = ?1
+             WHERE id = ?2",
+            rusqlite::params![chrono::Utc::now().to_rfc3339(), session_id],
+        )?;
+
+        if updated == 0 {
+            anyhow::bail!("Session not found: {session_id}");
+        }
+
+        Ok(())
+    }
+
     pub fn update_metrics(&self, session_id: &str, metrics: &SessionMetrics) -> Result<()> {
         self.conn.execute(
             "UPDATE sessions SET tokens_used = ?1, tool_calls = ?2, files_changed = ?3, duration_secs = ?4, cost_usd = ?5, updated_at = ?6 WHERE id = ?7",

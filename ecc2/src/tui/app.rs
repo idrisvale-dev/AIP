@@ -41,6 +41,7 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
                     (_, KeyCode::Char('n')) => dashboard.new_session(),
                     (_, KeyCode::Char('s')) => dashboard.stop_selected().await,
                     (_, KeyCode::Char('u')) => dashboard.resume_selected().await,
+                    (_, KeyCode::Char('x')) => dashboard.cleanup_selected_worktree().await,
                     (_, KeyCode::Char('r')) => dashboard.refresh(),
                     (_, KeyCode::Char('?')) => dashboard.toggle_help(),
                     _ => {}

@@ -345,7 +345,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [s]top  [u]resume  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [s]top  [u]resume  [x]cleanup  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let aggregate = self.aggregate_usage();
@@ -387,6 +387,7 @@ impl Dashboard {
             "  n       New session",
             "  s       Stop selected session",
             "  u       Resume selected session",
+            "  x       Cleanup selected worktree",
             "  Tab     Next pane",
             "  S-Tab   Previous pane",
             "  j/↓     Scroll down",
@@ -521,6 +522,23 @@ impl Dashboard {
 
         if let Err(error) = manager::resume_session(&self.db, &session.id).await {
             tracing::warn!("Failed to resume session {}: {error}", session.id);
+            return;
+        }
+
+        self.refresh();
+    }
+
+    pub async fn cleanup_selected_worktree(&mut self) {
+        let Some(session) = self.sessions.get(self.selected_session) else {
+            return;
+        };
+
+        if session.worktree.is_none() {
+            return;
+        }
+
+        if let Err(error) = manager::cleanup_session_worktree(&self.db, &session.id).await {
+            tracing::warn!("Failed to cleanup session {} worktree: {error}", session.id);
             return;
         }
 
@@ -1337,6 +1355,44 @@ mod tests {
         assert_eq!(session.state, SessionState::Pending);
         assert_eq!(session.pid, None);
 
+        let _ = std::fs::remove_file(db_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cleanup_selected_worktree_clears_session_metadata() -> Result<()> {
+        let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
+        let db = StateStore::open(&db_path)?;
+        let now = Utc::now();
+        let worktree_path = std::env::temp_dir().join(format!("ecc2-cleanup-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&worktree_path)?;
+
+        db.insert_session(&Session {
+            id: "stopped-1".to_string(),
+            task: "cleanup me".to_string(),
+            agent_type: "claude".to_string(),
+            state: SessionState::Stopped,
+            pid: None,
+            worktree: Some(WorktreeInfo {
+                path: worktree_path.clone(),
+                branch: "ecc/stopped-1".to_string(),
+                base_branch: "main".to_string(),
+            }),
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let dashboard_store = StateStore::open(&db_path)?;
+        let mut dashboard = Dashboard::new(dashboard_store, Config::default());
+        dashboard.cleanup_selected_worktree().await;
+
+        let session = db
+            .get_session("stopped-1")?
+            .expect("session should exist after cleanup");
+        assert!(session.worktree.is_none(), "worktree metadata should be cleared");
+
+        let _ = std::fs::remove_dir_all(worktree_path);
         let _ = std::fs::remove_file(db_path);
         Ok(())
     }

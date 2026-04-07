@@ -90,6 +90,23 @@ pub async fn resume_session(db: &StateStore, id: &str) -> Result<String> {
     Ok(session.id)
 }
 
+pub async fn cleanup_session_worktree(db: &StateStore, id: &str) -> Result<()> {
+    let session = resolve_session(db, id)?;
+
+    if session.state == SessionState::Running {
+        stop_session_with_options(db, &session.id, true).await?;
+        db.clear_worktree(&session.id)?;
+        return Ok(());
+    }
+
+    if let Some(worktree) = session.worktree.as_ref() {
+        crate::worktree::remove(&worktree.path)?;
+        db.clear_worktree(&session.id)?;
+    }
+
+    Ok(())
+}
+
 fn agent_program(agent_type: &str) -> Result<PathBuf> {
     match agent_type {
         "claude" => Ok(PathBuf::from("claude")),
@@ -657,6 +674,49 @@ mod tests {
 
         assert_eq!(resumed.state, SessionState::Pending);
         assert_eq!(resumed.pid, None);
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn cleanup_session_worktree_removes_path_and_clears_metadata() -> Result<()> {
+        let tempdir = TestDir::new("manager-cleanup-worktree")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_claude, _) = write_fake_claude(tempdir.path())?;
+
+        let session_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "cleanup later",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+
+        stop_session_with_options(&db, &session_id, false).await?;
+        let stopped = db
+            .get_session(&session_id)?
+            .context("stopped session should exist")?;
+        let worktree_path = stopped
+            .worktree
+            .clone()
+            .context("stopped session worktree missing")?
+            .path;
+        assert!(worktree_path.exists(), "worktree should still exist before cleanup");
+
+        cleanup_session_worktree(&db, &session_id).await?;
+
+        let cleaned = db
+            .get_session(&session_id)?
+            .context("cleaned session should still exist")?;
+        assert!(cleaned.worktree.is_none(), "worktree metadata should be cleared");
+        assert!(!worktree_path.exists(), "worktree path should be removed");
 
         Ok(())
     }
