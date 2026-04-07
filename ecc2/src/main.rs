@@ -36,6 +36,20 @@ enum Commands {
         #[arg(long)]
         from_session: Option<String>,
     },
+    /// Delegate a new session from an existing one
+    Delegate {
+        /// Source session ID or alias
+        from_session: String,
+        /// Task description for the delegated session
+        #[arg(short, long)]
+        task: Option<String>,
+        /// Agent type (claude, codex, custom)
+        #[arg(short, long, default_value = "claude")]
+        agent: String,
+        /// Create a dedicated worktree for the delegated session
+        #[arg(short, long, default_value_t = true)]
+        worktree: bool,
+    },
     /// List active sessions
     Sessions,
     /// Show session details
@@ -135,6 +149,33 @@ async fn main() -> Result<()> {
                 send_handoff_message(&db, &from_id, &session_id)?;
             }
             println!("Session started: {session_id}");
+        }
+        Some(Commands::Delegate {
+            from_session,
+            task,
+            agent,
+            worktree: use_worktree,
+        }) => {
+            let from_id = resolve_session_id(&db, &from_session)?;
+            let source = db
+                .get_session(&from_id)?
+                .ok_or_else(|| anyhow::anyhow!("Session not found: {from_id}"))?;
+            let task = task.unwrap_or_else(|| {
+                format!(
+                    "Follow up on {}: {}",
+                    short_session(&source.id),
+                    source.task
+                )
+            });
+
+            let session_id =
+                session::manager::create_session(&db, &cfg, &task, &agent, use_worktree).await?;
+            send_handoff_message(&db, &source.id, &session_id)?;
+            println!(
+                "Delegated session started: {} <- {}",
+                session_id,
+                short_session(&source.id)
+            );
         }
         Some(Commands::Sessions) => {
             let sessions = session::manager::list_sessions(&db)?;
@@ -375,6 +416,34 @@ mod tests {
                 assert_eq!(from_session.as_deref(), Some("planner"));
             }
             _ => panic!("expected start subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_delegate_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "delegate",
+            "planner",
+            "--task",
+            "Review auth changes",
+            "--agent",
+            "codex",
+        ])
+        .expect("delegate should parse");
+
+        match cli.command {
+            Some(Commands::Delegate {
+                from_session,
+                task,
+                agent,
+                ..
+            }) => {
+                assert_eq!(from_session, "planner");
+                assert_eq!(task.as_deref(), Some("Review auth changes"));
+                assert_eq!(agent, "codex");
+            }
+            _ => panic!("expected delegate subcommand"),
         }
     }
 }
