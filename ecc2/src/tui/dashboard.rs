@@ -191,10 +191,13 @@ impl Dashboard {
         let summary = SessionSummary::from_sessions(&self.sessions);
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Min(3)])
+            .constraints([Constraint::Length(2), Constraint::Min(3)])
             .split(inner_area);
 
-        frame.render_widget(Paragraph::new(summary_line(&summary)), chunks[0]);
+        frame.render_widget(
+            Paragraph::new(vec![summary_line(&summary), attention_queue_line(&summary)]),
+            chunks[0],
+        );
 
         let rows = self.sessions.iter().map(session_row);
         let header = Row::new(["ID", "Agent", "State", "Branch", "Tokens", "Duration"])
@@ -679,16 +682,52 @@ impl Dashboard {
     fn selected_session_metrics_text(&self) -> String {
         if let Some(session) = self.sessions.get(self.selected_session) {
             let metrics = &session.metrics;
-            format!(
-                "Selected {} [{}]\nTokens {} | Tools {} | Files {}\nCost ${:.4} | Duration {}s",
-                &session.id[..8.min(session.id.len())],
-                session.state,
+            let mut lines = vec![
+                format!(
+                    "Selected {} [{}]",
+                    &session.id[..8.min(session.id.len())],
+                    session.state
+                ),
+                format!("Task {}", session.task),
+            ];
+
+            if let Some(worktree) = session.worktree.as_ref() {
+                lines.push(format!(
+                    "Branch {} | Base {}",
+                    worktree.branch, worktree.base_branch
+                ));
+                lines.push(format!("Worktree {}", worktree.path.display()));
+            }
+
+            lines.push(format!(
+                "Tokens {} | Tools {} | Files {}",
                 format_token_count(metrics.tokens_used),
                 metrics.tool_calls,
                 metrics.files_changed,
-                metrics.cost_usd,
-                metrics.duration_secs
-            )
+            ));
+            lines.push(format!(
+                "Cost ${:.4} | Duration {}s",
+                metrics.cost_usd, metrics.duration_secs
+            ));
+
+            if let Some(last_output) = self.selected_output_lines().last() {
+                lines.push(format!(
+                    "Last output {}",
+                    truncate_for_dashboard(&last_output.text, 96)
+                ));
+            }
+
+            let attention_items = self.attention_queue_items(3);
+            if attention_items.is_empty() {
+                lines.push(String::new());
+                lines.push("Attention queue clear".to_string());
+            } else {
+                lines.push(String::new());
+                lines.push("Needs attention:".to_string());
+                lines.extend(attention_items);
+            }
+
+            lines.join("\n")
         } else {
             "No metrics available".to_string()
         }
@@ -716,6 +755,27 @@ impl Dashboard {
         }
 
         (text, aggregate.overall_state.style())
+    }
+
+    fn attention_queue_items(&self, limit: usize) -> Vec<String> {
+        self.sessions
+            .iter()
+            .filter(|session| {
+                matches!(
+                    session.state,
+                    SessionState::Failed | SessionState::Stopped | SessionState::Pending
+                )
+            })
+            .take(limit)
+            .map(|session| {
+                format!(
+                    "- {} {} | {}",
+                    session_state_label(&session.state),
+                    format_session_id(&session.id),
+                    truncate_for_dashboard(&session.task, 48)
+                )
+            })
+            .collect()
     }
 
     fn pane_areas(&self, area: Rect) -> PaneAreas {
@@ -923,6 +983,38 @@ fn summary_span(label: &str, value: usize, color: Color) -> Span<'static> {
     )
 }
 
+fn attention_queue_line(summary: &SessionSummary) -> Line<'static> {
+    if summary.failed == 0 && summary.stopped == 0 && summary.pending == 0 {
+        return Line::from(vec![
+            Span::styled(
+                "Attention queue clear",
+                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("  no failed, stopped, or pending sessions"),
+        ]);
+    }
+
+    Line::from(vec![
+        Span::styled(
+            "Attention queue  ",
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+        ),
+        summary_span("Failed", summary.failed, Color::Red),
+        summary_span("Stopped", summary.stopped, Color::DarkGray),
+        summary_span("Pending", summary.pending, Color::Yellow),
+    ])
+}
+
+fn truncate_for_dashboard(value: &str, max_chars: usize) -> String {
+    let trimmed = value.trim();
+    if trimmed.chars().count() <= max_chars {
+        return trimmed.to_string();
+    }
+
+    let truncated: String = trimmed.chars().take(max_chars.saturating_sub(1)).collect();
+    format!("{truncated}…")
+}
+
 fn session_state_label(state: &SessionState) -> &'static str {
     match state {
         SessionState::Pending => "Pending",
@@ -1009,7 +1101,49 @@ mod tests {
         assert!(rendered.contains("Total 2"));
         assert!(rendered.contains("Running 1"));
         assert!(rendered.contains("Completed 1"));
+        assert!(rendered.contains("Attention queue clear"));
         assert!(rendered.contains("done-876"));
+    }
+
+    #[test]
+    fn selected_session_metrics_text_includes_worktree_output_and_attention_queue() {
+        let mut dashboard = test_dashboard(
+            vec![
+                sample_session(
+                    "focus-12345678",
+                    "planner",
+                    SessionState::Running,
+                    Some("ecc/focus"),
+                    512,
+                    42,
+                ),
+                sample_session(
+                    "failed-87654321",
+                    "reviewer",
+                    SessionState::Failed,
+                    Some("ecc/failed"),
+                    64,
+                    5,
+                ),
+            ],
+            0,
+        );
+        dashboard
+            .session_output_cache
+            .insert(
+                "focus-12345678".to_string(),
+                vec![OutputLine {
+                    stream: OutputStream::Stdout,
+                    text: "last useful output".to_string(),
+                }],
+            );
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Branch ecc/focus | Base main"));
+        assert!(text.contains("Worktree /tmp/ecc/focus"));
+        assert!(text.contains("Last output last useful output"));
+        assert!(text.contains("Needs attention:"));
+        assert!(text.contains("Failed failed-8 | Render dashboard rows"));
     }
 
     #[test]
