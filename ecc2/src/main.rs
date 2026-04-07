@@ -90,6 +90,20 @@ enum Commands {
         #[arg(long, default_value_t = 10)]
         lead_limit: usize,
     },
+    /// Rebalance unread handoffs off backed-up delegates onto clearer team capacity
+    RebalanceTeam {
+        /// Lead session ID or alias
+        session_id: String,
+        /// Agent type for routed delegates
+        #[arg(short, long, default_value = "claude")]
+        agent: String,
+        /// Create a dedicated worktree if new delegates must be spawned
+        #[arg(short, long, default_value_t = true)]
+        worktree: bool,
+        /// Maximum handoffs to reroute in one pass
+        #[arg(long, default_value_t = 5)]
+        limit: usize,
+    },
     /// List active sessions
     Sessions,
     /// Show session details
@@ -319,6 +333,46 @@ async fn main() -> Result<()> {
                         short_session(&outcome.lead_session_id),
                         outcome.unread_count,
                         outcome.routed.len()
+                    );
+                }
+            }
+        }
+        Some(Commands::RebalanceTeam {
+            session_id,
+            agent,
+            worktree: use_worktree,
+            limit,
+        }) => {
+            let lead_id = resolve_session_id(&db, &session_id)?;
+            let outcomes = session::manager::rebalance_team_backlog(
+                &db,
+                &cfg,
+                &lead_id,
+                &agent,
+                use_worktree,
+                limit,
+            )
+            .await?;
+            if outcomes.is_empty() {
+                println!("No delegate backlog needed rebalancing for {}", short_session(&lead_id));
+            } else {
+                println!(
+                    "Rebalanced {} task handoff(s) for {}",
+                    outcomes.len(),
+                    short_session(&lead_id)
+                );
+                for outcome in outcomes {
+                    println!(
+                        "- {} | {} -> {} ({}) | {}",
+                        outcome.message_id,
+                        short_session(&outcome.from_session_id),
+                        short_session(&outcome.session_id),
+                        match outcome.action {
+                            session::manager::AssignmentAction::Spawned => "spawned",
+                            session::manager::AssignmentAction::ReusedIdle => "reused-idle",
+                            session::manager::AssignmentAction::ReusedActive => "reused-active",
+                        },
+                        outcome.task
                     );
                 }
             }
@@ -690,6 +744,34 @@ mod tests {
                 assert_eq!(lead_limit, 4);
             }
             _ => panic!("expected auto-dispatch subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_rebalance_team_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "rebalance-team",
+            "lead",
+            "--agent",
+            "claude",
+            "--limit",
+            "2",
+        ])
+        .expect("rebalance-team should parse");
+
+        match cli.command {
+            Some(Commands::RebalanceTeam {
+                session_id,
+                agent,
+                limit,
+                ..
+            }) => {
+                assert_eq!(session_id, "lead");
+                assert_eq!(agent, "claude");
+                assert_eq!(limit, 2);
+            }
+            _ => panic!("expected rebalance-team subcommand"),
         }
     }
 }
