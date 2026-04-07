@@ -504,8 +504,32 @@ impl Dashboard {
         }
     }
 
-    pub fn new_session(&mut self) {
-        tracing::info!("New session dialog requested");
+    pub async fn new_session(&mut self) {
+        if self.active_session_count() >= self.cfg.max_parallel_sessions {
+            tracing::warn!(
+                "Cannot queue new session: active session limit reached ({})",
+                self.cfg.max_parallel_sessions
+            );
+            return;
+        }
+
+        let task = self.new_session_task();
+        let agent = self.cfg.default_agent.clone();
+
+        let session_id = match manager::create_session(&self.db, &self.cfg, &task, &agent, true).await {
+            Ok(session_id) => session_id,
+            Err(error) => {
+                tracing::warn!("Failed to create new session from dashboard: {error}");
+                return;
+            }
+        };
+
+        self.refresh();
+        self.sync_selection_by_id(Some(&session_id));
+        self.reset_output_view();
+        self.sync_selected_output();
+        self.sync_selected_diff();
+        self.refresh_logs();
     }
 
     pub async fn stop_selected(&mut self) {
@@ -812,6 +836,31 @@ impl Dashboard {
                 )
             })
             .collect()
+    }
+
+    fn active_session_count(&self) -> usize {
+        self.sessions
+            .iter()
+            .filter(|session| {
+                matches!(
+                    session.state,
+                    SessionState::Pending | SessionState::Running | SessionState::Idle
+                )
+            })
+            .count()
+    }
+
+    fn new_session_task(&self) -> String {
+        self.sessions
+            .get(self.selected_session)
+            .map(|session| {
+                format!(
+                    "Follow up on {}: {}",
+                    format_session_id(&session.id),
+                    truncate_for_dashboard(&session.task, 96)
+                )
+            })
+            .unwrap_or_else(|| "New ECC 2.0 session".to_string())
     }
 
     fn pane_areas(&self, area: Rect) -> PaneAreas {
@@ -1197,6 +1246,43 @@ mod tests {
             dashboard.aggregate_cost_summary_text(),
             "Aggregate cost $8.25 / $10.00 | Budget warning"
         );
+    }
+
+    #[test]
+    fn new_session_task_uses_selected_session_context() {
+        let dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+
+        assert_eq!(
+            dashboard.new_session_task(),
+            "Follow up on focus-12: Render dashboard rows"
+        );
+    }
+
+    #[test]
+    fn active_session_count_only_counts_live_queue_states() {
+        let dashboard = test_dashboard(
+            vec![
+                sample_session("pending-1", "planner", SessionState::Pending, None, 1, 1),
+                sample_session("running-1", "planner", SessionState::Running, None, 1, 1),
+                sample_session("idle-1", "planner", SessionState::Idle, None, 1, 1),
+                sample_session("failed-1", "planner", SessionState::Failed, None, 1, 1),
+                sample_session("stopped-1", "planner", SessionState::Stopped, None, 1, 1),
+                sample_session("done-1", "planner", SessionState::Completed, None, 1, 1),
+            ],
+            0,
+        );
+
+        assert_eq!(dashboard.active_session_count(), 3);
     }
 
     #[test]
