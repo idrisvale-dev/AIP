@@ -400,7 +400,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  dra[i]n inbox  [g]lobal dispatch  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  dra[i]n inbox  [g]lobal dispatch  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -446,6 +446,7 @@ impl Dashboard {
             "",
             "  n       New session",
             "  a       Assign follow-up work from selected session",
+            "  b       Rebalance backed-up delegate inboxes for selected lead",
             "  i       Drain unread task handoffs from selected session inbox",
             "  g       Auto-dispatch unread handoffs across lead sessions",
             "  s       Stop selected session",
@@ -675,6 +676,59 @@ impl Dashboard {
         self.sync_selected_messages();
         self.sync_selected_lineage();
         self.refresh_logs();
+    }
+
+    pub async fn rebalance_selected_team(&mut self) {
+        let Some(source_session) = self.sessions.get(self.selected_session) else {
+            return;
+        };
+
+        let agent = self.cfg.default_agent.clone();
+        let source_session_id = source_session.id.clone();
+        let outcomes = match manager::rebalance_team_backlog(
+            &self.db,
+            &self.cfg,
+            &source_session_id,
+            &agent,
+            true,
+            self.cfg.auto_dispatch_limit_per_session,
+        )
+        .await
+        {
+            Ok(outcomes) => outcomes,
+            Err(error) => {
+                tracing::warn!(
+                    "Failed to rebalance team backlog for session {}: {error}",
+                    source_session_id
+                );
+                self.set_operator_note(format!(
+                    "rebalance failed for {}: {error}",
+                    format_session_id(&source_session_id)
+                ));
+                return;
+            }
+        };
+
+        self.refresh();
+        self.sync_selection_by_id(Some(&source_session_id));
+        self.sync_selected_output();
+        self.sync_selected_diff();
+        self.sync_selected_messages();
+        self.sync_selected_lineage();
+        self.refresh_logs();
+
+        if outcomes.is_empty() {
+            self.set_operator_note(format!(
+                "no delegate backlog needed rebalancing for {}",
+                format_session_id(&source_session_id)
+            ));
+        } else {
+            self.set_operator_note(format!(
+                "rebalanced {} delegate handoff(s) for {}",
+                outcomes.len(),
+                format_session_id(&source_session_id)
+            ));
+        }
     }
 
     pub async fn drain_inbox_selected(&mut self) {
@@ -2161,6 +2215,38 @@ mod tests {
         assert_eq!(
             dashboard.operator_note.as_deref(),
             Some("no unread handoff backlog found")
+        );
+
+        let _ = std::fs::remove_file(db_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn rebalance_selected_team_sets_operator_note_when_clear() -> Result<()> {
+        let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
+        let db = StateStore::open(&db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead-1".to_string(),
+            task: "coordinate".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let dashboard_store = StateStore::open(&db_path)?;
+        let mut dashboard = Dashboard::new(dashboard_store, Config::default());
+        dashboard.rebalance_selected_team().await;
+
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("no delegate backlog needed rebalancing for lead-1")
         );
 
         let _ = std::fs::remove_file(db_path);
