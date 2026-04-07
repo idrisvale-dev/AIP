@@ -38,6 +38,7 @@ pub struct Dashboard {
     selected_messages: Vec<SessionMessage>,
     selected_parent_session: Option<String>,
     selected_child_sessions: Vec<DelegatedChildSummary>,
+    selected_team_summary: Option<TeamSummary>,
     logs: Vec<ToolLogEntry>,
     selected_diff_summary: Option<String>,
     selected_pane: Pane,
@@ -95,6 +96,16 @@ struct DelegatedChildSummary {
     unread_messages: usize,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct TeamSummary {
+    total: usize,
+    idle: usize,
+    running: usize,
+    pending: usize,
+    failed: usize,
+    stopped: usize,
+}
+
 impl Dashboard {
     pub fn new(db: StateStore, cfg: Config) -> Self {
         Self::with_output_store(db, cfg, SessionOutputStore::default())
@@ -123,6 +134,7 @@ impl Dashboard {
             selected_messages: Vec::new(),
             selected_parent_session: None,
             selected_child_sessions: Vec::new(),
+            selected_team_summary: None,
             logs: Vec::new(),
             selected_diff_summary: None,
             selected_pane: Pane::Sessions,
@@ -379,7 +391,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let aggregate = self.aggregate_usage();
@@ -419,6 +431,7 @@ impl Dashboard {
             "Keyboard Shortcuts:",
             "",
             "  n       New session",
+            "  a       Assign follow-up work from selected session",
             "  s       Stop selected session",
             "  u       Resume selected session",
             "  x       Cleanup selected worktree",
@@ -594,6 +607,44 @@ impl Dashboard {
 
         self.refresh();
         self.sync_selection_by_id(Some(&session_id));
+        self.reset_output_view();
+        self.sync_selected_output();
+        self.sync_selected_diff();
+        self.sync_selected_messages();
+        self.sync_selected_lineage();
+        self.refresh_logs();
+    }
+
+    pub async fn assign_selected(&mut self) {
+        let Some(source_session) = self.sessions.get(self.selected_session) else {
+            return;
+        };
+
+        let task = self.new_session_task();
+        let agent = self.cfg.default_agent.clone();
+
+        let outcome = match manager::assign_session(
+            &self.db,
+            &self.cfg,
+            &source_session.id,
+            &task,
+            &agent,
+            true,
+        )
+        .await
+        {
+            Ok(outcome) => outcome,
+            Err(error) => {
+                tracing::warn!(
+                    "Failed to assign follow-up work from session {}: {error}",
+                    source_session.id
+                );
+                return;
+            }
+        };
+
+        self.refresh();
+        self.sync_selection_by_id(Some(&outcome.session_id));
         self.reset_output_view();
         self.sync_selected_output();
         self.sync_selected_diff();
@@ -789,6 +840,7 @@ impl Dashboard {
         let Some(session_id) = self.selected_session_id().map(ToOwned::to_owned) else {
             self.selected_parent_session = None;
             self.selected_child_sessions.clear();
+            self.selected_team_summary = None;
             return;
         };
 
@@ -800,28 +852,51 @@ impl Dashboard {
             }
         };
 
-        self.selected_child_sessions = match self.db.delegated_children(&session_id, 3) {
-            Ok(children) => children
-                .into_iter()
-                .filter_map(|child_id| match self.db.get_session(&child_id) {
-                    Ok(Some(session)) => Some(DelegatedChildSummary {
-                        unread_messages: self
-                            .unread_message_counts
-                            .get(&child_id)
-                            .copied()
-                            .unwrap_or(0),
-                        state: session.state,
-                        session_id: child_id,
-                    }),
-                    Ok(None) => None,
-                    Err(error) => {
-                        tracing::warn!("Failed to load delegated child session {}: {error}", child_id);
-                        None
+        self.selected_child_sessions = match self.db.delegated_children(&session_id, 50) {
+            Ok(children) => {
+                let mut delegated = Vec::new();
+                let mut team = TeamSummary::default();
+
+                for child_id in children {
+                    match self.db.get_session(&child_id) {
+                        Ok(Some(session)) => {
+                            team.total += 1;
+                            match session.state {
+                                SessionState::Idle => team.idle += 1,
+                                SessionState::Running => team.running += 1,
+                                SessionState::Pending => team.pending += 1,
+                                SessionState::Failed => team.failed += 1,
+                                SessionState::Stopped => team.stopped += 1,
+                                SessionState::Completed => {}
+                            }
+
+                            delegated.push(DelegatedChildSummary {
+                                unread_messages: self
+                                    .unread_message_counts
+                                    .get(&child_id)
+                                    .copied()
+                                    .unwrap_or(0),
+                                state: session.state,
+                                session_id: child_id,
+                            });
+                        }
+                        Ok(None) => {}
+                        Err(error) => {
+                            tracing::warn!(
+                                "Failed to load delegated child session {}: {error}",
+                                child_id
+                            );
+                        }
                     }
-                })
-                .collect(),
+                }
+
+                self.selected_team_summary = if team.total > 0 { Some(team) } else { None };
+                delegated.truncate(3);
+                delegated
+            }
             Err(error) => {
                 tracing::warn!("Failed to load delegated child sessions: {error}");
+                self.selected_team_summary = None;
                 Vec::new()
             }
         };
@@ -914,6 +989,19 @@ impl Dashboard {
 
             if let Some(parent) = self.selected_parent_session.as_ref() {
                 lines.push(format!("Delegated from {}", format_session_id(parent)));
+            }
+
+            if let Some(team) = self.selected_team_summary {
+                lines.push(format!(
+                    "Team {}/{} | idle {} | running {} | pending {} | failed {} | stopped {}",
+                    team.total,
+                    self.cfg.max_parallel_sessions,
+                    team.idle,
+                    team.running,
+                    team.pending,
+                    team.failed,
+                    team.stopped
+                ));
             }
 
             if !self.selected_child_sessions.is_empty() {
@@ -1469,6 +1557,32 @@ mod tests {
     }
 
     #[test]
+    fn selected_session_metrics_text_includes_team_capacity_summary() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.selected_team_summary = Some(TeamSummary {
+            total: 3,
+            idle: 1,
+            running: 1,
+            pending: 1,
+            failed: 0,
+            stopped: 0,
+        });
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Team 3/8 | idle 1 | running 1 | pending 1 | failed 0 | stopped 0"));
+    }
+
+    #[test]
     fn aggregate_cost_summary_mentions_total_cost() {
         let db = StateStore::open(Path::new(":memory:")).unwrap();
         let mut cfg = Config::default();
@@ -1846,6 +1960,7 @@ mod tests {
             selected_messages: Vec::new(),
             selected_parent_session: None,
             selected_child_sessions: Vec::new(),
+            selected_team_summary: None,
             logs: Vec::new(),
             selected_diff_summary: None,
             selected_pane: Pane::Sessions,

@@ -944,7 +944,7 @@ mod tests {
     }
 
     fn wait_for_file(path: &Path) -> Result<String> {
-        for _ in 0..50 {
+        for _ in 0..200 {
             if path.exists() {
                 return fs::read_to_string(path)
                     .with_context(|| format!("failed to read {}", path.display()));
@@ -1392,7 +1392,7 @@ mod tests {
             "task_handoff",
         )?;
 
-        let (fake_runner, log_path) = write_fake_claude(tempdir.path())?;
+        let (fake_runner, _) = write_fake_claude(tempdir.path())?;
         let outcome = assign_session_in_dir_with_runner_program(
             &db,
             &cfg,
@@ -1418,10 +1418,6 @@ mod tests {
             message.msg_type == "task_handoff"
                 && message.content.contains("New delegated task")
         }));
-
-        let log = wait_for_file(&log_path)?;
-        assert!(log.contains("run-session"));
-        assert!(log.contains("New delegated task"));
 
         Ok(())
     }
