@@ -551,7 +551,7 @@ impl Dashboard {
             return;
         };
 
-        if let Err(error) = manager::resume_session(&self.db, &session.id).await {
+        if let Err(error) = manager::resume_session(&self.db, &self.cfg, &session.id).await {
             tracing::warn!("Failed to resume session {}: {error}", session.id);
             return;
         }
@@ -1309,6 +1309,7 @@ mod tests {
             id: "older".to_string(),
             task: "older".to_string(),
             agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
             state: SessionState::Idle,
             pid: None,
             worktree: None,
@@ -1321,6 +1322,7 @@ mod tests {
             id: "newer".to_string(),
             task: "newer".to_string(),
             agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
             pid: None,
             worktree: None,
@@ -1349,6 +1351,7 @@ mod tests {
             id: "session-1".to_string(),
             task: "inspect output".to_string(),
             agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
             pid: None,
             worktree: None,
@@ -1387,6 +1390,7 @@ mod tests {
             id: "session-1".to_string(),
             task: "tail output".to_string(),
             agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
             pid: None,
             worktree: None,
@@ -1422,6 +1426,7 @@ mod tests {
             task: "stop me".to_string(),
             agent_type: "claude".to_string(),
             state: SessionState::Running,
+            working_dir: PathBuf::from("/tmp"),
             pid: Some(999_999),
             worktree: None,
             created_at: now,
@@ -1454,6 +1459,7 @@ mod tests {
             task: "resume me".to_string(),
             agent_type: "claude".to_string(),
             state: SessionState::Failed,
+            working_dir: PathBuf::from("/tmp/ecc2-resume"),
             pid: None,
             worktree: Some(WorktreeInfo {
                 path: PathBuf::from("/tmp/ecc2-resume"),
@@ -1492,6 +1498,7 @@ mod tests {
             task: "cleanup me".to_string(),
             agent_type: "claude".to_string(),
             state: SessionState::Stopped,
+            working_dir: worktree_path.clone(),
             pid: None,
             worktree: Some(WorktreeInfo {
                 path: worktree_path.clone(),
@@ -1527,6 +1534,7 @@ mod tests {
             id: "done-1".to_string(),
             task: "delete me".to_string(),
             agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
             state: SessionState::Completed,
             pid: None,
             worktree: None,
@@ -1638,6 +1646,9 @@ mod tests {
             task: "Render dashboard rows".to_string(),
             agent_type: agent_type.to_string(),
             state,
+            working_dir: branch
+                .map(|branch| PathBuf::from(format!("/tmp/{branch}")))
+                .unwrap_or_else(|| PathBuf::from("/tmp")),
             pid: None,
             worktree: branch.map(|branch| WorktreeInfo {
                 path: PathBuf::from(format!("/tmp/{branch}")),
@@ -1663,6 +1674,7 @@ mod tests {
             task: "Budget tracking".to_string(),
             agent_type: "claude".to_string(),
             state: SessionState::Running,
+            working_dir: PathBuf::from("/tmp"),
             pid: None,
             worktree: None,
             created_at: now,

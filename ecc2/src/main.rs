@@ -105,7 +105,7 @@ async fn main() -> Result<()> {
             println!("Session stopped: {session_id}");
         }
         Some(Commands::Resume { session_id }) => {
-            let resumed_id = session::manager::resume_session(&db, &session_id).await?;
+            let resumed_id = session::manager::resume_session(&db, &cfg, &session_id).await?;
             println!("Session resumed: {resumed_id}");
         }
         Some(Commands::Daemon) => {

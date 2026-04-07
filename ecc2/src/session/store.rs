@@ -29,6 +29,7 @@ impl StateStore {
                 id TEXT PRIMARY KEY,
                 task TEXT NOT NULL,
                 agent_type TEXT NOT NULL,
+                working_dir TEXT NOT NULL DEFAULT '.',
                 state TEXT NOT NULL DEFAULT 'pending',
                 pid INTEGER,
                 worktree_path TEXT,
@@ -84,6 +85,15 @@ impl StateStore {
     }
 
     fn ensure_session_columns(&self) -> Result<()> {
+        if !self.has_column("sessions", "working_dir")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE sessions ADD COLUMN working_dir TEXT NOT NULL DEFAULT '.'",
+                    [],
+                )
+                .context("Failed to add working_dir column to sessions table")?;
+        }
+
         if !self.has_column("sessions", "pid")? {
             self.conn
                 .execute("ALTER TABLE sessions ADD COLUMN pid INTEGER", [])
@@ -105,12 +115,13 @@ impl StateStore {
 
     pub fn insert_session(&self, session: &Session) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO sessions (id, task, agent_type, state, pid, worktree_path, worktree_branch, worktree_base, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO sessions (id, task, agent_type, working_dir, state, pid, worktree_path, worktree_branch, worktree_base, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             rusqlite::params![
                 session.id,
                 session.task,
                 session.agent_type,
+                session.working_dir.to_string_lossy().to_string(),
                 session.state.to_string(),
                 session.pid.map(i64::from),
                 session
@@ -243,7 +254,7 @@ impl StateStore {
 
     pub fn list_sessions(&self) -> Result<Vec<Session>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, task, agent_type, state, pid, worktree_path, worktree_branch, worktree_base,
+            "SELECT id, task, agent_type, working_dir, state, pid, worktree_path, worktree_branch, worktree_base,
                     tokens_used, tool_calls, files_changed, duration_secs, cost_usd,
                     created_at, updated_at
              FROM sessions ORDER BY updated_at DESC",
@@ -251,25 +262,26 @@ impl StateStore {
 
         let sessions = stmt
             .query_map([], |row| {
-                let state_str: String = row.get(3)?;
+                let state_str: String = row.get(4)?;
                 let state = SessionState::from_db_value(&state_str);
 
-                let worktree_path: Option<String> = row.get(5)?;
+                let worktree_path: Option<String> = row.get(6)?;
                 let worktree = worktree_path.map(|path| super::WorktreeInfo {
                     path: PathBuf::from(path),
-                    branch: row.get::<_, String>(6).unwrap_or_default(),
-                    base_branch: row.get::<_, String>(7).unwrap_or_default(),
+                    branch: row.get::<_, String>(7).unwrap_or_default(),
+                    base_branch: row.get::<_, String>(8).unwrap_or_default(),
                 });
 
-                let created_str: String = row.get(13)?;
-                let updated_str: String = row.get(14)?;
+                let created_str: String = row.get(14)?;
+                let updated_str: String = row.get(15)?;
 
                 Ok(Session {
                     id: row.get(0)?,
                     task: row.get(1)?,
                     agent_type: row.get(2)?,
+                    working_dir: PathBuf::from(row.get::<_, String>(3)?),
                     state,
-                    pid: row.get::<_, Option<u32>>(4)?,
+                    pid: row.get::<_, Option<u32>>(5)?,
                     worktree,
                     created_at: chrono::DateTime::parse_from_rfc3339(&created_str)
                         .unwrap_or_default()
@@ -278,11 +290,11 @@ impl StateStore {
                         .unwrap_or_default()
                         .with_timezone(&chrono::Utc),
                     metrics: SessionMetrics {
-                        tokens_used: row.get(8)?,
-                        tool_calls: row.get(9)?,
-                        files_changed: row.get(10)?,
-                        duration_secs: row.get(11)?,
-                        cost_usd: row.get(12)?,
+                        tokens_used: row.get(9)?,
+                        tool_calls: row.get(10)?,
+                        files_changed: row.get(11)?,
+                        duration_secs: row.get(12)?,
+                        cost_usd: row.get(13)?,
                     },
                 })
             })?
@@ -518,6 +530,7 @@ mod tests {
             id: id.to_string(),
             task: "task".to_string(),
             agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
             state,
             pid: None,
             worktree: None,
@@ -556,6 +569,7 @@ mod tests {
                 id TEXT PRIMARY KEY,
                 task TEXT NOT NULL,
                 agent_type TEXT NOT NULL,
+                working_dir TEXT NOT NULL DEFAULT '.',
                 state TEXT NOT NULL DEFAULT 'pending',
                 worktree_path TEXT,
                 worktree_branch TEXT,
@@ -578,6 +592,7 @@ mod tests {
             .query_map([], |row| row.get::<_, String>(1))?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
+        assert!(column_names.iter().any(|column| column == "working_dir"));
         assert!(column_names.iter().any(|column| column == "pid"));
         Ok(())
     }
@@ -592,6 +607,7 @@ mod tests {
             id: "session-1".to_string(),
             task: "buffer output".to_string(),
             agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
             pid: None,
             worktree: None,

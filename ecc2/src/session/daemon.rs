@@ -122,6 +122,7 @@ mod tests {
             id: id.to_string(),
             task: "Recover crashed worker".to_string(),
             agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
             state,
             pid,
             worktree: None,

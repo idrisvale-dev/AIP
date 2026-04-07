@@ -14,6 +14,7 @@ pub struct Session {
     pub id: String,
     pub task: String,
     pub agent_type: String,
+    pub working_dir: PathBuf,
     pub state: SessionState,
     pub pid: Option<u32>,
     pub worktree: Option<WorktreeInfo>,

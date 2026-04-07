@@ -75,7 +75,15 @@ pub fn query_tool_calls(
     ToolLogger::new(db).query(&session.id, page, page_size)
 }
 
-pub async fn resume_session(db: &StateStore, id: &str) -> Result<String> {
+pub async fn resume_session(db: &StateStore, _cfg: &Config, id: &str) -> Result<String> {
+    resume_session_with_program(db, id, None).await
+}
+
+async fn resume_session_with_program(
+    db: &StateStore,
+    id: &str,
+    runner_executable_override: Option<&Path>,
+) -> Result<String> {
     let session = resolve_session(db, id)?;
 
     if session.state == SessionState::Completed {
@@ -87,6 +95,19 @@ pub async fn resume_session(db: &StateStore, id: &str) -> Result<String> {
     }
 
     db.update_state_and_pid(&session.id, &SessionState::Pending, None)?;
+    let runner_executable = match runner_executable_override {
+        Some(program) => program.to_path_buf(),
+        None => std::env::current_exe().context("Failed to resolve ECC executable path")?,
+    };
+    spawn_session_runner_for_program(
+        &session.task,
+        &session.id,
+        &session.agent_type,
+        &session.working_dir,
+        &runner_executable,
+    )
+    .await
+    .with_context(|| format!("Failed to resume session {}", session.id))?;
     Ok(session.id)
 }
 
@@ -223,11 +244,16 @@ fn build_session_record(
     } else {
         None
     };
+    let working_dir = worktree
+        .as_ref()
+        .map(|worktree| worktree.path.clone())
+        .unwrap_or_else(|| repo_root.to_path_buf());
 
     Ok(Session {
         id,
         task: task.to_string(),
         agent_type: agent_type.to_string(),
+        working_dir,
         state: SessionState::Pending,
         pid: None,
         worktree,
@@ -280,8 +306,24 @@ async fn spawn_session_runner(
     agent_type: &str,
     working_dir: &Path,
 ) -> Result<()> {
-    let current_exe = std::env::current_exe().context("Failed to resolve ECC executable path")?;
-    let child = Command::new(&current_exe)
+    spawn_session_runner_for_program(
+        task,
+        session_id,
+        agent_type,
+        working_dir,
+        &std::env::current_exe().context("Failed to resolve ECC executable path")?,
+    )
+    .await
+}
+
+async fn spawn_session_runner_for_program(
+    task: &str,
+    session_id: &str,
+    agent_type: &str,
+    working_dir: &Path,
+    current_exe: &Path,
+) -> Result<()> {
+    let child = Command::new(current_exe)
         .arg("run-session")
         .arg("--session-id")
         .arg(session_id)
@@ -491,6 +533,7 @@ mod tests {
             id: id.to_string(),
             task: format!("task-{id}"),
             agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
             state,
             pid: None,
             worktree: None,
@@ -681,6 +724,7 @@ mod tests {
             id: "deadbeef".to_string(),
             task: "resume previous task".to_string(),
             agent_type: "claude".to_string(),
+            working_dir: tempdir.path().join("resume-working-dir"),
             state: SessionState::Failed,
             pid: Some(31337),
             worktree: None,
@@ -689,13 +733,23 @@ mod tests {
             metrics: SessionMetrics::default(),
         })?;
 
-        let resumed_id = resume_session(&db, "deadbeef").await?;
+        fs::create_dir_all(tempdir.path().join("resume-working-dir"))?;
+        let (fake_claude, log_path) = write_fake_claude(tempdir.path())?;
+
+        let resumed_id = resume_session_with_program(&db, "deadbeef", Some(&fake_claude)).await?;
         let resumed = db
             .get_session(&resumed_id)?
             .context("resumed session should exist")?;
 
         assert_eq!(resumed.state, SessionState::Pending);
         assert_eq!(resumed.pid, None);
+
+        let log = wait_for_file(&log_path)?;
+        assert!(log.contains("run-session"));
+        assert!(log.contains("--session-id"));
+        assert!(log.contains("deadbeef"));
+        assert!(log.contains("resume previous task"));
+        assert!(log.contains(tempdir.path().join("resume-working-dir").to_string_lossy().as_ref()));
 
         Ok(())
     }
