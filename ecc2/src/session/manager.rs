@@ -63,6 +63,29 @@ pub fn get_team_status(db: &StateStore, id: &str, depth: usize) -> Result<TeamSt
     })
 }
 
+pub async fn assign_session(
+    db: &StateStore,
+    cfg: &Config,
+    lead_id: &str,
+    task: &str,
+    agent_type: &str,
+    use_worktree: bool,
+) -> Result<AssignmentOutcome> {
+    let repo_root =
+        std::env::current_dir().context("Failed to resolve current working directory")?;
+    assign_session_in_dir_with_runner_program(
+        db,
+        cfg,
+        lead_id,
+        task,
+        agent_type,
+        use_worktree,
+        &repo_root,
+        &std::env::current_exe().context("Failed to resolve ECC executable path")?,
+    )
+    .await
+}
+
 pub async fn stop_session(db: &StateStore, id: &str) -> Result<()> {
     stop_session_with_options(db, id, true).await
 }
@@ -139,6 +162,84 @@ async fn resume_session_with_program(
     .await
     .with_context(|| format!("Failed to resume session {}", session.id))?;
     Ok(session.id)
+}
+
+async fn assign_session_in_dir_with_runner_program(
+    db: &StateStore,
+    cfg: &Config,
+    lead_id: &str,
+    task: &str,
+    agent_type: &str,
+    use_worktree: bool,
+    repo_root: &Path,
+    runner_program: &Path,
+) -> Result<AssignmentOutcome> {
+    let lead = resolve_session(db, lead_id)?;
+    let delegates = direct_delegate_sessions(db, &lead.id, agent_type)?;
+
+    if let Some(idle_delegate) = delegates
+        .iter()
+        .filter(|session| session.state == SessionState::Idle)
+        .min_by_key(|session| session.updated_at)
+    {
+        send_task_handoff(db, &lead, &idle_delegate.id, task, "reused idle delegate")?;
+        return Ok(AssignmentOutcome {
+            session_id: idle_delegate.id.clone(),
+            action: AssignmentAction::ReusedIdle,
+        });
+    }
+
+    if delegates.len() < cfg.max_parallel_sessions {
+        let session_id = queue_session_in_dir_with_runner_program(
+            db,
+            cfg,
+            task,
+            agent_type,
+            use_worktree,
+            repo_root,
+            runner_program,
+        )
+        .await?;
+        send_task_handoff(db, &lead, &session_id, task, "spawned new delegate")?;
+        return Ok(AssignmentOutcome {
+            session_id,
+            action: AssignmentAction::Spawned,
+        });
+    }
+
+    if let Some(active_delegate) = delegates
+        .iter()
+        .filter(|session| matches!(session.state, SessionState::Running | SessionState::Pending))
+        .min_by_key(|session| session.updated_at)
+    {
+        send_task_handoff(
+            db,
+            &lead,
+            &active_delegate.id,
+            task,
+            "reused active delegate at capacity",
+        )?;
+        return Ok(AssignmentOutcome {
+            session_id: active_delegate.id.clone(),
+            action: AssignmentAction::ReusedActive,
+        });
+    }
+
+    let session_id = queue_session_in_dir_with_runner_program(
+        db,
+        cfg,
+        task,
+        agent_type,
+        use_worktree,
+        repo_root,
+        runner_program,
+    )
+    .await?;
+    send_task_handoff(db, &lead, &session_id, task, "spawned fallback delegate")?;
+    Ok(AssignmentOutcome {
+        session_id,
+        action: AssignmentAction::Spawned,
+    })
 }
 
 fn collect_delegation_descendants(
@@ -278,6 +379,27 @@ async fn queue_session_in_dir(
     use_worktree: bool,
     repo_root: &Path,
 ) -> Result<String> {
+    queue_session_in_dir_with_runner_program(
+        db,
+        cfg,
+        task,
+        agent_type,
+        use_worktree,
+        repo_root,
+        &std::env::current_exe().context("Failed to resolve ECC executable path")?,
+    )
+    .await
+}
+
+async fn queue_session_in_dir_with_runner_program(
+    db: &StateStore,
+    cfg: &Config,
+    task: &str,
+    agent_type: &str,
+    use_worktree: bool,
+    repo_root: &Path,
+    runner_program: &Path,
+) -> Result<String> {
     let session = build_session_record(task, agent_type, use_worktree, cfg, repo_root)?;
     db.insert_session(&session)?;
 
@@ -287,7 +409,7 @@ async fn queue_session_in_dir(
         .map(|worktree| worktree.path.as_path())
         .unwrap_or(repo_root);
 
-    match spawn_session_runner(task, &session.id, agent_type, working_dir).await {
+    match spawn_session_runner_for_program(task, &session.id, agent_type, working_dir, runner_program).await {
         Ok(()) => Ok(session.id),
         Err(error) => {
             db.update_state(&session.id, &SessionState::Failed)?;
@@ -386,6 +508,63 @@ async fn spawn_session_runner(
         &std::env::current_exe().context("Failed to resolve ECC executable path")?,
     )
     .await
+}
+
+fn direct_delegate_sessions(db: &StateStore, lead_id: &str, agent_type: &str) -> Result<Vec<Session>> {
+    let mut sessions = Vec::new();
+    for child_id in db.delegated_children(lead_id, 50)? {
+        let Some(session) = db.get_session(&child_id)? else {
+            continue;
+        };
+
+        if session.agent_type != agent_type {
+            continue;
+        }
+
+        if matches!(
+            session.state,
+            SessionState::Pending | SessionState::Running | SessionState::Idle
+        ) {
+            sessions.push(session);
+        }
+    }
+
+    Ok(sessions)
+}
+
+fn send_task_handoff(
+    db: &StateStore,
+    from_session: &Session,
+    to_session_id: &str,
+    task: &str,
+    routing_reason: &str,
+) -> Result<()> {
+    let context = format!(
+        "Assigned by {} [{}] | cwd {}{} | {}",
+        from_session.id,
+        from_session.agent_type,
+        from_session.working_dir.display(),
+        from_session
+            .worktree
+            .as_ref()
+            .map(|worktree| format!(
+                " | worktree {} ({})",
+                worktree.branch,
+                worktree.path.display()
+            ))
+            .unwrap_or_default(),
+        routing_reason
+    );
+
+    crate::comms::send(
+        db,
+        &from_session.id,
+        to_session_id,
+        &crate::comms::MessageType::TaskHandoff {
+            task: task.to_string(),
+            context,
+        },
+    )
 }
 
 async fn spawn_session_runner_for_program(
@@ -531,6 +710,18 @@ pub struct TeamStatus {
     root: Session,
     unread_messages: std::collections::HashMap<String, usize>,
     descendants: Vec<DelegatedSessionSummary>,
+}
+
+pub struct AssignmentOutcome {
+    pub session_id: String,
+    pub action: AssignmentAction,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssignmentAction {
+    Spawned,
+    ReusedIdle,
+    ReusedActive,
 }
 
 struct DelegatedSessionSummary {
@@ -1090,6 +1281,147 @@ mod tests {
         assert!(rendered.contains("worker-a"));
         assert!(rendered.contains("worker-b"));
         assert!(rendered.contains("reviewer"));
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn assign_session_reuses_idle_delegate_when_available() -> Result<()> {
+        let tempdir = TestDir::new("manager-assign-reuse-idle")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "lead task".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(42),
+            worktree: None,
+            created_at: now - Duration::minutes(2),
+            updated_at: now - Duration::minutes(2),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "idle-worker".to_string(),
+            task: "old worker task".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Idle,
+            pid: Some(99),
+            worktree: None,
+            created_at: now - Duration::minutes(1),
+            updated_at: now - Duration::minutes(1),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.send_message(
+            "lead",
+            "idle-worker",
+            "{\"task\":\"old worker task\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+
+        let (fake_runner, _) = write_fake_claude(tempdir.path())?;
+        let outcome = assign_session_in_dir_with_runner_program(
+            &db,
+            &cfg,
+            "lead",
+            "Review billing edge cases",
+            "claude",
+            true,
+            &repo_root,
+            &fake_runner,
+        )
+        .await?;
+
+        assert_eq!(outcome.session_id, "idle-worker");
+        assert_eq!(outcome.action, AssignmentAction::ReusedIdle);
+
+        let messages = db.list_messages_for_session("idle-worker", 10)?;
+        assert!(messages.iter().any(|message| {
+            message.msg_type == "task_handoff"
+                && message.content.contains("Review billing edge cases")
+        }));
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn assign_session_spawns_when_team_has_capacity() -> Result<()> {
+        let tempdir = TestDir::new("manager-assign-spawn")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "lead task".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(42),
+            worktree: None,
+            created_at: now - Duration::minutes(3),
+            updated_at: now - Duration::minutes(3),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "busy-worker".to_string(),
+            task: "existing work".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(55),
+            worktree: None,
+            created_at: now - Duration::minutes(2),
+            updated_at: now - Duration::minutes(2),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.send_message(
+            "lead",
+            "busy-worker",
+            "{\"task\":\"existing work\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+
+        let (fake_runner, log_path) = write_fake_claude(tempdir.path())?;
+        let outcome = assign_session_in_dir_with_runner_program(
+            &db,
+            &cfg,
+            "lead",
+            "New delegated task",
+            "claude",
+            true,
+            &repo_root,
+            &fake_runner,
+        )
+        .await?;
+
+        assert_eq!(outcome.action, AssignmentAction::Spawned);
+        assert_ne!(outcome.session_id, "busy-worker");
+
+        let spawned = db
+            .get_session(&outcome.session_id)?
+            .context("spawned delegated session missing")?;
+        assert_eq!(spawned.state, SessionState::Pending);
+
+        let messages = db.list_messages_for_session(&outcome.session_id, 10)?;
+        assert!(messages.iter().any(|message| {
+            message.msg_type == "task_handoff"
+                && message.content.contains("New delegated task")
+        }));
+
+        let log = wait_for_file(&log_path)?;
+        assert!(log.contains("run-session"));
+        assert!(log.contains("New delegated task"));
 
         Ok(())
     }

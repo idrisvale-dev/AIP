@@ -50,6 +50,20 @@ enum Commands {
         #[arg(short, long, default_value_t = true)]
         worktree: bool,
     },
+    /// Route work to an existing delegate when possible, otherwise spawn a new one
+    Assign {
+        /// Lead session ID or alias
+        from_session: String,
+        /// Task description for the assignment
+        #[arg(short, long)]
+        task: String,
+        /// Agent type (claude, codex, custom)
+        #[arg(short, long, default_value = "claude")]
+        agent: String,
+        /// Create a dedicated worktree if a new delegate must be spawned
+        #[arg(short, long, default_value_t = true)]
+        worktree: bool,
+    },
     /// List active sessions
     Sessions,
     /// Show session details
@@ -183,6 +197,33 @@ async fn main() -> Result<()> {
                 "Delegated session started: {} <- {}",
                 session_id,
                 short_session(&source.id)
+            );
+        }
+        Some(Commands::Assign {
+            from_session,
+            task,
+            agent,
+            worktree: use_worktree,
+        }) => {
+            let lead_id = resolve_session_id(&db, &from_session)?;
+            let outcome = session::manager::assign_session(
+                &db,
+                &cfg,
+                &lead_id,
+                &task,
+                &agent,
+                use_worktree,
+            )
+            .await?;
+            println!(
+                "Assignment routed: {} -> {} ({})",
+                short_session(&lead_id),
+                short_session(&outcome.session_id),
+                match outcome.action {
+                    session::manager::AssignmentAction::Spawned => "spawned",
+                    session::manager::AssignmentAction::ReusedIdle => "reused-idle",
+                    session::manager::AssignmentAction::ReusedActive => "reused-active",
+                }
             );
         }
         Some(Commands::Sessions) => {
@@ -471,6 +512,34 @@ mod tests {
                 assert_eq!(depth, 3);
             }
             _ => panic!("expected team subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_assign_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "assign",
+            "lead",
+            "--task",
+            "Review auth changes",
+            "--agent",
+            "claude",
+        ])
+        .expect("assign should parse");
+
+        match cli.command {
+            Some(Commands::Assign {
+                from_session,
+                task,
+                agent,
+                ..
+            }) => {
+                assert_eq!(from_session, "lead");
+                assert_eq!(task, "Review auth changes");
+                assert_eq!(agent, "claude");
+            }
+            _ => panic!("expected assign subcommand"),
         }
     }
 }
