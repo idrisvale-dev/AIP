@@ -107,6 +107,28 @@ pub async fn cleanup_session_worktree(db: &StateStore, id: &str) -> Result<()> {
     Ok(())
 }
 
+pub async fn delete_session(db: &StateStore, id: &str) -> Result<()> {
+    let session = resolve_session(db, id)?;
+
+    if matches!(
+        session.state,
+        SessionState::Pending | SessionState::Running | SessionState::Idle
+    ) {
+        anyhow::bail!(
+            "Cannot delete active session {} while it is {}",
+            session.id,
+            session.state
+        );
+    }
+
+    if let Some(worktree) = session.worktree.as_ref() {
+        let _ = crate::worktree::remove(&worktree.path);
+    }
+
+    db.delete_session(&session.id)?;
+    Ok(())
+}
+
 fn agent_program(agent_type: &str) -> Result<PathBuf> {
     match agent_type {
         "claude" => Ok(PathBuf::from("claude")),
@@ -716,6 +738,45 @@ mod tests {
             .get_session(&session_id)?
             .context("cleaned session should still exist")?;
         assert!(cleaned.worktree.is_none(), "worktree metadata should be cleared");
+        assert!(!worktree_path.exists(), "worktree path should be removed");
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn delete_session_removes_inactive_session_and_worktree() -> Result<()> {
+        let tempdir = TestDir::new("manager-delete-session")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_claude, _) = write_fake_claude(tempdir.path())?;
+
+        let session_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "delete later",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+
+        stop_session_with_options(&db, &session_id, false).await?;
+        let stopped = db
+            .get_session(&session_id)?
+            .context("stopped session should exist")?;
+        let worktree_path = stopped
+            .worktree
+            .clone()
+            .context("stopped session worktree missing")?
+            .path;
+
+        delete_session(&db, &session_id).await?;
+
+        assert!(db.get_session(&session_id)?.is_none(), "session should be deleted");
         assert!(!worktree_path.exists(), "worktree path should be removed");
 
         Ok(())

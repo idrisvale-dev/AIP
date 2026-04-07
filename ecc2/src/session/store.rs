@@ -302,6 +302,32 @@ impl StateStore {
             .find(|session| session.id == id || session.id.starts_with(id)))
     }
 
+    pub fn delete_session(&self, session_id: &str) -> Result<()> {
+        self.conn.execute(
+            "DELETE FROM session_output WHERE session_id = ?1",
+            rusqlite::params![session_id],
+        )?;
+        self.conn.execute(
+            "DELETE FROM tool_log WHERE session_id = ?1",
+            rusqlite::params![session_id],
+        )?;
+        self.conn.execute(
+            "DELETE FROM messages WHERE from_session = ?1 OR to_session = ?1",
+            rusqlite::params![session_id],
+        )?;
+
+        let deleted = self.conn.execute(
+            "DELETE FROM sessions WHERE id = ?1",
+            rusqlite::params![session_id],
+        )?;
+
+        if deleted == 0 {
+            anyhow::bail!("Session not found: {session_id}");
+        }
+
+        Ok(())
+    }
+
     pub fn send_message(&self, from: &str, to: &str, content: &str, msg_type: &str) -> Result<()> {
         self.conn.execute(
             "INSERT INTO messages (from_session, to_session, content, msg_type, timestamp)

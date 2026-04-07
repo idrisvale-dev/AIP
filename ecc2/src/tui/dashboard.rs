@@ -349,7 +349,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [s]top  [u]resume  [x]cleanup  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let aggregate = self.aggregate_usage();
@@ -392,6 +392,7 @@ impl Dashboard {
             "  s       Stop selected session",
             "  u       Resume selected session",
             "  x       Cleanup selected worktree",
+            "  d       Delete selected inactive session",
             "  Tab     Next pane",
             "  S-Tab   Previous pane",
             "  j/↓     Scroll down",
@@ -569,6 +570,19 @@ impl Dashboard {
 
         if let Err(error) = manager::cleanup_session_worktree(&self.db, &session.id).await {
             tracing::warn!("Failed to cleanup session {} worktree: {error}", session.id);
+            return;
+        }
+
+        self.refresh();
+    }
+
+    pub async fn delete_selected_session(&mut self) {
+        let Some(session) = self.sessions.get(self.selected_session) else {
+            return;
+        };
+
+        if let Err(error) = manager::delete_session(&self.db, &session.id).await {
+            tracing::warn!("Failed to delete session {}: {error}", session.id);
             return;
         }
 
@@ -1499,6 +1513,34 @@ mod tests {
         assert!(session.worktree.is_none(), "worktree metadata should be cleared");
 
         let _ = std::fs::remove_dir_all(worktree_path);
+        let _ = std::fs::remove_file(db_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn delete_selected_session_removes_inactive_session() -> Result<()> {
+        let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
+        let db = StateStore::open(&db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "done-1".to_string(),
+            task: "delete me".to_string(),
+            agent_type: "claude".to_string(),
+            state: SessionState::Completed,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let dashboard_store = StateStore::open(&db_path)?;
+        let mut dashboard = Dashboard::new(dashboard_store, Config::default());
+        dashboard.delete_selected_session().await;
+
+        assert!(db.get_session("done-1")?.is_none(), "session should be deleted");
+
         let _ = std::fs::remove_file(db_path);
         Ok(())
     }
