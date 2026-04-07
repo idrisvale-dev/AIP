@@ -1,12 +1,13 @@
 use anyhow::{Context, Result};
 use rusqlite::{Connection, OptionalExtension};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::observability::{ToolLogEntry, ToolLogPage};
 
 use super::output::{OutputLine, OutputStream, OUTPUT_BUFFER_LIMIT};
-use super::{Session, SessionMetrics, SessionState};
+use super::{Session, SessionMessage, SessionMetrics, SessionState};
 
 pub struct StateStore {
     conn: Connection,
@@ -349,6 +350,67 @@ impl StateStore {
         Ok(())
     }
 
+    pub fn list_messages_for_session(
+        &self,
+        session_id: &str,
+        limit: usize,
+    ) -> Result<Vec<SessionMessage>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, from_session, to_session, content, msg_type, read, timestamp
+             FROM messages
+             WHERE from_session = ?1 OR to_session = ?1
+             ORDER BY id DESC
+             LIMIT ?2",
+        )?;
+
+        let mut messages = stmt
+            .query_map(rusqlite::params![session_id, limit as i64], |row| {
+                let timestamp: String = row.get(6)?;
+
+                Ok(SessionMessage {
+                    id: row.get(0)?,
+                    from_session: row.get(1)?,
+                    to_session: row.get(2)?,
+                    content: row.get(3)?,
+                    msg_type: row.get(4)?,
+                    read: row.get::<_, i64>(5)? != 0,
+                    timestamp: chrono::DateTime::parse_from_rfc3339(&timestamp)
+                        .unwrap_or_default()
+                        .with_timezone(&chrono::Utc),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        messages.reverse();
+        Ok(messages)
+    }
+
+    pub fn unread_message_counts(&self) -> Result<HashMap<String, usize>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT to_session, COUNT(*)
+             FROM messages
+             WHERE read = 0
+             GROUP BY to_session",
+        )?;
+
+        let counts = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+            })?
+            .collect::<Result<HashMap<_, _>, _>>()?;
+
+        Ok(counts)
+    }
+
+    pub fn mark_messages_read(&self, session_id: &str) -> Result<usize> {
+        let updated = self.conn.execute(
+            "UPDATE messages SET read = 1 WHERE to_session = ?1 AND read = 0",
+            rusqlite::params![session_id],
+        )?;
+
+        Ok(updated)
+    }
+
     pub fn append_output_line(
         &self,
         session_id: &str,
@@ -627,6 +689,41 @@ mod tests {
         assert_eq!(texts.first().copied(), Some("line-5"));
         let expected_last_line = format!("line-{}", OUTPUT_BUFFER_LIMIT + 4);
         assert_eq!(texts.last().copied(), Some(expected_last_line.as_str()));
+
+        Ok(())
+    }
+
+    #[test]
+    fn message_round_trip_tracks_unread_counts_and_read_state() -> Result<()> {
+        let tempdir = TestDir::new("store-messages")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+
+        db.insert_session(&build_session("planner", SessionState::Running))?;
+        db.insert_session(&build_session("worker", SessionState::Pending))?;
+
+        db.send_message("planner", "worker", "{\"question\":\"Need context\"}", "query")?;
+        db.send_message(
+            "worker",
+            "planner",
+            "{\"summary\":\"Finished pass\",\"files_changed\":[\"src/app.rs\"]}",
+            "completed",
+        )?;
+
+        let unread = db.unread_message_counts()?;
+        assert_eq!(unread.get("worker"), Some(&1));
+        assert_eq!(unread.get("planner"), Some(&1));
+
+        let worker_messages = db.list_messages_for_session("worker", 10)?;
+        assert_eq!(worker_messages.len(), 2);
+        assert_eq!(worker_messages[0].msg_type, "query");
+        assert_eq!(worker_messages[1].msg_type, "completed");
+
+        let updated = db.mark_messages_read("worker")?;
+        assert_eq!(updated, 1);
+
+        let unread_after = db.unread_message_counts()?;
+        assert_eq!(unread_after.get("worker"), None);
+        assert_eq!(unread_after.get("planner"), Some(&1));
 
         Ok(())
     }

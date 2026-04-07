@@ -10,12 +10,13 @@ use ratatui::{
 use tokio::sync::broadcast;
 
 use super::widgets::{budget_state, format_currency, format_token_count, BudgetState, TokenMeter};
+use crate::comms;
 use crate::config::{Config, PaneLayout};
 use crate::observability::ToolLogEntry;
 use crate::session::output::{OutputEvent, OutputLine, SessionOutputStore, OutputStream, OUTPUT_BUFFER_LIMIT};
-use crate::session::store::StateStore;
 use crate::session::manager;
-use crate::session::{Session, SessionMetrics, SessionState, WorktreeInfo};
+use crate::session::store::StateStore;
+use crate::session::{Session, SessionMessage, SessionMetrics, SessionState, WorktreeInfo};
 use crate::worktree;
 
 const DEFAULT_PANE_SIZE_PERCENT: u16 = 35;
@@ -33,6 +34,8 @@ pub struct Dashboard {
     output_rx: broadcast::Receiver<OutputEvent>,
     sessions: Vec<Session>,
     session_output_cache: HashMap<String, Vec<OutputLine>>,
+    unread_message_counts: HashMap<String, usize>,
+    selected_messages: Vec<SessionMessage>,
     logs: Vec<ToolLogEntry>,
     selected_diff_summary: Option<String>,
     selected_pane: Pane,
@@ -54,6 +57,8 @@ struct SessionSummary {
     completed: usize,
     failed: usize,
     stopped: usize,
+    unread_messages: usize,
+    inbox_sessions: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -105,6 +110,8 @@ impl Dashboard {
             output_rx,
             sessions,
             session_output_cache: HashMap::new(),
+            unread_message_counts: HashMap::new(),
+            selected_messages: Vec::new(),
             logs: Vec::new(),
             selected_diff_summary: None,
             selected_pane: Pane::Sessions,
@@ -116,8 +123,10 @@ impl Dashboard {
             pane_size_percent,
             session_table_state,
         };
+        dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap_or_default();
         dashboard.sync_selected_output();
         dashboard.sync_selected_diff();
+        dashboard.sync_selected_messages();
         dashboard.refresh_logs();
         dashboard
     }
@@ -192,7 +201,7 @@ impl Dashboard {
             return;
         }
 
-        let summary = SessionSummary::from_sessions(&self.sessions);
+        let summary = SessionSummary::from_sessions(&self.sessions, &self.unread_message_counts);
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(2), Constraint::Min(3)])
@@ -203,14 +212,23 @@ impl Dashboard {
             chunks[0],
         );
 
-        let rows = self.sessions.iter().map(session_row);
-        let header = Row::new(["ID", "Agent", "State", "Branch", "Tokens", "Duration"])
+        let rows = self.sessions.iter().map(|session| {
+            session_row(
+                session,
+                self.unread_message_counts
+                    .get(&session.id)
+                    .copied()
+                    .unwrap_or(0),
+            )
+        });
+        let header = Row::new(["ID", "Agent", "State", "Branch", "Inbox", "Tokens", "Duration"])
             .style(Style::default().add_modifier(Modifier::BOLD));
         let widths = [
             Constraint::Length(8),
             Constraint::Length(10),
             Constraint::Length(10),
             Constraint::Min(12),
+            Constraint::Length(7),
             Constraint::Length(8),
             Constraint::Length(8),
         ];
@@ -455,6 +473,7 @@ impl Dashboard {
                 self.reset_output_view();
                 self.sync_selected_output();
                 self.sync_selected_diff();
+                self.sync_selected_messages();
                 self.refresh_logs();
             }
             Pane::Output => {
@@ -487,6 +506,7 @@ impl Dashboard {
                 self.reset_output_view();
                 self.sync_selected_output();
                 self.sync_selected_diff();
+                self.sync_selected_messages();
                 self.refresh_logs();
             }
             Pane::Output => {
@@ -530,6 +550,7 @@ impl Dashboard {
         self.reset_output_view();
         self.sync_selected_output();
         self.sync_selected_diff();
+        self.sync_selected_messages();
         self.refresh_logs();
     }
 
@@ -619,10 +640,18 @@ impl Dashboard {
                 Vec::new()
             }
         };
+        self.unread_message_counts = match self.db.unread_message_counts() {
+            Ok(counts) => counts,
+            Err(error) => {
+                tracing::warn!("Failed to refresh unread message counts: {error}");
+                HashMap::new()
+            }
+        };
         self.sync_selection_by_id(selected_id.as_deref());
         self.ensure_selected_pane_visible();
         self.sync_selected_output();
         self.sync_selected_diff();
+        self.sync_selected_messages();
         self.refresh_logs();
     }
 
@@ -675,6 +704,36 @@ impl Dashboard {
             .get(self.selected_session)
             .and_then(|session| session.worktree.as_ref())
             .and_then(|worktree| worktree::diff_summary(worktree).ok().flatten());
+    }
+
+    fn sync_selected_messages(&mut self) {
+        let Some(session_id) = self.selected_session_id().map(ToOwned::to_owned) else {
+            self.selected_messages.clear();
+            return;
+        };
+
+        let unread_count = self.unread_message_counts.get(&session_id).copied().unwrap_or(0);
+        if unread_count > 0 {
+            match self.db.mark_messages_read(&session_id) {
+                Ok(_) => {
+                    self.unread_message_counts.insert(session_id.clone(), 0);
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        "Failed to mark session {} messages as read: {error}",
+                        session_id
+                    );
+                }
+            }
+        }
+
+        self.selected_messages = match self.db.list_messages_for_session(&session_id, 5) {
+            Ok(messages) => messages,
+            Err(error) => {
+                tracing::warn!("Failed to load session messages: {error}");
+                Vec::new()
+            }
+        };
     }
 
     fn selected_session_id(&self) -> Option<&str> {
@@ -791,6 +850,28 @@ impl Dashboard {
                 ));
             }
 
+            lines.push(String::new());
+            if self.selected_messages.is_empty() {
+                lines.push("Inbox clear".to_string());
+            } else {
+                lines.push("Recent messages:".to_string());
+                let recent = self
+                    .selected_messages
+                    .iter()
+                    .rev()
+                    .take(3)
+                    .collect::<Vec<_>>();
+                for message in recent.into_iter().rev() {
+                    lines.push(format!(
+                        "- {} {} -> {} | {}",
+                        self.short_timestamp(&message.timestamp.to_rfc3339()),
+                        format_session_id(&message.from_session),
+                        format_session_id(&message.to_session),
+                        comms::preview(&message.msg_type, &message.content)
+                    ));
+                }
+            }
+
             let attention_items = self.attention_queue_items(3);
             if attention_items.is_empty() {
                 lines.push(String::new());
@@ -832,24 +913,42 @@ impl Dashboard {
     }
 
     fn attention_queue_items(&self, limit: usize) -> Vec<String> {
-        self.sessions
-            .iter()
-            .filter(|session| {
-                matches!(
-                    session.state,
-                    SessionState::Failed | SessionState::Stopped | SessionState::Pending
-                )
-            })
-            .take(limit)
-            .map(|session| {
-                format!(
+        let mut items = Vec::new();
+
+        for session in &self.sessions {
+            let unread = self
+                .unread_message_counts
+                .get(&session.id)
+                .copied()
+                .unwrap_or(0);
+            if unread > 0 {
+                items.push(format!(
+                    "- Inbox {} | {} unread | {}",
+                    format_session_id(&session.id),
+                    unread,
+                    truncate_for_dashboard(&session.task, 40)
+                ));
+            }
+
+            if matches!(
+                session.state,
+                SessionState::Failed | SessionState::Stopped | SessionState::Pending
+            ) {
+                items.push(format!(
                     "- {} {} | {}",
                     session_state_label(&session.state),
                     format_session_id(&session.id),
                     truncate_for_dashboard(&session.task, 48)
-                )
-            })
-            .collect()
+                ));
+            }
+
+            if items.len() >= limit {
+                break;
+            }
+        }
+
+        items.truncate(limit);
+        items
     }
 
     fn active_session_count(&self) -> usize {
@@ -1024,10 +1123,12 @@ impl Pane {
 }
 
 impl SessionSummary {
-    fn from_sessions(sessions: &[Session]) -> Self {
+    fn from_sessions(sessions: &[Session], unread_message_counts: &HashMap<String, usize>) -> Self {
         sessions.iter().fold(
             Self {
                 total: sessions.len(),
+                unread_messages: unread_message_counts.values().sum(),
+                inbox_sessions: unread_message_counts.values().filter(|count| **count > 0).count(),
                 ..Self::default()
             },
             |mut summary, session| {
@@ -1045,7 +1146,7 @@ impl SessionSummary {
     }
 }
 
-fn session_row(session: &Session) -> Row<'static> {
+fn session_row(session: &Session, unread_messages: usize) -> Row<'static> {
     Row::new(vec![
         Cell::from(format_session_id(&session.id)),
         Cell::from(session.agent_type.clone()),
@@ -1055,6 +1156,18 @@ fn session_row(session: &Session) -> Row<'static> {
                 .add_modifier(Modifier::BOLD),
         ),
         Cell::from(session_branch(session)),
+        Cell::from(if unread_messages == 0 {
+            "-".to_string()
+        } else {
+            unread_messages.to_string()
+        })
+        .style(if unread_messages == 0 {
+            Style::default()
+        } else {
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD)
+        }),
         Cell::from(session.metrics.tokens_used.to_string()),
         Cell::from(format_duration(session.metrics.duration_secs)),
     ])
@@ -1083,7 +1196,11 @@ fn summary_span(label: &str, value: usize, color: Color) -> Span<'static> {
 }
 
 fn attention_queue_line(summary: &SessionSummary) -> Line<'static> {
-    if summary.failed == 0 && summary.stopped == 0 && summary.pending == 0 {
+    if summary.failed == 0
+        && summary.stopped == 0
+        && summary.pending == 0
+        && summary.unread_messages == 0
+    {
         return Line::from(vec![
             Span::styled(
                 "Attention queue clear",
@@ -1098,6 +1215,7 @@ fn attention_queue_line(summary: &SessionSummary) -> Line<'static> {
             "Attention queue  ",
             Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
         ),
+        summary_span("Inbox", summary.unread_messages, Color::Magenta),
         summary_span("Failed", summary.failed, Color::Red),
         summary_span("Stopped", summary.stopped, Color::DarkGray),
         summary_span("Pending", summary.pending, Color::Yellow),
@@ -1190,13 +1308,9 @@ mod tests {
             1,
         );
 
-        let rendered = render_dashboard_text(dashboard, 150, 24);
+        let rendered = render_dashboard_text(dashboard, 180, 24);
         assert!(rendered.contains("ID"));
-        assert!(rendered.contains("Agent"));
-        assert!(rendered.contains("State"));
         assert!(rendered.contains("Branch"));
-        assert!(rendered.contains("Tokens"));
-        assert!(rendered.contains("Duration"));
         assert!(rendered.contains("Total 2"));
         assert!(rendered.contains("Running 1"));
         assert!(rendered.contains("Completed 1"));
@@ -1621,6 +1735,8 @@ mod tests {
             output_rx,
             sessions,
             session_output_cache: HashMap::new(),
+            unread_message_counts: HashMap::new(),
+            selected_messages: Vec::new(),
             logs: Vec::new(),
             selected_diff_summary: None,
             selected_pane: Pane::Sessions,

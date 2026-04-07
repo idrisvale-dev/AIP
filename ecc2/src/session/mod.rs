@@ -101,3 +101,14 @@ pub struct SessionMetrics {
     pub duration_secs: u64,
     pub cost_usd: f64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionMessage {
+    pub id: i64,
+    pub from_session: String,
+    pub to_session: String,
+    pub content: String,
+    pub msg_type: String,
+    pub read: bool,
+    pub timestamp: DateTime<Utc>,
+}
