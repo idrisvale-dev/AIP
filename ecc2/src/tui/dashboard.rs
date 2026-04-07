@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use ratatui::{
     prelude::*,
@@ -14,6 +14,7 @@ use crate::config::{Config, PaneLayout};
 use crate::observability::ToolLogEntry;
 use crate::session::output::{OutputEvent, OutputLine, SessionOutputStore, OutputStream, OUTPUT_BUFFER_LIMIT};
 use crate::session::store::StateStore;
+use crate::session::manager;
 use crate::session::{Session, SessionMetrics, SessionState, WorktreeInfo};
 
 const DEFAULT_PANE_SIZE_PERCENT: u16 = 35;
@@ -341,7 +342,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [s]top  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [s]top  [u]resume  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let aggregate = self.aggregate_usage();
@@ -382,6 +383,7 @@ impl Dashboard {
             "",
             "  n       New session",
             "  s       Stop selected session",
+            "  u       Resume selected session",
             "  Tab     Next pane",
             "  S-Tab   Previous pane",
             "  j/↓     Scroll down",
@@ -496,17 +498,30 @@ impl Dashboard {
         tracing::info!("New session dialog requested");
     }
 
-    pub fn stop_selected(&mut self) {
-        if let Some(session) = self.sessions.get(self.selected_session) {
-            if let Err(error) =
-                self.db
-                    .update_state_and_pid(&session.id, &SessionState::Stopped, None)
-            {
-                tracing::warn!("Failed to stop session {}: {error}", session.id);
-                return;
-            }
-            self.refresh();
+    pub async fn stop_selected(&mut self) {
+        let Some(session) = self.sessions.get(self.selected_session) else {
+            return;
+        };
+
+        if let Err(error) = manager::stop_session(&self.db, &session.id).await {
+            tracing::warn!("Failed to stop session {}: {error}", session.id);
+            return;
         }
+
+        self.refresh();
+    }
+
+    pub async fn resume_selected(&mut self) {
+        let Some(session) = self.sessions.get(self.selected_session) else {
+            return;
+        };
+
+        if let Err(error) = manager::resume_session(&self.db, &session.id).await {
+            tracing::warn!("Failed to resume session {}: {error}", session.id);
+            return;
+        }
+
+        self.refresh();
     }
 
     pub fn refresh(&mut self) {
@@ -954,6 +969,7 @@ mod tests {
     use anyhow::Result;
     use chrono::Utc;
     use ratatui::{backend::TestBackend, Terminal};
+    use std::path::PathBuf;
     use uuid::Uuid;
 
     use super::*;
@@ -1118,6 +1134,74 @@ mod tests {
 
         assert_eq!(dashboard.output_scroll_offset, 8);
         assert!(dashboard.selected_output_text().contains("line 11"));
+
+        let _ = std::fs::remove_file(db_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn stop_selected_uses_session_manager_transition() -> Result<()> {
+        let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
+        let db = StateStore::open(&db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "running-1".to_string(),
+            task: "stop me".to_string(),
+            agent_type: "claude".to_string(),
+            state: SessionState::Running,
+            pid: Some(999_999),
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let dashboard_store = StateStore::open(&db_path)?;
+        let mut dashboard = Dashboard::new(dashboard_store, Config::default());
+        dashboard.stop_selected().await;
+
+        let session = db
+            .get_session("running-1")?
+            .expect("session should exist after stop");
+        assert_eq!(session.state, SessionState::Stopped);
+        assert_eq!(session.pid, None);
+
+        let _ = std::fs::remove_file(db_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn resume_selected_requeues_failed_session() -> Result<()> {
+        let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
+        let db = StateStore::open(&db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "failed-1".to_string(),
+            task: "resume me".to_string(),
+            agent_type: "claude".to_string(),
+            state: SessionState::Failed,
+            pid: None,
+            worktree: Some(WorktreeInfo {
+                path: PathBuf::from("/tmp/ecc2-resume"),
+                branch: "ecc/failed-1".to_string(),
+                base_branch: "main".to_string(),
+            }),
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let dashboard_store = StateStore::open(&db_path)?;
+        let mut dashboard = Dashboard::new(dashboard_store, Config::default());
+        dashboard.resume_selected().await;
+
+        let session = db
+            .get_session("failed-1")?
+            .expect("session should exist after resume");
+        assert_eq!(session.state, SessionState::Pending);
+        assert_eq!(session.pid, None);
 
         let _ = std::fs::remove_file(db_path);
         Ok(())
