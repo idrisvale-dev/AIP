@@ -7,12 +7,12 @@ use ratatui::{
 use std::collections::HashMap;
 use tokio::sync::broadcast;
 
-use super::widgets::{budget_state, format_currency, format_token_count, BudgetState, TokenMeter};
+use super::widgets::{BudgetState, TokenMeter, budget_state, format_currency, format_token_count};
 use crate::comms;
 use crate::config::{Config, PaneLayout};
 use crate::observability::ToolLogEntry;
 use crate::session::manager;
-use crate::session::output::{OutputEvent, OutputLine, SessionOutputStore, OUTPUT_BUFFER_LIMIT};
+use crate::session::output::{OUTPUT_BUFFER_LIMIT, OutputEvent, OutputLine, SessionOutputStore};
 use crate::session::store::{DaemonActivity, StateStore};
 use crate::session::{Session, SessionMessage, SessionState};
 use crate::worktree;
@@ -31,6 +31,7 @@ const MIN_PANE_SIZE_PERCENT: u16 = 20;
 const MAX_PANE_SIZE_PERCENT: u16 = 80;
 const PANE_RESIZE_STEP_PERCENT: u16 = 5;
 const MAX_LOG_ENTRIES: u64 = 12;
+const MAX_DIFF_PREVIEW_LINES: usize = 6;
 
 pub struct Dashboard {
     db: StateStore,
@@ -51,6 +52,7 @@ pub struct Dashboard {
     selected_route_preview: Option<String>,
     logs: Vec<ToolLogEntry>,
     selected_diff_summary: Option<String>,
+    selected_diff_preview: Vec<String>,
     selected_pane: Pane,
     selected_session: usize,
     show_help: bool,
@@ -157,6 +159,7 @@ impl Dashboard {
             selected_route_preview: None,
             logs: Vec::new(),
             selected_diff_summary: None,
+            selected_diff_preview: Vec::new(),
             selected_pane: Pane::Sessions,
             selected_session: 0,
             show_help: false,
@@ -1257,11 +1260,16 @@ impl Dashboard {
     }
 
     fn sync_selected_diff(&mut self) {
-        self.selected_diff_summary = self
+        let worktree = self
             .sessions
             .get(self.selected_session)
-            .and_then(|session| session.worktree.as_ref())
-            .and_then(|worktree| worktree::diff_summary(worktree).ok().flatten());
+            .and_then(|session| session.worktree.as_ref());
+
+        self.selected_diff_summary =
+            worktree.and_then(|worktree| worktree::diff_summary(worktree).ok().flatten());
+        self.selected_diff_preview = worktree
+            .and_then(|worktree| worktree::diff_file_preview(worktree, MAX_DIFF_PREVIEW_LINES).ok())
+            .unwrap_or_default();
     }
 
     fn sync_selected_messages(&mut self) {
@@ -1653,6 +1661,12 @@ impl Dashboard {
                 if let Some(diff_summary) = self.selected_diff_summary.as_ref() {
                     lines.push(format!("Diff {diff_summary}"));
                 }
+                if !self.selected_diff_preview.is_empty() {
+                    lines.push("Changed files".to_string());
+                    for entry in &self.selected_diff_preview {
+                        lines.push(format!("- {entry}"));
+                    }
+                }
             }
 
             lines.push(format!(
@@ -1914,11 +1928,7 @@ impl Dashboard {
 
     fn log_field<'a>(&self, value: &'a str) -> &'a str {
         let trimmed = value.trim();
-        if trimmed.is_empty() {
-            "n/a"
-        } else {
-            trimmed
-        }
+        if trimmed.is_empty() { "n/a" } else { trimmed }
     }
 
     fn short_timestamp(&self, timestamp: &str) -> String {
@@ -2140,7 +2150,7 @@ fn format_duration(duration_secs: u64) -> String {
 mod tests {
     use anyhow::Result;
     use chrono::Utc;
-    use ratatui::{backend::TestBackend, Terminal};
+    use ratatui::{Terminal, backend::TestBackend};
     use std::path::PathBuf;
     use uuid::Uuid;
 
@@ -2212,11 +2222,18 @@ mod tests {
             }],
         );
         dashboard.selected_diff_summary = Some("1 file changed, 2 insertions(+)".to_string());
+        dashboard.selected_diff_preview = vec![
+            "Branch M src/main.rs".to_string(),
+            "Working ?? notes.txt".to_string(),
+        ];
 
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Branch ecc/focus | Base main"));
         assert!(text.contains("Worktree /tmp/ecc/focus"));
         assert!(text.contains("Diff 1 file changed, 2 insertions(+)"));
+        assert!(text.contains("Changed files"));
+        assert!(text.contains("- Branch M src/main.rs"));
+        assert!(text.contains("- Working ?? notes.txt"));
         assert!(text.contains("Last output last useful output"));
         assert!(text.contains("Needs attention:"));
         assert!(text.contains("Failed failed-8 | Render dashboard rows"));
@@ -2356,7 +2373,8 @@ mod tests {
     }
 
     #[test]
-    fn selected_session_metrics_text_recommends_operator_escalation_when_chronic_saturation_is_stuck() {
+    fn selected_session_metrics_text_recommends_operator_escalation_when_chronic_saturation_is_stuck()
+     {
         let mut dashboard = test_dashboard(
             vec![sample_session(
                 "focus-12345678",
@@ -2383,7 +2401,9 @@ mod tests {
         };
 
         let text = dashboard.selected_session_metrics_text();
-        assert!(text.contains("Operator escalation recommended: chronic saturation is not clearing"));
+        assert!(
+            text.contains("Operator escalation recommended: chronic saturation is not clearing")
+        );
     }
 
     #[test]
@@ -3051,6 +3071,7 @@ mod tests {
             selected_route_preview: None,
             logs: Vec::new(),
             selected_diff_summary: None,
+            selected_diff_preview: Vec::new(),
             selected_pane: Pane::Sessions,
             selected_session,
             show_help: false,
