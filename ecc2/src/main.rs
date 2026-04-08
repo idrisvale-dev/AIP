@@ -193,6 +193,9 @@ enum Commands {
         /// Emit machine-readable JSON instead of the human summary
         #[arg(long)]
         json: bool,
+        /// Return a non-zero exit code when the worktree needs attention
+        #[arg(long)]
+        check: bool,
     },
     /// Stop a running session
     Stop {
@@ -637,7 +640,11 @@ async fn main() -> Result<()> {
             let team = session::manager::get_team_status(&db, &id, depth)?;
             println!("{team}");
         }
-        Some(Commands::WorktreeStatus { session_id, json }) => {
+        Some(Commands::WorktreeStatus {
+            session_id,
+            json,
+            check,
+        }) => {
             let id = session_id.unwrap_or_else(|| "latest".to_string());
             let resolved_id = resolve_session_id(&db, &id)?;
             let session = db
@@ -648,6 +655,9 @@ async fn main() -> Result<()> {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
                 println!("{}", format_worktree_status_human(&report));
+            }
+            if check {
+                std::process::exit(worktree_status_exit_code(&report));
             }
         }
         Some(Commands::Stop { session_id }) => {
@@ -878,6 +888,8 @@ struct WorktreeStatusReport {
     session_id: String,
     task: String,
     session_state: String,
+    health: String,
+    check_exit_code: i32,
     attached: bool,
     path: Option<String>,
     branch: Option<String>,
@@ -893,6 +905,8 @@ fn build_worktree_status_report(session: &session::Session) -> Result<WorktreeSt
             session_id: session.id.clone(),
             task: session.task.clone(),
             session_state: session.state.to_string(),
+            health: "clear".to_string(),
+            check_exit_code: 0,
             attached: false,
             path: None,
             branch: None,
@@ -906,11 +920,18 @@ fn build_worktree_status_report(session: &session::Session) -> Result<WorktreeSt
     let diff_summary = worktree::diff_summary(worktree)?;
     let file_preview = worktree::diff_file_preview(worktree, 8)?;
     let merge_readiness = worktree::merge_readiness(worktree)?;
+    let (health, check_exit_code) = match merge_readiness.status {
+        worktree::MergeReadinessStatus::Conflicted => ("conflicted".to_string(), 2),
+        worktree::MergeReadinessStatus::Ready if file_preview.is_empty() => ("clear".to_string(), 0),
+        worktree::MergeReadinessStatus::Ready => ("in_progress".to_string(), 1),
+    };
 
     Ok(WorktreeStatusReport {
         session_id: session.id.clone(),
         task: session.task.clone(),
         session_state: session.state.to_string(),
+        health,
+        check_exit_code,
         attached: true,
         path: Some(worktree.path.display().to_string()),
         branch: Some(worktree.branch.clone()),
@@ -935,6 +956,7 @@ fn format_worktree_status_human(report: &WorktreeStatusReport) -> String {
         report.session_state
     )];
     lines.push(format!("Task {}", report.task));
+    lines.push(format!("Health {}", report.health));
 
     if !report.attached {
         lines.push("No worktree attached".to_string());
@@ -964,6 +986,10 @@ fn format_worktree_status_human(report: &WorktreeStatusReport) -> String {
     }
 
     lines.join("\n")
+}
+
+fn worktree_status_exit_code(report: &WorktreeStatusReport) -> i32 {
+    report.check_exit_code
 }
 
 fn summarize_coordinate_backlog(
@@ -1199,9 +1225,14 @@ mod tests {
             .expect("worktree-status should parse");
 
         match cli.command {
-            Some(Commands::WorktreeStatus { session_id, json }) => {
+            Some(Commands::WorktreeStatus {
+                session_id,
+                json,
+                check,
+            }) => {
                 assert_eq!(session_id.as_deref(), Some("planner"));
                 assert!(!json);
+                assert!(!check);
             }
             _ => panic!("expected worktree-status subcommand"),
         }
@@ -1213,9 +1244,33 @@ mod tests {
             .expect("worktree-status --json should parse");
 
         match cli.command {
-            Some(Commands::WorktreeStatus { session_id, json }) => {
+            Some(Commands::WorktreeStatus {
+                session_id,
+                json,
+                check,
+            }) => {
                 assert_eq!(session_id, None);
                 assert!(json);
+                assert!(!check);
+            }
+            _ => panic!("expected worktree-status subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_worktree_status_check_flag() {
+        let cli = Cli::try_parse_from(["ecc", "worktree-status", "--check"])
+            .expect("worktree-status --check should parse");
+
+        match cli.command {
+            Some(Commands::WorktreeStatus {
+                session_id,
+                json,
+                check,
+            }) => {
+                assert_eq!(session_id, None);
+                assert!(!json);
+                assert!(check);
             }
             _ => panic!("expected worktree-status subcommand"),
         }
@@ -1227,6 +1282,8 @@ mod tests {
             session_id: "deadbeefcafefeed".to_string(),
             task: "Review merge readiness".to_string(),
             session_state: "running".to_string(),
+            health: "conflicted".to_string(),
+            check_exit_code: 2,
             attached: true,
             path: Some("/tmp/ecc/wt-1".to_string()),
             branch: Some("ecc/deadbeefcafefeed".to_string()),
@@ -1243,6 +1300,7 @@ mod tests {
         let text = format_worktree_status_human(&report);
         assert!(text.contains("Worktree status for deadbeef [running]"));
         assert!(text.contains("Branch ecc/deadbeefcafefeed (base main)"));
+        assert!(text.contains("Health conflicted"));
         assert!(text.contains("Branch M README.md"));
         assert!(text.contains("Merge blocked by 1 conflict(s): README.md"));
         assert!(text.contains("- conflict README.md"));
@@ -1254,6 +1312,8 @@ mod tests {
             session_id: "deadbeefcafefeed".to_string(),
             task: "No worktree here".to_string(),
             session_state: "stopped".to_string(),
+            health: "clear".to_string(),
+            check_exit_code: 0,
             attached: false,
             path: None,
             branch: None,
@@ -1266,7 +1326,66 @@ mod tests {
         let text = format_worktree_status_human(&report);
         assert!(text.contains("Worktree status for deadbeef [stopped]"));
         assert!(text.contains("Task No worktree here"));
+        assert!(text.contains("Health clear"));
         assert!(text.contains("No worktree attached"));
+    }
+
+    #[test]
+    fn worktree_status_exit_code_tracks_health() {
+        let clear = WorktreeStatusReport {
+            session_id: "a".to_string(),
+            task: "clear".to_string(),
+            session_state: "idle".to_string(),
+            health: "clear".to_string(),
+            check_exit_code: 0,
+            attached: false,
+            path: None,
+            branch: None,
+            base_branch: None,
+            diff_summary: None,
+            file_preview: Vec::new(),
+            merge_readiness: None,
+        };
+        let in_progress = WorktreeStatusReport {
+            session_id: "b".to_string(),
+            task: "progress".to_string(),
+            session_state: "running".to_string(),
+            health: "in_progress".to_string(),
+            check_exit_code: 1,
+            attached: true,
+            path: Some("/tmp/ecc/wt-2".to_string()),
+            branch: Some("ecc/b".to_string()),
+            base_branch: Some("main".to_string()),
+            diff_summary: Some("Branch 1 file changed".to_string()),
+            file_preview: vec!["Branch M README.md".to_string()],
+            merge_readiness: Some(WorktreeMergeReadinessReport {
+                status: "ready".to_string(),
+                summary: "Merge ready into main".to_string(),
+                conflicts: Vec::new(),
+            }),
+        };
+        let conflicted = WorktreeStatusReport {
+            session_id: "c".to_string(),
+            task: "conflict".to_string(),
+            session_state: "running".to_string(),
+            health: "conflicted".to_string(),
+            check_exit_code: 2,
+            attached: true,
+            path: Some("/tmp/ecc/wt-3".to_string()),
+            branch: Some("ecc/c".to_string()),
+            base_branch: Some("main".to_string()),
+            diff_summary: Some("Branch 1 file changed".to_string()),
+            file_preview: vec!["Branch M README.md".to_string()],
+            merge_readiness: Some(WorktreeMergeReadinessReport {
+                status: "conflicted".to_string(),
+                summary: "Merge blocked by 1 conflict(s): README.md".to_string(),
+                conflicts: vec!["README.md".to_string()],
+            }),
+        };
+
+        assert_eq!(worktree_status_exit_code(&clear), 0);
+        assert_eq!(worktree_status_exit_code(&in_progress), 1);
+        assert_eq!(worktree_status_exit_code(&conflicted), 2);
     }
 
     #[test]
