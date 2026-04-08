@@ -392,10 +392,7 @@ where
         );
     }
     if dirty > 0 {
-        tracing::warn!(
-            "Skipped {} dirty worktree(s) during auto-merge",
-            dirty
-        );
+        tracing::warn!("Skipped {} dirty worktree(s) during auto-merge", dirty);
     }
     if active > 0 {
         tracing::info!("Skipped {active} active worktree(s) during auto-merge");
