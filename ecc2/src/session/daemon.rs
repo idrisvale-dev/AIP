@@ -94,28 +94,16 @@ fn check_sessions(db: &StateStore, timeout: Duration) -> Result<()> {
 }
 
 async fn maybe_auto_dispatch(db: &StateStore, cfg: &Config) -> Result<usize> {
-    if !cfg.auto_dispatch_unread_handoffs {
-        return Ok(0);
-    }
-
-    let outcomes = manager::auto_dispatch_backlog(
-        db,
-        cfg,
-        &cfg.default_agent,
-        true,
-        cfg.max_parallel_sessions,
-    )
-    .await?;
-    let routed: usize = outcomes.iter().map(|outcome| outcome.routed.len()).sum();
-
-    if routed > 0 {
-        tracing::info!(
-            "Auto-dispatched {routed} task handoff(s) across {} lead session(s)",
-            outcomes.len()
-        );
-    }
-
-    Ok(routed)
+    maybe_auto_dispatch_with_recorder(cfg, || {
+        manager::auto_dispatch_backlog(
+            db,
+            cfg,
+            &cfg.default_agent,
+            true,
+            cfg.max_parallel_sessions,
+        )
+    }, |routed, leads| db.record_daemon_dispatch_pass(routed, leads))
+    .await
 }
 
 async fn maybe_auto_dispatch_with<F, Fut>(cfg: &Config, dispatch: F) -> Result<usize>
@@ -123,12 +111,22 @@ where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<Vec<manager::LeadDispatchOutcome>>>,
 {
+    maybe_auto_dispatch_with_recorder(cfg, dispatch, |_, _| Ok(())).await
+}
+
+async fn maybe_auto_dispatch_with_recorder<F, Fut, R>(cfg: &Config, dispatch: F, mut record: R) -> Result<usize>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<Vec<manager::LeadDispatchOutcome>>>,
+    R: FnMut(usize, usize) -> Result<()>,
+{
     if !cfg.auto_dispatch_unread_handoffs {
         return Ok(0);
     }
 
     let outcomes = dispatch().await?;
     let routed: usize = outcomes.iter().map(|outcome| outcome.routed.len()).sum();
+    record(routed, outcomes.len())?;
 
     if routed > 0 {
         tracing::info!(
@@ -141,28 +139,16 @@ where
 }
 
 async fn maybe_auto_rebalance(db: &StateStore, cfg: &Config) -> Result<usize> {
-    if !cfg.auto_dispatch_unread_handoffs {
-        return Ok(0);
-    }
-
-    let outcomes = manager::rebalance_all_teams(
-        db,
-        cfg,
-        &cfg.default_agent,
-        true,
-        cfg.max_parallel_sessions,
-    )
-    .await?;
-    let rerouted: usize = outcomes.iter().map(|outcome| outcome.rerouted.len()).sum();
-
-    if rerouted > 0 {
-        tracing::info!(
-            "Auto-rebalanced {rerouted} task handoff(s) across {} lead session(s)",
-            outcomes.len()
-        );
-    }
-
-    Ok(rerouted)
+    maybe_auto_rebalance_with_recorder(cfg, || {
+        manager::rebalance_all_teams(
+            db,
+            cfg,
+            &cfg.default_agent,
+            true,
+            cfg.max_parallel_sessions,
+        )
+    }, |rerouted, leads| db.record_daemon_rebalance_pass(rerouted, leads))
+    .await
 }
 
 async fn maybe_auto_rebalance_with<F, Fut>(cfg: &Config, rebalance: F) -> Result<usize>
@@ -170,12 +156,26 @@ where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<Vec<manager::LeadRebalanceOutcome>>>,
 {
+    maybe_auto_rebalance_with_recorder(cfg, rebalance, |_, _| Ok(())).await
+}
+
+async fn maybe_auto_rebalance_with_recorder<F, Fut, R>(
+    cfg: &Config,
+    rebalance: F,
+    mut record: R,
+) -> Result<usize>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<Vec<manager::LeadRebalanceOutcome>>>,
+    R: FnMut(usize, usize) -> Result<()>,
+{
     if !cfg.auto_dispatch_unread_handoffs {
         return Ok(0);
     }
 
     let outcomes = rebalance().await?;
     let rerouted: usize = outcomes.iter().map(|outcome| outcome.rerouted.len()).sum();
+    record(rerouted, outcomes.len())?;
 
     if rerouted > 0 {
         tracing::info!(
@@ -354,6 +354,50 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn maybe_auto_dispatch_records_latest_pass() -> Result<()> {
+        let path = temp_db_path();
+        let mut cfg = Config::default();
+        cfg.auto_dispatch_unread_handoffs = true;
+
+        let recorded = std::sync::Arc::new(std::sync::Mutex::new(None));
+        let recorded_clone = recorded.clone();
+
+        let routed = maybe_auto_dispatch_with_recorder(
+            &cfg,
+            || async move {
+                Ok(vec![LeadDispatchOutcome {
+                    lead_session_id: "lead-a".to_string(),
+                    unread_count: 3,
+                    routed: vec![
+                        InboxDrainOutcome {
+                            message_id: 1,
+                            task: "task-a".to_string(),
+                            session_id: "worker-a".to_string(),
+                            action: AssignmentAction::Spawned,
+                        },
+                        InboxDrainOutcome {
+                            message_id: 2,
+                            task: "task-b".to_string(),
+                            session_id: "worker-b".to_string(),
+                            action: AssignmentAction::Spawned,
+                        },
+                    ],
+                }])
+            },
+            move |count, leads| {
+                *recorded_clone.lock().unwrap() = Some((count, leads));
+                Ok(())
+            },
+        )
+        .await?;
+
+        assert_eq!(routed, 2);
+        assert_eq!(*recorded.lock().unwrap(), Some((2, 1)));
+        let _ = std::fs::remove_file(path);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn maybe_auto_rebalance_noops_when_disabled() -> Result<()> {
         let path = temp_db_path();
         let _store = StateStore::open(&path)?;
@@ -419,6 +463,42 @@ mod tests {
         .await?;
 
         assert_eq!(rerouted, 3);
+        let _ = std::fs::remove_file(path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn maybe_auto_rebalance_records_latest_pass() -> Result<()> {
+        let path = temp_db_path();
+        let mut cfg = Config::default();
+        cfg.auto_dispatch_unread_handoffs = true;
+
+        let recorded = std::sync::Arc::new(std::sync::Mutex::new(None));
+        let recorded_clone = recorded.clone();
+
+        let rerouted = maybe_auto_rebalance_with_recorder(
+            &cfg,
+            || async move {
+                Ok(vec![LeadRebalanceOutcome {
+                    lead_session_id: "lead-a".to_string(),
+                    rerouted: vec![RebalanceOutcome {
+                        from_session_id: "worker-a".to_string(),
+                        message_id: 7,
+                        task: "task-a".to_string(),
+                        session_id: "worker-b".to_string(),
+                        action: AssignmentAction::ReusedIdle,
+                    }],
+                }])
+            },
+            move |count, leads| {
+                *recorded_clone.lock().unwrap() = Some((count, leads));
+                Ok(())
+            },
+        )
+        .await?;
+
+        assert_eq!(rerouted, 1);
+        assert_eq!(*recorded.lock().unwrap(), Some((1, 1)));
         let _ = std::fs::remove_file(path);
         Ok(())
     }

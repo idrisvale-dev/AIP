@@ -1237,8 +1237,11 @@ mod tests {
     fn wait_for_file(path: &Path) -> Result<String> {
         for _ in 0..200 {
             if path.exists() {
-                return fs::read_to_string(path)
-                    .with_context(|| format!("failed to read {}", path.display()));
+                let content = fs::read_to_string(path)
+                    .with_context(|| format!("failed to read {}", path.display()))?;
+                if content.lines().count() >= 2 {
+                    return Ok(content);
+                }
             }
 
             thread::sleep(StdDuration::from_millis(20));

@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::path::Path;
-
 use ratatui::{
     prelude::*,
     widgets::{
@@ -13,11 +11,18 @@ use super::widgets::{budget_state, format_currency, format_token_count, BudgetSt
 use crate::comms;
 use crate::config::{Config, PaneLayout};
 use crate::observability::ToolLogEntry;
-use crate::session::output::{OutputEvent, OutputLine, SessionOutputStore, OutputStream, OUTPUT_BUFFER_LIMIT};
+use crate::session::output::{OutputEvent, OutputLine, SessionOutputStore, OUTPUT_BUFFER_LIMIT};
 use crate::session::manager;
-use crate::session::store::StateStore;
-use crate::session::{Session, SessionMessage, SessionMetrics, SessionState, WorktreeInfo};
+use crate::session::store::{DaemonActivity, StateStore};
+use crate::session::{Session, SessionMessage, SessionState};
 use crate::worktree;
+
+#[cfg(test)]
+use std::path::Path;
+#[cfg(test)]
+use crate::session::output::OutputStream;
+#[cfg(test)]
+use crate::session::{SessionMetrics, WorktreeInfo};
 
 const DEFAULT_PANE_SIZE_PERCENT: u16 = 35;
 const DEFAULT_GRID_SIZE_PERCENT: u16 = 50;
@@ -37,6 +42,7 @@ pub struct Dashboard {
     unread_message_counts: HashMap<String, usize>,
     global_handoff_backlog_leads: usize,
     global_handoff_backlog_messages: usize,
+    daemon_activity: DaemonActivity,
     selected_messages: Vec<SessionMessage>,
     selected_parent_session: Option<String>,
     selected_child_sessions: Vec<DelegatedChildSummary>,
@@ -137,6 +143,7 @@ impl Dashboard {
             unread_message_counts: HashMap::new(),
             global_handoff_backlog_leads: 0,
             global_handoff_backlog_messages: 0,
+            daemon_activity: DaemonActivity::default(),
             selected_messages: Vec::new(),
             selected_parent_session: None,
             selected_child_sessions: Vec::new(),
@@ -988,6 +995,7 @@ impl Dashboard {
             }
         };
         self.sync_global_handoff_backlog();
+        self.sync_daemon_activity();
         self.sync_selection_by_id(selected_id.as_deref());
         self.ensure_selected_pane_visible();
         self.sync_selected_output();
@@ -1036,6 +1044,16 @@ impl Dashboard {
                 self.global_handoff_backlog_messages = 0;
             }
         }
+    }
+
+    fn sync_daemon_activity(&mut self) {
+        self.daemon_activity = match self.db.daemon_activity() {
+            Ok(activity) => activity,
+            Err(error) => {
+                tracing::warn!("Failed to refresh daemon activity: {error}");
+                DaemonActivity::default()
+            }
+        };
     }
 
     fn sync_selected_output(&mut self) {
@@ -1332,6 +1350,24 @@ impl Dashboard {
                 if self.cfg.auto_dispatch_unread_handoffs { "on" } else { "off" },
                 self.cfg.auto_dispatch_limit_per_session
             ));
+
+            if let Some(last_dispatch_at) = self.daemon_activity.last_dispatch_at.as_ref() {
+                lines.push(format!(
+                    "Last daemon dispatch {} handoff(s) across {} lead(s) @ {}",
+                    self.daemon_activity.last_dispatch_routed,
+                    self.daemon_activity.last_dispatch_leads,
+                    self.short_timestamp(&last_dispatch_at.to_rfc3339())
+                ));
+            }
+
+            if let Some(last_rebalance_at) = self.daemon_activity.last_rebalance_at.as_ref() {
+                lines.push(format!(
+                    "Last daemon rebalance {} handoff(s) across {} lead(s) @ {}",
+                    self.daemon_activity.last_rebalance_rerouted,
+                    self.daemon_activity.last_rebalance_leads,
+                    self.short_timestamp(&last_rebalance_at.to_rfc3339())
+                ));
+            }
 
             if let Some(route_preview) = self.selected_route_preview.as_ref() {
                 lines.push(format!("Next route {route_preview}"));
@@ -1933,6 +1969,33 @@ mod tests {
     }
 
     #[test]
+    fn selected_session_metrics_text_includes_daemon_activity() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.daemon_activity = DaemonActivity {
+            last_dispatch_at: Some(Utc::now()),
+            last_dispatch_routed: 4,
+            last_dispatch_leads: 2,
+            last_rebalance_at: Some(Utc::now()),
+            last_rebalance_rerouted: 1,
+            last_rebalance_leads: 1,
+        };
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Last daemon dispatch 4 handoff(s) across 2 lead(s)"));
+        assert!(text.contains("Last daemon rebalance 1 handoff(s) across 1 lead(s)"));
+    }
+
+    #[test]
     fn aggregate_cost_summary_mentions_total_cost() {
         let db = StateStore::open(Path::new(":memory:")).unwrap();
         let mut cfg = Config::default();
@@ -2373,6 +2436,7 @@ mod tests {
             unread_message_counts: HashMap::new(),
             global_handoff_backlog_leads: 0,
             global_handoff_backlog_messages: 0,
+            daemon_activity: DaemonActivity::default(),
             selected_messages: Vec::new(),
             selected_parent_session: None,
             selected_child_sessions: Vec::new(),

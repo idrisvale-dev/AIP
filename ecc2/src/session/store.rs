@@ -13,6 +13,16 @@ pub struct StateStore {
     conn: Connection,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct DaemonActivity {
+    pub last_dispatch_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub last_dispatch_routed: usize,
+    pub last_dispatch_leads: usize,
+    pub last_rebalance_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub last_rebalance_rerouted: usize,
+    pub last_rebalance_leads: usize,
+}
+
 impl StateStore {
     pub fn open(path: &Path) -> Result<Self> {
         let conn = Connection::open(path)?;
@@ -74,11 +84,23 @@ impl StateStore {
                 timestamp TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS daemon_activity (
+                id INTEGER PRIMARY KEY CHECK(id = 1),
+                last_dispatch_at TEXT,
+                last_dispatch_routed INTEGER NOT NULL DEFAULT 0,
+                last_dispatch_leads INTEGER NOT NULL DEFAULT 0,
+                last_rebalance_at TEXT,
+                last_rebalance_rerouted INTEGER NOT NULL DEFAULT 0,
+                last_rebalance_leads INTEGER NOT NULL DEFAULT 0
+            );
+
             CREATE INDEX IF NOT EXISTS idx_sessions_state ON sessions(state);
             CREATE INDEX IF NOT EXISTS idx_tool_log_session ON tool_log(session_id);
             CREATE INDEX IF NOT EXISTS idx_messages_to ON messages(to_session, read);
             CREATE INDEX IF NOT EXISTS idx_session_output_session
                 ON session_output(session_id, id);
+
+            INSERT OR IGNORE INTO daemon_activity (id) VALUES (1);
             ",
         )?;
         self.ensure_session_columns()?;
@@ -488,6 +510,71 @@ impl StateStore {
             .map_err(Into::into)
     }
 
+    pub fn daemon_activity(&self) -> Result<DaemonActivity> {
+        self.conn
+            .query_row(
+                "SELECT last_dispatch_at, last_dispatch_routed, last_dispatch_leads,
+                        last_rebalance_at, last_rebalance_rerouted, last_rebalance_leads
+                 FROM daemon_activity
+                 WHERE id = 1",
+                [],
+                |row| {
+                    let parse_ts =
+                        |value: Option<String>| -> rusqlite::Result<Option<chrono::DateTime<chrono::Utc>>> {
+                            value
+                                .map(|raw| {
+                                    chrono::DateTime::parse_from_rfc3339(&raw)
+                                        .map(|ts| ts.with_timezone(&chrono::Utc))
+                                        .map_err(|err| {
+                                            rusqlite::Error::FromSqlConversionFailure(
+                                                0,
+                                                rusqlite::types::Type::Text,
+                                                Box::new(err),
+                                            )
+                                        })
+                                })
+                                .transpose()
+                        };
+
+                    Ok(DaemonActivity {
+                        last_dispatch_at: parse_ts(row.get(0)?)?,
+                        last_dispatch_routed: row.get::<_, i64>(1)? as usize,
+                        last_dispatch_leads: row.get::<_, i64>(2)? as usize,
+                        last_rebalance_at: parse_ts(row.get(3)?)?,
+                        last_rebalance_rerouted: row.get::<_, i64>(4)? as usize,
+                        last_rebalance_leads: row.get::<_, i64>(5)? as usize,
+                    })
+                },
+            )
+            .map_err(Into::into)
+    }
+
+    pub fn record_daemon_dispatch_pass(&self, routed: usize, leads: usize) -> Result<()> {
+        self.conn.execute(
+            "UPDATE daemon_activity
+             SET last_dispatch_at = ?1,
+                 last_dispatch_routed = ?2,
+                 last_dispatch_leads = ?3
+             WHERE id = 1",
+            rusqlite::params![chrono::Utc::now().to_rfc3339(), routed as i64, leads as i64],
+        )?;
+
+        Ok(())
+    }
+
+    pub fn record_daemon_rebalance_pass(&self, rerouted: usize, leads: usize) -> Result<()> {
+        self.conn.execute(
+            "UPDATE daemon_activity
+             SET last_rebalance_at = ?1,
+                 last_rebalance_rerouted = ?2,
+                 last_rebalance_leads = ?3
+             WHERE id = 1",
+            rusqlite::params![chrono::Utc::now().to_rfc3339(), rerouted as i64, leads as i64],
+        )?;
+
+        Ok(())
+    }
+
     pub fn delegated_children(&self, session_id: &str, limit: usize) -> Result<Vec<String>> {
         let mut stmt = self.conn.prepare(
             "SELECT to_session
@@ -852,6 +939,25 @@ mod tests {
                 ("worker-3".to_string(), 1),
             ]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn daemon_activity_round_trips_latest_passes() -> Result<()> {
+        let tempdir = TestDir::new("store-daemon-activity")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+
+        db.record_daemon_dispatch_pass(4, 2)?;
+        db.record_daemon_rebalance_pass(3, 1)?;
+
+        let activity = db.daemon_activity()?;
+        assert_eq!(activity.last_dispatch_routed, 4);
+        assert_eq!(activity.last_dispatch_leads, 2);
+        assert_eq!(activity.last_rebalance_rerouted, 3);
+        assert_eq!(activity.last_rebalance_leads, 1);
+        assert!(activity.last_dispatch_at.is_some());
+        assert!(activity.last_rebalance_at.is_some());
 
         Ok(())
     }
