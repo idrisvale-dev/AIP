@@ -157,7 +157,7 @@ where
     RFut: Future<Output = Result<usize>>,
     Rec: FnMut(usize, usize) -> Result<()>,
 {
-    if should_rebalance_first(prior_activity) {
+    if prior_activity.prefers_rebalance_first() {
         let rebalanced = rebalance().await?;
         let first_dispatch = dispatch().await?;
         return Ok((first_dispatch, rebalanced, DispatchPassSummary::default()));
@@ -180,21 +180,6 @@ where
     };
 
     Ok((first_dispatch, rebalanced, recovery_dispatch))
-}
-
-fn should_rebalance_first(activity: &super::store::DaemonActivity) -> bool {
-    if activity.last_dispatch_deferred == 0 {
-        return false;
-    }
-
-    match (
-        activity.last_dispatch_at.as_ref(),
-        activity.last_recovery_dispatch_at.as_ref(),
-    ) {
-        (Some(dispatch_at), Some(recovery_at)) => recovery_at < dispatch_at,
-        (Some(_), None) => true,
-        _ => false,
-    }
 }
 
 async fn maybe_auto_dispatch_with<F, Fut>(cfg: &Config, dispatch: F) -> Result<usize>
@@ -646,34 +631,6 @@ mod tests {
         assert_eq!(recovery.routed, 2);
         assert_eq!(*recorded.lock().unwrap(), Some((2, 1)));
         Ok(())
-    }
-
-    #[test]
-    fn should_rebalance_first_only_after_unrecovered_deferred_pressure() {
-        let now = chrono::Utc::now();
-
-        assert!(!should_rebalance_first(&DaemonActivity::default()));
-
-        let unresolved = DaemonActivity {
-            last_dispatch_at: Some(now),
-            last_dispatch_routed: 0,
-            last_dispatch_deferred: 2,
-            last_dispatch_leads: 1,
-            last_recovery_dispatch_at: None,
-            last_recovery_dispatch_routed: 0,
-            last_recovery_dispatch_leads: 0,
-            last_rebalance_at: None,
-            last_rebalance_rerouted: 0,
-            last_rebalance_leads: 0,
-        };
-        assert!(should_rebalance_first(&unresolved));
-
-        let recovered = DaemonActivity {
-            last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),
-            last_recovery_dispatch_routed: 1,
-            ..unresolved.clone()
-        };
-        assert!(!should_rebalance_first(&recovered));
     }
 
     #[tokio::test]

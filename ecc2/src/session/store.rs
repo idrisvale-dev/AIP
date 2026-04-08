@@ -27,6 +27,23 @@ pub struct DaemonActivity {
     pub last_rebalance_leads: usize,
 }
 
+impl DaemonActivity {
+    pub fn prefers_rebalance_first(&self) -> bool {
+        if self.last_dispatch_deferred == 0 {
+            return false;
+        }
+
+        match (
+            self.last_dispatch_at.as_ref(),
+            self.last_recovery_dispatch_at.as_ref(),
+        ) {
+            (Some(dispatch_at), Some(recovery_at)) => recovery_at < dispatch_at,
+            (Some(_), None) => true,
+            _ => false,
+        }
+    }
+}
+
 impl StateStore {
     pub fn open(path: &Path) -> Result<Self> {
         let conn = Connection::open(path)?;
@@ -1038,5 +1055,34 @@ mod tests {
         assert!(activity.last_rebalance_at.is_some());
 
         Ok(())
+    }
+
+    #[test]
+    fn daemon_activity_detects_rebalance_first_mode() {
+        let now = chrono::Utc::now();
+
+        let clear = DaemonActivity::default();
+        assert!(!clear.prefers_rebalance_first());
+
+        let unresolved = DaemonActivity {
+            last_dispatch_at: Some(now),
+            last_dispatch_routed: 0,
+            last_dispatch_deferred: 2,
+            last_dispatch_leads: 1,
+            last_recovery_dispatch_at: None,
+            last_recovery_dispatch_routed: 0,
+            last_recovery_dispatch_leads: 0,
+            last_rebalance_at: None,
+            last_rebalance_rerouted: 0,
+            last_rebalance_leads: 0,
+        };
+        assert!(unresolved.prefers_rebalance_first());
+
+        let recovered = DaemonActivity {
+            last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),
+            last_recovery_dispatch_routed: 1,
+            ..unresolved
+        };
+        assert!(!recovered.prefers_rebalance_first());
     }
 }

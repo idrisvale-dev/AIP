@@ -1487,6 +1487,15 @@ impl Dashboard {
                 self.cfg.auto_dispatch_limit_per_session
             ));
 
+            lines.push(format!(
+                "Coordination mode {}",
+                if self.daemon_activity.prefers_rebalance_first() {
+                    "rebalance-first (chronic saturation)"
+                } else {
+                    "dispatch-first"
+                }
+            ));
+
             if let Some(last_dispatch_at) = self.daemon_activity.last_dispatch_at.as_ref() {
                 lines.push(format!(
                     "Last daemon dispatch {} routed / {} deferred across {} lead(s) @ {}",
@@ -2114,6 +2123,7 @@ mod tests {
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Team 3/8 | idle 1 | running 1 | pending 1 | failed 0 | stopped 0"));
         assert!(text.contains("Global handoff backlog 2 lead(s) / 5 handoff(s) | Auto-dispatch off @ 5/lead"));
+        assert!(text.contains("Coordination mode dispatch-first"));
         assert!(text.contains("Next route reuse idle worker-1"));
     }
 
@@ -2144,9 +2154,40 @@ mod tests {
         };
 
         let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Coordination mode dispatch-first"));
         assert!(text.contains("Last daemon dispatch 4 routed / 2 deferred across 2 lead(s)"));
         assert!(text.contains("Last daemon recovery dispatch 1 handoff(s) across 1 lead(s)"));
         assert!(text.contains("Last daemon rebalance 1 handoff(s) across 1 lead(s)"));
+    }
+
+    #[test]
+    fn selected_session_metrics_text_shows_rebalance_first_mode_when_saturation_is_unrecovered() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.daemon_activity = DaemonActivity {
+            last_dispatch_at: Some(Utc::now()),
+            last_dispatch_routed: 0,
+            last_dispatch_deferred: 3,
+            last_dispatch_leads: 1,
+            last_recovery_dispatch_at: None,
+            last_recovery_dispatch_routed: 0,
+            last_recovery_dispatch_leads: 0,
+            last_rebalance_at: Some(Utc::now()),
+            last_rebalance_rerouted: 1,
+            last_rebalance_leads: 1,
+        };
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Coordination mode rebalance-first (chronic saturation)"));
     }
 
     #[test]
