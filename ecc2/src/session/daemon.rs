@@ -33,6 +33,10 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
             tracing::error!("Backlog coordination pass failed: {e}");
         }
 
+        if let Err(e) = maybe_auto_merge_ready_worktrees(&db, &cfg).await {
+            tracing::error!("Worktree auto-merge pass failed: {e}");
+        }
+
         time::sleep(heartbeat_interval).await;
     }
 }
@@ -335,6 +339,41 @@ where
     }
 
     Ok(rerouted)
+}
+
+async fn maybe_auto_merge_ready_worktrees(db: &StateStore, cfg: &Config) -> Result<usize> {
+    maybe_auto_merge_ready_worktrees_with(cfg, || manager::merge_ready_worktrees(db, true)).await
+}
+
+async fn maybe_auto_merge_ready_worktrees_with<F, Fut>(cfg: &Config, merge: F) -> Result<usize>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<manager::WorktreeBulkMergeOutcome>>,
+{
+    if !cfg.auto_merge_ready_worktrees {
+        return Ok(0);
+    }
+
+    let outcome = merge().await?;
+    let merged = outcome.merged.len();
+
+    if merged > 0 {
+        tracing::info!("Auto-merged {merged} ready worktree(s)");
+    }
+    if !outcome.conflicted_session_ids.is_empty() {
+        tracing::warn!(
+            "Skipped {} conflicted worktree(s) during auto-merge",
+            outcome.conflicted_session_ids.len()
+        );
+    }
+    if !outcome.dirty_worktree_ids.is_empty() {
+        tracing::warn!(
+            "Skipped {} dirty worktree(s) during auto-merge",
+            outcome.dirty_worktree_ids.len()
+        );
+    }
+
+    Ok(merged)
 }
 
 #[cfg(unix)]
@@ -1037,6 +1076,69 @@ mod tests {
         assert_eq!(rerouted, 1);
         assert_eq!(*recorded.lock().unwrap(), Some((1, 1)));
         let _ = std::fs::remove_file(path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn maybe_auto_merge_ready_worktrees_noops_when_disabled() -> Result<()> {
+        let mut cfg = Config::default();
+        cfg.auto_merge_ready_worktrees = false;
+
+        let invoked = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let invoked_flag = invoked.clone();
+
+        let merged = maybe_auto_merge_ready_worktrees_with(&cfg, move || {
+            let invoked_flag = invoked_flag.clone();
+            async move {
+                invoked_flag.store(true, std::sync::atomic::Ordering::SeqCst);
+                Ok(manager::WorktreeBulkMergeOutcome {
+                    merged: Vec::new(),
+                    active_with_worktree_ids: Vec::new(),
+                    conflicted_session_ids: Vec::new(),
+                    dirty_worktree_ids: Vec::new(),
+                    failures: Vec::new(),
+                })
+            }
+        })
+        .await?;
+
+        assert_eq!(merged, 0);
+        assert!(!invoked.load(std::sync::atomic::Ordering::SeqCst));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn maybe_auto_merge_ready_worktrees_merges_ready_worktrees_when_enabled() -> Result<()> {
+        let mut cfg = Config::default();
+        cfg.auto_merge_ready_worktrees = true;
+
+        let merged = maybe_auto_merge_ready_worktrees_with(&cfg, || async move {
+            Ok(manager::WorktreeBulkMergeOutcome {
+                merged: vec![
+                    manager::WorktreeMergeOutcome {
+                        session_id: "worker-a".to_string(),
+                        branch: "ecc/worker-a".to_string(),
+                        base_branch: "main".to_string(),
+                        already_up_to_date: false,
+                        cleaned_worktree: true,
+                    },
+                    manager::WorktreeMergeOutcome {
+                        session_id: "worker-b".to_string(),
+                        branch: "ecc/worker-b".to_string(),
+                        base_branch: "main".to_string(),
+                        already_up_to_date: true,
+                        cleaned_worktree: true,
+                    },
+                ],
+                active_with_worktree_ids: vec!["worker-c".to_string()],
+                conflicted_session_ids: vec!["worker-d".to_string()],
+                dirty_worktree_ids: vec!["worker-e".to_string()],
+                failures: Vec::new(),
+            })
+        })
+        .await?;
+
+        assert_eq!(merged, 2);
         Ok(())
     }
 }

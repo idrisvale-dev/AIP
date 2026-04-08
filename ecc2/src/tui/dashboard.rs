@@ -462,7 +462,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  [m]erge  merge ready [M]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  [m]erge  merge ready [M]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -517,6 +517,7 @@ impl Dashboard {
             "  m       Merge selected ready worktree into base and clean it up",
             "  M       Merge all ready inactive worktrees and clean them up",
             "  p       Toggle daemon auto-dispatch policy and persist config",
+            "  w       Toggle daemon auto-merge for ready inactive worktrees",
             "  ,/.     Decrease/increase auto-dispatch limit per lead",
             "  s       Stop selected session",
             "  u       Resume selected session",
@@ -1274,6 +1275,27 @@ impl Dashboard {
         }
     }
 
+    pub fn toggle_auto_merge_policy(&mut self) {
+        self.cfg.auto_merge_ready_worktrees = !self.cfg.auto_merge_ready_worktrees;
+        match self.cfg.save() {
+            Ok(()) => {
+                let state = if self.cfg.auto_merge_ready_worktrees {
+                    "enabled"
+                } else {
+                    "disabled"
+                };
+                self.set_operator_note(format!(
+                    "daemon auto-merge {state} | saved to {}",
+                    crate::config::Config::config_path().display()
+                ));
+            }
+            Err(error) => {
+                self.cfg.auto_merge_ready_worktrees = !self.cfg.auto_merge_ready_worktrees;
+                self.set_operator_note(format!("failed to persist auto-merge policy: {error}"));
+            }
+        }
+    }
+
     pub fn adjust_auto_dispatch_limit(&mut self, delta: isize) {
         let next =
             (self.cfg.auto_dispatch_limit_per_session as isize + delta).clamp(1, 50) as usize;
@@ -1749,7 +1771,7 @@ impl Dashboard {
             }
 
             lines.push(format!(
-                "Global handoff backlog {} lead(s) / {} handoff(s) | Auto-dispatch {} @ {}/lead",
+                "Global handoff backlog {} lead(s) / {} handoff(s) | Auto-dispatch {} @ {}/lead | Auto-merge {}",
                 self.global_handoff_backlog_leads,
                 self.global_handoff_backlog_messages,
                 if self.cfg.auto_dispatch_unread_handoffs {
@@ -1757,7 +1779,12 @@ impl Dashboard {
                 } else {
                     "off"
                 },
-                self.cfg.auto_dispatch_limit_per_session
+                self.cfg.auto_dispatch_limit_per_session,
+                if self.cfg.auto_merge_ready_worktrees {
+                    "on"
+                } else {
+                    "off"
+                }
             ));
 
             let stabilized = self.daemon_activity.stabilized_after_recovery_at();
@@ -2567,10 +2594,34 @@ mod tests {
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Team 3/8 | idle 1 | running 1 | pending 1 | failed 0 | stopped 0"));
         assert!(text.contains(
-            "Global handoff backlog 2 lead(s) / 5 handoff(s) | Auto-dispatch off @ 5/lead"
+            "Global handoff backlog 2 lead(s) / 5 handoff(s) | Auto-dispatch off @ 5/lead | Auto-merge off"
         ));
         assert!(text.contains("Coordination mode dispatch-first"));
         assert!(text.contains("Next route reuse idle worker-1"));
+    }
+
+    #[test]
+    fn selected_session_metrics_text_shows_auto_merge_policy_state() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.cfg.auto_dispatch_unread_handoffs = true;
+        dashboard.cfg.auto_merge_ready_worktrees = true;
+        dashboard.global_handoff_backlog_leads = 1;
+        dashboard.global_handoff_backlog_messages = 2;
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains(
+            "Global handoff backlog 1 lead(s) / 2 handoff(s) | Auto-dispatch on @ 5/lead | Auto-merge on"
+        ));
     }
 
     #[test]
@@ -3735,6 +3786,7 @@ mod tests {
             default_agent: "claude".to_string(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
+            auto_merge_ready_worktrees: false,
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             theme: Theme::Dark,

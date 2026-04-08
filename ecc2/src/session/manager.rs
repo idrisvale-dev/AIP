@@ -1618,6 +1618,7 @@ mod tests {
             default_agent: "claude".to_string(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
+            auto_merge_ready_worktrees: false,
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             theme: Theme::Dark,
