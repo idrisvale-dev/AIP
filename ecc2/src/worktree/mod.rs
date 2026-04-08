@@ -136,6 +136,34 @@ pub fn diff_file_preview(worktree: &WorktreeInfo, limit: usize) -> Result<Vec<St
     Ok(preview)
 }
 
+pub fn diff_patch_preview(worktree: &WorktreeInfo, max_lines: usize) -> Result<Option<String>> {
+    let mut remaining = max_lines.max(1);
+    let mut sections = Vec::new();
+    let base_ref = format!("{}...HEAD", worktree.base_branch);
+
+    let committed = git_diff_patch_lines(&worktree.path, &[&base_ref])?;
+    if !committed.is_empty() && remaining > 0 {
+        let taken = take_preview_lines(&committed, &mut remaining);
+        sections.push(format!(
+            "--- Branch diff vs {} ---\n{}",
+            worktree.base_branch,
+            taken.join("\n")
+        ));
+    }
+
+    let working = git_diff_patch_lines(&worktree.path, &[])?;
+    if !working.is_empty() && remaining > 0 {
+        let taken = take_preview_lines(&working, &mut remaining);
+        sections.push(format!("--- Working tree diff ---\n{}", taken.join("\n")));
+    }
+
+    if sections.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(sections.join("\n\n")))
+    }
+}
+
 fn git_diff_shortstat(worktree_path: &Path, extra_args: &[&str]) -> Result<Option<String>> {
     let mut command = Command::new("git");
     command
@@ -191,6 +219,31 @@ fn git_diff_name_status(worktree_path: &Path, extra_args: &[&str]) -> Result<Vec
     Ok(parse_nonempty_lines(&output.stdout))
 }
 
+fn git_diff_patch_lines(worktree_path: &Path, extra_args: &[&str]) -> Result<Vec<String>> {
+    let mut command = Command::new("git");
+    command
+        .arg("-C")
+        .arg(worktree_path)
+        .arg("diff")
+        .args(["--stat", "--patch", "--find-renames"]);
+    command.args(extra_args);
+
+    let output = command
+        .output()
+        .context("Failed to generate worktree patch preview")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        tracing::warn!(
+            "Worktree patch preview warning for {}: {stderr}",
+            worktree_path.display()
+        );
+        return Ok(Vec::new());
+    }
+
+    Ok(parse_nonempty_lines(&output.stdout))
+}
+
 fn git_status_short(worktree_path: &Path) -> Result<Vec<String>> {
     let output = Command::new("git")
         .arg("-C")
@@ -218,6 +271,13 @@ fn parse_nonempty_lines(stdout: &[u8]) -> Vec<String> {
         .filter(|line| !line.is_empty())
         .map(ToOwned::to_owned)
         .collect()
+}
+
+fn take_preview_lines(lines: &[String], remaining: &mut usize) -> Vec<String> {
+    let count = (*remaining).min(lines.len());
+    let taken = lines.iter().take(count).cloned().collect::<Vec<_>>();
+    *remaining = remaining.saturating_sub(count);
+    taken
 }
 
 fn get_current_branch(repo_root: &Path) -> Result<String> {
@@ -351,6 +411,59 @@ mod tests {
                 .iter()
                 .any(|line| line.contains("Working M") && line.contains("README.md"))
         );
+
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["worktree", "remove", "--force"])
+            .arg(&worktree_dir)
+            .output();
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn diff_patch_preview_reports_branch_and_working_tree_sections() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-worktree-patch-{}", Uuid::new_v4()));
+        let repo = root.join("repo");
+        fs::create_dir_all(&repo)?;
+
+        run_git(&repo, &["init", "-b", "main"])?;
+        run_git(&repo, &["config", "user.email", "ecc@example.com"])?;
+        run_git(&repo, &["config", "user.name", "ECC"])?;
+        fs::write(repo.join("README.md"), "hello\n")?;
+        run_git(&repo, &["add", "README.md"])?;
+        run_git(&repo, &["commit", "-m", "init"])?;
+
+        let worktree_dir = root.join("wt-1");
+        run_git(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "-b",
+                "ecc/test",
+                worktree_dir.to_str().expect("utf8 path"),
+                "HEAD",
+            ],
+        )?;
+
+        fs::write(worktree_dir.join("src.txt"), "branch\n")?;
+        run_git(&worktree_dir, &["add", "src.txt"])?;
+        run_git(&worktree_dir, &["commit", "-m", "branch file"])?;
+        fs::write(worktree_dir.join("README.md"), "hello\nworking\n")?;
+
+        let info = WorktreeInfo {
+            path: worktree_dir.clone(),
+            branch: "ecc/test".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        let preview = diff_patch_preview(&info, 40)?.expect("patch preview");
+        assert!(preview.contains("--- Branch diff vs main ---"));
+        assert!(preview.contains("--- Working tree diff ---"));
+        assert!(preview.contains("src.txt"));
+        assert!(preview.contains("README.md"));
 
         let _ = Command::new("git")
             .arg("-C")

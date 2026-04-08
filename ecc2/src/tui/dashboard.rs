@@ -32,6 +32,7 @@ const MAX_PANE_SIZE_PERCENT: u16 = 80;
 const PANE_RESIZE_STEP_PERCENT: u16 = 5;
 const MAX_LOG_ENTRIES: u64 = 12;
 const MAX_DIFF_PREVIEW_LINES: usize = 6;
+const MAX_DIFF_PATCH_LINES: usize = 80;
 
 pub struct Dashboard {
     db: StateStore,
@@ -53,6 +54,8 @@ pub struct Dashboard {
     logs: Vec<ToolLogEntry>,
     selected_diff_summary: Option<String>,
     selected_diff_preview: Vec<String>,
+    selected_diff_patch: Option<String>,
+    output_mode: OutputMode,
     selected_pane: Pane,
     selected_session: usize,
     show_help: bool,
@@ -83,6 +86,12 @@ enum Pane {
     Output,
     Metrics,
     Log,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OutputMode {
+    SessionOutput,
+    WorktreeDiff,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -160,6 +169,8 @@ impl Dashboard {
             logs: Vec::new(),
             selected_diff_summary: None,
             selected_diff_preview: Vec::new(),
+            selected_diff_patch: None,
+            output_mode: OutputMode::SessionOutput,
             selected_pane: Pane::Sessions,
             selected_session: 0,
             show_help: false,
@@ -319,27 +330,43 @@ impl Dashboard {
     fn render_output(&mut self, frame: &mut Frame, area: Rect) {
         self.sync_output_scroll(area.height.saturating_sub(2) as usize);
 
-        let content = if self.sessions.get(self.selected_session).is_some() {
-            let lines = self.selected_output_lines();
-
-            if lines.is_empty() {
-                "Waiting for session output...".to_string()
-            } else {
-                lines
-                    .iter()
-                    .map(|line| line.text.as_str())
-                    .collect::<Vec<_>>()
-                    .join("\n")
+        let (title, content) = if self.sessions.get(self.selected_session).is_some() {
+            match self.output_mode {
+                OutputMode::SessionOutput => {
+                    let lines = self.selected_output_lines();
+                    let content = if lines.is_empty() {
+                        "Waiting for session output...".to_string()
+                    } else {
+                        lines.iter().map(|line| line.text.as_str()).collect::<Vec<_>>().join("\n")
+                    };
+                    (" Output ", content)
+                }
+                OutputMode::WorktreeDiff => {
+                    let content = self
+                        .selected_diff_patch
+                        .clone()
+                        .or_else(|| {
+                            self.selected_diff_summary.as_ref().map(|summary| {
+                                format!(
+                                    "{summary}\n\nNo patch content to preview yet. The worktree may be clean or only have summary-level changes."
+                                )
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            "No worktree diff available for the selected session.".to_string()
+                        });
+                    (" Diff ", content)
+                }
             }
         } else {
-            "No sessions. Press 'n' to start one.".to_string()
+            (" Output ", "No sessions. Press 'n' to start one.".to_string())
         };
 
         let paragraph = Paragraph::new(content)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(" Output ")
+                    .title(title)
                     .border_style(self.pane_border_style(Pane::Output)),
             )
             .scroll((self.output_scroll_offset as u16, 0));
@@ -427,7 +454,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -478,6 +505,7 @@ impl Dashboard {
             "  i       Drain unread task handoffs from selected lead",
             "  g       Auto-dispatch unread handoffs across lead sessions",
             "  G       Dispatch then rebalance backlog across lead teams",
+            "  v       Toggle selected worktree diff in output pane",
             "  p       Toggle daemon auto-dispatch policy and persist config",
             "  ,/.     Decrease/increase auto-dispatch limit per lead",
             "  s       Stop selected session",
@@ -667,6 +695,27 @@ impl Dashboard {
         self.sync_selected_messages();
         self.sync_selected_lineage();
         self.refresh_logs();
+    }
+
+    pub fn toggle_output_mode(&mut self) {
+        match self.output_mode {
+            OutputMode::SessionOutput => {
+                if self.selected_diff_patch.is_some() || self.selected_diff_summary.is_some() {
+                    self.output_mode = OutputMode::WorktreeDiff;
+                    self.selected_pane = Pane::Output;
+                    self.output_follow = false;
+                    self.output_scroll_offset = 0;
+                    self.set_operator_note("showing selected worktree diff".to_string());
+                } else {
+                    self.set_operator_note("no worktree diff for selected session".to_string());
+                }
+            }
+            OutputMode::WorktreeDiff => {
+                self.output_mode = OutputMode::SessionOutput;
+                self.reset_output_view();
+                self.set_operator_note("showing session output".to_string());
+            }
+        }
     }
 
     pub async fn assign_selected(&mut self) {
@@ -1270,6 +1319,11 @@ impl Dashboard {
         self.selected_diff_preview = worktree
             .and_then(|worktree| worktree::diff_file_preview(worktree, MAX_DIFF_PREVIEW_LINES).ok())
             .unwrap_or_default();
+        self.selected_diff_patch = worktree
+            .and_then(|worktree| worktree::diff_patch_preview(worktree, MAX_DIFF_PATCH_LINES).ok().flatten());
+        if self.output_mode == OutputMode::WorktreeDiff && self.selected_diff_patch.is_none() {
+            self.output_mode = OutputMode::SessionOutput;
+        }
     }
 
     fn sync_selected_messages(&mut self) {
@@ -1950,6 +2004,20 @@ impl Dashboard {
             .collect::<Vec<_>>()
             .join("\n")
     }
+
+    #[cfg(test)]
+    fn rendered_output_text(&mut self, width: u16, height: u16) -> String {
+        let backend = ratatui::backend::TestBackend::new(width, height);
+        let mut terminal = ratatui::Terminal::new(backend).expect("terminal");
+        terminal.draw(|frame| self.render(frame)).expect("draw");
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect::<String>()
+    }
 }
 
 impl Pane {
@@ -2237,6 +2305,36 @@ mod tests {
         assert!(text.contains("Last output last useful output"));
         assert!(text.contains("Needs attention:"));
         assert!(text.contains("Failed failed-8 | Render dashboard rows"));
+    }
+
+    #[test]
+    fn toggle_output_mode_switches_to_worktree_diff_preview() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.selected_diff_summary = Some("1 file changed".to_string());
+        dashboard.selected_diff_patch = Some(
+            "--- Branch diff vs main ---\ndiff --git a/src/lib.rs b/src/lib.rs\n+hello".to_string(),
+        );
+
+        dashboard.toggle_output_mode();
+
+        assert_eq!(dashboard.output_mode, OutputMode::WorktreeDiff);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("showing selected worktree diff")
+        );
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("Diff"));
+        assert!(rendered.contains("diff --git a/src/lib.rs b/src/lib.rs"));
     }
 
     #[test]
@@ -3072,6 +3170,8 @@ mod tests {
             logs: Vec::new(),
             selected_diff_summary: None,
             selected_diff_preview: Vec::new(),
+            selected_diff_patch: None,
+            output_mode: OutputMode::SessionOutput,
             selected_pane: Pane::Sessions,
             selected_session,
             show_help: false,
