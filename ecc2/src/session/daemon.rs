@@ -26,6 +26,10 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
             tracing::error!("Auto-dispatch pass failed: {e}");
         }
 
+        if let Err(e) = maybe_auto_rebalance(&db, &cfg).await {
+            tracing::error!("Auto-rebalance pass failed: {e}");
+        }
+
         time::sleep(heartbeat_interval).await;
     }
 }
@@ -136,6 +140,53 @@ where
     Ok(routed)
 }
 
+async fn maybe_auto_rebalance(db: &StateStore, cfg: &Config) -> Result<usize> {
+    if !cfg.auto_dispatch_unread_handoffs {
+        return Ok(0);
+    }
+
+    let outcomes = manager::rebalance_all_teams(
+        db,
+        cfg,
+        &cfg.default_agent,
+        true,
+        cfg.max_parallel_sessions,
+    )
+    .await?;
+    let rerouted: usize = outcomes.iter().map(|outcome| outcome.rerouted.len()).sum();
+
+    if rerouted > 0 {
+        tracing::info!(
+            "Auto-rebalanced {rerouted} task handoff(s) across {} lead session(s)",
+            outcomes.len()
+        );
+    }
+
+    Ok(rerouted)
+}
+
+async fn maybe_auto_rebalance_with<F, Fut>(cfg: &Config, rebalance: F) -> Result<usize>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<Vec<manager::LeadRebalanceOutcome>>>,
+{
+    if !cfg.auto_dispatch_unread_handoffs {
+        return Ok(0);
+    }
+
+    let outcomes = rebalance().await?;
+    let rerouted: usize = outcomes.iter().map(|outcome| outcome.rerouted.len()).sum();
+
+    if rerouted > 0 {
+        tracing::info!(
+            "Auto-rebalanced {rerouted} task handoff(s) across {} lead session(s)",
+            outcomes.len()
+        );
+    }
+
+    Ok(rerouted)
+}
+
 #[cfg(unix)]
 fn pid_is_alive(pid: u32) -> bool {
     if pid == 0 {
@@ -162,7 +213,10 @@ fn pid_is_alive(_pid: u32) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::session::manager::{AssignmentAction, InboxDrainOutcome, LeadDispatchOutcome};
+    use crate::session::manager::{
+        AssignmentAction, InboxDrainOutcome, LeadDispatchOutcome, LeadRebalanceOutcome,
+        RebalanceOutcome,
+    };
     use crate::session::{Session, SessionMetrics, SessionState};
     use std::path::PathBuf;
 
@@ -295,6 +349,76 @@ mod tests {
         .await?;
 
         assert_eq!(routed, 3);
+        let _ = std::fs::remove_file(path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn maybe_auto_rebalance_noops_when_disabled() -> Result<()> {
+        let path = temp_db_path();
+        let _store = StateStore::open(&path)?;
+        let cfg = Config::default();
+        let invoked = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let invoked_flag = invoked.clone();
+
+        let rerouted = maybe_auto_rebalance_with(&cfg, move || {
+            let invoked_flag = invoked_flag.clone();
+            async move {
+                invoked_flag.store(true, std::sync::atomic::Ordering::SeqCst);
+                Ok(Vec::new())
+            }
+        })
+        .await?;
+
+        assert_eq!(rerouted, 0);
+        assert!(!invoked.load(std::sync::atomic::Ordering::SeqCst));
+        let _ = std::fs::remove_file(path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn maybe_auto_rebalance_reports_total_rerouted_work() -> Result<()> {
+        let path = temp_db_path();
+        let _store = StateStore::open(&path)?;
+        let mut cfg = Config::default();
+        cfg.auto_dispatch_unread_handoffs = true;
+
+        let rerouted = maybe_auto_rebalance_with(&cfg, || async move {
+            Ok(vec![
+                LeadRebalanceOutcome {
+                    lead_session_id: "lead-a".to_string(),
+                    rerouted: vec![
+                        RebalanceOutcome {
+                            from_session_id: "worker-a".to_string(),
+                            message_id: 1,
+                            task: "Task A".to_string(),
+                            session_id: "worker-b".to_string(),
+                            action: AssignmentAction::ReusedIdle,
+                        },
+                        RebalanceOutcome {
+                            from_session_id: "worker-a".to_string(),
+                            message_id: 2,
+                            task: "Task B".to_string(),
+                            session_id: "worker-c".to_string(),
+                            action: AssignmentAction::Spawned,
+                        },
+                    ],
+                },
+                LeadRebalanceOutcome {
+                    lead_session_id: "lead-b".to_string(),
+                    rerouted: vec![RebalanceOutcome {
+                        from_session_id: "worker-d".to_string(),
+                        message_id: 3,
+                        task: "Task C".to_string(),
+                        session_id: "worker-e".to_string(),
+                        action: AssignmentAction::ReusedActive,
+                    }],
+                },
+            ])
+        })
+        .await?;
+
+        assert_eq!(rerouted, 3);
         let _ = std::fs::remove_file(path);
         Ok(())
     }

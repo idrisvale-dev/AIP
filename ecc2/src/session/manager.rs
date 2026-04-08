@@ -166,6 +166,42 @@ pub async fn auto_dispatch_backlog(
     Ok(outcomes)
 }
 
+pub async fn rebalance_all_teams(
+    db: &StateStore,
+    cfg: &Config,
+    agent_type: &str,
+    use_worktree: bool,
+    lead_limit: usize,
+) -> Result<Vec<LeadRebalanceOutcome>> {
+    let sessions = db.list_sessions()?;
+    let mut outcomes = Vec::new();
+
+    for session in sessions
+        .into_iter()
+        .filter(|session| matches!(session.state, SessionState::Running | SessionState::Pending | SessionState::Idle))
+        .take(lead_limit)
+    {
+        let rerouted = rebalance_team_backlog(
+            db,
+            cfg,
+            &session.id,
+            agent_type,
+            use_worktree,
+            cfg.auto_dispatch_limit_per_session,
+        )
+        .await?;
+
+        if !rerouted.is_empty() {
+            outcomes.push(LeadRebalanceOutcome {
+                lead_session_id: session.id,
+                rerouted,
+            });
+        }
+    }
+
+    Ok(outcomes)
+}
+
 pub async fn rebalance_team_backlog(
     db: &StateStore,
     cfg: &Config,
@@ -963,6 +999,11 @@ pub struct RebalanceOutcome {
     pub task: String,
     pub session_id: String,
     pub action: AssignmentAction,
+}
+
+pub struct LeadRebalanceOutcome {
+    pub lead_session_id: String,
+    pub rerouted: Vec<RebalanceOutcome>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
