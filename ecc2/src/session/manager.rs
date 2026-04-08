@@ -42,7 +42,10 @@ pub fn get_status(db: &StateStore, id: &str) -> Result<SessionStatus> {
 
 pub fn get_team_status(db: &StateStore, id: &str, depth: usize) -> Result<TeamStatus> {
     let root = resolve_session(db, id)?;
-    let unread_counts = db.unread_message_counts()?;
+    let handoff_backlog = db
+        .unread_task_handoff_targets(db.list_sessions()?.len().max(1))?
+        .into_iter()
+        .collect();
     let mut visited = HashSet::new();
     visited.insert(root.id.clone());
 
@@ -52,14 +55,14 @@ pub fn get_team_status(db: &StateStore, id: &str, depth: usize) -> Result<TeamSt
         &root.id,
         depth,
         1,
-        &unread_counts,
+        &handoff_backlog,
         &mut visited,
         &mut descendants,
     )?;
 
     Ok(TeamStatus {
         root,
-        unread_messages: unread_counts,
+        handoff_backlog,
         descendants,
     })
 }
@@ -552,7 +555,7 @@ fn collect_delegation_descendants(
     session_id: &str,
     remaining_depth: usize,
     current_depth: usize,
-    unread_counts: &std::collections::HashMap<String, usize>,
+    handoff_backlog: &std::collections::HashMap<String, usize>,
     visited: &mut HashSet<String>,
     descendants: &mut Vec<DelegatedSessionSummary>,
 ) -> Result<()> {
@@ -571,7 +574,7 @@ fn collect_delegation_descendants(
 
         descendants.push(DelegatedSessionSummary {
             depth: current_depth,
-            unread_messages: unread_counts.get(&child_id).copied().unwrap_or(0),
+            handoff_backlog: handoff_backlog.get(&child_id).copied().unwrap_or(0),
             session,
         });
 
@@ -580,7 +583,7 @@ fn collect_delegation_descendants(
             &child_id,
             remaining_depth.saturating_sub(1),
             current_depth + 1,
-            unread_counts,
+            handoff_backlog,
             visited,
             descendants,
         )?;
@@ -843,14 +846,13 @@ fn summarize_backlog_pressure(
     agent_type: &str,
     targets: &[(String, usize)],
 ) -> Result<BacklogPressureSummary> {
-    let unread_counts = db.unread_message_counts()?;
     let mut summary = BacklogPressureSummary::default();
 
     for (session_id, _) in targets {
         let delegates = direct_delegate_sessions(db, session_id, agent_type)?;
         let has_clear_idle_delegate = delegates.iter().any(|delegate| {
             delegate.state == SessionState::Idle
-                && unread_counts.get(&delegate.id).copied().unwrap_or(0) == 0
+                && db.unread_task_handoff_count(&delegate.id).unwrap_or(0) == 0
         });
         let has_capacity = delegates.len() < cfg.max_parallel_sessions;
 
@@ -1048,7 +1050,7 @@ pub struct SessionStatus {
 
 pub struct TeamStatus {
     root: Session,
-    unread_messages: std::collections::HashMap<String, usize>,
+    handoff_backlog: std::collections::HashMap<String, usize>,
     descendants: Vec<DelegatedSessionSummary>,
 }
 
@@ -1112,7 +1114,7 @@ struct BacklogPressureSummary {
 
 struct DelegatedSessionSummary {
     depth: usize,
-    unread_messages: usize,
+    handoff_backlog: usize,
     session: Session,
 }
 
@@ -1154,8 +1156,8 @@ impl fmt::Display for TeamStatus {
             writeln!(f, "Branch:  {}", worktree.branch)?;
         }
 
-        let lead_unread = self.unread_messages.get(&self.root.id).copied().unwrap_or(0);
-        writeln!(f, "Inbox:   {}", lead_unread)?;
+        let lead_handoff_backlog = self.handoff_backlog.get(&self.root.id).copied().unwrap_or(0);
+        writeln!(f, "Backlog: {}", lead_handoff_backlog)?;
 
         if self.descendants.is_empty() {
             return write!(f, "Board:   no delegated sessions");
@@ -1185,11 +1187,11 @@ impl fmt::Display for TeamStatus {
             for item in items {
                 writeln!(
                     f,
-                    "    - {}{} [{}] | inbox {} | {}",
+                    "    - {}{} [{}] | backlog {} handoff(s) | {}",
                     "  ".repeat(item.depth.saturating_sub(1)),
                     item.session.id,
                     item.session.agent_type,
-                    item.unread_messages,
+                    item.handoff_backlog,
                     item.session.task
                 )?;
             }
@@ -2401,6 +2403,61 @@ mod tests {
             message.msg_type == "task_handoff"
                 && message.content.contains("Review auth flow")
         }));
+
+        Ok(())
+    }
+
+    #[test]
+    fn team_status_reports_handoff_backlog_not_generic_inbox_noise() -> Result<()> {
+        let tempdir = TestDir::new("manager-team-status-backlog")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "lead task".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(42),
+            worktree: None,
+            created_at: now - Duration::minutes(4),
+            updated_at: now - Duration::minutes(4),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "worker".to_string(),
+            task: "delegate task".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root,
+            state: SessionState::Idle,
+            pid: None,
+            worktree: None,
+            created_at: now - Duration::minutes(3),
+            updated_at: now - Duration::minutes(3),
+            metrics: SessionMetrics::default(),
+        })?;
+
+        db.send_message("lead", "worker", "FYI status update", "info")?;
+        db.send_message(
+            "lead",
+            "worker",
+            "{\"task\":\"Delegated work\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+        let _ = db.mark_messages_read("worker")?;
+        db.send_message("lead", "worker", "FYI reminder", "info")?;
+
+        let status = get_team_status(&db, "lead", 3)?;
+        let rendered = format!("{status}");
+
+        assert!(rendered.contains("Backlog: 0"));
+        assert!(rendered.contains("| backlog 0 handoff(s) |"));
+        assert!(!rendered.contains("Inbox:"));
 
         Ok(())
     }

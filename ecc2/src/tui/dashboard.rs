@@ -104,7 +104,7 @@ struct AggregateUsage {
 struct DelegatedChildSummary {
     session_id: String,
     state: SessionState,
-    unread_messages: usize,
+    handoff_backlog: usize,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -1297,11 +1297,6 @@ impl Dashboard {
                     match self.db.get_session(&child_id) {
                         Ok(Some(session)) => {
                             team.total += 1;
-                            let unread_messages = self
-                                .unread_message_counts
-                                .get(&child_id)
-                                .copied()
-                                .unwrap_or(0);
                             let handoff_backlog = match self.db.unread_task_handoff_count(&child_id) {
                                 Ok(count) => count,
                                 Err(error) => {
@@ -1323,12 +1318,12 @@ impl Dashboard {
                             }
 
                             route_candidates.push(DelegatedChildSummary {
-                                unread_messages: handoff_backlog,
+                                handoff_backlog,
                                 state: state.clone(),
                                 session_id: child_id.clone(),
                             });
                             delegated.push(DelegatedChildSummary {
-                                unread_messages,
+                                handoff_backlog,
                                 state,
                                 session_id: child_id,
                             });
@@ -1365,7 +1360,7 @@ impl Dashboard {
     ) -> Option<String> {
         if let Some(idle_clear) = delegates
             .iter()
-            .filter(|delegate| delegate.state == SessionState::Idle && delegate.unread_messages == 0)
+            .filter(|delegate| delegate.state == SessionState::Idle && delegate.handoff_backlog == 0)
             .min_by_key(|delegate| delegate.session_id.as_str())
         {
             return Some(format!(
@@ -1381,24 +1376,24 @@ impl Dashboard {
         if let Some(idle_backed_up) = delegates
             .iter()
             .filter(|delegate| delegate.state == SessionState::Idle)
-            .min_by_key(|delegate| (delegate.unread_messages, delegate.session_id.as_str()))
+            .min_by_key(|delegate| (delegate.handoff_backlog, delegate.session_id.as_str()))
         {
             return Some(format!(
-                "reuse idle {} with inbox {}",
+                "reuse idle {} with backlog {}",
                 format_session_id(&idle_backed_up.session_id),
-                idle_backed_up.unread_messages
+                idle_backed_up.handoff_backlog
             ));
         }
 
         if let Some(active_delegate) = delegates
             .iter()
             .filter(|delegate| matches!(delegate.state, SessionState::Running | SessionState::Pending))
-            .min_by_key(|delegate| (delegate.unread_messages, delegate.session_id.as_str()))
+            .min_by_key(|delegate| (delegate.handoff_backlog, delegate.session_id.as_str()))
         {
             return Some(format!(
-                "reuse active {} with inbox {}",
+                "reuse active {} with backlog {}",
                 format_session_id(&active_delegate.session_id),
-                active_delegate.unread_messages
+                active_delegate.handoff_backlog
             ));
         }
 
@@ -1588,10 +1583,10 @@ impl Dashboard {
                 lines.push("Delegates".to_string());
                 for child in &self.selected_child_sessions {
                     lines.push(format!(
-                        "- {} [{}] | inbox {}",
+                        "- {} [{}] | backlog {}",
                         format_session_id(&child.session_id),
                         session_state_label(&child.state),
-                        child.unread_messages
+                        child.handoff_backlog
                     ));
                 }
             }
@@ -2422,7 +2417,7 @@ mod tests {
             Some("reuse idle idle-wor")
         );
         assert_eq!(dashboard.selected_child_sessions.len(), 1);
-        assert_eq!(dashboard.selected_child_sessions[0].unread_messages, 1);
+        assert_eq!(dashboard.selected_child_sessions[0].handoff_backlog, 0);
     }
 
     #[test]
