@@ -279,16 +279,25 @@ async fn main() -> Result<()> {
                 use_worktree,
             )
             .await?;
-            println!(
-                "Assignment routed: {} -> {} ({})",
-                short_session(&lead_id),
-                short_session(&outcome.session_id),
-                match outcome.action {
-                    session::manager::AssignmentAction::Spawned => "spawned",
-                    session::manager::AssignmentAction::ReusedIdle => "reused-idle",
-                    session::manager::AssignmentAction::ReusedActive => "reused-active",
-                }
-            );
+            if session::manager::assignment_action_routes_work(outcome.action) {
+                println!(
+                    "Assignment routed: {} -> {} ({})",
+                    short_session(&lead_id),
+                    short_session(&outcome.session_id),
+                    match outcome.action {
+                        session::manager::AssignmentAction::Spawned => "spawned",
+                        session::manager::AssignmentAction::ReusedIdle => "reused-idle",
+                        session::manager::AssignmentAction::ReusedActive => "reused-active",
+                        session::manager::AssignmentAction::DeferredSaturated => unreachable!(),
+                    }
+                );
+            } else {
+                println!(
+                    "Assignment deferred: {} is saturated; task stayed in {} inbox",
+                    short_session(&lead_id),
+                    short_session(&lead_id),
+                );
+            }
         }
         Some(Commands::DrainInbox {
             session_id,
@@ -309,10 +318,18 @@ async fn main() -> Result<()> {
             if outcomes.is_empty() {
                 println!("No unread task handoffs for {}", short_session(&lead_id));
             } else {
+                let routed_count = outcomes
+                    .iter()
+                    .filter(|outcome| session::manager::assignment_action_routes_work(outcome.action))
+                    .count();
+                let deferred_count = outcomes.len().saturating_sub(routed_count);
                 println!(
-                    "Routed {} inbox task handoff(s) from {}",
+                    "Processed {} inbox task handoff(s) from {} ({} routed, {} deferred)",
                     outcomes.len(),
                     short_session(&lead_id)
+                    ,
+                    routed_count,
+                    deferred_count
                 );
                 for outcome in outcomes {
                     println!(
@@ -323,6 +340,9 @@ async fn main() -> Result<()> {
                             session::manager::AssignmentAction::Spawned => "spawned",
                             session::manager::AssignmentAction::ReusedIdle => "reused-idle",
                             session::manager::AssignmentAction::ReusedActive => "reused-active",
+                            session::manager::AssignmentAction::DeferredSaturated => {
+                                "deferred-saturated"
+                            }
                         },
                         outcome.task
                     );
@@ -345,18 +365,38 @@ async fn main() -> Result<()> {
             if outcomes.is_empty() {
                 println!("No unread task handoff backlog found");
             } else {
-                let total_routed: usize = outcomes.iter().map(|outcome| outcome.routed.len()).sum();
+                let total_processed: usize = outcomes.iter().map(|outcome| outcome.routed.len()).sum();
+                let total_routed: usize = outcomes
+                    .iter()
+                    .map(|outcome| {
+                        outcome
+                            .routed
+                            .iter()
+                            .filter(|item| session::manager::assignment_action_routes_work(item.action))
+                            .count()
+                    })
+                    .sum();
+                let total_deferred = total_processed.saturating_sub(total_routed);
                 println!(
-                    "Auto-dispatched {} task handoff(s) across {} lead session(s)",
+                    "Auto-dispatch processed {} task handoff(s) across {} lead session(s) ({} routed, {} deferred)",
+                    total_processed,
+                    outcomes.len(),
                     total_routed,
-                    outcomes.len()
+                    total_deferred
                 );
                 for outcome in outcomes {
+                    let routed = outcome
+                        .routed
+                        .iter()
+                        .filter(|item| session::manager::assignment_action_routes_work(item.action))
+                        .count();
+                    let deferred = outcome.routed.len().saturating_sub(routed);
                     println!(
-                        "- {} | unread {} | routed {}",
+                        "- {} | unread {} | routed {} | deferred {}",
                         short_session(&outcome.lead_session_id),
                         outcome.unread_count,
-                        outcome.routed.len()
+                        routed,
+                        deferred
                     );
                 }
             }
@@ -374,11 +414,23 @@ async fn main() -> Result<()> {
                 lead_limit,
             )
             .await?;
-            let total_routed: usize = outcome
+            let total_processed: usize = outcome
                 .dispatched
                 .iter()
                 .map(|dispatch| dispatch.routed.len())
                 .sum();
+            let total_routed: usize = outcome
+                .dispatched
+                .iter()
+                .map(|dispatch| {
+                    dispatch
+                        .routed
+                        .iter()
+                        .filter(|item| session::manager::assignment_action_routes_work(item.action))
+                        .count()
+                })
+                .sum();
+            let total_deferred = total_processed.saturating_sub(total_routed);
             let total_rerouted: usize = outcome
                 .rebalanced
                 .iter()
@@ -392,9 +444,11 @@ async fn main() -> Result<()> {
                 println!("Backlog already clear");
             } else {
                 println!(
-                    "Coordinated backlog: dispatched {} handoff(s) across {} lead(s); rebalanced {} handoff(s) across {} lead(s); remaining {} handoff(s) across {} session(s) [{} absorbable, {} saturated]",
-                    total_routed,
+                    "Coordinated backlog: processed {} handoff(s) across {} lead(s) ({} routed, {} deferred); rebalanced {} handoff(s) across {} lead(s); remaining {} handoff(s) across {} session(s) [{} absorbable, {} saturated]",
+                    total_processed,
                     outcome.dispatched.len(),
+                    total_routed,
+                    total_deferred,
                     total_rerouted,
                     outcome.rebalanced.len(),
                     outcome.remaining_backlog_messages,
@@ -470,6 +524,9 @@ async fn main() -> Result<()> {
                             session::manager::AssignmentAction::Spawned => "spawned",
                             session::manager::AssignmentAction::ReusedIdle => "reused-idle",
                             session::manager::AssignmentAction::ReusedActive => "reused-active",
+                            session::manager::AssignmentAction::DeferredSaturated => {
+                                "deferred-saturated"
+                            }
                         },
                         outcome.task
                     );

@@ -121,7 +121,9 @@ pub async fn drain_inbox(
         )
         .await?;
 
-        let _ = db.mark_message_read(message.id)?;
+        if assignment_action_routes_work(outcome.action) {
+            let _ = db.mark_message_read(message.id)?;
+        }
         outcomes.push(InboxDrainOutcome {
             message_id: message.id,
             task,
@@ -461,7 +463,7 @@ async fn assign_session_in_dir_with_runner_program(
         });
     }
 
-    if let Some(idle_delegate) = delegates
+    if let Some(_idle_delegate) = delegates
         .iter()
         .filter(|session| session.state == SessionState::Idle)
         .min_by_key(|session| {
@@ -471,16 +473,9 @@ async fn assign_session_in_dir_with_runner_program(
             )
         })
     {
-        send_task_handoff(
-            db,
-            &lead,
-            &idle_delegate.id,
-            task,
-            "reused idle delegate with existing inbox backlog",
-        )?;
         return Ok(AssignmentOutcome {
-            session_id: idle_delegate.id.clone(),
-            action: AssignmentAction::ReusedIdle,
+            session_id: lead.id.clone(),
+            action: AssignmentAction::DeferredSaturated,
         });
     }
 
@@ -494,6 +489,13 @@ async fn assign_session_in_dir_with_runner_program(
             )
         })
     {
+        if unread_counts.get(&active_delegate.id).copied().unwrap_or(0) > 0 {
+            return Ok(AssignmentOutcome {
+                session_id: lead.id.clone(),
+                action: AssignmentAction::DeferredSaturated,
+            });
+        }
+
         send_task_handoff(
             db,
             &lead,
@@ -1074,6 +1076,11 @@ pub enum AssignmentAction {
     Spawned,
     ReusedIdle,
     ReusedActive,
+    DeferredSaturated,
+}
+
+pub fn assignment_action_routes_work(action: AssignmentAction) -> bool {
+    !matches!(action, AssignmentAction::DeferredSaturated)
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -1863,6 +1870,73 @@ mod tests {
     }
 
     #[tokio::test(flavor = "current_thread")]
+    async fn assign_session_defers_when_team_is_saturated() -> Result<()> {
+        let tempdir = TestDir::new("manager-assign-defer-saturated")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.max_parallel_sessions = 1;
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "lead task".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(42),
+            worktree: None,
+            created_at: now - Duration::minutes(3),
+            updated_at: now - Duration::minutes(3),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "busy-worker".to_string(),
+            task: "existing work".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(55),
+            worktree: None,
+            created_at: now - Duration::minutes(2),
+            updated_at: now - Duration::minutes(2),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.send_message(
+            "lead",
+            "busy-worker",
+            "{\"task\":\"existing work\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+
+        let (fake_runner, _) = write_fake_claude(tempdir.path())?;
+        let outcome = assign_session_in_dir_with_runner_program(
+            &db,
+            &cfg,
+            "lead",
+            "New delegated task",
+            "claude",
+            true,
+            &repo_root,
+            &fake_runner,
+        )
+        .await?;
+
+        assert_eq!(outcome.action, AssignmentAction::DeferredSaturated);
+        assert_eq!(outcome.session_id, "lead");
+
+        let busy_messages = db.list_messages_for_session("busy-worker", 10)?;
+        assert!(!busy_messages.iter().any(|message| {
+            message.msg_type == "task_handoff"
+                && message.content.contains("New delegated task")
+        }));
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
     async fn drain_inbox_routes_unread_task_handoffs_and_marks_them_read() -> Result<()> {
         let tempdir = TestDir::new("manager-drain-inbox")?;
         let repo_root = tempdir.path().join("repo");
@@ -1902,6 +1976,73 @@ mod tests {
 
         let messages = db.list_messages_for_session(&outcomes[0].session_id, 10)?;
         assert!(messages.iter().any(|message| {
+            message.msg_type == "task_handoff"
+                && message.content.contains("Review auth changes")
+        }));
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn drain_inbox_leaves_saturated_handoffs_unread() -> Result<()> {
+        let tempdir = TestDir::new("manager-drain-inbox-defer")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.max_parallel_sessions = 1;
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "lead task".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(42),
+            worktree: None,
+            created_at: now - Duration::minutes(3),
+            updated_at: now - Duration::minutes(3),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "busy-worker".to_string(),
+            task: "existing work".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(55),
+            worktree: None,
+            created_at: now - Duration::minutes(2),
+            updated_at: now - Duration::minutes(2),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.send_message(
+            "lead",
+            "busy-worker",
+            "{\"task\":\"existing work\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+        db.send_message(
+            "planner",
+            "lead",
+            "{\"task\":\"Review auth changes\",\"context\":\"Inbound request\"}",
+            "task_handoff",
+        )?;
+
+        let outcomes = drain_inbox(&db, &cfg, "lead", "claude", true, 5).await?;
+        assert_eq!(outcomes.len(), 1);
+        assert_eq!(outcomes[0].task, "Review auth changes");
+        assert_eq!(outcomes[0].action, AssignmentAction::DeferredSaturated);
+        assert_eq!(outcomes[0].session_id, "lead");
+
+        let unread = db.unread_message_counts()?;
+        assert_eq!(unread.get("lead"), Some(&1));
+        assert_eq!(unread.get("busy-worker"), Some(&1));
+
+        let messages = db.list_messages_for_session("busy-worker", 10)?;
+        assert!(!messages.iter().any(|message| {
             message.msg_type == "task_handoff"
                 && message.content.contains("Review auth changes")
         }));

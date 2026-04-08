@@ -817,7 +817,18 @@ impl Dashboard {
             }
         };
 
-        let total_routed: usize = outcomes.iter().map(|outcome| outcome.routed.len()).sum();
+        let total_processed: usize = outcomes.iter().map(|outcome| outcome.routed.len()).sum();
+        let total_routed: usize = outcomes
+            .iter()
+            .map(|outcome| {
+                outcome
+                    .routed
+                    .iter()
+                    .filter(|item| manager::assignment_action_routes_work(item.action))
+                    .count()
+            })
+            .sum();
+        let total_deferred = total_processed.saturating_sub(total_routed);
         let selected_session_id = self
             .sessions
             .get(self.selected_session)
@@ -831,13 +842,15 @@ impl Dashboard {
         self.sync_selected_lineage();
         self.refresh_logs();
 
-        if total_routed == 0 {
+        if total_processed == 0 {
             self.set_operator_note("no unread handoff backlog found".to_string());
         } else {
             self.set_operator_note(format!(
-                "auto-dispatched {} handoff(s) across {} lead session(s)",
+                "auto-dispatch processed {} handoff(s) across {} lead session(s) ({} routed, {} deferred)",
+                total_processed,
+                outcomes.len(),
                 total_routed,
-                outcomes.len()
+                total_deferred
             ));
         }
     }
@@ -908,11 +921,23 @@ impl Dashboard {
                 return;
             }
         };
-        let total_routed: usize = outcome
+        let total_processed: usize = outcome
             .dispatched
             .iter()
             .map(|dispatch| dispatch.routed.len())
             .sum();
+        let total_routed: usize = outcome
+            .dispatched
+            .iter()
+            .map(|dispatch| {
+                dispatch
+                    .routed
+                    .iter()
+                    .filter(|item| manager::assignment_action_routes_work(item.action))
+                    .count()
+            })
+            .sum();
+        let total_deferred = total_processed.saturating_sub(total_routed);
         let total_rerouted: usize = outcome
             .rebalanced
             .iter()
@@ -932,13 +957,15 @@ impl Dashboard {
         self.sync_selected_lineage();
         self.refresh_logs();
 
-        if total_routed == 0 && total_rerouted == 0 && outcome.remaining_backlog_sessions == 0 {
+        if total_processed == 0 && total_rerouted == 0 && outcome.remaining_backlog_sessions == 0 {
             self.set_operator_note("backlog already clear".to_string());
         } else {
             self.set_operator_note(format!(
-                "coordinated backlog: dispatched {} across {} lead(s), rebalanced {} across {} lead(s), remaining {} across {} session(s) [{} absorbable, {} saturated]",
-                total_routed,
+                "coordinated backlog: processed {} across {} lead(s) ({} routed, {} deferred), rebalanced {} across {} lead(s), remaining {} across {} session(s) [{} absorbable, {} saturated]",
+                total_processed,
                 outcome.dispatched.len(),
+                total_routed,
+                total_deferred,
                 total_rerouted,
                 outcome.rebalanced.len(),
                 outcome.remaining_backlog_messages,
@@ -1940,6 +1967,7 @@ fn assignment_action_label(action: manager::AssignmentAction) -> &'static str {
         manager::AssignmentAction::Spawned => "spawned",
         manager::AssignmentAction::ReusedIdle => "reused idle",
         manager::AssignmentAction::ReusedActive => "reused active",
+        manager::AssignmentAction::DeferredSaturated => "deferred saturated",
     }
 }
 
