@@ -18,6 +18,13 @@ pub struct MergeReadiness {
     pub conflicts: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorktreeHealth {
+    Clear,
+    InProgress,
+    Conflicted,
+}
+
 /// Create a new git worktree for an agent session.
 pub fn create_for_session(session_id: &str, cfg: &Config) -> Result<WorktreeInfo> {
     let repo_root = std::env::current_dir().context("Failed to resolve repository root")?;
@@ -226,6 +233,19 @@ pub fn merge_readiness(worktree: &WorktreeInfo) -> Result<MergeReadiness> {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     anyhow::bail!("git merge-tree failed: {stderr}");
+}
+
+pub fn health(worktree: &WorktreeInfo) -> Result<WorktreeHealth> {
+    let merge_readiness = merge_readiness(worktree)?;
+    if merge_readiness.status == MergeReadinessStatus::Conflicted {
+        return Ok(WorktreeHealth::Conflicted);
+    }
+
+    if diff_file_preview(worktree, 1)?.is_empty() {
+        Ok(WorktreeHealth::Clear)
+    } else {
+        Ok(WorktreeHealth::InProgress)
+    }
 }
 
 fn git_diff_shortstat(worktree_path: &Path, extra_args: &[&str]) -> Result<Option<String>> {

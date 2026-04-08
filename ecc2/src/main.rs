@@ -967,10 +967,11 @@ fn build_worktree_status_report(session: &session::Session, include_patch: bool)
         None
     };
     let merge_readiness = worktree::merge_readiness(worktree)?;
-    let (health, check_exit_code) = match merge_readiness.status {
-        worktree::MergeReadinessStatus::Conflicted => ("conflicted".to_string(), 2),
-        worktree::MergeReadinessStatus::Ready if file_preview.is_empty() => ("clear".to_string(), 0),
-        worktree::MergeReadinessStatus::Ready => ("in_progress".to_string(), 1),
+    let worktree_health = worktree::health(worktree)?;
+    let (health, check_exit_code) = match worktree_health {
+        worktree::WorktreeHealth::Conflicted => ("conflicted".to_string(), 2),
+        worktree::WorktreeHealth::Clear => ("clear".to_string(), 0),
+        worktree::WorktreeHealth::InProgress => ("in_progress".to_string(), 1),
     };
 
     Ok(WorktreeStatusReport {

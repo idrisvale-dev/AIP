@@ -43,6 +43,7 @@ pub struct Dashboard {
     session_output_cache: HashMap<String, Vec<OutputLine>>,
     unread_message_counts: HashMap<String, usize>,
     handoff_backlog_counts: HashMap<String, usize>,
+    worktree_health_by_session: HashMap<String, worktree::WorktreeHealth>,
     global_handoff_backlog_leads: usize,
     global_handoff_backlog_messages: usize,
     daemon_activity: DaemonActivity,
@@ -79,6 +80,8 @@ struct SessionSummary {
     stopped: usize,
     unread_messages: usize,
     inbox_sessions: usize,
+    conflicted_worktrees: usize,
+    in_progress_worktrees: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -159,6 +162,7 @@ impl Dashboard {
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
             handoff_backlog_counts: HashMap::new(),
+            worktree_health_by_session: HashMap::new(),
             global_handoff_backlog_leads: 0,
             global_handoff_backlog_messages: 0,
             daemon_activity: DaemonActivity::default(),
@@ -268,8 +272,12 @@ impl Dashboard {
             .daemon_activity
             .stabilized_after_recovery_at()
             .is_some();
-        let summary =
-            SessionSummary::from_sessions(&self.sessions, &self.handoff_backlog_counts, stabilized);
+        let summary = SessionSummary::from_sessions(
+            &self.sessions,
+            &self.handoff_backlog_counts,
+            &self.worktree_health_by_session,
+            stabilized,
+        );
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(2), Constraint::Min(3)])
@@ -1240,6 +1248,7 @@ impl Dashboard {
             }
         };
         self.sync_handoff_backlog_counts();
+        self.sync_worktree_health_by_session();
         self.sync_global_handoff_backlog();
         self.sync_daemon_activity();
         self.sync_selection_by_id(selected_id.as_deref());
@@ -1305,6 +1314,28 @@ impl Dashboard {
             }
             Err(error) => {
                 tracing::warn!("Failed to refresh handoff backlog counts: {error}");
+            }
+        }
+    }
+
+    fn sync_worktree_health_by_session(&mut self) {
+        self.worktree_health_by_session.clear();
+        for session in &self.sessions {
+            let Some(worktree) = session.worktree.as_ref() else {
+                continue;
+            };
+
+            match worktree::health(worktree) {
+                Ok(health) => {
+                    self.worktree_health_by_session
+                        .insert(session.id.clone(), health);
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        "Failed to refresh worktree health for {}: {error}",
+                        session.id
+                    );
+                }
             }
         }
     }
@@ -1848,6 +1879,19 @@ impl Dashboard {
             .is_some();
 
         for session in &self.sessions {
+            if self
+                .worktree_health_by_session
+                .get(&session.id)
+                .copied()
+                == Some(worktree::WorktreeHealth::Conflicted)
+            {
+                items.push(format!(
+                    "- Conflicted worktree {} | {}",
+                    format_session_id(&session.id),
+                    truncate_for_dashboard(&session.task, 48)
+                ));
+            }
+
             let handoff_backlog = self
                 .handoff_backlog_counts
                 .get(&session.id)
@@ -2072,6 +2116,7 @@ impl SessionSummary {
     fn from_sessions(
         sessions: &[Session],
         unread_message_counts: &HashMap<String, usize>,
+        worktree_health_by_session: &HashMap<String, worktree::WorktreeHealth>,
         suppress_inbox_attention: bool,
     ) -> Self {
         sessions.iter().fold(
@@ -2100,6 +2145,15 @@ impl SessionSummary {
                     SessionState::Completed => summary.completed += 1,
                     SessionState::Failed => summary.failed += 1,
                     SessionState::Stopped => summary.stopped += 1,
+                }
+                match worktree_health_by_session.get(&session.id).copied() {
+                    Some(worktree::WorktreeHealth::Conflicted) => {
+                        summary.conflicted_worktrees += 1;
+                    }
+                    Some(worktree::WorktreeHealth::InProgress) => {
+                        summary.in_progress_worktrees += 1;
+                    }
+                    Some(worktree::WorktreeHealth::Clear) | None => {}
                 }
                 summary
             },
@@ -2135,7 +2189,7 @@ fn session_row(session: &Session, unread_messages: usize) -> Row<'static> {
 }
 
 fn summary_line(summary: &SessionSummary) -> Line<'static> {
-    Line::from(vec![
+    let mut spans = vec![
         Span::styled(
             format!("Total {}  ", summary.total),
             Style::default().add_modifier(Modifier::BOLD),
@@ -2146,7 +2200,17 @@ fn summary_line(summary: &SessionSummary) -> Line<'static> {
         summary_span("Failed", summary.failed, Color::Red),
         summary_span("Stopped", summary.stopped, Color::DarkGray),
         summary_span("Pending", summary.pending, Color::Reset),
-    ])
+    ];
+
+    if summary.conflicted_worktrees > 0 {
+        spans.push(summary_span("Conflicts", summary.conflicted_worktrees, Color::Red));
+    }
+
+    if summary.in_progress_worktrees > 0 {
+        spans.push(summary_span("Worktrees", summary.in_progress_worktrees, Color::Cyan));
+    }
+
+    Line::from(spans)
 }
 
 fn summary_span(label: &str, value: usize, color: Color) -> Span<'static> {
@@ -2161,6 +2225,7 @@ fn attention_queue_line(summary: &SessionSummary, stabilized: bool) -> Line<'sta
         && summary.stopped == 0
         && summary.pending == 0
         && summary.unread_messages == 0
+        && summary.conflicted_worktrees == 0
     {
         return Line::from(vec![
             Span::styled(
@@ -2177,18 +2242,27 @@ fn attention_queue_line(summary: &SessionSummary, stabilized: bool) -> Line<'sta
         ]);
     }
 
-    Line::from(vec![
+    let mut spans = vec![
         Span::styled(
             "Attention queue  ",
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         ),
+    ];
+
+    if summary.conflicted_worktrees > 0 {
+        spans.push(summary_span("Conflicts", summary.conflicted_worktrees, Color::Red));
+    }
+
+    spans.extend([
         summary_span("Backlog", summary.unread_messages, Color::Magenta),
         summary_span("Failed", summary.failed, Color::Red),
         summary_span("Stopped", summary.stopped, Color::DarkGray),
         summary_span("Pending", summary.pending, Color::Yellow),
-    ])
+    ]);
+
+    Line::from(spans)
 }
 
 fn truncate_for_dashboard(value: &str, max_chars: usize) -> String {
@@ -2595,7 +2669,7 @@ mod tests {
             42,
         )];
         let unread = HashMap::from([(String::from("focus-12345678"), 3usize)]);
-        let summary = SessionSummary::from_sessions(&sessions, &unread, true);
+        let summary = SessionSummary::from_sessions(&sessions, &unread, &HashMap::new(), true);
 
         let line = attention_queue_line(&summary, true);
         let rendered = line
@@ -2628,6 +2702,102 @@ mod tests {
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Attention queue clear"));
         assert!(!text.contains("Needs attention:"));
+        assert!(!text.contains("Backlog focus-12"));
+    }
+
+    #[test]
+    fn summary_line_includes_worktree_health_counts() {
+        let sessions = vec![
+            sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            ),
+            sample_session(
+                "worker-1234567",
+                "claude",
+                SessionState::Idle,
+                Some("ecc/worker"),
+                256,
+                21,
+            ),
+        ];
+        let unread = HashMap::new();
+        let worktree_health = HashMap::from([
+            (
+                String::from("focus-12345678"),
+                worktree::WorktreeHealth::Conflicted,
+            ),
+            (
+                String::from("worker-1234567"),
+                worktree::WorktreeHealth::InProgress,
+            ),
+        ]);
+
+        let summary = SessionSummary::from_sessions(&sessions, &unread, &worktree_health, false);
+        let rendered = summary_line(&summary)
+            .spans
+            .iter()
+            .map(|span| span.content.as_ref())
+            .collect::<String>();
+
+        assert!(rendered.contains("Conflicts 1"));
+        assert!(rendered.contains("Worktrees 1"));
+    }
+
+    #[test]
+    fn attention_queue_keeps_conflicted_worktree_pressure_when_stabilized() {
+        let now = Utc::now();
+        let sessions = vec![sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        )];
+        let unread = HashMap::from([(String::from("focus-12345678"), 3usize)]);
+        let worktree_health = HashMap::from([(
+            String::from("focus-12345678"),
+            worktree::WorktreeHealth::Conflicted,
+        )]);
+
+        let summary = SessionSummary::from_sessions(&sessions, &unread, &worktree_health, true);
+        let rendered = attention_queue_line(&summary, true)
+            .spans
+            .iter()
+            .map(|span| span.content.as_ref())
+            .collect::<String>();
+
+        assert!(rendered.contains("Attention queue"));
+        assert!(rendered.contains("Conflicts 1"));
+        assert!(!rendered.contains("Attention queue clear"));
+
+        let mut dashboard = test_dashboard(sessions, 0);
+        dashboard.unread_message_counts = unread;
+        dashboard.handoff_backlog_counts =
+            HashMap::from([(String::from("focus-12345678"), 3usize)]);
+        dashboard.worktree_health_by_session = worktree_health;
+        dashboard.daemon_activity = DaemonActivity {
+            last_dispatch_at: Some(now + chrono::Duration::seconds(2)),
+            last_dispatch_routed: 2,
+            last_dispatch_deferred: 0,
+            last_dispatch_leads: 1,
+            chronic_saturation_streak: 0,
+            last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),
+            last_recovery_dispatch_routed: 1,
+            last_recovery_dispatch_leads: 1,
+            last_rebalance_at: Some(now),
+            last_rebalance_rerouted: 1,
+            last_rebalance_leads: 1,
+        };
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Needs attention:"));
+        assert!(text.contains("Conflicted worktree focus-12"));
         assert!(!text.contains("Backlog focus-12"));
     }
 
@@ -3305,6 +3475,7 @@ mod tests {
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
             handoff_backlog_counts: HashMap::new(),
+            worktree_health_by_session: HashMap::new(),
             global_handoff_backlog_leads: 0,
             global_handoff_backlog_messages: 0,
             daemon_activity: DaemonActivity::default(),
