@@ -203,6 +203,20 @@ enum Commands {
         #[arg(long)]
         check: bool,
     },
+    /// Show conflict-resolution protocol for a worktree
+    WorktreeResolution {
+        /// Session ID or alias
+        session_id: Option<String>,
+        /// Show conflict protocol for all conflicted worktrees
+        #[arg(long)]
+        all: bool,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+        /// Return a non-zero exit code when conflicted worktrees are present
+        #[arg(long)]
+        check: bool,
+    },
     /// Merge a session worktree branch into its base branch
     MergeWorktree {
         /// Session ID or alias
@@ -704,6 +718,46 @@ async fn main() -> Result<()> {
                 std::process::exit(worktree_status_reports_exit_code(&reports));
             }
         }
+        Some(Commands::WorktreeResolution {
+            session_id,
+            all,
+            json,
+            check,
+        }) => {
+            if all && session_id.is_some() {
+                return Err(anyhow::anyhow!(
+                    "worktree-resolution does not accept a session ID when --all is set"
+                ));
+            }
+            let reports = if all {
+                session::manager::list_sessions(&db)?
+                    .into_iter()
+                    .map(|session| build_worktree_resolution_report(&session))
+                    .collect::<Result<Vec<_>>>()?
+                    .into_iter()
+                    .filter(|report| report.conflicted)
+                    .collect::<Vec<_>>()
+            } else {
+                let id = session_id.unwrap_or_else(|| "latest".to_string());
+                let resolved_id = resolve_session_id(&db, &id)?;
+                let session = db
+                    .get_session(&resolved_id)?
+                    .ok_or_else(|| anyhow::anyhow!("Session not found: {resolved_id}"))?;
+                vec![build_worktree_resolution_report(&session)?]
+            };
+            if json {
+                if all {
+                    println!("{}", serde_json::to_string_pretty(&reports)?);
+                } else {
+                    println!("{}", serde_json::to_string_pretty(&reports[0])?);
+                }
+            } else {
+                println!("{}", format_worktree_resolution_reports_human(&reports));
+            }
+            if check {
+                std::process::exit(worktree_resolution_reports_exit_code(&reports));
+            }
+        }
         Some(Commands::MergeWorktree {
             session_id,
             all,
@@ -987,6 +1041,22 @@ struct WorktreeStatusReport {
     merge_readiness: Option<WorktreeMergeReadinessReport>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct WorktreeResolutionReport {
+    session_id: String,
+    task: String,
+    session_state: String,
+    attached: bool,
+    conflicted: bool,
+    check_exit_code: i32,
+    path: Option<String>,
+    branch: Option<String>,
+    base_branch: Option<String>,
+    summary: String,
+    conflicts: Vec<String>,
+    resolution_steps: Vec<String>,
+}
+
 fn build_worktree_status_report(session: &session::Session, include_patch: bool) -> Result<WorktreeStatusReport> {
     let Some(worktree) = session.worktree.as_ref() else {
         return Ok(WorktreeStatusReport {
@@ -1047,6 +1117,55 @@ fn build_worktree_status_report(session: &session::Session, include_patch: bool)
     })
 }
 
+fn build_worktree_resolution_report(session: &session::Session) -> Result<WorktreeResolutionReport> {
+    let Some(worktree) = session.worktree.as_ref() else {
+        return Ok(WorktreeResolutionReport {
+            session_id: session.id.clone(),
+            task: session.task.clone(),
+            session_state: session.state.to_string(),
+            attached: false,
+            conflicted: false,
+            check_exit_code: 0,
+            path: None,
+            branch: None,
+            base_branch: None,
+            summary: "No worktree attached".to_string(),
+            conflicts: Vec::new(),
+            resolution_steps: Vec::new(),
+        });
+    };
+
+    let merge_readiness = worktree::merge_readiness(worktree)?;
+    let conflicted = merge_readiness.status == worktree::MergeReadinessStatus::Conflicted;
+    let resolution_steps = if conflicted {
+        vec![
+            format!("Inspect current patch: ecc worktree-status {} --patch", session.id),
+            format!("Open worktree: cd {}", worktree.path.display()),
+            "Resolve conflicts and stage files: git add <paths>".to_string(),
+            format!("Commit the resolution on {}: git commit", worktree.branch),
+            format!("Re-check readiness: ecc worktree-status {} --check", session.id),
+            format!("Merge when clear: ecc merge-worktree {}", session.id),
+        ]
+    } else {
+        Vec::new()
+    };
+
+    Ok(WorktreeResolutionReport {
+        session_id: session.id.clone(),
+        task: session.task.clone(),
+        session_state: session.state.to_string(),
+        attached: true,
+        conflicted,
+        check_exit_code: if conflicted { 2 } else { 0 },
+        path: Some(worktree.path.display().to_string()),
+        branch: Some(worktree.branch.clone()),
+        base_branch: Some(worktree.base_branch.clone()),
+        summary: merge_readiness.summary,
+        conflicts: merge_readiness.conflicts,
+        resolution_steps,
+    })
+}
+
 fn format_worktree_status_human(report: &WorktreeStatusReport) -> String {
     let mut lines = vec![format!(
         "Worktree status for {} [{}]",
@@ -1098,6 +1217,58 @@ fn format_worktree_status_reports_human(reports: &[WorktreeStatusReport]) -> Str
     reports
         .iter()
         .map(format_worktree_status_human)
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+fn format_worktree_resolution_human(report: &WorktreeResolutionReport) -> String {
+    let mut lines = vec![format!(
+        "Worktree resolution for {} [{}]",
+        short_session(&report.session_id),
+        report.session_state
+    )];
+    lines.push(format!("Task {}", report.task));
+
+    if !report.attached {
+        lines.push(report.summary.clone());
+        return lines.join("\n");
+    }
+
+    if let Some(path) = report.path.as_ref() {
+        lines.push(format!("Path {path}"));
+    }
+    if let (Some(branch), Some(base_branch)) = (report.branch.as_ref(), report.base_branch.as_ref()) {
+        lines.push(format!("Branch {branch} (base {base_branch})"));
+    }
+    lines.push(report.summary.clone());
+
+    if !report.conflicts.is_empty() {
+        lines.push("Conflicts".to_string());
+        for conflict in &report.conflicts {
+            lines.push(format!("- {conflict}"));
+        }
+    }
+
+    if report.resolution_steps.is_empty() {
+        lines.push("No conflict-resolution steps required".to_string());
+    } else {
+        lines.push("Resolution steps".to_string());
+        for (index, step) in report.resolution_steps.iter().enumerate() {
+            lines.push(format!("{}. {step}", index + 1));
+        }
+    }
+
+    lines.join("\n")
+}
+
+fn format_worktree_resolution_reports_human(reports: &[WorktreeResolutionReport]) -> String {
+    if reports.is_empty() {
+        return "No conflicted worktrees found".to_string();
+    }
+
+    reports
+        .iter()
+        .map(format_worktree_resolution_human)
         .collect::<Vec<_>>()
         .join("\n\n")
 }
@@ -1188,6 +1359,14 @@ fn worktree_status_reports_exit_code(reports: &[WorktreeStatusReport]) -> i32 {
     reports
         .iter()
         .map(worktree_status_exit_code)
+        .max()
+        .unwrap_or(0)
+}
+
+fn worktree_resolution_reports_exit_code(reports: &[WorktreeResolutionReport]) -> i32 {
+    reports
+        .iter()
+        .map(|report| report.check_exit_code)
         .max()
         .unwrap_or(0)
 }
@@ -1627,6 +1806,48 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_worktree_resolution_flags() {
+        let cli = Cli::try_parse_from(["ecc", "worktree-resolution", "planner", "--json", "--check"])
+            .expect("worktree-resolution flags should parse");
+
+        match cli.command {
+            Some(Commands::WorktreeResolution {
+                session_id,
+                all,
+                json,
+                check,
+            }) => {
+                assert_eq!(session_id.as_deref(), Some("planner"));
+                assert!(!all);
+                assert!(json);
+                assert!(check);
+            }
+            _ => panic!("expected worktree-resolution subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_worktree_resolution_all_flag() {
+        let cli = Cli::try_parse_from(["ecc", "worktree-resolution", "--all"])
+            .expect("worktree-resolution --all should parse");
+
+        match cli.command {
+            Some(Commands::WorktreeResolution {
+                session_id,
+                all,
+                json,
+                check,
+            }) => {
+                assert!(session_id.is_none());
+                assert!(all);
+                assert!(!json);
+                assert!(!check);
+            }
+            _ => panic!("expected worktree-resolution subcommand"),
+        }
+    }
+
+    #[test]
     fn cli_parses_prune_worktrees_json_flag() {
         let cli = Cli::try_parse_from(["ecc", "prune-worktrees", "--json"])
             .expect("prune-worktrees --json should parse");
@@ -1719,6 +1940,71 @@ mod tests {
         assert!(text.contains("- conflict README.md"));
         assert!(text.contains("Patch preview"));
         assert!(text.contains("--- Branch diff vs main ---"));
+    }
+
+    #[test]
+    fn format_worktree_resolution_human_includes_protocol_steps() {
+        let report = WorktreeResolutionReport {
+            session_id: "deadbeefcafefeed".to_string(),
+            task: "Resolve merge conflict".to_string(),
+            session_state: "stopped".to_string(),
+            attached: true,
+            conflicted: true,
+            check_exit_code: 2,
+            path: Some("/tmp/ecc/wt-1".to_string()),
+            branch: Some("ecc/deadbeefcafefeed".to_string()),
+            base_branch: Some("main".to_string()),
+            summary: "Merge blocked by 1 conflict(s): README.md".to_string(),
+            conflicts: vec!["README.md".to_string()],
+            resolution_steps: vec![
+                "Inspect current patch: ecc worktree-status deadbeefcafefeed --patch".to_string(),
+                "Open worktree: cd /tmp/ecc/wt-1".to_string(),
+                "Resolve conflicts and stage files: git add <paths>".to_string(),
+            ],
+        };
+
+        let text = format_worktree_resolution_human(&report);
+        assert!(text.contains("Worktree resolution for deadbeef [stopped]"));
+        assert!(text.contains("Merge blocked by 1 conflict(s): README.md"));
+        assert!(text.contains("Conflicts"));
+        assert!(text.contains("- README.md"));
+        assert!(text.contains("Resolution steps"));
+        assert!(text.contains("1. Inspect current patch"));
+    }
+
+    #[test]
+    fn worktree_resolution_reports_exit_code_tracks_conflicts() {
+        let clear = WorktreeResolutionReport {
+            session_id: "clear".to_string(),
+            task: "ok".to_string(),
+            session_state: "stopped".to_string(),
+            attached: false,
+            conflicted: false,
+            check_exit_code: 0,
+            path: None,
+            branch: None,
+            base_branch: None,
+            summary: "No worktree attached".to_string(),
+            conflicts: Vec::new(),
+            resolution_steps: Vec::new(),
+        };
+        let conflicted = WorktreeResolutionReport {
+            session_id: "conflicted".to_string(),
+            task: "resolve".to_string(),
+            session_state: "failed".to_string(),
+            attached: true,
+            conflicted: true,
+            check_exit_code: 2,
+            path: Some("/tmp/ecc/wt-2".to_string()),
+            branch: Some("ecc/conflicted".to_string()),
+            base_branch: Some("main".to_string()),
+            summary: "Merge blocked by 1 conflict(s): src/lib.rs".to_string(),
+            conflicts: vec!["src/lib.rs".to_string()],
+            resolution_steps: vec!["Inspect current patch".to_string()],
+        };
+
+        assert_eq!(worktree_resolution_reports_exit_code(&[clear]), 0);
+        assert_eq!(worktree_resolution_reports_exit_code(&[conflicted]), 2);
     }
 
     #[test]

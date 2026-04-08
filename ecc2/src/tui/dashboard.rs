@@ -54,6 +54,7 @@ pub struct Dashboard {
     selected_diff_summary: Option<String>,
     selected_diff_preview: Vec<String>,
     selected_diff_patch: Option<String>,
+    selected_conflict_protocol: Option<String>,
     selected_merge_readiness: Option<worktree::MergeReadiness>,
     output_mode: OutputMode,
     selected_pane: Pane,
@@ -94,6 +95,7 @@ enum Pane {
 enum OutputMode {
     SessionOutput,
     WorktreeDiff,
+    ConflictProtocol,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -173,6 +175,7 @@ impl Dashboard {
             selected_diff_summary: None,
             selected_diff_preview: Vec::new(),
             selected_diff_patch: None,
+            selected_conflict_protocol: None,
             selected_merge_readiness: None,
             output_mode: OutputMode::SessionOutput,
             selected_pane: Pane::Sessions,
@@ -365,6 +368,16 @@ impl Dashboard {
                         });
                     (" Diff ", content)
                 }
+                OutputMode::ConflictProtocol => {
+                    let content = self
+                        .selected_conflict_protocol
+                        .clone()
+                        .unwrap_or_else(|| {
+                            "No conflicted worktree available for the selected session."
+                                .to_string()
+                        });
+                    (" Conflict Protocol ", content)
+                }
             }
         } else {
             (" Output ", "No sessions. Press 'n' to start one.".to_string())
@@ -462,7 +475,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  [m]erge  merge ready [M]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [m]erge  merge ready [M]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -514,6 +527,7 @@ impl Dashboard {
             "  g       Auto-dispatch unread handoffs across lead sessions",
             "  G       Dispatch then rebalance backlog across lead teams",
             "  v       Toggle selected worktree diff in output pane",
+            "  c       Show conflict-resolution protocol for selected conflicted worktree",
             "  m       Merge selected ready worktree into base and clean it up",
             "  M       Merge all ready inactive worktrees and clean them up",
             "  p       Toggle daemon auto-dispatch policy and persist config",
@@ -726,6 +740,34 @@ impl Dashboard {
                 self.output_mode = OutputMode::SessionOutput;
                 self.reset_output_view();
                 self.set_operator_note("showing session output".to_string());
+            }
+            OutputMode::ConflictProtocol => {
+                self.output_mode = OutputMode::SessionOutput;
+                self.reset_output_view();
+                self.set_operator_note("showing session output".to_string());
+            }
+        }
+    }
+
+    pub fn toggle_conflict_protocol_mode(&mut self) {
+        match self.output_mode {
+            OutputMode::ConflictProtocol => {
+                self.output_mode = OutputMode::SessionOutput;
+                self.reset_output_view();
+                self.set_operator_note("showing session output".to_string());
+            }
+            _ => {
+                if self.selected_conflict_protocol.is_some() {
+                    self.output_mode = OutputMode::ConflictProtocol;
+                    self.selected_pane = Pane::Output;
+                    self.output_follow = false;
+                    self.output_scroll_offset = 0;
+                    self.set_operator_note("showing worktree conflict protocol".to_string());
+                } else {
+                    self.set_operator_note(
+                        "no conflicted worktree for selected session".to_string(),
+                    );
+                }
             }
         }
     }
@@ -1473,10 +1515,8 @@ impl Dashboard {
     }
 
     fn sync_selected_diff(&mut self) {
-        let worktree = self
-            .sessions
-            .get(self.selected_session)
-            .and_then(|session| session.worktree.as_ref());
+        let session = self.sessions.get(self.selected_session);
+        let worktree = session.and_then(|session| session.worktree.as_ref());
 
         self.selected_diff_summary =
             worktree.and_then(|worktree| worktree::diff_summary(worktree).ok().flatten());
@@ -1487,7 +1527,18 @@ impl Dashboard {
             .and_then(|worktree| worktree::diff_patch_preview(worktree, MAX_DIFF_PATCH_LINES).ok().flatten());
         self.selected_merge_readiness = worktree
             .and_then(|worktree| worktree::merge_readiness(worktree).ok());
+        self.selected_conflict_protocol = session
+            .zip(worktree)
+            .zip(self.selected_merge_readiness.as_ref())
+            .and_then(|((session, worktree), merge_readiness)| {
+                build_conflict_protocol(&session.id, worktree, merge_readiness)
+            });
         if self.output_mode == OutputMode::WorktreeDiff && self.selected_diff_patch.is_none() {
+            self.output_mode = OutputMode::SessionOutput;
+        }
+        if self.output_mode == OutputMode::ConflictProtocol
+            && self.selected_conflict_protocol.is_none()
+        {
             self.output_mode = OutputMode::SessionOutput;
         }
     }
@@ -2410,6 +2461,44 @@ fn format_session_id(id: &str) -> String {
     id.chars().take(8).collect()
 }
 
+fn build_conflict_protocol(
+    session_id: &str,
+    worktree: &crate::session::WorktreeInfo,
+    merge_readiness: &worktree::MergeReadiness,
+) -> Option<String> {
+    if merge_readiness.status != worktree::MergeReadinessStatus::Conflicted {
+        return None;
+    }
+
+    let mut lines = vec![
+        format!("Conflict protocol for {}", format_session_id(session_id)),
+        format!("Worktree {}", worktree.path.display()),
+        format!("Branch {} (base {})", worktree.branch, worktree.base_branch),
+        merge_readiness.summary.clone(),
+    ];
+
+    if !merge_readiness.conflicts.is_empty() {
+        lines.push("Conflicts".to_string());
+        for conflict in &merge_readiness.conflicts {
+            lines.push(format!("- {conflict}"));
+        }
+    }
+
+    lines.push("Resolution steps".to_string());
+    lines.push(format!(
+        "1. Inspect current patch: ecc worktree-status {session_id} --patch"
+    ));
+    lines.push(format!("2. Open worktree: cd {}", worktree.path.display()));
+    lines.push("3. Resolve conflicts and stage files: git add <paths>".to_string());
+    lines.push(format!("4. Commit the resolution on {}: git commit", worktree.branch));
+    lines.push(format!(
+        "5. Re-check readiness: ecc worktree-status {session_id} --check"
+    ));
+    lines.push(format!("6. Merge when clear: ecc merge-worktree {session_id}"));
+
+    Some(lines.join("\n"))
+}
+
 fn assignment_action_label(action: manager::AssignmentAction) -> &'static str {
     match action {
         manager::AssignmentAction::Spawned => "spawned",
@@ -2564,6 +2653,41 @@ mod tests {
         let rendered = dashboard.rendered_output_text(180, 30);
         assert!(rendered.contains("Diff"));
         assert!(rendered.contains("diff --git a/src/lib.rs b/src/lib.rs"));
+    }
+
+    #[test]
+    fn toggle_conflict_protocol_mode_switches_to_protocol_view() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.selected_merge_readiness = Some(worktree::MergeReadiness {
+            status: worktree::MergeReadinessStatus::Conflicted,
+            summary: "Merge blocked by 1 conflict(s): src/main.rs".to_string(),
+            conflicts: vec!["src/main.rs".to_string()],
+        });
+        dashboard.selected_conflict_protocol = Some(
+            "Conflict protocol for focus-12\nResolution steps\n1. Inspect current patch: ecc worktree-status focus-12345678 --patch"
+                .to_string(),
+        );
+
+        dashboard.toggle_conflict_protocol_mode();
+
+        assert_eq!(dashboard.output_mode, OutputMode::ConflictProtocol);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("showing worktree conflict protocol")
+        );
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("Conflict Protocol"));
+        assert!(rendered.contains("Resolution steps"));
     }
 
     #[test]
@@ -3762,6 +3886,7 @@ mod tests {
             selected_diff_summary: None,
             selected_diff_preview: Vec::new(),
             selected_diff_patch: None,
+            selected_conflict_protocol: None,
             selected_merge_readiness: None,
             output_mode: OutputMode::SessionOutput,
             selected_pane: Pane::Sessions,
