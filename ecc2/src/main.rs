@@ -207,6 +207,9 @@ enum Commands {
     MergeWorktree {
         /// Session ID or alias
         session_id: Option<String>,
+        /// Merge all ready inactive worktrees
+        #[arg(long)]
+        all: bool,
         /// Emit machine-readable JSON instead of the human summary
         #[arg(long)]
         json: bool,
@@ -703,17 +706,36 @@ async fn main() -> Result<()> {
         }
         Some(Commands::MergeWorktree {
             session_id,
+            all,
             json,
             keep_worktree,
         }) => {
-            let id = session_id.unwrap_or_else(|| "latest".to_string());
-            let resolved_id = resolve_session_id(&db, &id)?;
-            let outcome =
-                session::manager::merge_session_worktree(&db, &resolved_id, !keep_worktree).await?;
-            if json {
-                println!("{}", serde_json::to_string_pretty(&outcome)?);
+            if all && session_id.is_some() {
+                return Err(anyhow::anyhow!(
+                    "merge-worktree does not accept a session ID when --all is set"
+                ));
+            }
+            if all {
+                let outcome = session::manager::merge_ready_worktrees(&db, !keep_worktree).await?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&outcome)?);
+                } else {
+                    println!("{}", format_bulk_worktree_merge_human(&outcome));
+                }
             } else {
-                println!("{}", format_worktree_merge_human(&outcome));
+                let id = session_id.unwrap_or_else(|| "latest".to_string());
+                let resolved_id = resolve_session_id(&db, &id)?;
+                let outcome = session::manager::merge_session_worktree(
+                    &db,
+                    &resolved_id,
+                    !keep_worktree,
+                )
+                .await?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&outcome)?);
+                } else {
+                    println!("{}", format_worktree_merge_human(&outcome));
+                }
             }
         }
         Some(Commands::PruneWorktrees { json }) => {
@@ -1099,6 +1121,62 @@ fn format_worktree_merge_human(outcome: &session::manager::WorktreeMergeOutcome)
     } else {
         "Cleanup kept worktree attached".to_string()
     });
+    lines.join("\n")
+}
+
+fn format_bulk_worktree_merge_human(outcome: &session::manager::WorktreeBulkMergeOutcome) -> String {
+    let mut lines = Vec::new();
+    lines.push(format!(
+        "Merged {} ready worktree(s)",
+        outcome.merged.len()
+    ));
+
+    for merged in &outcome.merged {
+        lines.push(format!(
+            "- merged {} -> {} for {}{}",
+            merged.branch,
+            merged.base_branch,
+            short_session(&merged.session_id),
+            if merged.already_up_to_date {
+                " (already up to date)"
+            } else {
+                ""
+            }
+        ));
+    }
+
+    if !outcome.active_with_worktree_ids.is_empty() {
+        lines.push(format!(
+            "Skipped {} active worktree session(s)",
+            outcome.active_with_worktree_ids.len()
+        ));
+    }
+    if !outcome.conflicted_session_ids.is_empty() {
+        lines.push(format!(
+            "Skipped {} conflicted worktree(s)",
+            outcome.conflicted_session_ids.len()
+        ));
+    }
+    if !outcome.dirty_worktree_ids.is_empty() {
+        lines.push(format!(
+            "Skipped {} dirty worktree(s)",
+            outcome.dirty_worktree_ids.len()
+        ));
+    }
+    if !outcome.failures.is_empty() {
+        lines.push(format!(
+            "Encountered {} merge failure(s)",
+            outcome.failures.len()
+        ));
+        for failure in &outcome.failures {
+            lines.push(format!(
+                "- failed {}: {}",
+                short_session(&failure.session_id),
+                failure.reason
+            ));
+        }
+    }
+
     lines.join("\n")
 }
 
@@ -1575,12 +1653,35 @@ mod tests {
         match cli.command {
             Some(Commands::MergeWorktree {
                 session_id,
+                all,
                 json,
                 keep_worktree,
             }) => {
                 assert_eq!(session_id.as_deref(), Some("deadbeef"));
+                assert!(!all);
                 assert!(json);
                 assert!(keep_worktree);
+            }
+            _ => panic!("expected merge-worktree subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_merge_worktree_all_flags() {
+        let cli = Cli::try_parse_from(["ecc", "merge-worktree", "--all", "--json"])
+            .expect("merge-worktree --all --json should parse");
+
+        match cli.command {
+            Some(Commands::MergeWorktree {
+                session_id,
+                all,
+                json,
+                keep_worktree,
+            }) => {
+                assert!(session_id.is_none());
+                assert!(all);
+                assert!(json);
+                assert!(!keep_worktree);
             }
             _ => panic!("expected merge-worktree subcommand"),
         }
@@ -1647,6 +1748,34 @@ mod tests {
         assert!(text.contains("Branch ecc/deadbeef -> main"));
         assert!(text.contains("Result merged into base"));
         assert!(text.contains("Cleanup removed worktree and branch"));
+    }
+
+    #[test]
+    fn format_bulk_worktree_merge_human_reports_summary_and_skips() {
+        let text = format_bulk_worktree_merge_human(&session::manager::WorktreeBulkMergeOutcome {
+            merged: vec![session::manager::WorktreeMergeOutcome {
+                session_id: "deadbeefcafefeed".to_string(),
+                branch: "ecc/deadbeefcafefeed".to_string(),
+                base_branch: "main".to_string(),
+                already_up_to_date: false,
+                cleaned_worktree: true,
+            }],
+            active_with_worktree_ids: vec!["running12345678".to_string()],
+            conflicted_session_ids: vec!["conflict123456".to_string()],
+            dirty_worktree_ids: vec!["dirty123456789".to_string()],
+            failures: vec![session::manager::WorktreeMergeFailure {
+                session_id: "fail1234567890".to_string(),
+                reason: "base branch not checked out".to_string(),
+            }],
+        });
+
+        assert!(text.contains("Merged 1 ready worktree(s)"));
+        assert!(text.contains("- merged ecc/deadbeefcafefeed -> main for deadbeef"));
+        assert!(text.contains("Skipped 1 active worktree session(s)"));
+        assert!(text.contains("Skipped 1 conflicted worktree(s)"));
+        assert!(text.contains("Skipped 1 dirty worktree(s)"));
+        assert!(text.contains("Encountered 1 merge failure(s)"));
+        assert!(text.contains("- failed fail1234: base branch not checked out"));
     }
 
     #[test]

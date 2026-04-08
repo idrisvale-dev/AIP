@@ -462,7 +462,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  [m]erge  merge ready [M]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -515,6 +515,7 @@ impl Dashboard {
             "  G       Dispatch then rebalance backlog across lead teams",
             "  v       Toggle selected worktree diff in output pane",
             "  m       Merge selected ready worktree into base and clean it up",
+            "  M       Merge all ready inactive worktrees and clean them up",
             "  p       Toggle daemon auto-dispatch policy and persist config",
             "  ,/.     Decrease/increase auto-dispatch limit per lead",
             "  s       Stop selected session",
@@ -1149,6 +1150,51 @@ impl Dashboard {
                 ""
             }
         ));
+    }
+
+    pub async fn merge_ready_worktrees(&mut self) {
+        match manager::merge_ready_worktrees(&self.db, true).await {
+            Ok(outcome) => {
+                self.refresh();
+                if outcome.merged.is_empty()
+                    && outcome.active_with_worktree_ids.is_empty()
+                    && outcome.conflicted_session_ids.is_empty()
+                    && outcome.dirty_worktree_ids.is_empty()
+                    && outcome.failures.is_empty()
+                {
+                    self.set_operator_note("no ready worktrees to merge".to_string());
+                    return;
+                }
+
+                let mut parts = vec![format!("merged {} ready worktree(s)", outcome.merged.len())];
+                if !outcome.active_with_worktree_ids.is_empty() {
+                    parts.push(format!(
+                        "skipped {} active",
+                        outcome.active_with_worktree_ids.len()
+                    ));
+                }
+                if !outcome.conflicted_session_ids.is_empty() {
+                    parts.push(format!(
+                        "skipped {} conflicted",
+                        outcome.conflicted_session_ids.len()
+                    ));
+                }
+                if !outcome.dirty_worktree_ids.is_empty() {
+                    parts.push(format!(
+                        "skipped {} dirty",
+                        outcome.dirty_worktree_ids.len()
+                    ));
+                }
+                if !outcome.failures.is_empty() {
+                    parts.push(format!("{} failed", outcome.failures.len()));
+                }
+                self.set_operator_note(parts.join("; "));
+            }
+            Err(error) => {
+                tracing::warn!("Failed to merge ready worktrees: {error}");
+                self.set_operator_note(format!("merge ready worktrees failed: {error}"));
+            }
+        }
     }
 
     pub async fn prune_inactive_worktrees(&mut self) {
@@ -3329,6 +3375,83 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(repo_root.join("dashboard.txt"))?,
             "dashboard merge\n"
+        );
+
+        let _ = std::fs::remove_dir_all(&tempdir);
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn merge_ready_worktrees_sets_operator_note_with_skip_summary() -> Result<()> {
+        let tempdir =
+            std::env::temp_dir().join(format!("dashboard-merge-ready-{}", Uuid::new_v4()));
+        let repo_root = tempdir.join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(&tempdir);
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        let merged_worktree = worktree::create_for_session_in_repo("merge-ready", &cfg, &repo_root)?;
+        std::fs::write(merged_worktree.path.join("merged.txt"), "dashboard bulk merge\n")?;
+        Command::new("git")
+            .arg("-C")
+            .arg(&merged_worktree.path)
+            .args(["add", "merged.txt"])
+            .status()?;
+        Command::new("git")
+            .arg("-C")
+            .arg(&merged_worktree.path)
+            .args(["commit", "-qm", "dashboard bulk merge"])
+            .status()?;
+        db.insert_session(&Session {
+            id: "merge-ready".to_string(),
+            task: "merge via dashboard".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: merged_worktree.path.clone(),
+            state: SessionState::Completed,
+            pid: None,
+            worktree: Some(merged_worktree.clone()),
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let active_worktree =
+            worktree::create_for_session_in_repo("active-ready", &cfg, &repo_root)?;
+        db.insert_session(&Session {
+            id: "active-ready".to_string(),
+            task: "still active".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: active_worktree.path.clone(),
+            state: SessionState::Running,
+            pid: Some(999),
+            worktree: Some(active_worktree.clone()),
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.merge_ready_worktrees().await;
+
+        let note = dashboard
+            .operator_note
+            .clone()
+            .context("operator note should be set")?;
+        assert!(note.contains("merged 1 ready worktree(s)"));
+        assert!(note.contains("skipped 1 active"));
+        assert!(
+            dashboard
+                .db
+                .get_session("merge-ready")?
+                .context("merged session should still exist")?
+                .worktree
+                .is_none()
+        );
+        assert_eq!(
+            std::fs::read_to_string(repo_root.join("merged.txt"))?,
+            "dashboard bulk merge\n"
         );
 
         let _ = std::fs::remove_dir_all(&tempdir);

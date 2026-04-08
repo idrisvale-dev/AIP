@@ -297,13 +297,17 @@ pub fn health(worktree: &WorktreeInfo) -> Result<WorktreeHealth> {
     }
 }
 
+pub fn has_uncommitted_changes(worktree: &WorktreeInfo) -> Result<bool> {
+    Ok(!git_status_short(&worktree.path)?.is_empty())
+}
+
 pub fn merge_into_base(worktree: &WorktreeInfo) -> Result<MergeOutcome> {
     let readiness = merge_readiness(worktree)?;
     if readiness.status == MergeReadinessStatus::Conflicted {
         anyhow::bail!(readiness.summary);
     }
 
-    if !git_status_short(&worktree.path)?.is_empty() {
+    if has_uncommitted_changes(worktree)? {
         anyhow::bail!(
             "Worktree {} has uncommitted changes; commit or discard them before merging",
             worktree.branch

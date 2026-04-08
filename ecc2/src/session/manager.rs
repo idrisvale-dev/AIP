@@ -626,7 +626,10 @@ pub async fn merge_session_worktree(
 ) -> Result<WorktreeMergeOutcome> {
     let session = resolve_session(db, id)?;
 
-    if matches!(session.state, SessionState::Pending | SessionState::Running) {
+    if matches!(
+        session.state,
+        SessionState::Pending | SessionState::Running | SessionState::Idle
+    ) {
         anyhow::bail!(
             "Cannot merge active session {} while it is {}",
             session.id,
@@ -651,6 +654,95 @@ pub async fn merge_session_worktree(
         base_branch: outcome.base_branch,
         already_up_to_date: outcome.already_up_to_date,
         cleaned_worktree: cleanup_worktree,
+    })
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct WorktreeMergeFailure {
+    pub session_id: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct WorktreeBulkMergeOutcome {
+    pub merged: Vec<WorktreeMergeOutcome>,
+    pub active_with_worktree_ids: Vec<String>,
+    pub conflicted_session_ids: Vec<String>,
+    pub dirty_worktree_ids: Vec<String>,
+    pub failures: Vec<WorktreeMergeFailure>,
+}
+
+pub async fn merge_ready_worktrees(
+    db: &StateStore,
+    cleanup_worktree: bool,
+) -> Result<WorktreeBulkMergeOutcome> {
+    let sessions = db.list_sessions()?;
+    let mut merged = Vec::new();
+    let mut active_with_worktree_ids = Vec::new();
+    let mut conflicted_session_ids = Vec::new();
+    let mut dirty_worktree_ids = Vec::new();
+    let mut failures = Vec::new();
+
+    for session in sessions {
+        let Some(worktree) = session.worktree.clone() else {
+            continue;
+        };
+
+        if matches!(
+            session.state,
+            SessionState::Pending | SessionState::Running | SessionState::Idle
+        ) {
+            active_with_worktree_ids.push(session.id);
+            continue;
+        }
+
+        match crate::worktree::merge_readiness(&worktree) {
+            Ok(readiness)
+                if readiness.status == crate::worktree::MergeReadinessStatus::Conflicted =>
+            {
+                conflicted_session_ids.push(session.id);
+                continue;
+            }
+            Ok(_) => {}
+            Err(error) => {
+                failures.push(WorktreeMergeFailure {
+                    session_id: session.id,
+                    reason: error.to_string(),
+                });
+                continue;
+            }
+        }
+
+        match crate::worktree::has_uncommitted_changes(&worktree) {
+            Ok(true) => {
+                dirty_worktree_ids.push(session.id);
+                continue;
+            }
+            Ok(false) => {}
+            Err(error) => {
+                failures.push(WorktreeMergeFailure {
+                    session_id: session.id,
+                    reason: error.to_string(),
+                });
+                continue;
+            }
+        }
+
+        match merge_session_worktree(db, &session.id, cleanup_worktree).await {
+            Ok(outcome) => merged.push(outcome),
+            Err(error) => failures.push(WorktreeMergeFailure {
+                session_id: session.id,
+                reason: error.to_string(),
+            }),
+        }
+    }
+
+    Ok(WorktreeBulkMergeOutcome {
+        merged,
+        active_with_worktree_ids,
+        conflicted_session_ids,
+        dirty_worktree_ids,
+        failures,
     })
 }
 
@@ -1956,6 +2048,104 @@ mod tests {
             String::from_utf8_lossy(&branch_output.stdout).trim().is_empty(),
             "merged worktree branch should be deleted"
         );
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn merge_ready_worktrees_merges_ready_sessions_and_skips_active_and_dirty() -> Result<()>
+    {
+        let tempdir = TestDir::new("manager-merge-ready-worktrees")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        let merged_worktree =
+            crate::worktree::create_for_session_in_repo("merge-ready", &cfg, &repo_root)?;
+        fs::write(merged_worktree.path.join("merged.txt"), "bulk merge\n")?;
+        run_git(&merged_worktree.path, ["add", "merged.txt"])?;
+        run_git(&merged_worktree.path, ["commit", "-qm", "merge ready"])?;
+        db.insert_session(&Session {
+            id: "merge-ready".to_string(),
+            task: "merge me".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: merged_worktree.path.clone(),
+            state: SessionState::Completed,
+            pid: None,
+            worktree: Some(merged_worktree.clone()),
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let active_worktree =
+            crate::worktree::create_for_session_in_repo("active-worktree", &cfg, &repo_root)?;
+        db.insert_session(&Session {
+            id: "active-worktree".to_string(),
+            task: "still running".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: active_worktree.path.clone(),
+            state: SessionState::Running,
+            pid: Some(12345),
+            worktree: Some(active_worktree.clone()),
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let dirty_worktree =
+            crate::worktree::create_for_session_in_repo("dirty-worktree", &cfg, &repo_root)?;
+        fs::write(dirty_worktree.path.join("dirty.txt"), "not committed yet\n")?;
+        db.insert_session(&Session {
+            id: "dirty-worktree".to_string(),
+            task: "needs commit".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: dirty_worktree.path.clone(),
+            state: SessionState::Stopped,
+            pid: None,
+            worktree: Some(dirty_worktree.clone()),
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let outcome = merge_ready_worktrees(&db, true).await?;
+
+        assert_eq!(outcome.merged.len(), 1);
+        assert_eq!(outcome.merged[0].session_id, "merge-ready");
+        assert_eq!(outcome.active_with_worktree_ids, vec!["active-worktree".to_string()]);
+        assert_eq!(outcome.dirty_worktree_ids, vec!["dirty-worktree".to_string()]);
+        assert!(outcome.conflicted_session_ids.is_empty());
+        assert!(outcome.failures.is_empty());
+
+        assert_eq!(
+            fs::read_to_string(repo_root.join("merged.txt"))?,
+            "bulk merge\n"
+        );
+        assert!(
+            db.get_session("merge-ready")?
+                .context("merged session should still exist")?
+                .worktree
+                .is_none()
+        );
+        assert!(
+            db.get_session("active-worktree")?
+                .context("active session should still exist")?
+                .worktree
+                .is_some()
+        );
+        assert!(
+            db.get_session("dirty-worktree")?
+                .context("dirty session should still exist")?
+                .worktree
+                .is_some()
+        );
+        assert!(!merged_worktree.path.exists());
+        assert!(active_worktree.path.exists());
+        assert!(dirty_worktree.path.exists());
 
         Ok(())
     }
