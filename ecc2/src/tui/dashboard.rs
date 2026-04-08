@@ -456,7 +456,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -513,6 +513,7 @@ impl Dashboard {
             "  s       Stop selected session",
             "  u       Resume selected session",
             "  x       Cleanup selected worktree",
+            "  X       Prune inactive worktrees globally",
             "  d       Delete selected inactive session",
             "  Tab     Next pane",
             "  S-Tab   Previous pane",
@@ -1104,6 +1105,32 @@ impl Dashboard {
             "cleaned worktree for {}",
             format_session_id(&session_id)
         ));
+    }
+
+    pub async fn prune_inactive_worktrees(&mut self) {
+        match manager::prune_inactive_worktrees(&self.db).await {
+            Ok(outcome) => {
+                self.refresh();
+                if outcome.cleaned_session_ids.is_empty() {
+                    self.set_operator_note("no inactive worktrees to prune".to_string());
+                } else if outcome.active_with_worktree_ids.is_empty() {
+                    self.set_operator_note(format!(
+                        "pruned {} inactive worktree(s)",
+                        outcome.cleaned_session_ids.len()
+                    ));
+                } else {
+                    self.set_operator_note(format!(
+                        "pruned {} inactive worktree(s); skipped {} active session(s)",
+                        outcome.cleaned_session_ids.len(),
+                        outcome.active_with_worktree_ids.len()
+                    ));
+                }
+            }
+            Err(error) => {
+                tracing::warn!("Failed to prune inactive worktrees: {error}");
+                self.set_operator_note(format!("prune inactive worktrees failed: {error}"));
+            }
+        }
     }
 
     pub async fn delete_selected_session(&mut self) {
@@ -2932,6 +2959,108 @@ mod tests {
         );
 
         let _ = std::fs::remove_dir_all(worktree_path);
+        let _ = std::fs::remove_file(db_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn prune_inactive_worktrees_sets_operator_note_when_clear() -> Result<()> {
+        let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
+        let db = StateStore::open(&db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "running-1".to_string(),
+            task: "keep alive".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let dashboard_store = StateStore::open(&db_path)?;
+        let mut dashboard = Dashboard::new(dashboard_store, Config::default());
+        dashboard.prune_inactive_worktrees().await;
+
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("no inactive worktrees to prune")
+        );
+
+        let _ = std::fs::remove_file(db_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn prune_inactive_worktrees_reports_pruned_and_skipped_counts() -> Result<()> {
+        let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
+        let db = StateStore::open(&db_path)?;
+        let now = Utc::now();
+        let active_path = std::env::temp_dir().join(format!("ecc2-active-{}", Uuid::new_v4()));
+        let stopped_path = std::env::temp_dir().join(format!("ecc2-stopped-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&active_path)?;
+        std::fs::create_dir_all(&stopped_path)?;
+
+        db.insert_session(&Session {
+            id: "running-1".to_string(),
+            task: "keep worktree".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: active_path.clone(),
+            state: SessionState::Running,
+            pid: None,
+            worktree: Some(WorktreeInfo {
+                path: active_path.clone(),
+                branch: "ecc/running-1".to_string(),
+                base_branch: "main".to_string(),
+            }),
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "stopped-1".to_string(),
+            task: "prune me".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: stopped_path.clone(),
+            state: SessionState::Stopped,
+            pid: None,
+            worktree: Some(WorktreeInfo {
+                path: stopped_path.clone(),
+                branch: "ecc/stopped-1".to_string(),
+                base_branch: "main".to_string(),
+            }),
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let dashboard_store = StateStore::open(&db_path)?;
+        let mut dashboard = Dashboard::new(dashboard_store, Config::default());
+        dashboard.prune_inactive_worktrees().await;
+
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("pruned 1 inactive worktree(s); skipped 1 active session(s)")
+        );
+        assert!(
+            db.get_session("stopped-1")?
+                .expect("stopped session should exist")
+                .worktree
+                .is_none()
+        );
+        assert!(
+            db.get_session("running-1")?
+                .expect("running session should exist")
+                .worktree
+                .is_some()
+        );
+
+        let _ = std::fs::remove_dir_all(active_path);
+        let _ = std::fs::remove_dir_all(stopped_path);
         let _ = std::fs::remove_file(db_path);
         Ok(())
     }
