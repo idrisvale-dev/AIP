@@ -193,6 +193,9 @@ enum Commands {
         /// Emit machine-readable JSON instead of the human summary
         #[arg(long)]
         json: bool,
+        /// Include a bounded patch preview when a worktree is attached
+        #[arg(long)]
+        patch: bool,
         /// Return a non-zero exit code when the worktree needs attention
         #[arg(long)]
         check: bool,
@@ -643,6 +646,7 @@ async fn main() -> Result<()> {
         Some(Commands::WorktreeStatus {
             session_id,
             json,
+            patch,
             check,
         }) => {
             let id = session_id.unwrap_or_else(|| "latest".to_string());
@@ -650,7 +654,7 @@ async fn main() -> Result<()> {
             let session = db
                 .get_session(&resolved_id)?
                 .ok_or_else(|| anyhow::anyhow!("Session not found: {resolved_id}"))?;
-            let report = build_worktree_status_report(&session)?;
+            let report = build_worktree_status_report(&session, patch)?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
@@ -890,16 +894,18 @@ struct WorktreeStatusReport {
     session_state: String,
     health: String,
     check_exit_code: i32,
+    patch_included: bool,
     attached: bool,
     path: Option<String>,
     branch: Option<String>,
     base_branch: Option<String>,
     diff_summary: Option<String>,
     file_preview: Vec<String>,
+    patch_preview: Option<String>,
     merge_readiness: Option<WorktreeMergeReadinessReport>,
 }
 
-fn build_worktree_status_report(session: &session::Session) -> Result<WorktreeStatusReport> {
+fn build_worktree_status_report(session: &session::Session, include_patch: bool) -> Result<WorktreeStatusReport> {
     let Some(worktree) = session.worktree.as_ref() else {
         return Ok(WorktreeStatusReport {
             session_id: session.id.clone(),
@@ -907,18 +913,25 @@ fn build_worktree_status_report(session: &session::Session) -> Result<WorktreeSt
             session_state: session.state.to_string(),
             health: "clear".to_string(),
             check_exit_code: 0,
+            patch_included: include_patch,
             attached: false,
             path: None,
             branch: None,
             base_branch: None,
             diff_summary: None,
             file_preview: Vec::new(),
+            patch_preview: None,
             merge_readiness: None,
         });
     };
 
     let diff_summary = worktree::diff_summary(worktree)?;
     let file_preview = worktree::diff_file_preview(worktree, 8)?;
+    let patch_preview = if include_patch {
+        worktree::diff_patch_preview(worktree, 80)?
+    } else {
+        None
+    };
     let merge_readiness = worktree::merge_readiness(worktree)?;
     let (health, check_exit_code) = match merge_readiness.status {
         worktree::MergeReadinessStatus::Conflicted => ("conflicted".to_string(), 2),
@@ -932,12 +945,14 @@ fn build_worktree_status_report(session: &session::Session) -> Result<WorktreeSt
         session_state: session.state.to_string(),
         health,
         check_exit_code,
+        patch_included: include_patch,
         attached: true,
         path: Some(worktree.path.display().to_string()),
         branch: Some(worktree.branch.clone()),
         base_branch: Some(worktree.base_branch.clone()),
         diff_summary,
         file_preview,
+        patch_preview,
         merge_readiness: Some(WorktreeMergeReadinessReport {
             status: match merge_readiness.status {
                 worktree::MergeReadinessStatus::Ready => "ready".to_string(),
@@ -982,6 +997,14 @@ fn format_worktree_status_human(report: &WorktreeStatusReport) -> String {
         lines.push(merge_readiness.summary.clone());
         for conflict in merge_readiness.conflicts.iter().take(5) {
             lines.push(format!("- conflict {conflict}"));
+        }
+    }
+    if report.patch_included {
+        if let Some(patch_preview) = report.patch_preview.as_ref() {
+            lines.push("Patch preview".to_string());
+            lines.push(patch_preview.clone());
+        } else {
+            lines.push("Patch preview unavailable".to_string());
         }
     }
 
@@ -1228,10 +1251,12 @@ mod tests {
             Some(Commands::WorktreeStatus {
                 session_id,
                 json,
+                patch,
                 check,
             }) => {
                 assert_eq!(session_id.as_deref(), Some("planner"));
                 assert!(!json);
+                assert!(!patch);
                 assert!(!check);
             }
             _ => panic!("expected worktree-status subcommand"),
@@ -1247,10 +1272,33 @@ mod tests {
             Some(Commands::WorktreeStatus {
                 session_id,
                 json,
+                patch,
                 check,
             }) => {
                 assert_eq!(session_id, None);
                 assert!(json);
+                assert!(!patch);
+                assert!(!check);
+            }
+            _ => panic!("expected worktree-status subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_worktree_status_patch_flag() {
+        let cli = Cli::try_parse_from(["ecc", "worktree-status", "--patch"])
+            .expect("worktree-status --patch should parse");
+
+        match cli.command {
+            Some(Commands::WorktreeStatus {
+                session_id,
+                json,
+                patch,
+                check,
+            }) => {
+                assert_eq!(session_id, None);
+                assert!(!json);
+                assert!(patch);
                 assert!(!check);
             }
             _ => panic!("expected worktree-status subcommand"),
@@ -1266,10 +1314,12 @@ mod tests {
             Some(Commands::WorktreeStatus {
                 session_id,
                 json,
+                patch,
                 check,
             }) => {
                 assert_eq!(session_id, None);
                 assert!(!json);
+                assert!(!patch);
                 assert!(check);
             }
             _ => panic!("expected worktree-status subcommand"),
@@ -1284,12 +1334,14 @@ mod tests {
             session_state: "running".to_string(),
             health: "conflicted".to_string(),
             check_exit_code: 2,
+            patch_included: true,
             attached: true,
             path: Some("/tmp/ecc/wt-1".to_string()),
             branch: Some("ecc/deadbeefcafefeed".to_string()),
             base_branch: Some("main".to_string()),
             diff_summary: Some("Branch 1 file changed, 2 insertions(+)".to_string()),
             file_preview: vec!["Branch M README.md".to_string()],
+            patch_preview: Some("--- Branch diff vs main ---\n+hello".to_string()),
             merge_readiness: Some(WorktreeMergeReadinessReport {
                 status: "conflicted".to_string(),
                 summary: "Merge blocked by 1 conflict(s): README.md".to_string(),
@@ -1304,6 +1356,8 @@ mod tests {
         assert!(text.contains("Branch M README.md"));
         assert!(text.contains("Merge blocked by 1 conflict(s): README.md"));
         assert!(text.contains("- conflict README.md"));
+        assert!(text.contains("Patch preview"));
+        assert!(text.contains("--- Branch diff vs main ---"));
     }
 
     #[test]
@@ -1314,12 +1368,14 @@ mod tests {
             session_state: "stopped".to_string(),
             health: "clear".to_string(),
             check_exit_code: 0,
+            patch_included: true,
             attached: false,
             path: None,
             branch: None,
             base_branch: None,
             diff_summary: None,
             file_preview: Vec::new(),
+            patch_preview: None,
             merge_readiness: None,
         };
 
@@ -1338,12 +1394,14 @@ mod tests {
             session_state: "idle".to_string(),
             health: "clear".to_string(),
             check_exit_code: 0,
+            patch_included: false,
             attached: false,
             path: None,
             branch: None,
             base_branch: None,
             diff_summary: None,
             file_preview: Vec::new(),
+            patch_preview: None,
             merge_readiness: None,
         };
         let in_progress = WorktreeStatusReport {
@@ -1352,12 +1410,14 @@ mod tests {
             session_state: "running".to_string(),
             health: "in_progress".to_string(),
             check_exit_code: 1,
+            patch_included: false,
             attached: true,
             path: Some("/tmp/ecc/wt-2".to_string()),
             branch: Some("ecc/b".to_string()),
             base_branch: Some("main".to_string()),
             diff_summary: Some("Branch 1 file changed".to_string()),
             file_preview: vec!["Branch M README.md".to_string()],
+            patch_preview: None,
             merge_readiness: Some(WorktreeMergeReadinessReport {
                 status: "ready".to_string(),
                 summary: "Merge ready into main".to_string(),
@@ -1370,12 +1430,14 @@ mod tests {
             session_state: "running".to_string(),
             health: "conflicted".to_string(),
             check_exit_code: 2,
+            patch_included: false,
             attached: true,
             path: Some("/tmp/ecc/wt-3".to_string()),
             branch: Some("ecc/c".to_string()),
             base_branch: Some("main".to_string()),
             diff_summary: Some("Branch 1 file changed".to_string()),
             file_preview: vec!["Branch M README.md".to_string()],
+            patch_preview: None,
             merge_readiness: Some(WorktreeMergeReadinessReport {
                 status: "conflicted".to_string(),
                 summary: "Merge blocked by 1 conflict(s): README.md".to_string(),
