@@ -103,7 +103,11 @@ enum Commands {
         lead_limit: usize,
     },
     /// Show global coordination, backlog, and daemon policy status
-    CoordinationStatus,
+    CoordinationStatus {
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
     /// Rebalance unread handoffs across lead teams with backed-up delegates
     RebalanceAll {
         /// Agent type for routed delegates
@@ -460,9 +464,9 @@ async fn main() -> Result<()> {
                 );
             }
         }
-        Some(Commands::CoordinationStatus) => {
+        Some(Commands::CoordinationStatus { json }) => {
             let status = session::manager::get_coordination_status(&db, &cfg)?;
-            println!("{status}");
+            println!("{}", format_coordination_status(&status, json)?);
         }
         Some(Commands::RebalanceAll {
             agent,
@@ -668,6 +672,17 @@ fn build_message(
 
 fn short_session(session_id: &str) -> String {
     session_id.chars().take(8).collect()
+}
+
+fn format_coordination_status(
+    status: &session::manager::CoordinationStatus,
+    json: bool,
+) -> Result<String> {
+    if json {
+        return Ok(serde_json::to_string_pretty(status)?);
+    }
+
+    Ok(status.to_string())
 }
 
 fn send_handoff_message(
@@ -965,9 +980,46 @@ mod tests {
             .expect("coordination-status should parse");
 
         match cli.command {
-            Some(Commands::CoordinationStatus) => {}
+            Some(Commands::CoordinationStatus { json }) => assert!(!json),
             _ => panic!("expected coordination-status subcommand"),
         }
+    }
+
+    #[test]
+    fn cli_parses_coordination_status_json_flag() {
+        let cli = Cli::try_parse_from(["ecc", "coordination-status", "--json"])
+            .expect("coordination-status --json should parse");
+
+        match cli.command {
+            Some(Commands::CoordinationStatus { json }) => assert!(json),
+            _ => panic!("expected coordination-status subcommand"),
+        }
+    }
+
+    #[test]
+    fn format_coordination_status_emits_json() {
+        let status = session::manager::CoordinationStatus {
+            backlog_leads: 2,
+            backlog_messages: 5,
+            absorbable_sessions: 1,
+            saturated_sessions: 1,
+            auto_dispatch_enabled: true,
+            auto_dispatch_limit_per_session: 4,
+            daemon_activity: session::store::DaemonActivity {
+                last_dispatch_routed: 3,
+                last_dispatch_deferred: 1,
+                last_dispatch_leads: 2,
+                ..Default::default()
+            },
+        };
+
+        let rendered =
+            format_coordination_status(&status, true).expect("json formatting should succeed");
+        let value: serde_json::Value =
+            serde_json::from_str(&rendered).expect("valid json should be emitted");
+        assert_eq!(value["backlog_leads"], 2);
+        assert_eq!(value["backlog_messages"], 5);
+        assert_eq!(value["daemon_activity"]["last_dispatch_routed"], 3);
     }
 
     #[test]

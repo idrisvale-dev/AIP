@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use rusqlite::{Connection, OptionalExtension};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -13,7 +14,7 @@ pub struct StateStore {
     conn: Connection,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct DaemonActivity {
     pub last_dispatch_at: Option<chrono::DateTime<chrono::Utc>>,
     pub last_dispatch_routed: usize,

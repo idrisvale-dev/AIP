@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -1094,6 +1095,7 @@ pub struct CoordinateBacklogOutcome {
     pub remaining_saturated_sessions: usize,
 }
 
+#[derive(Debug, Clone, Serialize)]
 pub struct CoordinationStatus {
     pub backlog_leads: usize,
     pub backlog_messages: usize,
