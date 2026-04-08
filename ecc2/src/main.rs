@@ -692,12 +692,11 @@ fn format_coordination_status(
 }
 
 fn coordination_status_exit_code(status: &session::manager::CoordinationStatus) -> i32 {
-    if status.daemon_activity.operator_escalation_required() || status.saturated_sessions > 0 {
-        2
-    } else if status.backlog_messages > 0 {
-        1
-    } else {
-        0
+    match status.health {
+        session::manager::CoordinationHealth::Healthy => 0,
+        session::manager::CoordinationHealth::BacklogAbsorbable => 1,
+        session::manager::CoordinationHealth::Saturated
+        | session::manager::CoordinationHealth::EscalationRequired => 2,
     }
 }
 
@@ -1039,6 +1038,9 @@ mod tests {
             backlog_messages: 5,
             absorbable_sessions: 1,
             saturated_sessions: 1,
+            mode: session::manager::CoordinationMode::RebalanceFirstChronicSaturation,
+            health: session::manager::CoordinationHealth::Saturated,
+            operator_escalation_required: false,
             auto_dispatch_enabled: true,
             auto_dispatch_limit_per_session: 4,
             daemon_activity: session::store::DaemonActivity {
@@ -1065,6 +1067,9 @@ mod tests {
             backlog_messages: 0,
             absorbable_sessions: 0,
             saturated_sessions: 0,
+            mode: session::manager::CoordinationMode::DispatchFirst,
+            health: session::manager::CoordinationHealth::Healthy,
+            operator_escalation_required: false,
             auto_dispatch_enabled: false,
             auto_dispatch_limit_per_session: 5,
             daemon_activity: Default::default(),
@@ -1075,12 +1080,14 @@ mod tests {
             backlog_messages: 2,
             backlog_leads: 1,
             absorbable_sessions: 1,
+            health: session::manager::CoordinationHealth::BacklogAbsorbable,
             ..clear.clone()
         };
         assert_eq!(coordination_status_exit_code(&absorbable), 1);
 
         let saturated = session::manager::CoordinationStatus {
             saturated_sessions: 1,
+            health: session::manager::CoordinationHealth::Saturated,
             ..absorbable
         };
         assert_eq!(coordination_status_exit_code(&saturated), 2);

@@ -1101,9 +1101,30 @@ pub struct CoordinationStatus {
     pub backlog_messages: usize,
     pub absorbable_sessions: usize,
     pub saturated_sessions: usize,
+    pub mode: CoordinationMode,
+    pub health: CoordinationHealth,
+    pub operator_escalation_required: bool,
     pub auto_dispatch_enabled: bool,
     pub auto_dispatch_limit_per_session: usize,
     pub daemon_activity: super::store::DaemonActivity,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CoordinationMode {
+    DispatchFirst,
+    DispatchFirstStabilized,
+    RebalanceFirstChronicSaturation,
+    RebalanceCooloffChronicSaturation,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CoordinationHealth {
+    Healthy,
+    BacklogAbsorbable,
+    Saturated,
+    EscalationRequired,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1118,6 +1139,34 @@ pub fn assignment_action_routes_work(action: AssignmentAction) -> bool {
     !matches!(action, AssignmentAction::DeferredSaturated)
 }
 
+fn coordination_mode(activity: &super::store::DaemonActivity) -> CoordinationMode {
+    if activity.dispatch_cooloff_active() {
+        CoordinationMode::RebalanceCooloffChronicSaturation
+    } else if activity.prefers_rebalance_first() {
+        CoordinationMode::RebalanceFirstChronicSaturation
+    } else if activity.stabilized_after_recovery_at().is_some() {
+        CoordinationMode::DispatchFirstStabilized
+    } else {
+        CoordinationMode::DispatchFirst
+    }
+}
+
+fn coordination_health(
+    backlog_messages: usize,
+    saturated_sessions: usize,
+    activity: &super::store::DaemonActivity,
+) -> CoordinationHealth {
+    if activity.operator_escalation_required() {
+        CoordinationHealth::EscalationRequired
+    } else if saturated_sessions > 0 {
+        CoordinationHealth::Saturated
+    } else if backlog_messages > 0 {
+        CoordinationHealth::BacklogAbsorbable
+    } else {
+        CoordinationHealth::Healthy
+    }
+}
+
 pub fn get_coordination_status(db: &StateStore, cfg: &Config) -> Result<CoordinationStatus> {
     let targets = db.unread_task_handoff_targets(db.list_sessions()?.len().max(1))?;
     let pressure = summarize_backlog_pressure(db, cfg, &cfg.default_agent, &targets)?;
@@ -1125,15 +1174,23 @@ pub fn get_coordination_status(db: &StateStore, cfg: &Config) -> Result<Coordina
         .iter()
         .map(|(_, unread_count)| *unread_count)
         .sum::<usize>();
+    let daemon_activity = db.daemon_activity()?;
 
     Ok(CoordinationStatus {
         backlog_leads: targets.len(),
         backlog_messages,
         absorbable_sessions: pressure.absorbable_sessions,
         saturated_sessions: pressure.saturated_sessions,
+        mode: coordination_mode(&daemon_activity),
+        health: coordination_health(
+            backlog_messages,
+            pressure.saturated_sessions,
+            &daemon_activity,
+        ),
+        operator_escalation_required: daemon_activity.operator_escalation_required(),
         auto_dispatch_enabled: cfg.auto_dispatch_unread_handoffs,
         auto_dispatch_limit_per_session: cfg.auto_dispatch_limit_per_session,
-        daemon_activity: db.daemon_activity()?,
+        daemon_activity,
     })
 }
 
@@ -1235,14 +1292,15 @@ impl fmt::Display for TeamStatus {
 impl fmt::Display for CoordinationStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let stabilized = self.daemon_activity.stabilized_after_recovery_at();
-        let mode = if self.daemon_activity.dispatch_cooloff_active() {
-            "rebalance-cooloff (chronic saturation)"
-        } else if self.daemon_activity.prefers_rebalance_first() {
-            "rebalance-first (chronic saturation)"
-        } else if stabilized.is_some() {
-            "dispatch-first (stabilized)"
-        } else {
-            "dispatch-first"
+        let mode = match self.mode {
+            CoordinationMode::DispatchFirst => "dispatch-first",
+            CoordinationMode::DispatchFirstStabilized => "dispatch-first (stabilized)",
+            CoordinationMode::RebalanceFirstChronicSaturation => {
+                "rebalance-first (chronic saturation)"
+            }
+            CoordinationMode::RebalanceCooloffChronicSaturation => {
+                "rebalance-cooloff (chronic saturation)"
+            }
         };
 
         writeln!(
@@ -1273,7 +1331,7 @@ impl fmt::Display for CoordinationStatus {
             )?;
         }
 
-        if self.daemon_activity.operator_escalation_required() {
+        if self.operator_escalation_required {
             writeln!(
                 f,
                 "Operator escalation: chronic saturation is not clearing"
@@ -2616,6 +2674,9 @@ mod tests {
             backlog_messages: 5,
             absorbable_sessions: 1,
             saturated_sessions: 1,
+            mode: CoordinationMode::RebalanceFirstChronicSaturation,
+            health: CoordinationHealth::Saturated,
+            operator_escalation_required: false,
             auto_dispatch_enabled: true,
             auto_dispatch_limit_per_session: 4,
             daemon_activity: build_daemon_activity(),
@@ -2683,6 +2744,9 @@ mod tests {
         assert_eq!(status.backlog_messages, 3);
         assert_eq!(status.absorbable_sessions, 2);
         assert_eq!(status.saturated_sessions, 1);
+        assert_eq!(status.mode, CoordinationMode::RebalanceFirstChronicSaturation);
+        assert_eq!(status.health, CoordinationHealth::Saturated);
+        assert!(!status.operator_escalation_required);
         assert_eq!(status.daemon_activity.last_dispatch_routed, 1);
         assert_eq!(status.daemon_activity.last_dispatch_deferred, 1);
 
