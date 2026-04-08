@@ -555,6 +555,19 @@ impl StateStore {
             .map_err(Into::into)
     }
 
+    pub fn unread_task_handoff_count(&self, session_id: &str) -> Result<usize> {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*)
+                 FROM messages
+                 WHERE to_session = ?1 AND msg_type = 'task_handoff' AND read = 0",
+                rusqlite::params![session_id],
+                |row| row.get::<_, i64>(0),
+            )
+            .map(|count| count as usize)
+            .map_err(Into::into)
+    }
+
     pub fn unread_task_handoff_targets(&self, limit: usize) -> Result<Vec<(String, usize)>> {
         let mut stmt = self.conn.prepare(
             "SELECT to_session, COUNT(*) as unread_count

@@ -1285,6 +1285,16 @@ impl Dashboard {
                                 .get(&child_id)
                                 .copied()
                                 .unwrap_or(0);
+                            let handoff_backlog = match self.db.unread_task_handoff_count(&child_id) {
+                                Ok(count) => count,
+                                Err(error) => {
+                                    tracing::warn!(
+                                        "Failed to load delegated child handoff backlog {}: {error}",
+                                        child_id
+                                    );
+                                    0
+                                }
+                            };
                             let state = session.state.clone();
                             match state {
                                 SessionState::Idle => team.idle += 1,
@@ -1296,7 +1306,7 @@ impl Dashboard {
                             }
 
                             route_candidates.push(DelegatedChildSummary {
-                                unread_messages,
+                                unread_messages: handoff_backlog,
                                 state: state.clone(),
                                 session_id: child_id.clone(),
                             });
@@ -2343,6 +2353,58 @@ mod tests {
         assert!(text.contains("Attention queue clear"));
         assert!(!text.contains("Needs attention:"));
         assert!(!text.contains("Inbox focus-12"));
+    }
+
+    #[test]
+    fn route_preview_ignores_non_handoff_inbox_noise() {
+        let lead = sample_session(
+            "lead-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/lead"),
+            512,
+            42,
+        );
+        let idle_worker = sample_session(
+            "idle-worker",
+            "planner",
+            SessionState::Idle,
+            Some("ecc/idle"),
+            128,
+            12,
+        );
+
+        let mut dashboard = test_dashboard(vec![lead.clone(), idle_worker.clone()], 0);
+        dashboard.db.insert_session(&lead).unwrap();
+        dashboard.db.insert_session(&idle_worker).unwrap();
+        dashboard
+            .db
+            .send_message("lead-12345678", "idle-worker", "FYI status update", "info")
+            .unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "idle-worker",
+                "{\"task\":\"Delegated work\",\"context\":\"Delegated from lead\"}",
+                "task_handoff",
+            )
+            .unwrap();
+        dashboard.db.mark_messages_read("idle-worker").unwrap();
+        dashboard
+            .db
+            .send_message("lead-12345678", "idle-worker", "FYI status update", "info")
+            .unwrap();
+
+        dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap();
+        dashboard.sync_selected_lineage();
+
+        assert_eq!(
+            dashboard.selected_route_preview.as_deref(),
+            Some("reuse idle idle-wor")
+        );
+        assert_eq!(dashboard.selected_child_sessions.len(), 1);
+        assert_eq!(dashboard.selected_child_sessions[0].unread_messages, 1);
     }
 
     #[test]

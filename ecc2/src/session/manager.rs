@@ -428,13 +428,23 @@ async fn assign_session_in_dir_with_runner_program(
 ) -> Result<AssignmentOutcome> {
     let lead = resolve_session(db, lead_id)?;
     let delegates = direct_delegate_sessions(db, &lead.id, agent_type)?;
-    let unread_counts = db.unread_message_counts()?;
+    let delegate_handoff_backlog = delegates
+        .iter()
+        .map(|session| {
+            db.unread_task_handoff_count(&session.id)
+                .map(|count| (session.id.clone(), count))
+        })
+        .collect::<Result<std::collections::HashMap<_, _>>>()?;
 
     if let Some(idle_delegate) = delegates
         .iter()
         .filter(|session| {
             session.state == SessionState::Idle
-                && unread_counts.get(&session.id).copied().unwrap_or(0) == 0
+                && delegate_handoff_backlog
+                    .get(&session.id)
+                    .copied()
+                    .unwrap_or(0)
+                    == 0
         })
         .min_by_key(|session| session.updated_at)
     {
@@ -468,7 +478,10 @@ async fn assign_session_in_dir_with_runner_program(
         .filter(|session| session.state == SessionState::Idle)
         .min_by_key(|session| {
             (
-                unread_counts.get(&session.id).copied().unwrap_or(0),
+                delegate_handoff_backlog
+                    .get(&session.id)
+                    .copied()
+                    .unwrap_or(0),
                 session.updated_at,
             )
         })
@@ -484,12 +497,20 @@ async fn assign_session_in_dir_with_runner_program(
         .filter(|session| matches!(session.state, SessionState::Running | SessionState::Pending))
         .min_by_key(|session| {
             (
-                unread_counts.get(&session.id).copied().unwrap_or(0),
+                delegate_handoff_backlog
+                    .get(&session.id)
+                    .copied()
+                    .unwrap_or(0),
                 session.updated_at,
             )
         })
     {
-        if unread_counts.get(&active_delegate.id).copied().unwrap_or(0) > 0 {
+        if delegate_handoff_backlog
+            .get(&active_delegate.id)
+            .copied()
+            .unwrap_or(0)
+            > 0
+        {
             return Ok(AssignmentOutcome {
                 session_id: lead.id.clone(),
                 action: AssignmentAction::DeferredSaturated,
@@ -1791,6 +1812,74 @@ mod tests {
 
         let spawned_messages = db.list_messages_for_session(&outcome.session_id, 10)?;
         assert!(spawned_messages.iter().any(|message| {
+            message.msg_type == "task_handoff"
+                && message.content.contains("Fresh delegated task")
+        }));
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn assign_session_reuses_idle_delegate_when_only_non_handoff_messages_are_unread() -> Result<()> {
+        let tempdir = TestDir::new("manager-assign-reuse-idle-info-inbox")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "lead task".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(42),
+            worktree: None,
+            created_at: now - Duration::minutes(3),
+            updated_at: now - Duration::minutes(3),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "idle-worker".to_string(),
+            task: "old worker task".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Idle,
+            pid: Some(99),
+            worktree: None,
+            created_at: now - Duration::minutes(2),
+            updated_at: now - Duration::minutes(2),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.send_message(
+            "lead",
+            "idle-worker",
+            "{\"task\":\"old worker task\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+        db.mark_messages_read("idle-worker")?;
+        db.send_message("lead", "idle-worker", "FYI status update", "info")?;
+
+        let (fake_runner, _) = write_fake_claude(tempdir.path())?;
+        let outcome = assign_session_in_dir_with_runner_program(
+            &db,
+            &cfg,
+            "lead",
+            "Fresh delegated task",
+            "claude",
+            true,
+            &repo_root,
+            &fake_runner,
+        )
+        .await?;
+
+        assert_eq!(outcome.action, AssignmentAction::ReusedIdle);
+        assert_eq!(outcome.session_id, "idle-worker");
+
+        let idle_messages = db.list_messages_for_session("idle-worker", 10)?;
+        assert!(idle_messages.iter().any(|message| {
             message.msg_type == "task_handoff"
                 && message.content.contains("Fresh delegated task")
         }));
