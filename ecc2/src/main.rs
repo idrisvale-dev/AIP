@@ -90,6 +90,18 @@ enum Commands {
         #[arg(long, default_value_t = 10)]
         lead_limit: usize,
     },
+    /// Rebalance unread handoffs across lead teams with backed-up delegates
+    RebalanceAll {
+        /// Agent type for routed delegates
+        #[arg(short, long, default_value = "claude")]
+        agent: String,
+        /// Create a dedicated worktree if new delegates must be spawned
+        #[arg(short, long, default_value_t = true)]
+        worktree: bool,
+        /// Maximum lead sessions to sweep in one pass
+        #[arg(long, default_value_t = 10)]
+        lead_limit: usize,
+    },
     /// Rebalance unread handoffs off backed-up delegates onto clearer team capacity
     RebalanceTeam {
         /// Lead session ID or alias
@@ -333,6 +345,38 @@ async fn main() -> Result<()> {
                         short_session(&outcome.lead_session_id),
                         outcome.unread_count,
                         outcome.routed.len()
+                    );
+                }
+            }
+        }
+        Some(Commands::RebalanceAll {
+            agent,
+            worktree: use_worktree,
+            lead_limit,
+        }) => {
+            let outcomes = session::manager::rebalance_all_teams(
+                &db,
+                &cfg,
+                &agent,
+                use_worktree,
+                lead_limit,
+            )
+            .await?;
+            if outcomes.is_empty() {
+                println!("No delegate backlog needed global rebalancing");
+            } else {
+                let total_rerouted: usize =
+                    outcomes.iter().map(|outcome| outcome.rerouted.len()).sum();
+                println!(
+                    "Rebalanced {} task handoff(s) across {} lead session(s)",
+                    total_rerouted,
+                    outcomes.len()
+                );
+                for outcome in outcomes {
+                    println!(
+                        "- {} | rerouted {}",
+                        short_session(&outcome.lead_session_id),
+                        outcome.rerouted.len()
                     );
                 }
             }
@@ -744,6 +788,31 @@ mod tests {
                 assert_eq!(lead_limit, 4);
             }
             _ => panic!("expected auto-dispatch subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_rebalance_all_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "rebalance-all",
+            "--agent",
+            "claude",
+            "--lead-limit",
+            "6",
+        ])
+        .expect("rebalance-all should parse");
+
+        match cli.command {
+            Some(Commands::RebalanceAll {
+                agent,
+                lead_limit,
+                ..
+            }) => {
+                assert_eq!(agent, "claude");
+                assert_eq!(lead_limit, 6);
+            }
+            _ => panic!("expected rebalance-all subcommand"),
         }
     }
 
