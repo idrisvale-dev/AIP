@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
-use std::path::Path;
+use serde::Serialize;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::config::Config;
@@ -23,6 +24,13 @@ pub enum WorktreeHealth {
     Clear,
     InProgress,
     Conflicted,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct MergeOutcome {
+    pub branch: String,
+    pub base_branch: String,
+    pub already_up_to_date: bool,
 }
 
 /// Create a new git worktree for an agent session.
@@ -73,18 +81,59 @@ pub(crate) fn create_for_session_in_repo(
 }
 
 /// Remove a worktree and its branch.
-pub fn remove(path: &Path) -> Result<()> {
+pub fn remove(worktree: &WorktreeInfo) -> Result<()> {
+    let repo_root = match base_checkout_path(worktree) {
+        Ok(path) => path,
+        Err(error) => {
+            tracing::warn!(
+                "Falling back to filesystem-only cleanup for {}: {error}",
+                worktree.path.display()
+            );
+            if worktree.path.exists() {
+                if let Err(remove_error) = std::fs::remove_dir_all(&worktree.path) {
+                    tracing::warn!(
+                        "Fallback worktree directory cleanup warning for {}: {remove_error}",
+                        worktree.path.display()
+                    );
+                }
+            }
+            return Ok(());
+        }
+    };
     let output = Command::new("git")
         .arg("-C")
-        .arg(path)
+        .arg(&repo_root)
         .args(["worktree", "remove", "--force"])
-        .arg(path)
+        .arg(&worktree.path)
         .output()
         .context("Failed to remove worktree")?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         tracing::warn!("Worktree removal warning: {stderr}");
+        if worktree.path.exists() {
+            if let Err(remove_error) = std::fs::remove_dir_all(&worktree.path) {
+                tracing::warn!(
+                    "Fallback worktree directory cleanup warning for {}: {remove_error}",
+                    worktree.path.display()
+                );
+            }
+        }
+    }
+
+    let branch_output = Command::new("git")
+        .arg("-C")
+        .arg(&repo_root)
+        .args(["branch", "-D", &worktree.branch])
+        .output()
+        .context("Failed to delete worktree branch")?;
+
+    if !branch_output.status.success() {
+        let stderr = String::from_utf8_lossy(&branch_output.stderr);
+        tracing::warn!(
+            "Worktree branch deletion warning for {}: {stderr}",
+            worktree.branch
+        );
     }
 
     Ok(())
@@ -248,6 +297,61 @@ pub fn health(worktree: &WorktreeInfo) -> Result<WorktreeHealth> {
     }
 }
 
+pub fn merge_into_base(worktree: &WorktreeInfo) -> Result<MergeOutcome> {
+    let readiness = merge_readiness(worktree)?;
+    if readiness.status == MergeReadinessStatus::Conflicted {
+        anyhow::bail!(readiness.summary);
+    }
+
+    if !git_status_short(&worktree.path)?.is_empty() {
+        anyhow::bail!(
+            "Worktree {} has uncommitted changes; commit or discard them before merging",
+            worktree.branch
+        );
+    }
+
+    let repo_root = base_checkout_path(worktree)?;
+    let current_branch = get_current_branch(&repo_root)?;
+    if current_branch != worktree.base_branch {
+        anyhow::bail!(
+            "Base branch {} is not checked out in repo root (currently {})",
+            worktree.base_branch,
+            current_branch
+        );
+    }
+
+    if !git_status_short(&repo_root)?.is_empty() {
+        anyhow::bail!(
+            "Repository root {} has uncommitted changes; commit or stash them before merging",
+            repo_root.display()
+        );
+    }
+
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&repo_root)
+        .args(["merge", "--no-edit", &worktree.branch])
+        .output()
+        .context("Failed to merge worktree branch into base")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git merge failed: {stderr}");
+    }
+
+    let merged_output = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    Ok(MergeOutcome {
+        branch: worktree.branch.clone(),
+        base_branch: worktree.base_branch.clone(),
+        already_up_to_date: merged_output.contains("Already up to date."),
+    })
+}
+
 fn git_diff_shortstat(worktree_path: &Path, extra_args: &[&str]) -> Result<Option<String>> {
     let mut command = Command::new("git");
     command
@@ -385,6 +489,61 @@ fn get_current_branch(repo_root: &Path) -> Result<String> {
         .context("Failed to get current branch")?;
 
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn base_checkout_path(worktree: &WorktreeInfo) -> Result<PathBuf> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["worktree", "list", "--porcelain"])
+        .output()
+        .context("Failed to resolve git worktree list")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git worktree list --porcelain failed: {stderr}");
+    }
+
+    let target_branch = format!("refs/heads/{}", worktree.base_branch);
+    let mut current_path: Option<PathBuf> = None;
+    let mut current_branch: Option<String> = None;
+    let mut fallback: Option<PathBuf> = None;
+
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        if line.is_empty() {
+            if let Some(path) = current_path.take() {
+                if fallback.is_none() && path != worktree.path {
+                    fallback = Some(path.clone());
+                }
+                if current_branch.as_deref() == Some(target_branch.as_str()) && path != worktree.path
+                {
+                    return Ok(path);
+                }
+            }
+            current_branch = None;
+            continue;
+        }
+
+        if let Some(path) = line.strip_prefix("worktree ") {
+            current_path = Some(PathBuf::from(path.trim()));
+        } else if let Some(branch) = line.strip_prefix("branch ") {
+            current_branch = Some(branch.trim().to_string());
+        }
+    }
+
+    if let Some(path) = current_path.take() {
+        if fallback.is_none() && path != worktree.path {
+            fallback = Some(path.clone());
+        }
+        if current_branch.as_deref() == Some(target_branch.as_str()) && path != worktree.path {
+            return Ok(path);
+        }
+    }
+
+    fallback.context(format!(
+        "Failed to locate base checkout for {} from git worktree list",
+        worktree.base_branch
+    ))
 }
 
 #[cfg(test)]

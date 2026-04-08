@@ -21,8 +21,6 @@ use crate::worktree;
 use crate::session::output::OutputStream;
 #[cfg(test)]
 use crate::session::{SessionMetrics, WorktreeInfo};
-#[cfg(test)]
-use std::path::Path;
 
 const DEFAULT_PANE_SIZE_PERCENT: u16 = 35;
 const DEFAULT_GRID_SIZE_PERCENT: u16 = 50;
@@ -516,6 +514,7 @@ impl Dashboard {
             "  g       Auto-dispatch unread handoffs across lead sessions",
             "  G       Dispatch then rebalance backlog across lead teams",
             "  v       Toggle selected worktree diff in output pane",
+            "  m       Merge selected ready worktree into base and clean it up",
             "  p       Toggle daemon auto-dispatch policy and persist config",
             "  ,/.     Decrease/increase auto-dispatch limit per lead",
             "  s       Stop selected session",
@@ -1112,6 +1111,43 @@ impl Dashboard {
         self.set_operator_note(format!(
             "cleaned worktree for {}",
             format_session_id(&session_id)
+        ));
+    }
+
+    pub async fn merge_selected_worktree(&mut self) {
+        let Some(session) = self.sessions.get(self.selected_session) else {
+            return;
+        };
+
+        if session.worktree.is_none() {
+            self.set_operator_note("selected session has no worktree to merge".to_string());
+            return;
+        }
+
+        let session_id = session.id.clone();
+        let outcome = match manager::merge_session_worktree(&self.db, &session_id, true).await {
+            Ok(outcome) => outcome,
+            Err(error) => {
+                tracing::warn!("Failed to merge session {} worktree: {error}", session.id);
+                self.set_operator_note(format!(
+                    "merge failed for {}: {error}",
+                    format_session_id(&session_id)
+                ));
+                return;
+            }
+        };
+
+        self.refresh();
+        self.set_operator_note(format!(
+            "merged {} into {} for {}{}",
+            outcome.branch,
+            outcome.base_branch,
+            format_session_id(&session_id),
+            if outcome.already_up_to_date {
+                " (already up to date)"
+            } else {
+                ""
+            }
         ));
     }
 
@@ -2327,14 +2363,16 @@ fn format_duration(duration_secs: u64) -> String {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Result;
+    use anyhow::{Context, Result};
     use chrono::Utc;
     use ratatui::{Terminal, backend::TestBackend};
-    use std::path::PathBuf;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::process::Command;
     use uuid::Uuid;
 
     use super::*;
-    use crate::config::PaneLayout;
+    use crate::config::{Config, PaneLayout, Theme};
 
     #[test]
     fn render_sessions_shows_summary_headers_and_selected_row() {
@@ -3235,6 +3273,68 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test(flavor = "current_thread")]
+    async fn merge_selected_worktree_sets_operator_note_when_ready() -> Result<()> {
+        let tempdir = std::env::temp_dir().join(format!("dashboard-merge-{}", Uuid::new_v4()));
+        let repo_root = tempdir.join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(&tempdir);
+        let db = StateStore::open(&cfg.db_path)?;
+        let worktree = worktree::create_for_session_in_repo("merge1234", &cfg, &repo_root)?;
+        let session_id = "merge1234".to_string();
+        let now = Utc::now();
+        db.insert_session(&Session {
+            id: session_id.clone(),
+            task: "merge via dashboard".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: worktree.path.clone(),
+            state: SessionState::Completed,
+            pid: None,
+            worktree: Some(worktree.clone()),
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        std::fs::write(worktree.path.join("dashboard.txt"), "dashboard merge\n")?;
+        Command::new("git")
+            .arg("-C")
+            .arg(&worktree.path)
+            .args(["add", "dashboard.txt"])
+            .status()?;
+        Command::new("git")
+            .arg("-C")
+            .arg(&worktree.path)
+            .args(["commit", "-qm", "dashboard work"])
+            .status()?;
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.sync_selection_by_id(Some(&session_id));
+        dashboard.merge_selected_worktree().await;
+
+        let note = dashboard
+            .operator_note
+            .clone()
+            .context("operator note should be set")?;
+        assert!(note.contains("merged ecc/merge1234 into"));
+        assert!(note.contains(&format!("for {}", format_session_id(&session_id))));
+
+        let session = dashboard
+            .db
+            .get_session(&session_id)?
+            .context("merged session should still exist")?;
+        assert!(session.worktree.is_none(), "worktree metadata should be cleared");
+        assert!(!worktree.path.exists(), "worktree path should be removed");
+        assert_eq!(
+            std::fs::read_to_string(repo_root.join("dashboard.txt"))?,
+            "dashboard merge\n"
+        );
+
+        let _ = std::fs::remove_dir_all(&tempdir);
+        Ok(())
+    }
+
     #[tokio::test]
     async fn delete_selected_session_removes_inactive_session() -> Result<()> {
         let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
@@ -3499,6 +3599,48 @@ mod tests {
             last_output_height: 0,
             session_table_state,
         }
+    }
+
+    fn build_config(root: &Path) -> Config {
+        Config {
+            db_path: root.join("state.db"),
+            worktree_root: root.join("worktrees"),
+            max_parallel_sessions: 4,
+            max_parallel_worktrees: 4,
+            session_timeout_secs: 60,
+            heartbeat_interval_secs: 5,
+            default_agent: "claude".to_string(),
+            auto_dispatch_unread_handoffs: false,
+            auto_dispatch_limit_per_session: 5,
+            cost_budget_usd: 10.0,
+            token_budget: 500_000,
+            theme: Theme::Dark,
+            pane_layout: PaneLayout::Horizontal,
+            risk_thresholds: Config::RISK_THRESHOLDS,
+        }
+    }
+
+    fn init_git_repo(path: &Path) -> Result<()> {
+        fs::create_dir_all(path)?;
+        run_git(path, &["init", "-q"])?;
+        run_git(path, &["config", "user.name", "ECC Tests"])?;
+        run_git(path, &["config", "user.email", "ecc-tests@example.com"])?;
+        fs::write(path.join("README.md"), "hello\n")?;
+        run_git(path, &["add", "README.md"])?;
+        run_git(path, &["commit", "-qm", "init"])?;
+        Ok(())
+    }
+
+    fn run_git(path: &Path, args: &[&str]) -> Result<()> {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(path)
+            .args(args)
+            .output()?;
+        if !output.status.success() {
+            anyhow::bail!("{}", String::from_utf8_lossy(&output.stderr));
+        }
+        Ok(())
     }
 
     fn sample_session(

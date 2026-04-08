@@ -603,11 +603,55 @@ pub async fn cleanup_session_worktree(db: &StateStore, id: &str) -> Result<()> {
     }
 
     if let Some(worktree) = session.worktree.as_ref() {
-        crate::worktree::remove(&worktree.path)?;
+        crate::worktree::remove(worktree)?;
         db.clear_worktree(&session.id)?;
     }
 
     Ok(())
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct WorktreeMergeOutcome {
+    pub session_id: String,
+    pub branch: String,
+    pub base_branch: String,
+    pub already_up_to_date: bool,
+    pub cleaned_worktree: bool,
+}
+
+pub async fn merge_session_worktree(
+    db: &StateStore,
+    id: &str,
+    cleanup_worktree: bool,
+) -> Result<WorktreeMergeOutcome> {
+    let session = resolve_session(db, id)?;
+
+    if matches!(session.state, SessionState::Pending | SessionState::Running) {
+        anyhow::bail!(
+            "Cannot merge active session {} while it is {}",
+            session.id,
+            session.state
+        );
+    }
+
+    let worktree = session
+        .worktree
+        .clone()
+        .ok_or_else(|| anyhow::anyhow!("Session {} has no attached worktree", session.id))?;
+    let outcome = crate::worktree::merge_into_base(&worktree)?;
+
+    if cleanup_worktree {
+        crate::worktree::remove(&worktree)?;
+        db.clear_worktree(&session.id)?;
+    }
+
+    Ok(WorktreeMergeOutcome {
+        session_id: session.id,
+        branch: outcome.branch,
+        base_branch: outcome.base_branch,
+        already_up_to_date: outcome.already_up_to_date,
+        cleaned_worktree: cleanup_worktree,
+    })
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -659,7 +703,7 @@ pub async fn delete_session(db: &StateStore, id: &str) -> Result<()> {
     }
 
     if let Some(worktree) = session.worktree.as_ref() {
-        let _ = crate::worktree::remove(&worktree.path);
+        let _ = crate::worktree::remove(worktree);
     }
 
     db.delete_session(&session.id)?;
@@ -758,7 +802,7 @@ async fn queue_session_in_dir_with_runner_program(
             db.update_state(&session.id, &SessionState::Failed)?;
 
             if let Some(worktree) = session.worktree.as_ref() {
-                let _ = crate::worktree::remove(&worktree.path);
+                let _ = crate::worktree::remove(worktree);
             }
 
             Err(error.context(format!("Failed to queue session {}", session.id)))
@@ -829,7 +873,7 @@ async fn create_session_in_dir(
             db.update_state(&session.id, &SessionState::Failed)?;
 
             if let Some(worktree) = session.worktree.as_ref() {
-                let _ = crate::worktree::remove(&worktree.path);
+                let _ = crate::worktree::remove(worktree);
             }
 
             Err(error.context(format!("Failed to start session {}", session.id)))
@@ -1029,7 +1073,7 @@ async fn stop_session_with_options(
 
     if cleanup_worktree {
         if let Some(worktree) = session.worktree.as_ref() {
-            crate::worktree::remove(&worktree.path)?;
+            crate::worktree::remove(worktree)?;
         }
     }
 
@@ -1525,15 +1569,13 @@ mod tests {
     fn init_git_repo(path: &Path) -> Result<()> {
         fs::create_dir_all(path)?;
         run_git(path, ["init", "-q"])?;
+        run_git(path, ["config", "user.name", "ECC Tests"])?;
+        run_git(path, ["config", "user.email", "ecc-tests@example.com"])?;
         fs::write(path.join("README.md"), "hello\n")?;
         run_git(path, ["add", "README.md"])?;
         run_git(
             path,
             [
-                "-c",
-                "user.name=ECC Tests",
-                "-c",
-                "user.email=ecc-tests@example.com",
                 "commit",
                 "-qm",
                 "init",
@@ -1851,6 +1893,68 @@ mod tests {
         assert!(
             stopped_after.worktree.is_none(),
             "stopped session worktree metadata should be cleared"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn merge_session_worktree_merges_branch_and_cleans_worktree() -> Result<()> {
+        let tempdir = TestDir::new("manager-merge-worktree")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_claude, _) = write_fake_claude(tempdir.path())?;
+
+        let session_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "merge later",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+
+        stop_session_with_options(&db, &session_id, false).await?;
+        let stopped = db
+            .get_session(&session_id)?
+            .context("stopped session should exist")?;
+        let worktree = stopped
+            .worktree
+            .clone()
+            .context("stopped session worktree missing")?;
+
+        fs::write(worktree.path.join("feature.txt"), "ready to merge\n")?;
+        run_git(&worktree.path, ["add", "feature.txt"])?;
+        run_git(&worktree.path, ["commit", "-qm", "feature work"])?;
+
+        let outcome = merge_session_worktree(&db, &session_id, true).await?;
+
+        assert_eq!(outcome.session_id, session_id);
+        assert_eq!(outcome.branch, worktree.branch);
+        assert_eq!(outcome.base_branch, worktree.base_branch);
+        assert!(outcome.cleaned_worktree);
+        assert!(!outcome.already_up_to_date);
+        assert_eq!(fs::read_to_string(repo_root.join("feature.txt"))?, "ready to merge\n");
+
+        let merged = db
+            .get_session(&outcome.session_id)?
+            .context("merged session should still exist")?;
+        assert!(merged.worktree.is_none(), "worktree metadata should be cleared");
+        assert!(!worktree.path.exists(), "worktree path should be removed");
+
+        let branch_output = StdCommand::new("git")
+            .arg("-C")
+            .arg(&repo_root)
+            .args(["branch", "--list", &worktree.branch])
+            .output()?;
+        assert!(
+            String::from_utf8_lossy(&branch_output.stdout).trim().is_empty(),
+            "merged worktree branch should be deleted"
         );
 
         Ok(())

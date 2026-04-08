@@ -203,6 +203,17 @@ enum Commands {
         #[arg(long)]
         check: bool,
     },
+    /// Merge a session worktree branch into its base branch
+    MergeWorktree {
+        /// Session ID or alias
+        session_id: Option<String>,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+        /// Keep the worktree attached after a successful merge
+        #[arg(long)]
+        keep_worktree: bool,
+    },
     /// Prune worktrees for inactive sessions and report any active sessions still holding one
     PruneWorktrees {
         /// Emit machine-readable JSON instead of the human summary
@@ -690,6 +701,21 @@ async fn main() -> Result<()> {
                 std::process::exit(worktree_status_reports_exit_code(&reports));
             }
         }
+        Some(Commands::MergeWorktree {
+            session_id,
+            json,
+            keep_worktree,
+        }) => {
+            let id = session_id.unwrap_or_else(|| "latest".to_string());
+            let resolved_id = resolve_session_id(&db, &id)?;
+            let outcome =
+                session::manager::merge_session_worktree(&db, &resolved_id, !keep_worktree).await?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&outcome)?);
+            } else {
+                println!("{}", format_worktree_merge_human(&outcome));
+            }
+        }
         Some(Commands::PruneWorktrees { json }) => {
             let outcome = session::manager::prune_inactive_worktrees(&db).await?;
             if json {
@@ -1052,6 +1078,28 @@ fn format_worktree_status_reports_human(reports: &[WorktreeStatusReport]) -> Str
         .map(format_worktree_status_human)
         .collect::<Vec<_>>()
         .join("\n\n")
+}
+
+fn format_worktree_merge_human(outcome: &session::manager::WorktreeMergeOutcome) -> String {
+    let mut lines = vec![format!(
+        "Merged worktree for {}",
+        short_session(&outcome.session_id)
+    )];
+    lines.push(format!(
+        "Branch {} -> {}",
+        outcome.branch, outcome.base_branch
+    ));
+    lines.push(if outcome.already_up_to_date {
+        "Result already up to date".to_string()
+    } else {
+        "Result merged into base".to_string()
+    });
+    lines.push(if outcome.cleaned_worktree {
+        "Cleanup removed worktree and branch".to_string()
+    } else {
+        "Cleanup kept worktree attached".to_string()
+    });
+    lines.join("\n")
 }
 
 fn worktree_status_exit_code(report: &WorktreeStatusReport) -> i32 {
@@ -1514,6 +1562,31 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_merge_worktree_flags() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "merge-worktree",
+            "deadbeef",
+            "--json",
+            "--keep-worktree",
+        ])
+        .expect("merge-worktree flags should parse");
+
+        match cli.command {
+            Some(Commands::MergeWorktree {
+                session_id,
+                json,
+                keep_worktree,
+            }) => {
+                assert_eq!(session_id.as_deref(), Some("deadbeef"));
+                assert!(json);
+                assert!(keep_worktree);
+            }
+            _ => panic!("expected merge-worktree subcommand"),
+        }
+    }
+
+    #[test]
     fn format_worktree_status_human_includes_readiness_and_conflicts() {
         let report = WorktreeStatusReport {
             session_id: "deadbeefcafefeed".to_string(),
@@ -1558,6 +1631,22 @@ mod tests {
         assert!(text.contains("- cleaned deadbeef"));
         assert!(text.contains("Skipped 1 active session(s) still holding worktrees"));
         assert!(text.contains("- active facefeed"));
+    }
+
+    #[test]
+    fn format_worktree_merge_human_reports_merge_and_cleanup() {
+        let text = format_worktree_merge_human(&session::manager::WorktreeMergeOutcome {
+            session_id: "deadbeefcafefeed".to_string(),
+            branch: "ecc/deadbeef".to_string(),
+            base_branch: "main".to_string(),
+            already_up_to_date: false,
+            cleaned_worktree: true,
+        });
+
+        assert!(text.contains("Merged worktree for deadbeef"));
+        assert!(text.contains("Branch ecc/deadbeef -> main"));
+        assert!(text.contains("Result merged into base"));
+        assert!(text.contains("Cleanup removed worktree and branch"));
     }
 
     #[test]
