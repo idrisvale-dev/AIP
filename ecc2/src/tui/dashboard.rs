@@ -461,9 +461,9 @@ impl Dashboard {
             "",
             "  n       New session",
             "  a       Assign follow-up work from selected session",
-            "  b       Rebalance backed-up delegate inboxes for selected lead",
-            "  B       Rebalance backed-up delegate inboxes across lead teams",
-            "  i       Drain unread task handoffs from selected session inbox",
+            "  b       Rebalance backed-up delegate handoff backlog for selected lead",
+            "  B       Rebalance backed-up delegate handoff backlog across lead teams",
+            "  i       Drain unread task handoffs from selected lead",
             "  g       Auto-dispatch unread handoffs across lead sessions",
             "  G       Dispatch then rebalance backlog across lead teams",
             "  p       Toggle daemon auto-dispatch policy and persist config",
@@ -1622,7 +1622,7 @@ impl Dashboard {
 
             lines.push(String::new());
             if self.selected_messages.is_empty() {
-                lines.push("Inbox clear".to_string());
+                lines.push("Message inbox clear".to_string());
             } else {
                 lines.push("Recent messages:".to_string());
                 let recent = self
@@ -2365,7 +2365,7 @@ mod tests {
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Attention queue clear"));
         assert!(!text.contains("Needs attention:"));
-        assert!(!text.contains("Inbox focus-12"));
+        assert!(!text.contains("Backlog focus-12"));
     }
 
     #[test]
