@@ -42,6 +42,10 @@ impl DaemonActivity {
             _ => false,
         }
     }
+
+    pub fn dispatch_cooloff_active(&self) -> bool {
+        self.prefers_rebalance_first() && self.last_dispatch_deferred >= 2
+    }
 }
 
 impl StateStore {
@@ -1063,6 +1067,7 @@ mod tests {
 
         let clear = DaemonActivity::default();
         assert!(!clear.prefers_rebalance_first());
+        assert!(!clear.dispatch_cooloff_active());
 
         let unresolved = DaemonActivity {
             last_dispatch_at: Some(now),
@@ -1077,6 +1082,7 @@ mod tests {
             last_rebalance_leads: 0,
         };
         assert!(unresolved.prefers_rebalance_first());
+        assert!(unresolved.dispatch_cooloff_active());
 
         let recovered = DaemonActivity {
             last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),
@@ -1084,5 +1090,6 @@ mod tests {
             ..unresolved
         };
         assert!(!recovered.prefers_rebalance_first());
+        assert!(!recovered.dispatch_cooloff_active());
     }
 }

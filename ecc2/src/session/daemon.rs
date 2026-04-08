@@ -159,6 +159,12 @@ where
 {
     if prior_activity.prefers_rebalance_first() {
         let rebalanced = rebalance().await?;
+        if prior_activity.dispatch_cooloff_active() && rebalanced == 0 {
+            tracing::warn!(
+                "Skipping immediate dispatch retry because chronic saturation cooloff is active"
+            );
+            return Ok((DispatchPassSummary::default(), rebalanced, DispatchPassSummary::default()));
+        }
         let first_dispatch = dispatch().await?;
         return Ok((first_dispatch, rebalanced, DispatchPassSummary::default()));
     }
@@ -685,6 +691,54 @@ mod tests {
         assert_eq!(first.routed, 1);
         assert_eq!(rebalanced, 1);
         assert_eq!(recovery, DispatchPassSummary::default());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn coordinate_backlog_cycle_skips_dispatch_during_chronic_cooloff_when_rebalance_does_not_help() -> Result<()> {
+        let cfg = Config {
+            auto_dispatch_unread_handoffs: true,
+            ..Config::default()
+        };
+        let now = chrono::Utc::now();
+        let activity = DaemonActivity {
+            last_dispatch_at: Some(now),
+            last_dispatch_routed: 0,
+            last_dispatch_deferred: 3,
+            last_dispatch_leads: 1,
+            last_recovery_dispatch_at: None,
+            last_recovery_dispatch_routed: 0,
+            last_recovery_dispatch_leads: 0,
+            last_rebalance_at: Some(now - chrono::Duration::seconds(1)),
+            last_rebalance_rerouted: 0,
+            last_rebalance_leads: 1,
+        };
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let calls_clone = calls.clone();
+
+        let (first, rebalanced, recovery) = coordinate_backlog_cycle_with(
+            &cfg,
+            &activity,
+            move || {
+                let calls_clone = calls_clone.clone();
+                async move {
+                    calls_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    Ok(DispatchPassSummary {
+                        routed: 1,
+                        deferred: 0,
+                        leads: 1,
+                    })
+                }
+            },
+            || async move { Ok(0) },
+            |_, _| Ok(()),
+        )
+        .await?;
+
+        assert_eq!(first, DispatchPassSummary::default());
+        assert_eq!(rebalanced, 0);
+        assert_eq!(recovery, DispatchPassSummary::default());
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
         Ok(())
     }
 

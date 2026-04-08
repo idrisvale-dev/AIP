@@ -1489,7 +1489,9 @@ impl Dashboard {
 
             lines.push(format!(
                 "Coordination mode {}",
-                if self.daemon_activity.prefers_rebalance_first() {
+                if self.daemon_activity.dispatch_cooloff_active() {
+                    "rebalance-cooloff (chronic saturation)"
+                } else if self.daemon_activity.prefers_rebalance_first() {
                     "rebalance-first (chronic saturation)"
                 } else {
                     "dispatch-first"
@@ -2176,7 +2178,7 @@ mod tests {
         dashboard.daemon_activity = DaemonActivity {
             last_dispatch_at: Some(Utc::now()),
             last_dispatch_routed: 0,
-            last_dispatch_deferred: 3,
+            last_dispatch_deferred: 1,
             last_dispatch_leads: 1,
             last_recovery_dispatch_at: None,
             last_recovery_dispatch_routed: 0,
@@ -2188,6 +2190,36 @@ mod tests {
 
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Coordination mode rebalance-first (chronic saturation)"));
+    }
+
+    #[test]
+    fn selected_session_metrics_text_shows_rebalance_cooloff_mode_when_saturation_is_chronic() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.daemon_activity = DaemonActivity {
+            last_dispatch_at: Some(Utc::now()),
+            last_dispatch_routed: 0,
+            last_dispatch_deferred: 3,
+            last_dispatch_leads: 1,
+            last_recovery_dispatch_at: None,
+            last_recovery_dispatch_routed: 0,
+            last_recovery_dispatch_leads: 0,
+            last_rebalance_at: Some(Utc::now()),
+            last_rebalance_rerouted: 1,
+            last_rebalance_leads: 1,
+        };
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Coordination mode rebalance-cooloff (chronic saturation)"));
     }
 
     #[test]
