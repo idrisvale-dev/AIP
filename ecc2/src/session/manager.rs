@@ -202,6 +202,30 @@ pub async fn rebalance_all_teams(
     Ok(outcomes)
 }
 
+pub async fn coordinate_backlog(
+    db: &StateStore,
+    cfg: &Config,
+    agent_type: &str,
+    use_worktree: bool,
+    lead_limit: usize,
+) -> Result<CoordinateBacklogOutcome> {
+    let dispatched = auto_dispatch_backlog(db, cfg, agent_type, use_worktree, lead_limit).await?;
+    let rebalanced = rebalance_all_teams(db, cfg, agent_type, use_worktree, lead_limit).await?;
+    let remaining_targets = db.unread_task_handoff_targets(db.list_sessions()?.len().max(1))?;
+    let remaining_backlog_sessions = remaining_targets.len();
+    let remaining_backlog_messages = remaining_targets
+        .iter()
+        .map(|(_, unread_count)| *unread_count)
+        .sum();
+
+    Ok(CoordinateBacklogOutcome {
+        dispatched,
+        rebalanced,
+        remaining_backlog_sessions,
+        remaining_backlog_messages,
+    })
+}
+
 pub async fn rebalance_team_backlog(
     db: &StateStore,
     cfg: &Config,
@@ -1004,6 +1028,13 @@ pub struct RebalanceOutcome {
 pub struct LeadRebalanceOutcome {
     pub lead_session_id: String,
     pub rerouted: Vec<RebalanceOutcome>,
+}
+
+pub struct CoordinateBacklogOutcome {
+    pub dispatched: Vec<LeadDispatchOutcome>,
+    pub rebalanced: Vec<LeadRebalanceOutcome>,
+    pub remaining_backlog_sessions: usize,
+    pub remaining_backlog_messages: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1895,6 +1926,55 @@ mod tests {
         let unread = db.unread_task_handoff_targets(10)?;
         assert!(!unread.iter().any(|(session_id, _)| session_id == "lead-a"));
         assert!(!unread.iter().any(|(session_id, _)| session_id == "lead-b"));
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn coordinate_backlog_reports_remaining_backlog_after_limited_pass() -> Result<()> {
+        let tempdir = TestDir::new("manager-coordinate-backlog")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.auto_dispatch_limit_per_session = 5;
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        for lead_id in ["lead-a", "lead-b"] {
+            db.insert_session(&Session {
+                id: lead_id.to_string(),
+                task: format!("{lead_id} task"),
+                agent_type: "claude".to_string(),
+                working_dir: repo_root.clone(),
+                state: SessionState::Running,
+                pid: Some(42),
+                worktree: None,
+                created_at: now - Duration::minutes(3),
+                updated_at: now - Duration::minutes(3),
+                metrics: SessionMetrics::default(),
+            })?;
+        }
+
+        db.send_message(
+            "planner",
+            "lead-a",
+            "{\"task\":\"Review auth\",\"context\":\"Inbound\"}",
+            "task_handoff",
+        )?;
+        db.send_message(
+            "planner",
+            "lead-b",
+            "{\"task\":\"Review billing\",\"context\":\"Inbound\"}",
+            "task_handoff",
+        )?;
+
+        let outcome = coordinate_backlog(&db, &cfg, "claude", true, 1).await?;
+
+        assert_eq!(outcome.dispatched.len(), 1);
+        assert_eq!(outcome.rebalanced.len(), 0);
+        assert_eq!(outcome.remaining_backlog_sessions, 2);
+        assert_eq!(outcome.remaining_backlog_messages, 2);
 
         Ok(())
     }

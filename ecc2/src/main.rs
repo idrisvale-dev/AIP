@@ -366,7 +366,7 @@ async fn main() -> Result<()> {
             worktree: use_worktree,
             lead_limit,
         }) => {
-            let dispatch_outcomes = session::manager::auto_dispatch_backlog(
+            let outcome = session::manager::coordinate_backlog(
                 &db,
                 &cfg,
                 &agent,
@@ -374,31 +374,31 @@ async fn main() -> Result<()> {
                 lead_limit,
             )
             .await?;
-            let total_routed: usize =
-                dispatch_outcomes.iter().map(|outcome| outcome.routed.len()).sum();
-
-            let rebalance_outcomes = session::manager::rebalance_all_teams(
-                &db,
-                &cfg,
-                &agent,
-                use_worktree,
-                lead_limit,
-            )
-            .await?;
-            let total_rerouted: usize = rebalance_outcomes
+            let total_routed: usize = outcome
+                .dispatched
                 .iter()
-                .map(|outcome| outcome.rerouted.len())
+                .map(|dispatch| dispatch.routed.len())
+                .sum();
+            let total_rerouted: usize = outcome
+                .rebalanced
+                .iter()
+                .map(|rebalance| rebalance.rerouted.len())
                 .sum();
 
-            if total_routed == 0 && total_rerouted == 0 {
+            if total_routed == 0
+                && total_rerouted == 0
+                && outcome.remaining_backlog_sessions == 0
+            {
                 println!("Backlog already clear");
             } else {
                 println!(
-                    "Coordinated backlog: dispatched {} handoff(s) across {} lead(s); rebalanced {} handoff(s) across {} lead(s)",
+                    "Coordinated backlog: dispatched {} handoff(s) across {} lead(s); rebalanced {} handoff(s) across {} lead(s); remaining {} handoff(s) across {} session(s)",
                     total_routed,
-                    dispatch_outcomes.len(),
+                    outcome.dispatched.len(),
                     total_rerouted,
-                    rebalance_outcomes.len()
+                    outcome.rebalanced.len(),
+                    outcome.remaining_backlog_messages,
+                    outcome.remaining_backlog_sessions
                 );
             }
         }

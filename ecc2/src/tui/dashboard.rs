@@ -892,7 +892,7 @@ impl Dashboard {
         let agent = self.cfg.default_agent.clone();
         let lead_limit = self.sessions.len().max(1);
 
-        let dispatch_outcomes = match manager::auto_dispatch_backlog(
+        let outcome = match manager::coordinate_backlog(
             &self.db,
             &self.cfg,
             &agent,
@@ -903,32 +903,20 @@ impl Dashboard {
         {
             Ok(outcomes) => outcomes,
             Err(error) => {
-                tracing::warn!("Failed to coordinate backlog dispatch from dashboard: {error}");
-                self.set_operator_note(format!("global coordinate failed during dispatch: {error}"));
+                tracing::warn!("Failed to coordinate backlog from dashboard: {error}");
+                self.set_operator_note(format!("global coordinate failed: {error}"));
                 return;
             }
         };
-        let total_routed: usize = dispatch_outcomes.iter().map(|outcome| outcome.routed.len()).sum();
-
-        let rebalance_outcomes = match manager::rebalance_all_teams(
-            &self.db,
-            &self.cfg,
-            &agent,
-            true,
-            lead_limit,
-        )
-        .await
-        {
-            Ok(outcomes) => outcomes,
-            Err(error) => {
-                tracing::warn!("Failed to coordinate backlog rebalance from dashboard: {error}");
-                self.set_operator_note(format!("global coordinate failed during rebalance: {error}"));
-                return;
-            }
-        };
-        let total_rerouted: usize = rebalance_outcomes
+        let total_routed: usize = outcome
+            .dispatched
             .iter()
-            .map(|outcome| outcome.rerouted.len())
+            .map(|dispatch| dispatch.routed.len())
+            .sum();
+        let total_rerouted: usize = outcome
+            .rebalanced
+            .iter()
+            .map(|rebalance| rebalance.rerouted.len())
             .sum();
 
         let selected_session_id = self
@@ -944,15 +932,17 @@ impl Dashboard {
         self.sync_selected_lineage();
         self.refresh_logs();
 
-        if total_routed == 0 && total_rerouted == 0 {
+        if total_routed == 0 && total_rerouted == 0 && outcome.remaining_backlog_sessions == 0 {
             self.set_operator_note("backlog already clear".to_string());
         } else {
             self.set_operator_note(format!(
-                "coordinated backlog: dispatched {} handoff(s) across {} lead(s), rebalanced {} handoff(s) across {} lead(s)",
+                "coordinated backlog: dispatched {} across {} lead(s), rebalanced {} across {} lead(s), remaining {} across {} session(s)",
                 total_routed,
-                dispatch_outcomes.len(),
+                outcome.dispatched.len(),
                 total_rerouted,
-                rebalance_outcomes.len()
+                outcome.rebalanced.len(),
+                outcome.remaining_backlog_messages,
+                outcome.remaining_backlog_sessions
             ));
         }
     }
