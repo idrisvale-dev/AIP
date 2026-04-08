@@ -107,6 +107,9 @@ enum Commands {
         /// Emit machine-readable JSON instead of the human summary
         #[arg(long)]
         json: bool,
+        /// Return a non-zero exit code when backlog or saturation needs attention
+        #[arg(long)]
+        check: bool,
     },
     /// Rebalance unread handoffs across lead teams with backed-up delegates
     RebalanceAll {
@@ -464,9 +467,12 @@ async fn main() -> Result<()> {
                 );
             }
         }
-        Some(Commands::CoordinationStatus { json }) => {
+        Some(Commands::CoordinationStatus { json, check }) => {
             let status = session::manager::get_coordination_status(&db, &cfg)?;
             println!("{}", format_coordination_status(&status, json)?);
+            if check {
+                std::process::exit(coordination_status_exit_code(&status));
+            }
         }
         Some(Commands::RebalanceAll {
             agent,
@@ -683,6 +689,16 @@ fn format_coordination_status(
     }
 
     Ok(status.to_string())
+}
+
+fn coordination_status_exit_code(status: &session::manager::CoordinationStatus) -> i32 {
+    if status.daemon_activity.operator_escalation_required() || status.saturated_sessions > 0 {
+        2
+    } else if status.backlog_messages > 0 {
+        1
+    } else {
+        0
+    }
 }
 
 fn send_handoff_message(
@@ -980,7 +996,10 @@ mod tests {
             .expect("coordination-status should parse");
 
         match cli.command {
-            Some(Commands::CoordinationStatus { json }) => assert!(!json),
+            Some(Commands::CoordinationStatus { json, check }) => {
+                assert!(!json);
+                assert!(!check);
+            }
             _ => panic!("expected coordination-status subcommand"),
         }
     }
@@ -991,7 +1010,24 @@ mod tests {
             .expect("coordination-status --json should parse");
 
         match cli.command {
-            Some(Commands::CoordinationStatus { json }) => assert!(json),
+            Some(Commands::CoordinationStatus { json, check }) => {
+                assert!(json);
+                assert!(!check);
+            }
+            _ => panic!("expected coordination-status subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_coordination_status_check_flag() {
+        let cli = Cli::try_parse_from(["ecc", "coordination-status", "--check"])
+            .expect("coordination-status --check should parse");
+
+        match cli.command {
+            Some(Commands::CoordinationStatus { json, check }) => {
+                assert!(!json);
+                assert!(check);
+            }
             _ => panic!("expected coordination-status subcommand"),
         }
     }
@@ -1020,6 +1056,34 @@ mod tests {
         assert_eq!(value["backlog_leads"], 2);
         assert_eq!(value["backlog_messages"], 5);
         assert_eq!(value["daemon_activity"]["last_dispatch_routed"], 3);
+    }
+
+    #[test]
+    fn coordination_status_exit_codes_reflect_pressure() {
+        let clear = session::manager::CoordinationStatus {
+            backlog_leads: 0,
+            backlog_messages: 0,
+            absorbable_sessions: 0,
+            saturated_sessions: 0,
+            auto_dispatch_enabled: false,
+            auto_dispatch_limit_per_session: 5,
+            daemon_activity: Default::default(),
+        };
+        assert_eq!(coordination_status_exit_code(&clear), 0);
+
+        let absorbable = session::manager::CoordinationStatus {
+            backlog_messages: 2,
+            backlog_leads: 1,
+            absorbable_sessions: 1,
+            ..clear.clone()
+        };
+        assert_eq!(coordination_status_exit_code(&absorbable), 1);
+
+        let saturated = session::manager::CoordinationStatus {
+            saturated_sessions: 1,
+            ..absorbable
+        };
+        assert_eq!(coordination_status_exit_code(&saturated), 2);
     }
 
     #[test]
