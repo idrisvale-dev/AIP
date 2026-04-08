@@ -80,6 +80,12 @@ impl DaemonActivity {
             _ => None,
         }
     }
+
+    pub fn operator_escalation_required(&self) -> bool {
+        self.dispatch_cooloff_active()
+            && self.chronic_saturation_streak >= 5
+            && self.last_rebalance_rerouted == 0
+    }
 }
 
 impl StateStore {
@@ -1162,6 +1168,14 @@ mod tests {
         };
         assert!(persistent.prefers_rebalance_first());
         assert!(persistent.dispatch_cooloff_active());
+        assert!(!persistent.operator_escalation_required());
+
+        let escalated = DaemonActivity {
+            chronic_saturation_streak: 5,
+            last_rebalance_rerouted: 0,
+            ..persistent.clone()
+        };
+        assert!(escalated.operator_escalation_required());
 
         let recovered = DaemonActivity {
             last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),

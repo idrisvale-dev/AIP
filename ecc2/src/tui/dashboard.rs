@@ -1576,6 +1576,12 @@ impl Dashboard {
                 ));
             }
 
+            if self.daemon_activity.operator_escalation_required() {
+                lines.push(
+                    "Operator escalation recommended: chronic saturation is not clearing".into(),
+                );
+            }
+
             if let Some(cleared_at) = self.daemon_activity.chronic_saturation_cleared_at() {
                 lines.push(format!(
                     "Chronic saturation cleared @ {}",
@@ -2347,6 +2353,37 @@ mod tests {
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Coordination mode rebalance-cooloff (chronic saturation)"));
         assert!(text.contains("Chronic saturation streak 3 cycle(s)"));
+    }
+
+    #[test]
+    fn selected_session_metrics_text_recommends_operator_escalation_when_chronic_saturation_is_stuck() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.daemon_activity = DaemonActivity {
+            last_dispatch_at: Some(Utc::now()),
+            last_dispatch_routed: 0,
+            last_dispatch_deferred: 2,
+            last_dispatch_leads: 1,
+            chronic_saturation_streak: 5,
+            last_recovery_dispatch_at: None,
+            last_recovery_dispatch_routed: 0,
+            last_recovery_dispatch_leads: 0,
+            last_rebalance_at: Some(Utc::now()),
+            last_rebalance_rerouted: 0,
+            last_rebalance_leads: 1,
+        };
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Operator escalation recommended: chronic saturation is not clearing"));
     }
 
     #[test]
