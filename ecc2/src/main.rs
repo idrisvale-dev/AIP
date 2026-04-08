@@ -186,6 +186,14 @@ enum Commands {
         #[arg(long, default_value_t = 2)]
         depth: usize,
     },
+    /// Show worktree diff and merge-readiness details for a session
+    WorktreeStatus {
+        /// Session ID or alias
+        session_id: Option<String>,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
     /// Stop a running session
     Stop {
         /// Session ID or alias
@@ -629,6 +637,19 @@ async fn main() -> Result<()> {
             let team = session::manager::get_team_status(&db, &id, depth)?;
             println!("{team}");
         }
+        Some(Commands::WorktreeStatus { session_id, json }) => {
+            let id = session_id.unwrap_or_else(|| "latest".to_string());
+            let resolved_id = resolve_session_id(&db, &id)?;
+            let session = db
+                .get_session(&resolved_id)?
+                .ok_or_else(|| anyhow::anyhow!("Session not found: {resolved_id}"))?;
+            let report = build_worktree_status_report(&session)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                println!("{}", format_worktree_status_human(&report));
+            }
+        }
         Some(Commands::Stop { session_id }) => {
             session::manager::stop_session(&db, &session_id).await?;
             println!("Session stopped: {session_id}");
@@ -843,6 +864,106 @@ struct MaintainCoordinationRun {
     initial_status: session::manager::CoordinationStatus,
     run: Option<CoordinateBacklogRun>,
     final_status: session::manager::CoordinationStatus,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WorktreeMergeReadinessReport {
+    status: String,
+    summary: String,
+    conflicts: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WorktreeStatusReport {
+    session_id: String,
+    task: String,
+    session_state: String,
+    attached: bool,
+    path: Option<String>,
+    branch: Option<String>,
+    base_branch: Option<String>,
+    diff_summary: Option<String>,
+    file_preview: Vec<String>,
+    merge_readiness: Option<WorktreeMergeReadinessReport>,
+}
+
+fn build_worktree_status_report(session: &session::Session) -> Result<WorktreeStatusReport> {
+    let Some(worktree) = session.worktree.as_ref() else {
+        return Ok(WorktreeStatusReport {
+            session_id: session.id.clone(),
+            task: session.task.clone(),
+            session_state: session.state.to_string(),
+            attached: false,
+            path: None,
+            branch: None,
+            base_branch: None,
+            diff_summary: None,
+            file_preview: Vec::new(),
+            merge_readiness: None,
+        });
+    };
+
+    let diff_summary = worktree::diff_summary(worktree)?;
+    let file_preview = worktree::diff_file_preview(worktree, 8)?;
+    let merge_readiness = worktree::merge_readiness(worktree)?;
+
+    Ok(WorktreeStatusReport {
+        session_id: session.id.clone(),
+        task: session.task.clone(),
+        session_state: session.state.to_string(),
+        attached: true,
+        path: Some(worktree.path.display().to_string()),
+        branch: Some(worktree.branch.clone()),
+        base_branch: Some(worktree.base_branch.clone()),
+        diff_summary,
+        file_preview,
+        merge_readiness: Some(WorktreeMergeReadinessReport {
+            status: match merge_readiness.status {
+                worktree::MergeReadinessStatus::Ready => "ready".to_string(),
+                worktree::MergeReadinessStatus::Conflicted => "conflicted".to_string(),
+            },
+            summary: merge_readiness.summary,
+            conflicts: merge_readiness.conflicts,
+        }),
+    })
+}
+
+fn format_worktree_status_human(report: &WorktreeStatusReport) -> String {
+    let mut lines = vec![format!(
+        "Worktree status for {} [{}]",
+        short_session(&report.session_id),
+        report.session_state
+    )];
+    lines.push(format!("Task {}", report.task));
+
+    if !report.attached {
+        lines.push("No worktree attached".to_string());
+        return lines.join("\n");
+    }
+
+    if let Some(path) = report.path.as_ref() {
+        lines.push(format!("Path {path}"));
+    }
+    if let (Some(branch), Some(base_branch)) = (report.branch.as_ref(), report.base_branch.as_ref()) {
+        lines.push(format!("Branch {branch} (base {base_branch})"));
+    }
+    if let Some(diff_summary) = report.diff_summary.as_ref() {
+        lines.push(diff_summary.clone());
+    }
+    if !report.file_preview.is_empty() {
+        lines.push("Files".to_string());
+        for entry in &report.file_preview {
+            lines.push(format!("- {entry}"));
+        }
+    }
+    if let Some(merge_readiness) = report.merge_readiness.as_ref() {
+        lines.push(merge_readiness.summary.clone());
+        for conflict in merge_readiness.conflicts.iter().take(5) {
+            lines.push(format!("- conflict {conflict}"));
+        }
+    }
+
+    lines.join("\n")
 }
 
 fn summarize_coordinate_backlog(
@@ -1070,6 +1191,82 @@ mod tests {
             }
             _ => panic!("expected team subcommand"),
         }
+    }
+
+    #[test]
+    fn cli_parses_worktree_status_command() {
+        let cli = Cli::try_parse_from(["ecc", "worktree-status", "planner"])
+            .expect("worktree-status should parse");
+
+        match cli.command {
+            Some(Commands::WorktreeStatus { session_id, json }) => {
+                assert_eq!(session_id.as_deref(), Some("planner"));
+                assert!(!json);
+            }
+            _ => panic!("expected worktree-status subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_worktree_status_json_flag() {
+        let cli = Cli::try_parse_from(["ecc", "worktree-status", "--json"])
+            .expect("worktree-status --json should parse");
+
+        match cli.command {
+            Some(Commands::WorktreeStatus { session_id, json }) => {
+                assert_eq!(session_id, None);
+                assert!(json);
+            }
+            _ => panic!("expected worktree-status subcommand"),
+        }
+    }
+
+    #[test]
+    fn format_worktree_status_human_includes_readiness_and_conflicts() {
+        let report = WorktreeStatusReport {
+            session_id: "deadbeefcafefeed".to_string(),
+            task: "Review merge readiness".to_string(),
+            session_state: "running".to_string(),
+            attached: true,
+            path: Some("/tmp/ecc/wt-1".to_string()),
+            branch: Some("ecc/deadbeefcafefeed".to_string()),
+            base_branch: Some("main".to_string()),
+            diff_summary: Some("Branch 1 file changed, 2 insertions(+)".to_string()),
+            file_preview: vec!["Branch M README.md".to_string()],
+            merge_readiness: Some(WorktreeMergeReadinessReport {
+                status: "conflicted".to_string(),
+                summary: "Merge blocked by 1 conflict(s): README.md".to_string(),
+                conflicts: vec!["README.md".to_string()],
+            }),
+        };
+
+        let text = format_worktree_status_human(&report);
+        assert!(text.contains("Worktree status for deadbeef [running]"));
+        assert!(text.contains("Branch ecc/deadbeefcafefeed (base main)"));
+        assert!(text.contains("Branch M README.md"));
+        assert!(text.contains("Merge blocked by 1 conflict(s): README.md"));
+        assert!(text.contains("- conflict README.md"));
+    }
+
+    #[test]
+    fn format_worktree_status_human_handles_missing_worktree() {
+        let report = WorktreeStatusReport {
+            session_id: "deadbeefcafefeed".to_string(),
+            task: "No worktree here".to_string(),
+            session_state: "stopped".to_string(),
+            attached: false,
+            path: None,
+            branch: None,
+            base_branch: None,
+            diff_summary: None,
+            file_preview: Vec::new(),
+            merge_readiness: None,
+        };
+
+        let text = format_worktree_status_human(&report);
+        assert!(text.contains("Worktree status for deadbeef [stopped]"));
+        assert!(text.contains("Task No worktree here"));
+        assert!(text.contains("No worktree attached"));
     }
 
     #[test]
