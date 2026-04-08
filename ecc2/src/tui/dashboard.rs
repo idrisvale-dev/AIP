@@ -32,6 +32,12 @@ const MAX_LOG_ENTRIES: u64 = 12;
 const MAX_DIFF_PREVIEW_LINES: usize = 6;
 const MAX_DIFF_PATCH_LINES: usize = 80;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct WorktreeDiffColumns {
+    removals: String,
+    additions: String,
+}
+
 pub struct Dashboard {
     db: StateStore,
     cfg: Config,
@@ -341,6 +347,14 @@ impl Dashboard {
     fn render_output(&mut self, frame: &mut Frame, area: Rect) {
         self.sync_output_scroll(area.height.saturating_sub(2) as usize);
 
+        if self.sessions.get(self.selected_session).is_some()
+            && self.output_mode == OutputMode::WorktreeDiff
+            && self.selected_diff_patch.is_some()
+        {
+            self.render_split_diff_output(frame, area);
+            return;
+        }
+
         let (title, content) = if self.sessions.get(self.selected_session).is_some() {
             match self.output_mode {
                 OutputMode::SessionOutput => {
@@ -392,6 +406,40 @@ impl Dashboard {
             )
             .scroll((self.output_scroll_offset as u16, 0));
         frame.render_widget(paragraph, area);
+    }
+
+    fn render_split_diff_output(&mut self, frame: &mut Frame, area: Rect) {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title(" Diff ")
+            .border_style(self.pane_border_style(Pane::Output));
+        let inner_area = block.inner(area);
+        frame.render_widget(block, area);
+
+        if inner_area.is_empty() {
+            return;
+        }
+
+        let Some(patch) = self.selected_diff_patch.as_ref() else {
+            return;
+        };
+        let columns = build_worktree_diff_columns(patch);
+        let column_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(inner_area);
+
+        let removals = Paragraph::new(columns.removals)
+            .block(Block::default().borders(Borders::ALL).title(" Removals "))
+            .scroll((self.output_scroll_offset as u16, 0))
+            .wrap(Wrap { trim: false });
+        frame.render_widget(removals, column_chunks[0]);
+
+        let additions = Paragraph::new(columns.additions)
+            .block(Block::default().borders(Borders::ALL).title(" Additions "))
+            .scroll((self.output_scroll_offset as u16, 0))
+            .wrap(Wrap { trim: false });
+        frame.render_widget(additions, column_chunks[1]);
     }
 
     fn render_metrics(&self, frame: &mut Frame, area: Rect) {
@@ -2447,6 +2495,62 @@ fn truncate_for_dashboard(value: &str, max_chars: usize) -> String {
     format!("{truncated}…")
 }
 
+fn build_worktree_diff_columns(patch: &str) -> WorktreeDiffColumns {
+    let mut removals = Vec::new();
+    let mut additions = Vec::new();
+
+    for line in patch.lines() {
+        if line.is_empty() {
+            continue;
+        }
+
+        if line.starts_with("--- ") && !line.starts_with("--- a/") {
+            removals.push(line.to_string());
+            additions.push(line.to_string());
+            continue;
+        }
+
+        if let Some(path) = line.strip_prefix("--- a/") {
+            removals.push(format!("File {path}"));
+            continue;
+        }
+
+        if let Some(path) = line.strip_prefix("+++ b/") {
+            additions.push(format!("File {path}"));
+            continue;
+        }
+
+        if line.starts_with("diff --git ") || line.starts_with("@@") {
+            removals.push(line.to_string());
+            additions.push(line.to_string());
+            continue;
+        }
+
+        if line.starts_with('-') {
+            removals.push(line.to_string());
+            continue;
+        }
+
+        if line.starts_with('+') {
+            additions.push(line.to_string());
+            continue;
+        }
+    }
+
+    WorktreeDiffColumns {
+        removals: if removals.is_empty() {
+            "No removals in this bounded preview.".to_string()
+        } else {
+            removals.join("\n")
+        },
+        additions: if additions.is_empty() {
+            "No additions in this bounded preview.".to_string()
+        } else {
+            additions.join("\n")
+        },
+    }
+}
+
 fn session_state_label(state: &SessionState) -> &'static str {
     match state {
         SessionState::Pending => "Pending",
@@ -2652,7 +2756,7 @@ mod tests {
         );
         dashboard.selected_diff_summary = Some("1 file changed".to_string());
         dashboard.selected_diff_patch = Some(
-            "--- Branch diff vs main ---\ndiff --git a/src/lib.rs b/src/lib.rs\n+hello".to_string(),
+            "--- Branch diff vs main ---\ndiff --git a/src/lib.rs b/src/lib.rs\n@@ -1 +1 @@\n-old line\n+new line".to_string(),
         );
 
         dashboard.toggle_output_mode();
@@ -2664,7 +2768,35 @@ mod tests {
         );
         let rendered = dashboard.rendered_output_text(180, 30);
         assert!(rendered.contains("Diff"));
-        assert!(rendered.contains("diff --git a/src/lib.rs b/src/lib.rs"));
+        assert!(rendered.contains("Removals"));
+        assert!(rendered.contains("Additions"));
+        assert!(rendered.contains("-old line"));
+        assert!(rendered.contains("+new line"));
+    }
+
+    #[test]
+    fn worktree_diff_columns_split_removed_and_added_lines() {
+        let patch = "\
+--- Branch diff vs main ---
+diff --git a/src/lib.rs b/src/lib.rs
+@@ -1,2 +1,2 @@
+-old line
+ context
++new line
+
+--- Working tree diff ---
+diff --git a/src/next.rs b/src/next.rs
+@@ -3 +3 @@
+-bye
++hello";
+
+        let columns = build_worktree_diff_columns(patch);
+        assert!(columns.removals.contains("Branch diff vs main"));
+        assert!(columns.removals.contains("-old line"));
+        assert!(columns.removals.contains("-bye"));
+        assert!(columns.additions.contains("Working tree diff"));
+        assert!(columns.additions.contains("+new line"));
+        assert!(columns.additions.contains("+hello"));
     }
 
     #[test]
