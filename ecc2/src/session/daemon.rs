@@ -166,6 +166,13 @@ where
             return Ok((DispatchPassSummary::default(), rebalanced, DispatchPassSummary::default()));
         }
         let first_dispatch = dispatch().await?;
+        if first_dispatch.routed > 0 {
+            record_recovery(first_dispatch.routed, first_dispatch.leads)?;
+            tracing::info!(
+                "Recovered {} deferred task handoff(s) after rebalancing",
+                first_dispatch.routed
+            );
+        }
         return Ok((first_dispatch, rebalanced, DispatchPassSummary::default()));
     }
 
@@ -691,6 +698,53 @@ mod tests {
         assert_eq!(first.routed, 1);
         assert_eq!(rebalanced, 1);
         assert_eq!(recovery, DispatchPassSummary::default());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn coordinate_backlog_cycle_records_recovery_when_rebalance_first_dispatch_routes_work() -> Result<()> {
+        let cfg = Config {
+            auto_dispatch_unread_handoffs: true,
+            ..Config::default()
+        };
+        let now = chrono::Utc::now();
+        let activity = DaemonActivity {
+            last_dispatch_at: Some(now),
+            last_dispatch_routed: 0,
+            last_dispatch_deferred: 2,
+            last_dispatch_leads: 1,
+            last_recovery_dispatch_at: None,
+            last_recovery_dispatch_routed: 0,
+            last_recovery_dispatch_leads: 0,
+            last_rebalance_at: None,
+            last_rebalance_rerouted: 0,
+            last_rebalance_leads: 0,
+        };
+        let recorded = std::sync::Arc::new(std::sync::Mutex::new(None));
+        let recorded_clone = recorded.clone();
+
+        let (first, rebalanced, recovery) = coordinate_backlog_cycle_with(
+            &cfg,
+            &activity,
+            || async move {
+                Ok(DispatchPassSummary {
+                    routed: 2,
+                    deferred: 0,
+                    leads: 1,
+                })
+            },
+            || async move { Ok(1) },
+            move |routed, leads| {
+                *recorded_clone.lock().unwrap() = Some((routed, leads));
+                Ok(())
+            },
+        )
+        .await?;
+
+        assert_eq!(first.routed, 2);
+        assert_eq!(rebalanced, 1);
+        assert_eq!(recovery, DispatchPassSummary::default());
+        assert_eq!(*recorded.lock().unwrap(), Some((2, 1)));
         Ok(())
     }
 
