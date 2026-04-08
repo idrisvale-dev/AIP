@@ -102,6 +102,8 @@ enum Commands {
         #[arg(long, default_value_t = 10)]
         lead_limit: usize,
     },
+    /// Show global coordination, backlog, and daemon policy status
+    CoordinationStatus,
     /// Rebalance unread handoffs across lead teams with backed-up delegates
     RebalanceAll {
         /// Agent type for routed delegates
@@ -457,6 +459,10 @@ async fn main() -> Result<()> {
                     outcome.remaining_saturated_sessions
                 );
             }
+        }
+        Some(Commands::CoordinationStatus) => {
+            let status = session::manager::get_coordination_status(&db, &cfg)?;
+            println!("{status}");
         }
         Some(Commands::RebalanceAll {
             agent,
@@ -950,6 +956,17 @@ mod tests {
                 assert_eq!(lead_limit, 6);
             }
             _ => panic!("expected rebalance-all subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_coordination_status_command() {
+        let cli = Cli::try_parse_from(["ecc", "coordination-status"])
+            .expect("coordination-status should parse");
+
+        match cli.command {
+            Some(Commands::CoordinationStatus) => {}
+            _ => panic!("expected coordination-status subcommand"),
         }
     }
 
