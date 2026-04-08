@@ -19,6 +19,7 @@ pub struct DaemonActivity {
     pub last_dispatch_routed: usize,
     pub last_dispatch_deferred: usize,
     pub last_dispatch_leads: usize,
+    pub chronic_saturation_streak: usize,
     pub last_recovery_dispatch_at: Option<chrono::DateTime<chrono::Utc>>,
     pub last_recovery_dispatch_routed: usize,
     pub last_recovery_dispatch_leads: usize,
@@ -44,12 +45,11 @@ impl DaemonActivity {
     }
 
     pub fn dispatch_cooloff_active(&self) -> bool {
-        self.prefers_rebalance_first() && self.last_dispatch_deferred >= 2
+        self.prefers_rebalance_first()
+            && (self.last_dispatch_deferred >= 2 || self.chronic_saturation_streak >= 3)
     }
 
-    pub fn chronic_saturation_cleared_at(
-        &self,
-    ) -> Option<&chrono::DateTime<chrono::Utc>> {
+    pub fn chronic_saturation_cleared_at(&self) -> Option<&chrono::DateTime<chrono::Utc>> {
         if self.prefers_rebalance_first() {
             return None;
         }
@@ -58,14 +58,14 @@ impl DaemonActivity {
             self.last_dispatch_at.as_ref(),
             self.last_recovery_dispatch_at.as_ref(),
         ) {
-            (Some(dispatch_at), Some(recovery_at)) if recovery_at > dispatch_at => Some(recovery_at),
+            (Some(dispatch_at), Some(recovery_at)) if recovery_at > dispatch_at => {
+                Some(recovery_at)
+            }
             _ => None,
         }
     }
 
-    pub fn stabilized_after_recovery_at(
-        &self,
-    ) -> Option<&chrono::DateTime<chrono::Utc>> {
+    pub fn stabilized_after_recovery_at(&self) -> Option<&chrono::DateTime<chrono::Utc>> {
         if self.last_dispatch_deferred != 0 {
             return None;
         }
@@ -74,7 +74,9 @@ impl DaemonActivity {
             self.last_dispatch_at.as_ref(),
             self.last_recovery_dispatch_at.as_ref(),
         ) {
-            (Some(dispatch_at), Some(recovery_at)) if dispatch_at > recovery_at => Some(dispatch_at),
+            (Some(dispatch_at), Some(recovery_at)) if dispatch_at > recovery_at => {
+                Some(dispatch_at)
+            }
             _ => None,
         }
     }
@@ -147,6 +149,7 @@ impl StateStore {
                 last_dispatch_routed INTEGER NOT NULL DEFAULT 0,
                 last_dispatch_deferred INTEGER NOT NULL DEFAULT 0,
                 last_dispatch_leads INTEGER NOT NULL DEFAULT 0,
+                chronic_saturation_streak INTEGER NOT NULL DEFAULT 0,
                 last_recovery_dispatch_at TEXT,
                 last_recovery_dispatch_routed INTEGER NOT NULL DEFAULT 0,
                 last_recovery_dispatch_leads INTEGER NOT NULL DEFAULT 0,
@@ -199,7 +202,9 @@ impl StateStore {
                     "ALTER TABLE daemon_activity ADD COLUMN last_recovery_dispatch_at TEXT",
                     [],
                 )
-                .context("Failed to add last_recovery_dispatch_at column to daemon_activity table")?;
+                .context(
+                    "Failed to add last_recovery_dispatch_at column to daemon_activity table",
+                )?;
         }
 
         if !self.has_column("daemon_activity", "last_recovery_dispatch_routed")? {
@@ -218,6 +223,15 @@ impl StateStore {
                     [],
                 )
                 .context("Failed to add last_recovery_dispatch_leads column to daemon_activity table")?;
+        }
+
+        if !self.has_column("daemon_activity", "chronic_saturation_streak")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE daemon_activity ADD COLUMN chronic_saturation_streak INTEGER NOT NULL DEFAULT 0",
+                    [],
+                )
+                .context("Failed to add chronic_saturation_streak column to daemon_activity table")?;
         }
 
         Ok(())
@@ -550,9 +564,7 @@ impl StateStore {
             })
         })?;
 
-        messages
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(Into::into)
+        messages.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
     pub fn unread_task_handoff_count(&self, session_id: &str) -> Result<usize> {
@@ -582,9 +594,7 @@ impl StateStore {
             Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
         })?;
 
-        targets
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(Into::into)
+        targets.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
     pub fn mark_messages_read(&self, session_id: &str) -> Result<usize> {
@@ -624,6 +634,7 @@ impl StateStore {
         self.conn
             .query_row(
                 "SELECT last_dispatch_at, last_dispatch_routed, last_dispatch_deferred, last_dispatch_leads,
+                        chronic_saturation_streak,
                         last_recovery_dispatch_at, last_recovery_dispatch_routed, last_recovery_dispatch_leads,
                         last_rebalance_at, last_rebalance_rerouted, last_rebalance_leads
                  FROM daemon_activity
@@ -652,12 +663,13 @@ impl StateStore {
                         last_dispatch_routed: row.get::<_, i64>(1)? as usize,
                         last_dispatch_deferred: row.get::<_, i64>(2)? as usize,
                         last_dispatch_leads: row.get::<_, i64>(3)? as usize,
-                        last_recovery_dispatch_at: parse_ts(row.get(4)?)?,
-                        last_recovery_dispatch_routed: row.get::<_, i64>(5)? as usize,
-                        last_recovery_dispatch_leads: row.get::<_, i64>(6)? as usize,
-                        last_rebalance_at: parse_ts(row.get(7)?)?,
-                        last_rebalance_rerouted: row.get::<_, i64>(8)? as usize,
-                        last_rebalance_leads: row.get::<_, i64>(9)? as usize,
+                        chronic_saturation_streak: row.get::<_, i64>(4)? as usize,
+                        last_recovery_dispatch_at: parse_ts(row.get(5)?)?,
+                        last_recovery_dispatch_routed: row.get::<_, i64>(6)? as usize,
+                        last_recovery_dispatch_leads: row.get::<_, i64>(7)? as usize,
+                        last_rebalance_at: parse_ts(row.get(8)?)?,
+                        last_rebalance_rerouted: row.get::<_, i64>(9)? as usize,
+                        last_rebalance_leads: row.get::<_, i64>(10)? as usize,
                     })
                 },
             )
@@ -675,7 +687,11 @@ impl StateStore {
              SET last_dispatch_at = ?1,
                  last_dispatch_routed = ?2,
                  last_dispatch_deferred = ?3,
-                 last_dispatch_leads = ?4
+                 last_dispatch_leads = ?4,
+                 chronic_saturation_streak = CASE
+                    WHEN ?3 > 0 THEN chronic_saturation_streak + 1
+                    ELSE 0
+                 END
              WHERE id = 1",
             rusqlite::params![
                 chrono::Utc::now().to_rfc3339(),
@@ -693,7 +709,8 @@ impl StateStore {
             "UPDATE daemon_activity
              SET last_recovery_dispatch_at = ?1,
                  last_recovery_dispatch_routed = ?2,
-                 last_recovery_dispatch_leads = ?3
+                 last_recovery_dispatch_leads = ?3,
+                 chronic_saturation_streak = 0
              WHERE id = 1",
             rusqlite::params![chrono::Utc::now().to_rfc3339(), routed as i64, leads as i64],
         )?;
@@ -708,7 +725,11 @@ impl StateStore {
                  last_rebalance_rerouted = ?2,
                  last_rebalance_leads = ?3
              WHERE id = 1",
-            rusqlite::params![chrono::Utc::now().to_rfc3339(), rerouted as i64, leads as i64],
+            rusqlite::params![
+                chrono::Utc::now().to_rfc3339(),
+                rerouted as i64,
+                leads as i64
+            ],
         )?;
 
         Ok(())
@@ -1023,7 +1044,12 @@ mod tests {
         db.insert_session(&build_session("planner", SessionState::Running))?;
         db.insert_session(&build_session("worker", SessionState::Pending))?;
 
-        db.send_message("planner", "worker", "{\"question\":\"Need context\"}", "query")?;
+        db.send_message(
+            "planner",
+            "worker",
+            "{\"question\":\"Need context\"}",
+            "query",
+        )?;
         db.send_message(
             "worker",
             "planner",
@@ -1066,17 +1092,11 @@ mod tests {
         );
         assert_eq!(
             db.delegated_children("planner", 10)?,
-            vec![
-                "worker-3".to_string(),
-                "worker-2".to_string(),
-            ]
+            vec!["worker-3".to_string(), "worker-2".to_string(),]
         );
         assert_eq!(
             db.unread_task_handoff_targets(10)?,
-            vec![
-                ("worker-2".to_string(), 1),
-                ("worker-3".to_string(), 1),
-            ]
+            vec![("worker-2".to_string(), 1), ("worker-3".to_string(), 1),]
         );
 
         Ok(())
@@ -1095,6 +1115,7 @@ mod tests {
         assert_eq!(activity.last_dispatch_routed, 4);
         assert_eq!(activity.last_dispatch_deferred, 1);
         assert_eq!(activity.last_dispatch_leads, 2);
+        assert_eq!(activity.chronic_saturation_streak, 0);
         assert_eq!(activity.last_recovery_dispatch_routed, 2);
         assert_eq!(activity.last_recovery_dispatch_leads, 1);
         assert_eq!(activity.last_rebalance_rerouted, 3);
@@ -1121,6 +1142,7 @@ mod tests {
             last_dispatch_routed: 0,
             last_dispatch_deferred: 2,
             last_dispatch_leads: 1,
+            chronic_saturation_streak: 1,
             last_recovery_dispatch_at: None,
             last_recovery_dispatch_routed: 0,
             last_recovery_dispatch_leads: 0,
@@ -1133,9 +1155,18 @@ mod tests {
         assert!(unresolved.chronic_saturation_cleared_at().is_none());
         assert!(unresolved.stabilized_after_recovery_at().is_none());
 
+        let persistent = DaemonActivity {
+            last_dispatch_deferred: 1,
+            chronic_saturation_streak: 3,
+            ..unresolved.clone()
+        };
+        assert!(persistent.prefers_rebalance_first());
+        assert!(persistent.dispatch_cooloff_active());
+
         let recovered = DaemonActivity {
             last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),
             last_recovery_dispatch_routed: 1,
+            chronic_saturation_streak: 0,
             ..unresolved
         };
         assert!(!recovered.prefers_rebalance_first());
@@ -1160,5 +1191,28 @@ mod tests {
             stabilized.stabilized_after_recovery_at(),
             stabilized.last_dispatch_at.as_ref()
         );
+    }
+
+    #[test]
+    fn daemon_activity_tracks_chronic_saturation_streak() -> Result<()> {
+        let tempdir = TestDir::new("store-daemon-streak")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+
+        db.record_daemon_dispatch_pass(0, 1, 1)?;
+        db.record_daemon_dispatch_pass(0, 1, 1)?;
+        let saturated = db.daemon_activity()?;
+        assert_eq!(saturated.chronic_saturation_streak, 2);
+        assert!(!saturated.dispatch_cooloff_active());
+
+        db.record_daemon_dispatch_pass(0, 1, 1)?;
+        let chronic = db.daemon_activity()?;
+        assert_eq!(chronic.chronic_saturation_streak, 3);
+        assert!(chronic.dispatch_cooloff_active());
+
+        db.record_daemon_recovery_dispatch_pass(1, 1)?;
+        let recovered = db.daemon_activity()?;
+        assert_eq!(recovered.chronic_saturation_streak, 0);
+
+        Ok(())
     }
 }

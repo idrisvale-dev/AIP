@@ -97,15 +97,19 @@ fn check_sessions(db: &StateStore, timeout: Duration) -> Result<()> {
 }
 
 async fn maybe_auto_dispatch(db: &StateStore, cfg: &Config) -> Result<usize> {
-    let summary = maybe_auto_dispatch_with_recorder(cfg, || {
-        manager::auto_dispatch_backlog(
-            db,
-            cfg,
-            &cfg.default_agent,
-            true,
-            cfg.max_parallel_sessions,
-        )
-    }, |routed, deferred, leads| db.record_daemon_dispatch_pass(routed, deferred, leads))
+    let summary = maybe_auto_dispatch_with_recorder(
+        cfg,
+        || {
+            manager::auto_dispatch_backlog(
+                db,
+                cfg,
+                &cfg.default_agent,
+                true,
+                cfg.max_parallel_sessions,
+            )
+        },
+        |routed, deferred, leads| db.record_daemon_dispatch_pass(routed, deferred, leads),
+    )
     .await?;
     Ok(summary.routed)
 }
@@ -116,26 +120,34 @@ async fn coordinate_backlog_cycle(db: &StateStore, cfg: &Config) -> Result<()> {
         cfg,
         &activity,
         || {
-            maybe_auto_dispatch_with_recorder(cfg, || {
-                manager::auto_dispatch_backlog(
-                    db,
-                    cfg,
-                    &cfg.default_agent,
-                    true,
-                    cfg.max_parallel_sessions,
-                )
-            }, |routed, deferred, leads| db.record_daemon_dispatch_pass(routed, deferred, leads))
+            maybe_auto_dispatch_with_recorder(
+                cfg,
+                || {
+                    manager::auto_dispatch_backlog(
+                        db,
+                        cfg,
+                        &cfg.default_agent,
+                        true,
+                        cfg.max_parallel_sessions,
+                    )
+                },
+                |routed, deferred, leads| db.record_daemon_dispatch_pass(routed, deferred, leads),
+            )
         },
         || {
-            maybe_auto_rebalance_with_recorder(cfg, || {
-                manager::rebalance_all_teams(
-                    db,
-                    cfg,
-                    &cfg.default_agent,
-                    true,
-                    cfg.max_parallel_sessions,
-                )
-            }, |rerouted, leads| db.record_daemon_rebalance_pass(rerouted, leads))
+            maybe_auto_rebalance_with_recorder(
+                cfg,
+                || {
+                    manager::rebalance_all_teams(
+                        db,
+                        cfg,
+                        &cfg.default_agent,
+                        true,
+                        cfg.max_parallel_sessions,
+                    )
+                },
+                |rerouted, leads| db.record_daemon_rebalance_pass(rerouted, leads),
+            )
         },
         |routed, leads| db.record_daemon_recovery_dispatch_pass(routed, leads),
     )
@@ -163,7 +175,11 @@ where
             tracing::warn!(
                 "Skipping immediate dispatch retry because chronic saturation cooloff is active"
             );
-            return Ok((DispatchPassSummary::default(), rebalanced, DispatchPassSummary::default()));
+            return Ok((
+                DispatchPassSummary::default(),
+                rebalanced,
+                DispatchPassSummary::default(),
+            ));
         }
         let first_dispatch = dispatch().await?;
         if first_dispatch.routed > 0 {
@@ -206,7 +222,11 @@ where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<Vec<manager::LeadDispatchOutcome>>>,
 {
-    Ok(maybe_auto_dispatch_with_recorder(cfg, dispatch, |_, _, _| Ok(())).await?.routed)
+    Ok(
+        maybe_auto_dispatch_with_recorder(cfg, dispatch, |_, _, _| Ok(()))
+            .await?
+            .routed,
+    )
 }
 
 async fn maybe_auto_dispatch_with_recorder<F, Fut, R>(
@@ -254,9 +274,7 @@ where
         );
     }
     if deferred > 0 {
-        tracing::warn!(
-            "Deferred {deferred} task handoff(s) because delegate teams were saturated"
-        );
+        tracing::warn!("Deferred {deferred} task handoff(s) because delegate teams were saturated");
     }
 
     Ok(DispatchPassSummary {
@@ -267,15 +285,19 @@ where
 }
 
 async fn maybe_auto_rebalance(db: &StateStore, cfg: &Config) -> Result<usize> {
-    maybe_auto_rebalance_with_recorder(cfg, || {
-        manager::rebalance_all_teams(
-            db,
-            cfg,
-            &cfg.default_agent,
-            true,
-            cfg.max_parallel_sessions,
-        )
-    }, |rerouted, leads| db.record_daemon_rebalance_pass(rerouted, leads))
+    maybe_auto_rebalance_with_recorder(
+        cfg,
+        || {
+            manager::rebalance_all_teams(
+                db,
+                cfg,
+                &cfg.default_agent,
+                true,
+                cfg.max_parallel_sessions,
+            )
+        },
+        |rerouted, leads| db.record_daemon_rebalance_pass(rerouted, leads),
+    )
     .await
 }
 
@@ -528,7 +550,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn coordinate_backlog_cycle_retries_after_rebalance_when_dispatch_deferred() -> Result<()> {
+    async fn coordinate_backlog_cycle_retries_after_rebalance_when_dispatch_deferred() -> Result<()>
+    {
         let cfg = Config {
             auto_dispatch_unread_handoffs: true,
             ..Config::default()
@@ -607,7 +630,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn coordinate_backlog_cycle_records_recovery_dispatch_when_it_routes_work() -> Result<()> {
+    async fn coordinate_backlog_cycle_records_recovery_dispatch_when_it_routes_work() -> Result<()>
+    {
         let cfg = Config {
             auto_dispatch_unread_handoffs: true,
             ..Config::default()
@@ -653,7 +677,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn coordinate_backlog_cycle_rebalances_first_after_unrecovered_deferred_pressure() -> Result<()> {
+    async fn coordinate_backlog_cycle_rebalances_first_after_unrecovered_deferred_pressure(
+    ) -> Result<()> {
         let cfg = Config {
             auto_dispatch_unread_handoffs: true,
             ..Config::default()
@@ -664,6 +689,7 @@ mod tests {
             last_dispatch_routed: 0,
             last_dispatch_deferred: 2,
             last_dispatch_leads: 1,
+            chronic_saturation_streak: 1,
             last_recovery_dispatch_at: None,
             last_recovery_dispatch_routed: 0,
             last_recovery_dispatch_leads: 0,
@@ -708,7 +734,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn coordinate_backlog_cycle_records_recovery_when_rebalance_first_dispatch_routes_work() -> Result<()> {
+    async fn coordinate_backlog_cycle_records_recovery_when_rebalance_first_dispatch_routes_work(
+    ) -> Result<()> {
         let cfg = Config {
             auto_dispatch_unread_handoffs: true,
             ..Config::default()
@@ -719,6 +746,7 @@ mod tests {
             last_dispatch_routed: 0,
             last_dispatch_deferred: 2,
             last_dispatch_leads: 1,
+            chronic_saturation_streak: 1,
             last_recovery_dispatch_at: None,
             last_recovery_dispatch_routed: 0,
             last_recovery_dispatch_leads: 0,
@@ -755,7 +783,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn coordinate_backlog_cycle_skips_dispatch_during_chronic_cooloff_when_rebalance_does_not_help() -> Result<()> {
+    async fn coordinate_backlog_cycle_skips_dispatch_during_chronic_cooloff_when_rebalance_does_not_help(
+    ) -> Result<()> {
         let cfg = Config {
             auto_dispatch_unread_handoffs: true,
             ..Config::default()
@@ -766,6 +795,7 @@ mod tests {
             last_dispatch_routed: 0,
             last_dispatch_deferred: 3,
             last_dispatch_leads: 1,
+            chronic_saturation_streak: 1,
             last_recovery_dispatch_at: None,
             last_recovery_dispatch_routed: 0,
             last_recovery_dispatch_leads: 0,
@@ -803,7 +833,58 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn coordinate_backlog_cycle_skips_rebalance_when_stabilized_and_dispatch_is_healthy() -> Result<()> {
+    async fn coordinate_backlog_cycle_skips_dispatch_when_persistent_saturation_streak_hits_cooloff(
+    ) -> Result<()> {
+        let cfg = Config {
+            auto_dispatch_unread_handoffs: true,
+            ..Config::default()
+        };
+        let now = chrono::Utc::now();
+        let activity = DaemonActivity {
+            last_dispatch_at: Some(now),
+            last_dispatch_routed: 0,
+            last_dispatch_deferred: 1,
+            last_dispatch_leads: 1,
+            chronic_saturation_streak: 3,
+            last_recovery_dispatch_at: None,
+            last_recovery_dispatch_routed: 0,
+            last_recovery_dispatch_leads: 0,
+            last_rebalance_at: Some(now - chrono::Duration::seconds(1)),
+            last_rebalance_rerouted: 0,
+            last_rebalance_leads: 1,
+        };
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let calls_clone = calls.clone();
+
+        let (first, rebalanced, recovery) = coordinate_backlog_cycle_with(
+            &cfg,
+            &activity,
+            move || {
+                let calls_clone = calls_clone.clone();
+                async move {
+                    calls_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    Ok(DispatchPassSummary {
+                        routed: 1,
+                        deferred: 0,
+                        leads: 1,
+                    })
+                }
+            },
+            || async move { Ok(0) },
+            |_, _| Ok(()),
+        )
+        .await?;
+
+        assert_eq!(first, DispatchPassSummary::default());
+        assert_eq!(rebalanced, 0);
+        assert_eq!(recovery, DispatchPassSummary::default());
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn coordinate_backlog_cycle_skips_rebalance_when_stabilized_and_dispatch_is_healthy(
+    ) -> Result<()> {
         let cfg = Config {
             auto_dispatch_unread_handoffs: true,
             ..Config::default()
@@ -814,6 +895,7 @@ mod tests {
             last_dispatch_routed: 2,
             last_dispatch_deferred: 0,
             last_dispatch_leads: 1,
+            chronic_saturation_streak: 0,
             last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),
             last_recovery_dispatch_routed: 1,
             last_recovery_dispatch_leads: 1,
