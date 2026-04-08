@@ -407,7 +407,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -457,6 +457,7 @@ impl Dashboard {
             "  B       Rebalance backed-up delegate inboxes across lead teams",
             "  i       Drain unread task handoffs from selected session inbox",
             "  g       Auto-dispatch unread handoffs across lead sessions",
+            "  G       Dispatch then rebalance backlog across lead teams",
             "  p       Toggle daemon auto-dispatch policy and persist config",
             "  ,/.     Decrease/increase auto-dispatch limit per lead",
             "  s       Stop selected session",
@@ -883,6 +884,75 @@ impl Dashboard {
                 "rebalanced {} handoff(s) across {} lead session(s)",
                 total_rerouted,
                 outcomes.len()
+            ));
+        }
+    }
+
+    pub async fn coordinate_backlog(&mut self) {
+        let agent = self.cfg.default_agent.clone();
+        let lead_limit = self.sessions.len().max(1);
+
+        let dispatch_outcomes = match manager::auto_dispatch_backlog(
+            &self.db,
+            &self.cfg,
+            &agent,
+            true,
+            lead_limit,
+        )
+        .await
+        {
+            Ok(outcomes) => outcomes,
+            Err(error) => {
+                tracing::warn!("Failed to coordinate backlog dispatch from dashboard: {error}");
+                self.set_operator_note(format!("global coordinate failed during dispatch: {error}"));
+                return;
+            }
+        };
+        let total_routed: usize = dispatch_outcomes.iter().map(|outcome| outcome.routed.len()).sum();
+
+        let rebalance_outcomes = match manager::rebalance_all_teams(
+            &self.db,
+            &self.cfg,
+            &agent,
+            true,
+            lead_limit,
+        )
+        .await
+        {
+            Ok(outcomes) => outcomes,
+            Err(error) => {
+                tracing::warn!("Failed to coordinate backlog rebalance from dashboard: {error}");
+                self.set_operator_note(format!("global coordinate failed during rebalance: {error}"));
+                return;
+            }
+        };
+        let total_rerouted: usize = rebalance_outcomes
+            .iter()
+            .map(|outcome| outcome.rerouted.len())
+            .sum();
+
+        let selected_session_id = self
+            .sessions
+            .get(self.selected_session)
+            .map(|session| session.id.clone());
+
+        self.refresh();
+        self.sync_selection_by_id(selected_session_id.as_deref());
+        self.sync_selected_output();
+        self.sync_selected_diff();
+        self.sync_selected_messages();
+        self.sync_selected_lineage();
+        self.refresh_logs();
+
+        if total_routed == 0 && total_rerouted == 0 {
+            self.set_operator_note("backlog already clear".to_string());
+        } else {
+            self.set_operator_note(format!(
+                "coordinated backlog: dispatched {} handoff(s) across {} lead(s), rebalanced {} handoff(s) across {} lead(s)",
+                total_routed,
+                dispatch_outcomes.len(),
+                total_rerouted,
+                rebalance_outcomes.len()
             ));
         }
     }
@@ -2439,6 +2509,35 @@ mod tests {
             dashboard.operator_note.as_deref(),
             Some("no delegate backlog needed global rebalancing")
         );
+
+        let _ = std::fs::remove_file(db_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn coordinate_backlog_sets_operator_note_when_clear() -> Result<()> {
+        let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
+        let db = StateStore::open(&db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead-1".to_string(),
+            task: "coordinate".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let dashboard_store = StateStore::open(&db_path)?;
+        let mut dashboard = Dashboard::new(dashboard_store, Config::default());
+        dashboard.coordinate_backlog().await;
+
+        assert_eq!(dashboard.operator_note.as_deref(), Some("backlog already clear"));
 
         let _ = std::fs::remove_file(db_path);
         Ok(())

@@ -90,6 +90,18 @@ enum Commands {
         #[arg(long, default_value_t = 10)]
         lead_limit: usize,
     },
+    /// Dispatch unread handoffs, then rebalance delegate backlog across lead teams
+    CoordinateBacklog {
+        /// Agent type for routed delegates
+        #[arg(short, long, default_value = "claude")]
+        agent: String,
+        /// Create a dedicated worktree if new delegates must be spawned
+        #[arg(short, long, default_value_t = true)]
+        worktree: bool,
+        /// Maximum lead sessions to sweep in one pass
+        #[arg(long, default_value_t = 10)]
+        lead_limit: usize,
+    },
     /// Rebalance unread handoffs across lead teams with backed-up delegates
     RebalanceAll {
         /// Agent type for routed delegates
@@ -347,6 +359,47 @@ async fn main() -> Result<()> {
                         outcome.routed.len()
                     );
                 }
+            }
+        }
+        Some(Commands::CoordinateBacklog {
+            agent,
+            worktree: use_worktree,
+            lead_limit,
+        }) => {
+            let dispatch_outcomes = session::manager::auto_dispatch_backlog(
+                &db,
+                &cfg,
+                &agent,
+                use_worktree,
+                lead_limit,
+            )
+            .await?;
+            let total_routed: usize =
+                dispatch_outcomes.iter().map(|outcome| outcome.routed.len()).sum();
+
+            let rebalance_outcomes = session::manager::rebalance_all_teams(
+                &db,
+                &cfg,
+                &agent,
+                use_worktree,
+                lead_limit,
+            )
+            .await?;
+            let total_rerouted: usize = rebalance_outcomes
+                .iter()
+                .map(|outcome| outcome.rerouted.len())
+                .sum();
+
+            if total_routed == 0 && total_rerouted == 0 {
+                println!("Backlog already clear");
+            } else {
+                println!(
+                    "Coordinated backlog: dispatched {} handoff(s) across {} lead(s); rebalanced {} handoff(s) across {} lead(s)",
+                    total_routed,
+                    dispatch_outcomes.len(),
+                    total_rerouted,
+                    rebalance_outcomes.len()
+                );
             }
         }
         Some(Commands::RebalanceAll {
@@ -788,6 +841,31 @@ mod tests {
                 assert_eq!(lead_limit, 4);
             }
             _ => panic!("expected auto-dispatch subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_coordinate_backlog_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "coordinate-backlog",
+            "--agent",
+            "claude",
+            "--lead-limit",
+            "7",
+        ])
+        .expect("coordinate-backlog should parse");
+
+        match cli.command {
+            Some(Commands::CoordinateBacklog {
+                agent,
+                lead_limit,
+                ..
+            }) => {
+                assert_eq!(agent, "claude");
+                assert_eq!(lead_limit, 7);
+            }
+            _ => panic!("expected coordinate-backlog subcommand"),
         }
     }
 
