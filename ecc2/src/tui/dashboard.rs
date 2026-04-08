@@ -40,6 +40,7 @@ pub struct Dashboard {
     sessions: Vec<Session>,
     session_output_cache: HashMap<String, Vec<OutputLine>>,
     unread_message_counts: HashMap<String, usize>,
+    handoff_backlog_counts: HashMap<String, usize>,
     global_handoff_backlog_leads: usize,
     global_handoff_backlog_messages: usize,
     daemon_activity: DaemonActivity,
@@ -141,6 +142,7 @@ impl Dashboard {
             sessions,
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
+            handoff_backlog_counts: HashMap::new(),
             global_handoff_backlog_leads: 0,
             global_handoff_backlog_messages: 0,
             daemon_activity: DaemonActivity::default(),
@@ -162,6 +164,7 @@ impl Dashboard {
             session_table_state,
         };
         dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap_or_default();
+        dashboard.sync_handoff_backlog_counts();
         dashboard.sync_global_handoff_backlog();
         dashboard.sync_selected_output();
         dashboard.sync_selected_diff();
@@ -243,7 +246,7 @@ impl Dashboard {
 
         let stabilized = self.daemon_activity.stabilized_after_recovery_at().is_some();
         let summary =
-            SessionSummary::from_sessions(&self.sessions, &self.unread_message_counts, stabilized);
+            SessionSummary::from_sessions(&self.sessions, &self.handoff_backlog_counts, stabilized);
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(2), Constraint::Min(3)])
@@ -260,13 +263,13 @@ impl Dashboard {
         let rows = self.sessions.iter().map(|session| {
             session_row(
                 session,
-                self.unread_message_counts
+                self.handoff_backlog_counts
                     .get(&session.id)
                     .copied()
                     .unwrap_or(0),
             )
         });
-        let header = Row::new(["ID", "Agent", "State", "Branch", "Inbox", "Tokens", "Duration"])
+        let header = Row::new(["ID", "Agent", "State", "Branch", "Backlog", "Tokens", "Duration"])
             .style(Style::default().add_modifier(Modifier::BOLD));
         let widths = [
             Constraint::Length(8),
@@ -1135,6 +1138,7 @@ impl Dashboard {
                 HashMap::new()
             }
         };
+        self.sync_handoff_backlog_counts();
         self.sync_global_handoff_backlog();
         self.sync_daemon_activity();
         self.sync_selection_by_id(selected_id.as_deref());
@@ -1183,6 +1187,19 @@ impl Dashboard {
                 tracing::warn!("Failed to refresh global handoff backlog: {error}");
                 self.global_handoff_backlog_leads = 0;
                 self.global_handoff_backlog_messages = 0;
+            }
+        }
+    }
+
+    fn sync_handoff_backlog_counts(&mut self) {
+        let limit = self.sessions.len().max(1);
+        self.handoff_backlog_counts.clear();
+        match self.db.unread_task_handoff_targets(limit) {
+            Ok(targets) => {
+                self.handoff_backlog_counts.extend(targets);
+            }
+            Err(error) => {
+                tracing::warn!("Failed to refresh handoff backlog counts: {error}");
             }
         }
     }
@@ -1675,16 +1692,16 @@ impl Dashboard {
         let suppress_inbox_attention = self.daemon_activity.stabilized_after_recovery_at().is_some();
 
         for session in &self.sessions {
-            let unread = self
-                .unread_message_counts
+            let handoff_backlog = self
+                .handoff_backlog_counts
                 .get(&session.id)
                 .copied()
                 .unwrap_or(0);
-            if unread > 0 && !suppress_inbox_attention {
+            if handoff_backlog > 0 && !suppress_inbox_attention {
                 items.push(format!(
-                    "- Inbox {} | {} unread | {}",
+                    "- Backlog {} | {} handoff(s) | {}",
                     format_session_id(&session.id),
-                    unread,
+                    handoff_backlog,
                     truncate_for_dashboard(&session.task, 40)
                 ));
             }
@@ -1994,7 +2011,7 @@ fn attention_queue_line(summary: &SessionSummary, stabilized: bool) -> Line<'sta
             "Attention queue  ",
             Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
         ),
-        summary_span("Inbox", summary.unread_messages, Color::Magenta),
+        summary_span("Backlog", summary.unread_messages, Color::Magenta),
         summary_span("Failed", summary.failed, Color::Red),
         summary_span("Stopped", summary.stopped, Color::DarkGray),
         summary_span("Pending", summary.pending, Color::Yellow),
@@ -2336,6 +2353,7 @@ mod tests {
 
         let mut dashboard = test_dashboard(sessions, 0);
         dashboard.unread_message_counts = unread;
+        dashboard.handoff_backlog_counts = HashMap::from([(String::from("focus-12345678"), 3usize)]);
         dashboard.daemon_activity = DaemonActivity {
             last_dispatch_at: Some(now + chrono::Duration::seconds(2)),
             last_dispatch_routed: 2,
@@ -2907,6 +2925,7 @@ mod tests {
             sessions,
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
+            handoff_backlog_counts: HashMap::new(),
             global_handoff_backlog_leads: 0,
             global_handoff_backlog_messages: 0,
             daemon_activity: DaemonActivity::default(),
