@@ -392,13 +392,15 @@ async fn main() -> Result<()> {
                 println!("Backlog already clear");
             } else {
                 println!(
-                    "Coordinated backlog: dispatched {} handoff(s) across {} lead(s); rebalanced {} handoff(s) across {} lead(s); remaining {} handoff(s) across {} session(s)",
+                    "Coordinated backlog: dispatched {} handoff(s) across {} lead(s); rebalanced {} handoff(s) across {} lead(s); remaining {} handoff(s) across {} session(s) [{} absorbable, {} saturated]",
                     total_routed,
                     outcome.dispatched.len(),
                     total_rerouted,
                     outcome.rebalanced.len(),
                     outcome.remaining_backlog_messages,
-                    outcome.remaining_backlog_sessions
+                    outcome.remaining_backlog_sessions,
+                    outcome.remaining_absorbable_sessions,
+                    outcome.remaining_saturated_sessions
                 );
             }
         }

@@ -936,13 +936,15 @@ impl Dashboard {
             self.set_operator_note("backlog already clear".to_string());
         } else {
             self.set_operator_note(format!(
-                "coordinated backlog: dispatched {} across {} lead(s), rebalanced {} across {} lead(s), remaining {} across {} session(s)",
+                "coordinated backlog: dispatched {} across {} lead(s), rebalanced {} across {} lead(s), remaining {} across {} session(s) [{} absorbable, {} saturated]",
                 total_routed,
                 outcome.dispatched.len(),
                 total_rerouted,
                 outcome.rebalanced.len(),
                 outcome.remaining_backlog_messages,
-                outcome.remaining_backlog_sessions
+                outcome.remaining_backlog_sessions,
+                outcome.remaining_absorbable_sessions,
+                outcome.remaining_saturated_sessions
             ));
         }
     }
