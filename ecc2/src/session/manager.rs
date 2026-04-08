@@ -1585,6 +1585,16 @@ impl fmt::Display for CoordinationStatus {
             )?;
         }
 
+        if let Some(last_auto_prune_at) = self.daemon_activity.last_auto_prune_at.as_ref() {
+            writeln!(
+                f,
+                "Last daemon auto-prune: {} pruned / {} active @ {}",
+                self.daemon_activity.last_auto_prune_pruned,
+                self.daemon_activity.last_auto_prune_active_skipped,
+                last_auto_prune_at.to_rfc3339()
+            )?;
+        }
+
         Ok(())
     }
 }
@@ -1693,6 +1703,9 @@ mod tests {
             last_auto_merge_conflicted_skipped: 0,
             last_auto_merge_dirty_skipped: 0,
             last_auto_merge_failed: 0,
+            last_auto_prune_at: Some(now),
+            last_auto_prune_pruned: 2,
+            last_auto_prune_active_skipped: 1,
         }
     }
 
@@ -3171,6 +3184,7 @@ mod tests {
         assert!(rendered.contains(
             "Last daemon auto-merge: 1 merged / 1 active / 0 conflicted / 0 dirty / 0 failed"
         ));
+        assert!(rendered.contains("Last daemon auto-prune: 2 pruned / 1 active"));
     }
 
     #[test]

@@ -2029,6 +2029,15 @@ impl Dashboard {
                 ));
             }
 
+            if let Some(last_auto_prune_at) = self.daemon_activity.last_auto_prune_at.as_ref() {
+                lines.push(format!(
+                    "Last daemon auto-prune {} pruned / {} active @ {}",
+                    self.daemon_activity.last_auto_prune_pruned,
+                    self.daemon_activity.last_auto_prune_active_skipped,
+                    self.short_timestamp(&last_auto_prune_at.to_rfc3339())
+                ));
+            }
+
             if let Some(route_preview) = self.selected_route_preview.as_ref() {
                 lines.push(format!("Next route {route_preview}"));
             }
@@ -3041,6 +3050,9 @@ diff --git a/src/next.rs b/src/next.rs
             last_auto_merge_conflicted_skipped: 1,
             last_auto_merge_dirty_skipped: 0,
             last_auto_merge_failed: 0,
+            last_auto_prune_at: Some(now + chrono::Duration::seconds(4)),
+            last_auto_prune_pruned: 3,
+            last_auto_prune_active_skipped: 1,
         };
 
         let text = dashboard.selected_session_metrics_text();
@@ -3052,6 +3064,7 @@ diff --git a/src/next.rs b/src/next.rs
         assert!(text.contains(
             "Last daemon auto-merge 2 merged / 1 active / 1 conflicted / 0 dirty / 0 failed"
         ));
+        assert!(text.contains("Last daemon auto-prune 3 pruned / 1 active"));
     }
 
     #[test]
@@ -3085,6 +3098,9 @@ diff --git a/src/next.rs b/src/next.rs
             last_auto_merge_conflicted_skipped: 0,
             last_auto_merge_dirty_skipped: 0,
             last_auto_merge_failed: 0,
+            last_auto_prune_at: None,
+            last_auto_prune_pruned: 0,
+            last_auto_prune_active_skipped: 0,
         };
 
         let text = dashboard.selected_session_metrics_text();
@@ -3122,6 +3138,9 @@ diff --git a/src/next.rs b/src/next.rs
             last_auto_merge_conflicted_skipped: 0,
             last_auto_merge_dirty_skipped: 0,
             last_auto_merge_failed: 0,
+            last_auto_prune_at: None,
+            last_auto_prune_pruned: 0,
+            last_auto_prune_active_skipped: 0,
         };
 
         let text = dashboard.selected_session_metrics_text();
@@ -3161,6 +3180,9 @@ diff --git a/src/next.rs b/src/next.rs
             last_auto_merge_conflicted_skipped: 0,
             last_auto_merge_dirty_skipped: 0,
             last_auto_merge_failed: 0,
+            last_auto_prune_at: None,
+            last_auto_prune_pruned: 0,
+            last_auto_prune_active_skipped: 0,
         };
 
         let text = dashboard.selected_session_metrics_text();
@@ -3201,6 +3223,9 @@ diff --git a/src/next.rs b/src/next.rs
             last_auto_merge_conflicted_skipped: 0,
             last_auto_merge_dirty_skipped: 0,
             last_auto_merge_failed: 0,
+            last_auto_prune_at: None,
+            last_auto_prune_pruned: 0,
+            last_auto_prune_active_skipped: 0,
         };
 
         let text = dashboard.selected_session_metrics_text();
@@ -3256,6 +3281,9 @@ diff --git a/src/next.rs b/src/next.rs
             last_auto_merge_conflicted_skipped: 0,
             last_auto_merge_dirty_skipped: 0,
             last_auto_merge_failed: 0,
+            last_auto_prune_at: None,
+            last_auto_prune_pruned: 0,
+            last_auto_prune_active_skipped: 0,
         };
 
         let text = dashboard.selected_session_metrics_text();
@@ -3358,6 +3386,9 @@ diff --git a/src/next.rs b/src/next.rs
             last_auto_merge_conflicted_skipped: 0,
             last_auto_merge_dirty_skipped: 0,
             last_auto_merge_failed: 0,
+            last_auto_prune_at: None,
+            last_auto_prune_pruned: 0,
+            last_auto_prune_active_skipped: 0,
         };
 
         let text = dashboard.selected_session_metrics_text();
