@@ -610,6 +610,40 @@ pub async fn cleanup_session_worktree(db: &StateStore, id: &str) -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct WorktreePruneOutcome {
+    pub cleaned_session_ids: Vec<String>,
+    pub active_with_worktree_ids: Vec<String>,
+}
+
+pub async fn prune_inactive_worktrees(db: &StateStore) -> Result<WorktreePruneOutcome> {
+    let sessions = db.list_sessions()?;
+    let mut cleaned_session_ids = Vec::new();
+    let mut active_with_worktree_ids = Vec::new();
+
+    for session in sessions {
+        let Some(_) = session.worktree.as_ref() else {
+            continue;
+        };
+
+        if matches!(
+            session.state,
+            SessionState::Pending | SessionState::Running | SessionState::Idle
+        ) {
+            active_with_worktree_ids.push(session.id);
+            continue;
+        }
+
+        cleanup_session_worktree(db, &session.id).await?;
+        cleaned_session_ids.push(session.id);
+    }
+
+    Ok(WorktreePruneOutcome {
+        cleaned_session_ids,
+        active_with_worktree_ids,
+    })
+}
+
 pub async fn delete_session(db: &StateStore, id: &str) -> Result<()> {
     let session = resolve_session(db, id)?;
 
@@ -1741,6 +1775,83 @@ mod tests {
             .context("cleaned session should still exist")?;
         assert!(cleaned.worktree.is_none(), "worktree metadata should be cleared");
         assert!(!worktree_path.exists(), "worktree path should be removed");
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn prune_inactive_worktrees_cleans_stopped_sessions_only() -> Result<()> {
+        let tempdir = TestDir::new("manager-prune-worktrees")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_claude, _) = write_fake_claude(tempdir.path())?;
+
+        let active_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "active worktree",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+        let stopped_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "stopped worktree",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+
+        stop_session_with_options(&db, &stopped_id, false).await?;
+
+        let active_before = db
+            .get_session(&active_id)?
+            .context("active session should exist")?;
+        let active_path = active_before
+            .worktree
+            .clone()
+            .context("active session worktree missing")?
+            .path;
+
+        let stopped_before = db
+            .get_session(&stopped_id)?
+            .context("stopped session should exist")?;
+        let stopped_path = stopped_before
+            .worktree
+            .clone()
+            .context("stopped session worktree missing")?
+            .path;
+
+        let outcome = prune_inactive_worktrees(&db).await?;
+
+        assert_eq!(outcome.cleaned_session_ids, vec![stopped_id.clone()]);
+        assert_eq!(outcome.active_with_worktree_ids, vec![active_id.clone()]);
+        assert!(active_path.exists(), "active worktree should remain");
+        assert!(!stopped_path.exists(), "stopped worktree should be removed");
+
+        let active_after = db
+            .get_session(&active_id)?
+            .context("active session should still exist")?;
+        assert!(
+            active_after.worktree.is_some(),
+            "active session should keep worktree metadata"
+        );
+
+        let stopped_after = db
+            .get_session(&stopped_id)?
+            .context("stopped session should still exist")?;
+        assert!(
+            stopped_after.worktree.is_none(),
+            "stopped session worktree metadata should be cleared"
+        );
 
         Ok(())
     }

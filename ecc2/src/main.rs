@@ -203,6 +203,12 @@ enum Commands {
         #[arg(long)]
         check: bool,
     },
+    /// Prune worktrees for inactive sessions and report any active sessions still holding one
+    PruneWorktrees {
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
     /// Stop a running session
     Stop {
         /// Session ID or alias
@@ -684,6 +690,14 @@ async fn main() -> Result<()> {
                 std::process::exit(worktree_status_reports_exit_code(&reports));
             }
         }
+        Some(Commands::PruneWorktrees { json }) => {
+            let outcome = session::manager::prune_inactive_worktrees(&db).await?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&outcome)?);
+            } else {
+                println!("{}", format_prune_worktrees_human(&outcome));
+            }
+        }
         Some(Commands::Stop { session_id }) => {
             session::manager::stop_session(&db, &session_id).await?;
             println!("Session stopped: {session_id}");
@@ -1049,6 +1063,36 @@ fn worktree_status_reports_exit_code(reports: &[WorktreeStatusReport]) -> i32 {
         .map(worktree_status_exit_code)
         .max()
         .unwrap_or(0)
+}
+
+fn format_prune_worktrees_human(outcome: &session::manager::WorktreePruneOutcome) -> String {
+    let mut lines = Vec::new();
+
+    if outcome.cleaned_session_ids.is_empty() {
+        lines.push("Pruned 0 inactive worktree(s)".to_string());
+    } else {
+        lines.push(format!(
+            "Pruned {} inactive worktree(s)",
+            outcome.cleaned_session_ids.len()
+        ));
+        for session_id in &outcome.cleaned_session_ids {
+            lines.push(format!("- cleaned {}", short_session(session_id)));
+        }
+    }
+
+    if outcome.active_with_worktree_ids.is_empty() {
+        lines.push("No active sessions are holding worktrees".to_string());
+    } else {
+        lines.push(format!(
+            "Skipped {} active session(s) still holding worktrees",
+            outcome.active_with_worktree_ids.len()
+        ));
+        for session_id in &outcome.active_with_worktree_ids {
+            lines.push(format!("- active {}", short_session(session_id)));
+        }
+    }
+
+    lines.join("\n")
 }
 
 fn summarize_coordinate_backlog(
@@ -1456,6 +1500,19 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_prune_worktrees_json_flag() {
+        let cli = Cli::try_parse_from(["ecc", "prune-worktrees", "--json"])
+            .expect("prune-worktrees --json should parse");
+
+        match cli.command {
+            Some(Commands::PruneWorktrees { json }) => {
+                assert!(json);
+            }
+            _ => panic!("expected prune-worktrees subcommand"),
+        }
+    }
+
+    #[test]
     fn format_worktree_status_human_includes_readiness_and_conflicts() {
         let report = WorktreeStatusReport {
             session_id: "deadbeefcafefeed".to_string(),
@@ -1487,6 +1544,19 @@ mod tests {
         assert!(text.contains("- conflict README.md"));
         assert!(text.contains("Patch preview"));
         assert!(text.contains("--- Branch diff vs main ---"));
+    }
+
+    #[test]
+    fn format_prune_worktrees_human_reports_cleaned_and_active_sessions() {
+        let text = format_prune_worktrees_human(&session::manager::WorktreePruneOutcome {
+            cleaned_session_ids: vec!["deadbeefcafefeed".to_string()],
+            active_with_worktree_ids: vec!["facefeed12345678".to_string()],
+        });
+
+        assert!(text.contains("Pruned 1 inactive worktree(s)"));
+        assert!(text.contains("- cleaned deadbeef"));
+        assert!(text.contains("Skipped 1 active session(s) still holding worktrees"));
+        assert!(text.contains("- active facefeed"));
     }
 
     #[test]
