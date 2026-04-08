@@ -105,6 +105,9 @@ enum Commands {
         /// Emit machine-readable JSON instead of the human summary
         #[arg(long)]
         json: bool,
+        /// Return a non-zero exit code from the final coordination health
+        #[arg(long)]
+        check: bool,
         /// Keep coordinating until the backlog is healthy, saturated, or max passes is reached
         #[arg(long)]
         until_healthy: bool,
@@ -425,6 +428,7 @@ async fn main() -> Result<()> {
             worktree: use_worktree,
             lead_limit,
             json,
+            check,
             until_healthy,
             max_passes,
         }) => {
@@ -475,11 +479,11 @@ async fn main() -> Result<()> {
                 let payload = CoordinateBacklogRun {
                     pass_budget,
                     passes: pass_summaries,
-                    final_status,
+                    final_status: final_status.clone(),
                 };
                 println!("{}", serde_json::to_string_pretty(&payload)?);
             } else if pass_budget > 1 {
-                if let Some(status) = final_status {
+                if let Some(status) = final_status.as_ref() {
                     println!(
                         "Final coordination health: {:?} | mode {:?} | backlog {} handoff(s) across {} lead(s)",
                         status.health,
@@ -488,6 +492,14 @@ async fn main() -> Result<()> {
                         status.backlog_leads
                     );
                 }
+            }
+
+            if check {
+                let exit_code = final_status
+                    .as_ref()
+                    .map(coordination_status_exit_code)
+                    .unwrap_or(0);
+                std::process::exit(exit_code);
             }
         }
         Some(Commands::CoordinationStatus { json, check }) => {
@@ -1061,12 +1073,14 @@ mod tests {
             Some(Commands::CoordinateBacklog {
                 agent,
                 lead_limit,
+                check,
                 until_healthy,
                 max_passes,
                 ..
             }) => {
                 assert_eq!(agent, "claude");
                 assert_eq!(lead_limit, 7);
+                assert!(!check);
                 assert!(!until_healthy);
                 assert_eq!(max_passes, 5);
             }
@@ -1108,11 +1122,35 @@ mod tests {
         match cli.command {
             Some(Commands::CoordinateBacklog {
                 json,
+                check,
                 until_healthy,
                 max_passes,
                 ..
             }) => {
                 assert!(json);
+                assert!(!check);
+                assert!(!until_healthy);
+                assert_eq!(max_passes, 5);
+            }
+            _ => panic!("expected coordinate-backlog subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_coordinate_backlog_check_flag() {
+        let cli = Cli::try_parse_from(["ecc", "coordinate-backlog", "--check"])
+            .expect("coordinate-backlog --check should parse");
+
+        match cli.command {
+            Some(Commands::CoordinateBacklog {
+                json,
+                check,
+                until_healthy,
+                max_passes,
+                ..
+            }) => {
+                assert!(!json);
+                assert!(check);
                 assert!(!until_healthy);
                 assert_eq!(max_passes, 5);
             }
