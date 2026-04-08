@@ -1487,13 +1487,15 @@ impl Dashboard {
                 self.cfg.auto_dispatch_limit_per_session
             ));
 
+            let stabilized = self.daemon_activity.stabilized_after_recovery_at();
+
             lines.push(format!(
                 "Coordination mode {}",
                 if self.daemon_activity.dispatch_cooloff_active() {
                     "rebalance-cooloff (chronic saturation)"
                 } else if self.daemon_activity.prefers_rebalance_first() {
                     "rebalance-first (chronic saturation)"
-                } else if self.daemon_activity.stabilized_after_recovery_at().is_some() {
+                } else if stabilized.is_some() {
                     "dispatch-first (stabilized)"
                 } else {
                     "dispatch-first"
@@ -1507,7 +1509,7 @@ impl Dashboard {
                 ));
             }
 
-            if let Some(stabilized_at) = self.daemon_activity.stabilized_after_recovery_at() {
+            if let Some(stabilized_at) = stabilized {
                 lines.push(format!(
                     "Recovery stabilized @ {}",
                     self.short_timestamp(&stabilized_at.to_rfc3339())
@@ -1524,24 +1526,26 @@ impl Dashboard {
                 ));
             }
 
-            if let Some(last_recovery_dispatch_at) =
-                self.daemon_activity.last_recovery_dispatch_at.as_ref()
-            {
-                lines.push(format!(
-                    "Last daemon recovery dispatch {} handoff(s) across {} lead(s) @ {}",
-                    self.daemon_activity.last_recovery_dispatch_routed,
-                    self.daemon_activity.last_recovery_dispatch_leads,
-                    self.short_timestamp(&last_recovery_dispatch_at.to_rfc3339())
-                ));
-            }
+            if stabilized.is_none() {
+                if let Some(last_recovery_dispatch_at) =
+                    self.daemon_activity.last_recovery_dispatch_at.as_ref()
+                {
+                    lines.push(format!(
+                        "Last daemon recovery dispatch {} handoff(s) across {} lead(s) @ {}",
+                        self.daemon_activity.last_recovery_dispatch_routed,
+                        self.daemon_activity.last_recovery_dispatch_leads,
+                        self.short_timestamp(&last_recovery_dispatch_at.to_rfc3339())
+                    ));
+                }
 
-            if let Some(last_rebalance_at) = self.daemon_activity.last_rebalance_at.as_ref() {
-                lines.push(format!(
-                    "Last daemon rebalance {} handoff(s) across {} lead(s) @ {}",
-                    self.daemon_activity.last_rebalance_rerouted,
-                    self.daemon_activity.last_rebalance_leads,
-                    self.short_timestamp(&last_rebalance_at.to_rfc3339())
-                ));
+                if let Some(last_rebalance_at) = self.daemon_activity.last_rebalance_at.as_ref() {
+                    lines.push(format!(
+                        "Last daemon rebalance {} handoff(s) across {} lead(s) @ {}",
+                        self.daemon_activity.last_rebalance_rerouted,
+                        self.daemon_activity.last_rebalance_leads,
+                        self.short_timestamp(&last_rebalance_at.to_rfc3339())
+                    ));
+                }
             }
 
             if let Some(route_preview) = self.selected_route_preview.as_ref() {
@@ -2270,6 +2274,8 @@ mod tests {
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Coordination mode dispatch-first (stabilized)"));
         assert!(text.contains("Recovery stabilized @"));
+        assert!(!text.contains("Last daemon recovery dispatch"));
+        assert!(!text.contains("Last daemon rebalance"));
     }
 
     #[test]
