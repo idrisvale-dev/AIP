@@ -1493,6 +1493,8 @@ impl Dashboard {
                     "rebalance-cooloff (chronic saturation)"
                 } else if self.daemon_activity.prefers_rebalance_first() {
                     "rebalance-first (chronic saturation)"
+                } else if self.daemon_activity.stabilized_after_recovery_at().is_some() {
+                    "dispatch-first (stabilized)"
                 } else {
                     "dispatch-first"
                 }
@@ -1502,6 +1504,13 @@ impl Dashboard {
                 lines.push(format!(
                     "Chronic saturation cleared @ {}",
                     self.short_timestamp(&cleared_at.to_rfc3339())
+                ));
+            }
+
+            if let Some(stabilized_at) = self.daemon_activity.stabilized_after_recovery_at() {
+                lines.push(format!(
+                    "Recovery stabilized @ {}",
+                    self.short_timestamp(&stabilized_at.to_rfc3339())
                 ));
             }
 
@@ -2229,6 +2238,38 @@ mod tests {
 
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Coordination mode rebalance-cooloff (chronic saturation)"));
+    }
+
+    #[test]
+    fn selected_session_metrics_text_shows_stabilized_dispatch_mode_after_recovery() {
+        let now = Utc::now();
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.daemon_activity = DaemonActivity {
+            last_dispatch_at: Some(now + chrono::Duration::seconds(2)),
+            last_dispatch_routed: 2,
+            last_dispatch_deferred: 0,
+            last_dispatch_leads: 1,
+            last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),
+            last_recovery_dispatch_routed: 1,
+            last_recovery_dispatch_leads: 1,
+            last_rebalance_at: Some(now),
+            last_rebalance_rerouted: 1,
+            last_rebalance_leads: 1,
+        };
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Coordination mode dispatch-first (stabilized)"));
+        assert!(text.contains("Recovery stabilized @"));
     }
 
     #[test]

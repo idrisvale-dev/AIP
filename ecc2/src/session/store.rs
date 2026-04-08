@@ -62,6 +62,22 @@ impl DaemonActivity {
             _ => None,
         }
     }
+
+    pub fn stabilized_after_recovery_at(
+        &self,
+    ) -> Option<&chrono::DateTime<chrono::Utc>> {
+        if self.last_dispatch_deferred != 0 {
+            return None;
+        }
+
+        match (
+            self.last_dispatch_at.as_ref(),
+            self.last_recovery_dispatch_at.as_ref(),
+        ) {
+            (Some(dispatch_at), Some(recovery_at)) if dispatch_at > recovery_at => Some(dispatch_at),
+            _ => None,
+        }
+    }
 }
 
 impl StateStore {
@@ -1085,6 +1101,7 @@ mod tests {
         assert!(!clear.prefers_rebalance_first());
         assert!(!clear.dispatch_cooloff_active());
         assert!(clear.chronic_saturation_cleared_at().is_none());
+        assert!(clear.stabilized_after_recovery_at().is_none());
 
         let unresolved = DaemonActivity {
             last_dispatch_at: Some(now),
@@ -1101,6 +1118,7 @@ mod tests {
         assert!(unresolved.prefers_rebalance_first());
         assert!(unresolved.dispatch_cooloff_active());
         assert!(unresolved.chronic_saturation_cleared_at().is_none());
+        assert!(unresolved.stabilized_after_recovery_at().is_none());
 
         let recovered = DaemonActivity {
             last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),
@@ -1112,6 +1130,22 @@ mod tests {
         assert_eq!(
             recovered.chronic_saturation_cleared_at(),
             recovered.last_recovery_dispatch_at.as_ref()
+        );
+        assert!(recovered.stabilized_after_recovery_at().is_none());
+
+        let stabilized = DaemonActivity {
+            last_dispatch_at: Some(now + chrono::Duration::seconds(2)),
+            last_dispatch_routed: 2,
+            last_dispatch_deferred: 0,
+            last_dispatch_leads: 1,
+            ..recovered
+        };
+        assert!(!stabilized.prefers_rebalance_first());
+        assert!(!stabilized.dispatch_cooloff_active());
+        assert!(stabilized.chronic_saturation_cleared_at().is_none());
+        assert_eq!(
+            stabilized.stabilized_after_recovery_at(),
+            stabilized.last_dispatch_at.as_ref()
         );
     }
 }
