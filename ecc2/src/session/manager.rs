@@ -1555,6 +1555,19 @@ impl fmt::Display for CoordinationStatus {
             }
         }
 
+        if let Some(last_auto_merge_at) = self.daemon_activity.last_auto_merge_at.as_ref() {
+            writeln!(
+                f,
+                "Last daemon auto-merge: {} merged / {} active / {} conflicted / {} dirty / {} failed @ {}",
+                self.daemon_activity.last_auto_merge_merged,
+                self.daemon_activity.last_auto_merge_active_skipped,
+                self.daemon_activity.last_auto_merge_conflicted_skipped,
+                self.daemon_activity.last_auto_merge_dirty_skipped,
+                self.daemon_activity.last_auto_merge_failed,
+                last_auto_merge_at.to_rfc3339()
+            )?;
+        }
+
         Ok(())
     }
 }
@@ -1656,6 +1669,12 @@ mod tests {
             last_rebalance_at: Some(now - Duration::seconds(2)),
             last_rebalance_rerouted: 0,
             last_rebalance_leads: 1,
+            last_auto_merge_at: Some(now - Duration::seconds(1)),
+            last_auto_merge_merged: 1,
+            last_auto_merge_active_skipped: 1,
+            last_auto_merge_conflicted_skipped: 0,
+            last_auto_merge_dirty_skipped: 0,
+            last_auto_merge_failed: 0,
         }
     }
 
@@ -3100,6 +3119,11 @@ mod tests {
         assert!(rendered.contains("Last daemon dispatch: 3 routed / 1 deferred across 2 lead(s)"));
         assert!(rendered.contains("Last daemon recovery dispatch: 2 handoff(s) across 1 lead(s)"));
         assert!(rendered.contains("Last daemon rebalance: 0 handoff(s) across 1 lead(s)"));
+        assert!(
+            rendered.contains(
+                "Last daemon auto-merge: 1 merged / 1 active / 0 conflicted / 0 dirty / 0 failed"
+            )
+        );
     }
 
     #[test]

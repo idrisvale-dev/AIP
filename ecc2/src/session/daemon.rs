@@ -342,7 +342,14 @@ where
 }
 
 async fn maybe_auto_merge_ready_worktrees(db: &StateStore, cfg: &Config) -> Result<usize> {
-    maybe_auto_merge_ready_worktrees_with(cfg, || manager::merge_ready_worktrees(db, true)).await
+    maybe_auto_merge_ready_worktrees_with_recorder(
+        cfg,
+        || manager::merge_ready_worktrees(db, true),
+        |merged, active, conflicted, dirty, failed| {
+            db.record_daemon_auto_merge_pass(merged, active, conflicted, dirty, failed)
+        },
+    )
+    .await
 }
 
 async fn maybe_auto_merge_ready_worktrees_with<F, Fut>(cfg: &Config, merge: F) -> Result<usize>
@@ -350,27 +357,51 @@ where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<manager::WorktreeBulkMergeOutcome>>,
 {
+    maybe_auto_merge_ready_worktrees_with_recorder(cfg, merge, |_, _, _, _, _| Ok(())).await
+}
+
+async fn maybe_auto_merge_ready_worktrees_with_recorder<F, Fut, R>(
+    cfg: &Config,
+    merge: F,
+    mut record: R,
+) -> Result<usize>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<manager::WorktreeBulkMergeOutcome>>,
+    R: FnMut(usize, usize, usize, usize, usize) -> Result<()>,
+{
     if !cfg.auto_merge_ready_worktrees {
         return Ok(0);
     }
 
     let outcome = merge().await?;
     let merged = outcome.merged.len();
+    let active = outcome.active_with_worktree_ids.len();
+    let conflicted = outcome.conflicted_session_ids.len();
+    let dirty = outcome.dirty_worktree_ids.len();
+    let failed = outcome.failures.len();
+    record(merged, active, conflicted, dirty, failed)?;
 
     if merged > 0 {
         tracing::info!("Auto-merged {merged} ready worktree(s)");
     }
-    if !outcome.conflicted_session_ids.is_empty() {
+    if conflicted > 0 {
         tracing::warn!(
             "Skipped {} conflicted worktree(s) during auto-merge",
-            outcome.conflicted_session_ids.len()
+            conflicted
         );
     }
-    if !outcome.dirty_worktree_ids.is_empty() {
+    if dirty > 0 {
         tracing::warn!(
             "Skipped {} dirty worktree(s) during auto-merge",
-            outcome.dirty_worktree_ids.len()
+            dirty
         );
+    }
+    if active > 0 {
+        tracing::info!("Skipped {active} active worktree(s) during auto-merge");
+    }
+    if failed > 0 {
+        tracing::warn!("Auto-merge failed for {failed} worktree(s)");
     }
 
     Ok(merged)
@@ -735,6 +766,12 @@ mod tests {
             last_rebalance_at: None,
             last_rebalance_rerouted: 0,
             last_rebalance_leads: 0,
+            last_auto_merge_at: None,
+            last_auto_merge_merged: 0,
+            last_auto_merge_active_skipped: 0,
+            last_auto_merge_conflicted_skipped: 0,
+            last_auto_merge_dirty_skipped: 0,
+            last_auto_merge_failed: 0,
         };
         let order = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
         let dispatch_order = order.clone();
@@ -792,6 +829,12 @@ mod tests {
             last_rebalance_at: None,
             last_rebalance_rerouted: 0,
             last_rebalance_leads: 0,
+            last_auto_merge_at: None,
+            last_auto_merge_merged: 0,
+            last_auto_merge_active_skipped: 0,
+            last_auto_merge_conflicted_skipped: 0,
+            last_auto_merge_dirty_skipped: 0,
+            last_auto_merge_failed: 0,
         };
         let recorded = std::sync::Arc::new(std::sync::Mutex::new(None));
         let recorded_clone = recorded.clone();
@@ -841,6 +884,12 @@ mod tests {
             last_rebalance_at: Some(now - chrono::Duration::seconds(1)),
             last_rebalance_rerouted: 0,
             last_rebalance_leads: 1,
+            last_auto_merge_at: None,
+            last_auto_merge_merged: 0,
+            last_auto_merge_active_skipped: 0,
+            last_auto_merge_conflicted_skipped: 0,
+            last_auto_merge_dirty_skipped: 0,
+            last_auto_merge_failed: 0,
         };
         let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let calls_clone = calls.clone();
@@ -891,6 +940,12 @@ mod tests {
             last_rebalance_at: Some(now - chrono::Duration::seconds(1)),
             last_rebalance_rerouted: 0,
             last_rebalance_leads: 1,
+            last_auto_merge_at: None,
+            last_auto_merge_merged: 0,
+            last_auto_merge_active_skipped: 0,
+            last_auto_merge_conflicted_skipped: 0,
+            last_auto_merge_dirty_skipped: 0,
+            last_auto_merge_failed: 0,
         };
         let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let calls_clone = calls.clone();
@@ -941,6 +996,12 @@ mod tests {
             last_rebalance_at: Some(now),
             last_rebalance_rerouted: 1,
             last_rebalance_leads: 1,
+            last_auto_merge_at: None,
+            last_auto_merge_merged: 0,
+            last_auto_merge_active_skipped: 0,
+            last_auto_merge_conflicted_skipped: 0,
+            last_auto_merge_dirty_skipped: 0,
+            last_auto_merge_failed: 0,
         };
         let rebalance_calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let rebalance_calls_clone = rebalance_calls.clone();

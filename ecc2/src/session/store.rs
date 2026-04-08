@@ -27,6 +27,12 @@ pub struct DaemonActivity {
     pub last_rebalance_at: Option<chrono::DateTime<chrono::Utc>>,
     pub last_rebalance_rerouted: usize,
     pub last_rebalance_leads: usize,
+    pub last_auto_merge_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub last_auto_merge_merged: usize,
+    pub last_auto_merge_active_skipped: usize,
+    pub last_auto_merge_conflicted_skipped: usize,
+    pub last_auto_merge_dirty_skipped: usize,
+    pub last_auto_merge_failed: usize,
 }
 
 impl DaemonActivity {
@@ -162,7 +168,13 @@ impl StateStore {
                 last_recovery_dispatch_leads INTEGER NOT NULL DEFAULT 0,
                 last_rebalance_at TEXT,
                 last_rebalance_rerouted INTEGER NOT NULL DEFAULT 0,
-                last_rebalance_leads INTEGER NOT NULL DEFAULT 0
+                last_rebalance_leads INTEGER NOT NULL DEFAULT 0,
+                last_auto_merge_at TEXT,
+                last_auto_merge_merged INTEGER NOT NULL DEFAULT 0,
+                last_auto_merge_active_skipped INTEGER NOT NULL DEFAULT 0,
+                last_auto_merge_conflicted_skipped INTEGER NOT NULL DEFAULT 0,
+                last_auto_merge_dirty_skipped INTEGER NOT NULL DEFAULT 0,
+                last_auto_merge_failed INTEGER NOT NULL DEFAULT 0
             );
 
             CREATE INDEX IF NOT EXISTS idx_sessions_state ON sessions(state);
@@ -239,6 +251,60 @@ impl StateStore {
                     [],
                 )
                 .context("Failed to add chronic_saturation_streak column to daemon_activity table")?;
+        }
+
+        if !self.has_column("daemon_activity", "last_auto_merge_at")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE daemon_activity ADD COLUMN last_auto_merge_at TEXT",
+                    [],
+                )
+                .context("Failed to add last_auto_merge_at column to daemon_activity table")?;
+        }
+
+        if !self.has_column("daemon_activity", "last_auto_merge_merged")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE daemon_activity ADD COLUMN last_auto_merge_merged INTEGER NOT NULL DEFAULT 0",
+                    [],
+                )
+                .context("Failed to add last_auto_merge_merged column to daemon_activity table")?;
+        }
+
+        if !self.has_column("daemon_activity", "last_auto_merge_active_skipped")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE daemon_activity ADD COLUMN last_auto_merge_active_skipped INTEGER NOT NULL DEFAULT 0",
+                    [],
+                )
+                .context("Failed to add last_auto_merge_active_skipped column to daemon_activity table")?;
+        }
+
+        if !self.has_column("daemon_activity", "last_auto_merge_conflicted_skipped")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE daemon_activity ADD COLUMN last_auto_merge_conflicted_skipped INTEGER NOT NULL DEFAULT 0",
+                    [],
+                )
+                .context("Failed to add last_auto_merge_conflicted_skipped column to daemon_activity table")?;
+        }
+
+        if !self.has_column("daemon_activity", "last_auto_merge_dirty_skipped")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE daemon_activity ADD COLUMN last_auto_merge_dirty_skipped INTEGER NOT NULL DEFAULT 0",
+                    [],
+                )
+                .context("Failed to add last_auto_merge_dirty_skipped column to daemon_activity table")?;
+        }
+
+        if !self.has_column("daemon_activity", "last_auto_merge_failed")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE daemon_activity ADD COLUMN last_auto_merge_failed INTEGER NOT NULL DEFAULT 0",
+                    [],
+                )
+                .context("Failed to add last_auto_merge_failed column to daemon_activity table")?;
         }
 
         Ok(())
@@ -643,7 +709,10 @@ impl StateStore {
                 "SELECT last_dispatch_at, last_dispatch_routed, last_dispatch_deferred, last_dispatch_leads,
                         chronic_saturation_streak,
                         last_recovery_dispatch_at, last_recovery_dispatch_routed, last_recovery_dispatch_leads,
-                        last_rebalance_at, last_rebalance_rerouted, last_rebalance_leads
+                        last_rebalance_at, last_rebalance_rerouted, last_rebalance_leads,
+                        last_auto_merge_at, last_auto_merge_merged, last_auto_merge_active_skipped,
+                        last_auto_merge_conflicted_skipped, last_auto_merge_dirty_skipped,
+                        last_auto_merge_failed
                  FROM daemon_activity
                  WHERE id = 1",
                 [],
@@ -677,6 +746,12 @@ impl StateStore {
                         last_rebalance_at: parse_ts(row.get(8)?)?,
                         last_rebalance_rerouted: row.get::<_, i64>(9)? as usize,
                         last_rebalance_leads: row.get::<_, i64>(10)? as usize,
+                        last_auto_merge_at: parse_ts(row.get(11)?)?,
+                        last_auto_merge_merged: row.get::<_, i64>(12)? as usize,
+                        last_auto_merge_active_skipped: row.get::<_, i64>(13)? as usize,
+                        last_auto_merge_conflicted_skipped: row.get::<_, i64>(14)? as usize,
+                        last_auto_merge_dirty_skipped: row.get::<_, i64>(15)? as usize,
+                        last_auto_merge_failed: row.get::<_, i64>(16)? as usize,
                     })
                 },
             )
@@ -736,6 +811,36 @@ impl StateStore {
                 chrono::Utc::now().to_rfc3339(),
                 rerouted as i64,
                 leads as i64
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    pub fn record_daemon_auto_merge_pass(
+        &self,
+        merged: usize,
+        active_skipped: usize,
+        conflicted_skipped: usize,
+        dirty_skipped: usize,
+        failed: usize,
+    ) -> Result<()> {
+        self.conn.execute(
+            "UPDATE daemon_activity
+             SET last_auto_merge_at = ?1,
+                 last_auto_merge_merged = ?2,
+                 last_auto_merge_active_skipped = ?3,
+                 last_auto_merge_conflicted_skipped = ?4,
+                 last_auto_merge_dirty_skipped = ?5,
+                 last_auto_merge_failed = ?6
+             WHERE id = 1",
+            rusqlite::params![
+                chrono::Utc::now().to_rfc3339(),
+                merged as i64,
+                active_skipped as i64,
+                conflicted_skipped as i64,
+                dirty_skipped as i64,
+                failed as i64,
             ],
         )?;
 
@@ -1117,6 +1222,7 @@ mod tests {
         db.record_daemon_dispatch_pass(4, 1, 2)?;
         db.record_daemon_recovery_dispatch_pass(2, 1)?;
         db.record_daemon_rebalance_pass(3, 1)?;
+        db.record_daemon_auto_merge_pass(2, 1, 1, 1, 0)?;
 
         let activity = db.daemon_activity()?;
         assert_eq!(activity.last_dispatch_routed, 4);
@@ -1127,9 +1233,15 @@ mod tests {
         assert_eq!(activity.last_recovery_dispatch_leads, 1);
         assert_eq!(activity.last_rebalance_rerouted, 3);
         assert_eq!(activity.last_rebalance_leads, 1);
+        assert_eq!(activity.last_auto_merge_merged, 2);
+        assert_eq!(activity.last_auto_merge_active_skipped, 1);
+        assert_eq!(activity.last_auto_merge_conflicted_skipped, 1);
+        assert_eq!(activity.last_auto_merge_dirty_skipped, 1);
+        assert_eq!(activity.last_auto_merge_failed, 0);
         assert!(activity.last_dispatch_at.is_some());
         assert!(activity.last_recovery_dispatch_at.is_some());
         assert!(activity.last_rebalance_at.is_some());
+        assert!(activity.last_auto_merge_at.is_some());
 
         Ok(())
     }
@@ -1156,6 +1268,12 @@ mod tests {
             last_rebalance_at: None,
             last_rebalance_rerouted: 0,
             last_rebalance_leads: 0,
+            last_auto_merge_at: None,
+            last_auto_merge_merged: 0,
+            last_auto_merge_active_skipped: 0,
+            last_auto_merge_conflicted_skipped: 0,
+            last_auto_merge_dirty_skipped: 0,
+            last_auto_merge_failed: 0,
         };
         assert!(unresolved.prefers_rebalance_first());
         assert!(unresolved.dispatch_cooloff_active());
