@@ -1498,6 +1498,13 @@ impl Dashboard {
                 }
             ));
 
+            if let Some(cleared_at) = self.daemon_activity.chronic_saturation_cleared_at() {
+                lines.push(format!(
+                    "Chronic saturation cleared @ {}",
+                    self.short_timestamp(&cleared_at.to_rfc3339())
+                ));
+            }
+
             if let Some(last_dispatch_at) = self.daemon_activity.last_dispatch_at.as_ref() {
                 lines.push(format!(
                     "Last daemon dispatch {} routed / {} deferred across {} lead(s) @ {}",
@@ -2131,6 +2138,7 @@ mod tests {
 
     #[test]
     fn selected_session_metrics_text_includes_daemon_activity() {
+        let now = Utc::now();
         let mut dashboard = test_dashboard(
             vec![sample_session(
                 "focus-12345678",
@@ -2143,20 +2151,21 @@ mod tests {
             0,
         );
         dashboard.daemon_activity = DaemonActivity {
-            last_dispatch_at: Some(Utc::now()),
+            last_dispatch_at: Some(now),
             last_dispatch_routed: 4,
             last_dispatch_deferred: 2,
             last_dispatch_leads: 2,
-            last_recovery_dispatch_at: Some(Utc::now()),
+            last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),
             last_recovery_dispatch_routed: 1,
             last_recovery_dispatch_leads: 1,
-            last_rebalance_at: Some(Utc::now()),
+            last_rebalance_at: Some(now + chrono::Duration::seconds(2)),
             last_rebalance_rerouted: 1,
             last_rebalance_leads: 1,
         };
 
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Coordination mode dispatch-first"));
+        assert!(text.contains("Chronic saturation cleared @"));
         assert!(text.contains("Last daemon dispatch 4 routed / 2 deferred across 2 lead(s)"));
         assert!(text.contains("Last daemon recovery dispatch 1 handoff(s) across 1 lead(s)"));
         assert!(text.contains("Last daemon rebalance 1 handoff(s) across 1 lead(s)"));
