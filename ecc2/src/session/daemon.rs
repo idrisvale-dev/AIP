@@ -105,7 +105,7 @@ async fn maybe_auto_dispatch(db: &StateStore, cfg: &Config) -> Result<usize> {
             true,
             cfg.max_parallel_sessions,
         )
-    }, |routed, leads| db.record_daemon_dispatch_pass(routed, leads))
+    }, |routed, deferred, leads| db.record_daemon_dispatch_pass(routed, deferred, leads))
     .await?;
     Ok(summary.routed)
 }
@@ -122,7 +122,7 @@ async fn coordinate_backlog_cycle(db: &StateStore, cfg: &Config) -> Result<()> {
                     true,
                     cfg.max_parallel_sessions,
                 )
-            }, |routed, leads| db.record_daemon_dispatch_pass(routed, leads))
+            }, |routed, deferred, leads| db.record_daemon_dispatch_pass(routed, deferred, leads))
         },
         || {
             maybe_auto_rebalance_with_recorder(cfg, || {
@@ -135,27 +135,31 @@ async fn coordinate_backlog_cycle(db: &StateStore, cfg: &Config) -> Result<()> {
                 )
             }, |rerouted, leads| db.record_daemon_rebalance_pass(rerouted, leads))
         },
+        |routed, leads| db.record_daemon_recovery_dispatch_pass(routed, leads),
     )
     .await?;
     Ok(())
 }
 
-async fn coordinate_backlog_cycle_with<DF, DFut, RF, RFut>(
+async fn coordinate_backlog_cycle_with<DF, DFut, RF, RFut, Rec>(
     _cfg: &Config,
     dispatch: DF,
     rebalance: RF,
+    mut record_recovery: Rec,
 ) -> Result<(DispatchPassSummary, usize, DispatchPassSummary)>
 where
     DF: Fn() -> DFut,
     DFut: Future<Output = Result<DispatchPassSummary>>,
     RF: Fn() -> RFut,
     RFut: Future<Output = Result<usize>>,
+    Rec: FnMut(usize, usize) -> Result<()>,
 {
     let first_dispatch = dispatch().await?;
     let rebalanced = rebalance().await?;
     let recovery_dispatch = if first_dispatch.deferred > 0 && rebalanced > 0 {
         let recovery = dispatch().await?;
         if recovery.routed > 0 {
+            record_recovery(recovery.routed, recovery.leads)?;
             tracing::info!(
                 "Recovered {} deferred task handoff(s) after rebalancing",
                 recovery.routed
@@ -174,7 +178,7 @@ where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<Vec<manager::LeadDispatchOutcome>>>,
 {
-    Ok(maybe_auto_dispatch_with_recorder(cfg, dispatch, |_, _| Ok(())).await?.routed)
+    Ok(maybe_auto_dispatch_with_recorder(cfg, dispatch, |_, _, _| Ok(())).await?.routed)
 }
 
 async fn maybe_auto_dispatch_with_recorder<F, Fut, R>(
@@ -185,7 +189,7 @@ async fn maybe_auto_dispatch_with_recorder<F, Fut, R>(
 where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<Vec<manager::LeadDispatchOutcome>>>,
-    R: FnMut(usize, usize) -> Result<()>,
+    R: FnMut(usize, usize, usize) -> Result<()>,
 {
     if !cfg.auto_dispatch_unread_handoffs {
         return Ok(DispatchPassSummary::default());
@@ -213,7 +217,7 @@ where
         })
         .sum();
     let leads = outcomes.len();
-    record(routed, leads)?;
+    record(routed, deferred, leads)?;
 
     if routed > 0 {
         tracing::info!(
@@ -480,7 +484,7 @@ mod tests {
                     ],
                 }])
             },
-            move |count, leads| {
+            move |count, _deferred, leads| {
                 *recorded_clone.lock().unwrap() = Some((count, leads));
                 Ok(())
             },
@@ -524,6 +528,7 @@ mod tests {
                 }
             },
             || async move { Ok(1) },
+            |_, _| Ok(()),
         )
         .await?;
 
@@ -557,6 +562,7 @@ mod tests {
                 }
             },
             || async move { Ok(0) },
+            |_, _| Ok(()),
         )
         .await?;
 
@@ -564,6 +570,50 @@ mod tests {
         assert_eq!(rebalanced, 0);
         assert_eq!(recovery, DispatchPassSummary::default());
         assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn coordinate_backlog_cycle_records_recovery_dispatch_when_it_routes_work() -> Result<()> {
+        let cfg = Config {
+            auto_dispatch_unread_handoffs: true,
+            ..Config::default()
+        };
+        let recorded = std::sync::Arc::new(std::sync::Mutex::new(None));
+        let recorded_clone = recorded.clone();
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let calls_clone = calls.clone();
+
+        let (_first, _rebalanced, recovery) = coordinate_backlog_cycle_with(
+            &cfg,
+            move || {
+                let calls_clone = calls_clone.clone();
+                async move {
+                    let call = calls_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    Ok(match call {
+                        0 => DispatchPassSummary {
+                            routed: 0,
+                            deferred: 1,
+                            leads: 1,
+                        },
+                        _ => DispatchPassSummary {
+                            routed: 2,
+                            deferred: 0,
+                            leads: 1,
+                        },
+                    })
+                }
+            },
+            || async move { Ok(1) },
+            move |routed, leads| {
+                *recorded_clone.lock().unwrap() = Some((routed, leads));
+                Ok(())
+            },
+        )
+        .await?;
+
+        assert_eq!(recovery.routed, 2);
+        assert_eq!(*recorded.lock().unwrap(), Some((2, 1)));
         Ok(())
     }
 

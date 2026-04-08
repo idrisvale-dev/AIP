@@ -1489,10 +1489,22 @@ impl Dashboard {
 
             if let Some(last_dispatch_at) = self.daemon_activity.last_dispatch_at.as_ref() {
                 lines.push(format!(
-                    "Last daemon dispatch {} handoff(s) across {} lead(s) @ {}",
+                    "Last daemon dispatch {} routed / {} deferred across {} lead(s) @ {}",
                     self.daemon_activity.last_dispatch_routed,
+                    self.daemon_activity.last_dispatch_deferred,
                     self.daemon_activity.last_dispatch_leads,
                     self.short_timestamp(&last_dispatch_at.to_rfc3339())
+                ));
+            }
+
+            if let Some(last_recovery_dispatch_at) =
+                self.daemon_activity.last_recovery_dispatch_at.as_ref()
+            {
+                lines.push(format!(
+                    "Last daemon recovery dispatch {} handoff(s) across {} lead(s) @ {}",
+                    self.daemon_activity.last_recovery_dispatch_routed,
+                    self.daemon_activity.last_recovery_dispatch_leads,
+                    self.short_timestamp(&last_recovery_dispatch_at.to_rfc3339())
                 ));
             }
 
@@ -2121,14 +2133,19 @@ mod tests {
         dashboard.daemon_activity = DaemonActivity {
             last_dispatch_at: Some(Utc::now()),
             last_dispatch_routed: 4,
+            last_dispatch_deferred: 2,
             last_dispatch_leads: 2,
+            last_recovery_dispatch_at: Some(Utc::now()),
+            last_recovery_dispatch_routed: 1,
+            last_recovery_dispatch_leads: 1,
             last_rebalance_at: Some(Utc::now()),
             last_rebalance_rerouted: 1,
             last_rebalance_leads: 1,
         };
 
         let text = dashboard.selected_session_metrics_text();
-        assert!(text.contains("Last daemon dispatch 4 handoff(s) across 2 lead(s)"));
+        assert!(text.contains("Last daemon dispatch 4 routed / 2 deferred across 2 lead(s)"));
+        assert!(text.contains("Last daemon recovery dispatch 1 handoff(s) across 1 lead(s)"));
         assert!(text.contains("Last daemon rebalance 1 handoff(s) across 1 lead(s)"));
     }
 
