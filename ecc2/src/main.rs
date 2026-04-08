@@ -190,6 +190,9 @@ enum Commands {
     WorktreeStatus {
         /// Session ID or alias
         session_id: Option<String>,
+        /// Show worktree status for all sessions
+        #[arg(long)]
+        all: bool,
         /// Emit machine-readable JSON instead of the human summary
         #[arg(long)]
         json: bool,
@@ -645,23 +648,40 @@ async fn main() -> Result<()> {
         }
         Some(Commands::WorktreeStatus {
             session_id,
+            all,
             json,
             patch,
             check,
         }) => {
-            let id = session_id.unwrap_or_else(|| "latest".to_string());
-            let resolved_id = resolve_session_id(&db, &id)?;
-            let session = db
-                .get_session(&resolved_id)?
-                .ok_or_else(|| anyhow::anyhow!("Session not found: {resolved_id}"))?;
-            let report = build_worktree_status_report(&session, patch)?;
-            if json {
-                println!("{}", serde_json::to_string_pretty(&report)?);
+            if all && session_id.is_some() {
+                return Err(anyhow::anyhow!(
+                    "worktree-status does not accept a session ID when --all is set"
+                ));
+            }
+            let reports = if all {
+                session::manager::list_sessions(&db)?
+                    .into_iter()
+                    .map(|session| build_worktree_status_report(&session, patch))
+                    .collect::<Result<Vec<_>>>()?
             } else {
-                println!("{}", format_worktree_status_human(&report));
+                let id = session_id.unwrap_or_else(|| "latest".to_string());
+                let resolved_id = resolve_session_id(&db, &id)?;
+                let session = db
+                    .get_session(&resolved_id)?
+                    .ok_or_else(|| anyhow::anyhow!("Session not found: {resolved_id}"))?;
+                vec![build_worktree_status_report(&session, patch)?]
+            };
+            if json {
+                if all {
+                    println!("{}", serde_json::to_string_pretty(&reports)?);
+                } else {
+                    println!("{}", serde_json::to_string_pretty(&reports[0])?);
+                }
+            } else {
+                println!("{}", format_worktree_status_reports_human(&reports));
             }
             if check {
-                std::process::exit(worktree_status_exit_code(&report));
+                std::process::exit(worktree_status_reports_exit_code(&reports));
             }
         }
         Some(Commands::Stop { session_id }) => {
@@ -1011,8 +1031,24 @@ fn format_worktree_status_human(report: &WorktreeStatusReport) -> String {
     lines.join("\n")
 }
 
+fn format_worktree_status_reports_human(reports: &[WorktreeStatusReport]) -> String {
+    reports
+        .iter()
+        .map(format_worktree_status_human)
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
 fn worktree_status_exit_code(report: &WorktreeStatusReport) -> i32 {
     report.check_exit_code
+}
+
+fn worktree_status_reports_exit_code(reports: &[WorktreeStatusReport]) -> i32 {
+    reports
+        .iter()
+        .map(worktree_status_exit_code)
+        .max()
+        .unwrap_or(0)
 }
 
 fn summarize_coordinate_backlog(
@@ -1250,11 +1286,13 @@ mod tests {
         match cli.command {
             Some(Commands::WorktreeStatus {
                 session_id,
+                all,
                 json,
                 patch,
                 check,
             }) => {
                 assert_eq!(session_id.as_deref(), Some("planner"));
+                assert!(!all);
                 assert!(!json);
                 assert!(!patch);
                 assert!(!check);
@@ -1271,17 +1309,104 @@ mod tests {
         match cli.command {
             Some(Commands::WorktreeStatus {
                 session_id,
+                all,
                 json,
                 patch,
                 check,
             }) => {
                 assert_eq!(session_id, None);
+                assert!(!all);
                 assert!(json);
                 assert!(!patch);
                 assert!(!check);
             }
             _ => panic!("expected worktree-status subcommand"),
         }
+    }
+
+    #[test]
+    fn cli_parses_worktree_status_all_flag() {
+        let cli = Cli::try_parse_from(["ecc", "worktree-status", "--all"])
+            .expect("worktree-status --all should parse");
+
+        match cli.command {
+            Some(Commands::WorktreeStatus {
+                session_id,
+                all,
+                json,
+                patch,
+                check,
+            }) => {
+                assert_eq!(session_id, None);
+                assert!(all);
+                assert!(!json);
+                assert!(!patch);
+                assert!(!check);
+            }
+            _ => panic!("expected worktree-status subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_worktree_status_session_id_with_all_flag() {
+        let err = Cli::try_parse_from(["ecc", "worktree-status", "planner", "--all"])
+            .expect("worktree-status planner --all should parse");
+
+        let command = err.command.expect("expected command");
+        let Commands::WorktreeStatus {
+            session_id,
+            all,
+            ..
+        } = command
+        else {
+            panic!("expected worktree-status subcommand");
+        };
+
+        assert_eq!(session_id.as_deref(), Some("planner"));
+        assert!(all);
+    }
+
+    #[test]
+    fn format_worktree_status_reports_human_joins_multiple_reports() {
+        let reports = vec![
+            WorktreeStatusReport {
+                session_id: "sess-a".to_string(),
+                task: "first".to_string(),
+                session_state: "running".to_string(),
+                health: "in_progress".to_string(),
+                check_exit_code: 1,
+                patch_included: false,
+                attached: false,
+                path: None,
+                branch: None,
+                base_branch: None,
+                diff_summary: None,
+                file_preview: Vec::new(),
+                patch_preview: None,
+                merge_readiness: None,
+            },
+            WorktreeStatusReport {
+                session_id: "sess-b".to_string(),
+                task: "second".to_string(),
+                session_state: "stopped".to_string(),
+                health: "clear".to_string(),
+                check_exit_code: 0,
+                patch_included: false,
+                attached: false,
+                path: None,
+                branch: None,
+                base_branch: None,
+                diff_summary: None,
+                file_preview: Vec::new(),
+                patch_preview: None,
+                merge_readiness: None,
+            },
+        ];
+
+        let text = format_worktree_status_reports_human(&reports);
+        assert!(text.contains("Worktree status for sess-a [running]"));
+        assert!(text.contains("Worktree status for sess-b [stopped]"));
+        assert!(text.contains("\n\nWorktree status for sess-b [stopped]"));
     }
 
     #[test]
@@ -1292,11 +1417,13 @@ mod tests {
         match cli.command {
             Some(Commands::WorktreeStatus {
                 session_id,
+                all,
                 json,
                 patch,
                 check,
             }) => {
                 assert_eq!(session_id, None);
+                assert!(!all);
                 assert!(!json);
                 assert!(patch);
                 assert!(!check);
@@ -1313,11 +1440,13 @@ mod tests {
         match cli.command {
             Some(Commands::WorktreeStatus {
                 session_id,
+                all,
                 json,
                 patch,
                 check,
             }) => {
                 assert_eq!(session_id, None);
+                assert!(!all);
                 assert!(!json);
                 assert!(!patch);
                 assert!(check);
@@ -1448,6 +1577,62 @@ mod tests {
         assert_eq!(worktree_status_exit_code(&clear), 0);
         assert_eq!(worktree_status_exit_code(&in_progress), 1);
         assert_eq!(worktree_status_exit_code(&conflicted), 2);
+    }
+
+    #[test]
+    fn worktree_status_reports_exit_code_uses_highest_severity() {
+        let reports = vec![
+            WorktreeStatusReport {
+                session_id: "sess-a".to_string(),
+                task: "first".to_string(),
+                session_state: "running".to_string(),
+                health: "clear".to_string(),
+                check_exit_code: 0,
+                patch_included: false,
+                attached: false,
+                path: None,
+                branch: None,
+                base_branch: None,
+                diff_summary: None,
+                file_preview: Vec::new(),
+                patch_preview: None,
+                merge_readiness: None,
+            },
+            WorktreeStatusReport {
+                session_id: "sess-b".to_string(),
+                task: "second".to_string(),
+                session_state: "running".to_string(),
+                health: "in_progress".to_string(),
+                check_exit_code: 1,
+                patch_included: false,
+                attached: false,
+                path: None,
+                branch: None,
+                base_branch: None,
+                diff_summary: None,
+                file_preview: Vec::new(),
+                patch_preview: None,
+                merge_readiness: None,
+            },
+            WorktreeStatusReport {
+                session_id: "sess-c".to_string(),
+                task: "third".to_string(),
+                session_state: "running".to_string(),
+                health: "conflicted".to_string(),
+                check_exit_code: 2,
+                patch_included: false,
+                attached: false,
+                path: None,
+                branch: None,
+                base_branch: None,
+                diff_summary: None,
+                file_preview: Vec::new(),
+                patch_preview: None,
+                merge_readiness: None,
+            },
+        ];
+
+        assert_eq!(worktree_status_reports_exit_code(&reports), 2);
     }
 
     #[test]
