@@ -241,14 +241,19 @@ impl Dashboard {
             return;
         }
 
-        let summary = SessionSummary::from_sessions(&self.sessions, &self.unread_message_counts);
+        let stabilized = self.daemon_activity.stabilized_after_recovery_at().is_some();
+        let summary =
+            SessionSummary::from_sessions(&self.sessions, &self.unread_message_counts, stabilized);
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(2), Constraint::Min(3)])
             .split(inner_area);
 
         frame.render_widget(
-            Paragraph::new(vec![summary_line(&summary), attention_queue_line(&summary)]),
+            Paragraph::new(vec![
+                summary_line(&summary),
+                attention_queue_line(&summary, stabilized),
+            ]),
             chunks[0],
         );
 
@@ -1657,6 +1662,7 @@ impl Dashboard {
 
     fn attention_queue_items(&self, limit: usize) -> Vec<String> {
         let mut items = Vec::new();
+        let suppress_inbox_attention = self.daemon_activity.stabilized_after_recovery_at().is_some();
 
         for session in &self.sessions {
             let unread = self
@@ -1664,7 +1670,7 @@ impl Dashboard {
                 .get(&session.id)
                 .copied()
                 .unwrap_or(0);
-            if unread > 0 {
+            if unread > 0 && !suppress_inbox_attention {
                 items.push(format!(
                     "- Inbox {} | {} unread | {}",
                     format_session_id(&session.id),
@@ -1870,12 +1876,24 @@ impl Pane {
 }
 
 impl SessionSummary {
-    fn from_sessions(sessions: &[Session], unread_message_counts: &HashMap<String, usize>) -> Self {
+    fn from_sessions(
+        sessions: &[Session],
+        unread_message_counts: &HashMap<String, usize>,
+        suppress_inbox_attention: bool,
+    ) -> Self {
         sessions.iter().fold(
             Self {
                 total: sessions.len(),
-                unread_messages: unread_message_counts.values().sum(),
-                inbox_sessions: unread_message_counts.values().filter(|count| **count > 0).count(),
+                unread_messages: if suppress_inbox_attention {
+                    0
+                } else {
+                    unread_message_counts.values().sum()
+                },
+                inbox_sessions: if suppress_inbox_attention {
+                    0
+                } else {
+                    unread_message_counts.values().filter(|count| **count > 0).count()
+                },
                 ..Self::default()
             },
             |mut summary, session| {
@@ -1942,7 +1960,7 @@ fn summary_span(label: &str, value: usize, color: Color) -> Span<'static> {
     )
 }
 
-fn attention_queue_line(summary: &SessionSummary) -> Line<'static> {
+fn attention_queue_line(summary: &SessionSummary, stabilized: bool) -> Line<'static> {
     if summary.failed == 0
         && summary.stopped == 0
         && summary.pending == 0
@@ -1953,7 +1971,11 @@ fn attention_queue_line(summary: &SessionSummary) -> Line<'static> {
                 "Attention queue clear",
                 Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
             ),
-            Span::raw("  no failed, stopped, or pending sessions"),
+            Span::raw(if stabilized {
+                "  stabilized backlog absorbed"
+            } else {
+                "  no failed, stopped, or pending sessions"
+            }),
         ]);
     }
 
@@ -2276,6 +2298,51 @@ mod tests {
         assert!(text.contains("Recovery stabilized @"));
         assert!(!text.contains("Last daemon recovery dispatch"));
         assert!(!text.contains("Last daemon rebalance"));
+    }
+
+    #[test]
+    fn attention_queue_suppresses_inbox_pressure_when_stabilized() {
+        let now = Utc::now();
+        let sessions = vec![sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        )];
+        let unread = HashMap::from([(String::from("focus-12345678"), 3usize)]);
+        let summary = SessionSummary::from_sessions(&sessions, &unread, true);
+
+        let line = attention_queue_line(&summary, true);
+        let rendered = line
+            .spans
+            .iter()
+            .map(|span| span.content.as_ref())
+            .collect::<String>();
+
+        assert!(rendered.contains("Attention queue clear"));
+        assert!(rendered.contains("stabilized backlog absorbed"));
+
+        let mut dashboard = test_dashboard(sessions, 0);
+        dashboard.unread_message_counts = unread;
+        dashboard.daemon_activity = DaemonActivity {
+            last_dispatch_at: Some(now + chrono::Duration::seconds(2)),
+            last_dispatch_routed: 2,
+            last_dispatch_deferred: 0,
+            last_dispatch_leads: 1,
+            last_recovery_dispatch_at: Some(now + chrono::Duration::seconds(1)),
+            last_recovery_dispatch_routed: 1,
+            last_recovery_dispatch_leads: 1,
+            last_rebalance_at: Some(now),
+            last_rebalance_rerouted: 1,
+            last_rebalance_leads: 1,
+        };
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Attention queue clear"));
+        assert!(!text.contains("Needs attention:"));
+        assert!(!text.contains("Inbox focus-12"));
     }
 
     #[test]
