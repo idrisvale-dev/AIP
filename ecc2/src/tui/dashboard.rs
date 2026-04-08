@@ -55,6 +55,7 @@ pub struct Dashboard {
     selected_diff_summary: Option<String>,
     selected_diff_preview: Vec<String>,
     selected_diff_patch: Option<String>,
+    selected_merge_readiness: Option<worktree::MergeReadiness>,
     output_mode: OutputMode,
     selected_pane: Pane,
     selected_session: usize,
@@ -170,6 +171,7 @@ impl Dashboard {
             selected_diff_summary: None,
             selected_diff_preview: Vec::new(),
             selected_diff_patch: None,
+            selected_merge_readiness: None,
             output_mode: OutputMode::SessionOutput,
             selected_pane: Pane::Sessions,
             selected_session: 0,
@@ -1321,6 +1323,8 @@ impl Dashboard {
             .unwrap_or_default();
         self.selected_diff_patch = worktree
             .and_then(|worktree| worktree::diff_patch_preview(worktree, MAX_DIFF_PATCH_LINES).ok().flatten());
+        self.selected_merge_readiness = worktree
+            .and_then(|worktree| worktree::merge_readiness(worktree).ok());
         if self.output_mode == OutputMode::WorktreeDiff && self.selected_diff_patch.is_none() {
             self.output_mode = OutputMode::SessionOutput;
         }
@@ -1719,6 +1723,12 @@ impl Dashboard {
                     lines.push("Changed files".to_string());
                     for entry in &self.selected_diff_preview {
                         lines.push(format!("- {entry}"));
+                    }
+                }
+                if let Some(merge_readiness) = self.selected_merge_readiness.as_ref() {
+                    lines.push(merge_readiness.summary.clone());
+                    for conflict in merge_readiness.conflicts.iter().take(3) {
+                        lines.push(format!("- conflict {conflict}"));
                     }
                 }
             }
@@ -2294,6 +2304,11 @@ mod tests {
             "Branch M src/main.rs".to_string(),
             "Working ?? notes.txt".to_string(),
         ];
+        dashboard.selected_merge_readiness = Some(worktree::MergeReadiness {
+            status: worktree::MergeReadinessStatus::Conflicted,
+            summary: "Merge blocked by 1 conflict(s): src/main.rs".to_string(),
+            conflicts: vec!["src/main.rs".to_string()],
+        });
 
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Branch ecc/focus | Base main"));
@@ -2302,6 +2317,8 @@ mod tests {
         assert!(text.contains("Changed files"));
         assert!(text.contains("- Branch M src/main.rs"));
         assert!(text.contains("- Working ?? notes.txt"));
+        assert!(text.contains("Merge blocked by 1 conflict(s): src/main.rs"));
+        assert!(text.contains("- conflict src/main.rs"));
         assert!(text.contains("Last output last useful output"));
         assert!(text.contains("Needs attention:"));
         assert!(text.contains("Failed failed-8 | Render dashboard rows"));
@@ -3171,6 +3188,7 @@ mod tests {
             selected_diff_summary: None,
             selected_diff_preview: Vec::new(),
             selected_diff_patch: None,
+            selected_merge_readiness: None,
             output_mode: OutputMode::SessionOutput,
             selected_pane: Pane::Sessions,
             selected_session,

@@ -5,6 +5,19 @@ use std::process::Command;
 use crate::config::Config;
 use crate::session::WorktreeInfo;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MergeReadinessStatus {
+    Ready,
+    Conflicted,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MergeReadiness {
+    pub status: MergeReadinessStatus,
+    pub summary: String,
+    pub conflicts: Vec<String>,
+}
+
 /// Create a new git worktree for an agent session.
 pub fn create_for_session(session_id: &str, cfg: &Config) -> Result<WorktreeInfo> {
     let repo_root = std::env::current_dir().context("Failed to resolve repository root")?;
@@ -164,6 +177,57 @@ pub fn diff_patch_preview(worktree: &WorktreeInfo, max_lines: usize) -> Result<O
     }
 }
 
+pub fn merge_readiness(worktree: &WorktreeInfo) -> Result<MergeReadiness> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["merge-tree", "--write-tree", &worktree.base_branch, &worktree.branch])
+        .output()
+        .context("Failed to generate merge readiness preview")?;
+
+    let merged_output = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let conflicts = merged_output
+        .lines()
+        .filter_map(parse_merge_conflict_path)
+        .collect::<Vec<_>>();
+
+    if output.status.success() {
+        return Ok(MergeReadiness {
+            status: MergeReadinessStatus::Ready,
+            summary: format!("Merge ready into {}", worktree.base_branch),
+            conflicts: Vec::new(),
+        });
+    }
+
+    if !conflicts.is_empty() {
+        let conflict_summary = conflicts
+            .iter()
+            .take(3)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(", ");
+        let overflow = conflicts.len().saturating_sub(3);
+        let detail = if overflow > 0 {
+            format!("{conflict_summary}, +{overflow} more")
+        } else {
+            conflict_summary
+        };
+
+        return Ok(MergeReadiness {
+            status: MergeReadinessStatus::Conflicted,
+            summary: format!("Merge blocked by {} conflict(s): {detail}", conflicts.len()),
+            conflicts,
+        });
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    anyhow::bail!("git merge-tree failed: {stderr}");
+}
+
 fn git_diff_shortstat(worktree_path: &Path, extra_args: &[&str]) -> Result<Option<String>> {
     let mut command = Command::new("git");
     command
@@ -278,6 +342,18 @@ fn take_preview_lines(lines: &[String], remaining: &mut usize) -> Vec<String> {
     let taken = lines.iter().take(count).cloned().collect::<Vec<_>>();
     *remaining = remaining.saturating_sub(count);
     taken
+}
+
+fn parse_merge_conflict_path(line: &str) -> Option<String> {
+    if !line.contains("CONFLICT") {
+        return None;
+    }
+
+    line.split(" in ")
+        .nth(1)
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+        .map(ToOwned::to_owned)
 }
 
 fn get_current_branch(repo_root: &Path) -> Result<String> {
@@ -464,6 +540,109 @@ mod tests {
         assert!(preview.contains("--- Working tree diff ---"));
         assert!(preview.contains("src.txt"));
         assert!(preview.contains("README.md"));
+
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["worktree", "remove", "--force"])
+            .arg(&worktree_dir)
+            .output();
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn merge_readiness_reports_ready_worktree() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-worktree-merge-ready-{}", Uuid::new_v4()));
+        let repo = root.join("repo");
+        fs::create_dir_all(&repo)?;
+
+        run_git(&repo, &["init", "-b", "main"])?;
+        run_git(&repo, &["config", "user.email", "ecc@example.com"])?;
+        run_git(&repo, &["config", "user.name", "ECC"])?;
+        fs::write(repo.join("README.md"), "hello\n")?;
+        run_git(&repo, &["add", "README.md"])?;
+        run_git(&repo, &["commit", "-m", "init"])?;
+
+        let worktree_dir = root.join("wt-1");
+        run_git(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "-b",
+                "ecc/test",
+                worktree_dir.to_str().expect("utf8 path"),
+                "HEAD",
+            ],
+        )?;
+
+        fs::write(worktree_dir.join("src.txt"), "branch only\n")?;
+        run_git(&worktree_dir, &["add", "src.txt"])?;
+        run_git(&worktree_dir, &["commit", "-m", "branch file"])?;
+
+        let info = WorktreeInfo {
+            path: worktree_dir.clone(),
+            branch: "ecc/test".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        let readiness = merge_readiness(&info)?;
+        assert_eq!(readiness.status, MergeReadinessStatus::Ready);
+        assert!(readiness.summary.contains("Merge ready into main"));
+        assert!(readiness.conflicts.is_empty());
+
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["worktree", "remove", "--force"])
+            .arg(&worktree_dir)
+            .output();
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn merge_readiness_reports_conflicted_worktree() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-worktree-merge-conflict-{}", Uuid::new_v4()));
+        let repo = root.join("repo");
+        fs::create_dir_all(&repo)?;
+
+        run_git(&repo, &["init", "-b", "main"])?;
+        run_git(&repo, &["config", "user.email", "ecc@example.com"])?;
+        run_git(&repo, &["config", "user.name", "ECC"])?;
+        fs::write(repo.join("README.md"), "hello\n")?;
+        run_git(&repo, &["add", "README.md"])?;
+        run_git(&repo, &["commit", "-m", "init"])?;
+
+        let worktree_dir = root.join("wt-1");
+        run_git(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "-b",
+                "ecc/test",
+                worktree_dir.to_str().expect("utf8 path"),
+                "HEAD",
+            ],
+        )?;
+
+        fs::write(worktree_dir.join("README.md"), "hello\nbranch\n")?;
+        run_git(&worktree_dir, &["commit", "-am", "branch change"])?;
+        fs::write(repo.join("README.md"), "hello\nmain\n")?;
+        run_git(&repo, &["commit", "-am", "main change"])?;
+
+        let info = WorktreeInfo {
+            path: worktree_dir.clone(),
+            branch: "ecc/test".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        let readiness = merge_readiness(&info)?;
+        assert_eq!(readiness.status, MergeReadinessStatus::Conflicted);
+        assert!(readiness.summary.contains("Merge blocked by 1 conflict"));
+        assert_eq!(readiness.conflicts, vec!["README.md".to_string()]);
 
         let _ = Command::new("git")
             .arg("-C")
