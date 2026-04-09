@@ -77,6 +77,7 @@ pub struct Dashboard {
     output_mode: OutputMode,
     output_filter: OutputFilter,
     output_time_filter: OutputTimeFilter,
+    timeline_event_filter: TimelineEventFilter,
     selected_pane: Pane,
     selected_session: usize,
     show_help: bool,
@@ -124,6 +125,7 @@ enum Pane {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OutputMode {
     SessionOutput,
+    Timeline,
     WorktreeDiff,
     ConflictProtocol,
 }
@@ -145,6 +147,15 @@ enum OutputTimeFilter {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TimelineEventFilter {
+    All,
+    Lifecycle,
+    Messages,
+    ToolCalls,
+    FileChanges,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SearchScope {
     SelectedSession,
     AllSessions,
@@ -160,6 +171,21 @@ enum SearchAgentFilter {
 struct SearchMatch {
     session_id: String,
     line_index: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TimelineEventType {
+    Lifecycle,
+    Message,
+    ToolCall,
+    FileChange,
+}
+
+#[derive(Debug, Clone)]
+struct TimelineEvent {
+    occurred_at: chrono::DateTime<Utc>,
+    event_type: TimelineEventType,
+    summary: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -276,6 +302,7 @@ impl Dashboard {
             output_mode: OutputMode::SessionOutput,
             output_filter: OutputFilter::All,
             output_time_filter: OutputTimeFilter::AllTime,
+            timeline_event_filter: TimelineEventFilter::All,
             selected_pane: Pane::Sessions,
             selected_session: 0,
             show_help: false,
@@ -498,6 +525,15 @@ impl Dashboard {
                     };
                     (self.output_title(), content)
                 }
+                OutputMode::Timeline => {
+                    let lines = self.visible_timeline_lines();
+                    let content = if lines.is_empty() {
+                        Text::from(self.empty_timeline_message())
+                    } else {
+                        Text::from(lines)
+                    };
+                    (self.output_title(), content)
+                }
                 OutputMode::WorktreeDiff => {
                     let content = self
                         .selected_diff_patch
@@ -574,6 +610,14 @@ impl Dashboard {
     }
 
     fn output_title(&self) -> String {
+        if self.output_mode == OutputMode::Timeline {
+            return format!(
+                " Timeline{}{} ",
+                self.timeline_event_filter.title_suffix(),
+                self.output_time_filter.title_suffix()
+            );
+        }
+
         let filter = format!(
             "{}{}",
             self.output_filter.title_suffix(),
@@ -615,6 +659,37 @@ impl Dashboard {
             (OutputFilter::ToolCallsOnly, _) => "No tool-call output in the selected time range.",
             (OutputFilter::FileChangesOnly, _) => {
                 "No file-change output in the selected time range."
+            }
+        }
+    }
+
+    fn empty_timeline_message(&self) -> &'static str {
+        match (self.timeline_event_filter, self.output_time_filter) {
+            (TimelineEventFilter::All, OutputTimeFilter::AllTime) => {
+                "No timeline events for this session yet."
+            }
+            (TimelineEventFilter::Lifecycle, OutputTimeFilter::AllTime) => {
+                "No lifecycle events for this session yet."
+            }
+            (TimelineEventFilter::Messages, OutputTimeFilter::AllTime) => {
+                "No message events for this session yet."
+            }
+            (TimelineEventFilter::ToolCalls, OutputTimeFilter::AllTime) => {
+                "No tool-call events for this session yet."
+            }
+            (TimelineEventFilter::FileChanges, OutputTimeFilter::AllTime) => {
+                "No file-change events for this session yet."
+            }
+            (TimelineEventFilter::All, _) => "No timeline events in the selected time range.",
+            (TimelineEventFilter::Lifecycle, _) => {
+                "No lifecycle events in the selected time range."
+            }
+            (TimelineEventFilter::Messages, _) => "No message events in the selected time range.",
+            (TimelineEventFilter::ToolCalls, _) => {
+                "No tool-call events in the selected time range."
+            }
+            (TimelineEventFilter::FileChanges, _) => {
+                "No file-change events in the selected time range."
             }
         }
     }
@@ -738,7 +813,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
@@ -824,10 +899,12 @@ impl Dashboard {
             "  G       Dispatch then rebalance backlog across lead teams",
             "  h       Collapse the focused non-session pane",
             "  H       Restore all collapsed panes",
+            "  y       Toggle selected-session timeline view",
+            "  E       Cycle timeline event filter",
             "  v       Toggle selected worktree diff in output pane",
             "  c       Show conflict-resolution protocol for selected conflicted worktree",
             "  e       Cycle output content filter: all/errors/tool calls/file changes",
-            "  f       Cycle output time filter between all/15m/1h/24h",
+            "  f       Cycle output or timeline time range between all/15m/1h/24h",
             "  A       Toggle search scope between selected session and all sessions",
             "  o       Toggle search agent filter between all agents and selected agent type",
             "  m       Merge selected ready worktree into base and clean it up",
@@ -1350,10 +1427,36 @@ impl Dashboard {
                 self.reset_output_view();
                 self.set_operator_note("showing session output".to_string());
             }
+            OutputMode::Timeline => {
+                self.output_mode = OutputMode::SessionOutput;
+                self.reset_output_view();
+                self.set_operator_note("showing session output".to_string());
+            }
             OutputMode::ConflictProtocol => {
                 self.output_mode = OutputMode::SessionOutput;
                 self.reset_output_view();
                 self.set_operator_note("showing session output".to_string());
+            }
+        }
+    }
+
+    pub fn toggle_timeline_mode(&mut self) {
+        match self.output_mode {
+            OutputMode::Timeline => {
+                self.output_mode = OutputMode::SessionOutput;
+                self.reset_output_view();
+                self.set_operator_note("showing session output".to_string());
+            }
+            _ => {
+                if self.sessions.get(self.selected_session).is_some() {
+                    self.output_mode = OutputMode::Timeline;
+                    self.selected_pane = Pane::Output;
+                    self.output_follow = false;
+                    self.output_scroll_offset = 0;
+                    self.set_operator_note("showing selected session timeline".to_string());
+                } else {
+                    self.set_operator_note("no session selected for timeline view".to_string());
+                }
             }
         }
     }
@@ -2237,19 +2340,45 @@ impl Dashboard {
     }
 
     pub fn cycle_output_time_filter(&mut self) {
-        if self.output_mode != OutputMode::SessionOutput {
+        if !matches!(
+            self.output_mode,
+            OutputMode::SessionOutput | OutputMode::Timeline
+        ) {
             self.set_operator_note(
-                "output time filters are only available in session output view".to_string(),
+                "time filters are only available in session output or timeline view".to_string(),
             );
             return;
         }
 
         self.output_time_filter = self.output_time_filter.next();
-        self.recompute_search_matches();
+        if self.output_mode == OutputMode::SessionOutput {
+            self.recompute_search_matches();
+        }
+        self.sync_output_scroll(self.last_output_height.max(1));
+        let note_prefix = if self.output_mode == OutputMode::Timeline {
+            "timeline range"
+        } else {
+            "output time filter"
+        };
+        self.set_operator_note(format!(
+            "{note_prefix} set to {}",
+            self.output_time_filter.label()
+        ));
+    }
+
+    pub fn cycle_timeline_event_filter(&mut self) {
+        if self.output_mode != OutputMode::Timeline {
+            self.set_operator_note(
+                "timeline event filters are only available in timeline view".to_string(),
+            );
+            return;
+        }
+
+        self.timeline_event_filter = self.timeline_event_filter.next();
         self.sync_output_scroll(self.last_output_height.max(1));
         self.set_operator_note(format!(
-            "output time filter set to {}",
-            self.output_time_filter.label()
+            "timeline filter set to {}",
+            self.timeline_event_filter.label()
         ));
     }
 
@@ -2844,6 +2973,111 @@ impl Dashboard {
         self.selected_session_id()
             .map(|session_id| self.visible_output_lines_for_session(session_id))
             .unwrap_or_default()
+    }
+
+    fn visible_timeline_lines(&self) -> Vec<Line<'static>> {
+        self.selected_timeline_events()
+            .into_iter()
+            .filter(|event| self.timeline_event_filter.matches(event.event_type))
+            .filter(|event| self.output_time_filter.matches_timestamp(event.occurred_at))
+            .map(|event| {
+                Line::from(format!(
+                    "[{}] {:<11} {}",
+                    event.occurred_at.format("%H:%M:%S"),
+                    event.event_type.label(),
+                    event.summary
+                ))
+            })
+            .collect()
+    }
+
+    fn selected_timeline_events(&self) -> Vec<TimelineEvent> {
+        let Some(session) = self.sessions.get(self.selected_session) else {
+            return Vec::new();
+        };
+
+        let mut events = vec![TimelineEvent {
+            occurred_at: session.created_at,
+            event_type: TimelineEventType::Lifecycle,
+            summary: format!(
+                "created session as {} for {}",
+                session.agent_type,
+                truncate_for_dashboard(&session.task, 64)
+            ),
+        }];
+
+        if session.updated_at > session.created_at {
+            events.push(TimelineEvent {
+                occurred_at: session.updated_at,
+                event_type: TimelineEventType::Lifecycle,
+                summary: format!("state {} | updated session metadata", session.state),
+            });
+        }
+
+        if let Some(worktree) = session.worktree.as_ref() {
+            events.push(TimelineEvent {
+                occurred_at: session.updated_at,
+                event_type: TimelineEventType::Lifecycle,
+                summary: format!(
+                    "attached worktree {} from {}",
+                    worktree.branch, worktree.base_branch
+                ),
+            });
+        }
+
+        if session.metrics.files_changed > 0 {
+            events.push(TimelineEvent {
+                occurred_at: session.updated_at,
+                event_type: TimelineEventType::FileChange,
+                summary: format!("files changed {}", session.metrics.files_changed),
+            });
+        }
+
+        let messages = self
+            .db
+            .list_messages_for_session(&session.id, 128)
+            .unwrap_or_default();
+        events.extend(messages.into_iter().map(|message| {
+            let (direction, counterpart) = if message.from_session == session.id {
+                ("sent", format_session_id(&message.to_session))
+            } else {
+                ("received", format_session_id(&message.from_session))
+            };
+            TimelineEvent {
+                occurred_at: message.timestamp,
+                event_type: TimelineEventType::Message,
+                summary: format!(
+                    "{direction} {} {} | {}",
+                    message.msg_type,
+                    counterpart,
+                    truncate_for_dashboard(
+                        &comms::preview(&message.msg_type, &message.content),
+                        64
+                    )
+                ),
+            }
+        }));
+
+        let tool_logs = self
+            .db
+            .query_tool_logs(&session.id, 1, 128)
+            .map(|page| page.entries)
+            .unwrap_or_default();
+        events.extend(tool_logs.into_iter().filter_map(|entry| {
+            parse_rfc3339_to_utc(&entry.timestamp).map(|occurred_at| TimelineEvent {
+                occurred_at,
+                event_type: TimelineEventType::ToolCall,
+                summary: format!(
+                    "tool {} | {}ms | {}",
+                    entry.tool_name,
+                    entry.duration_ms,
+                    truncate_for_dashboard(&entry.input_summary, 56)
+                ),
+            })
+        }));
+
+        events.sort_by_key(|event| event.occurred_at);
+        events
     }
 
     fn recompute_search_matches(&mut self) {
@@ -4048,16 +4282,25 @@ impl OutputTimeFilter {
             Self::AllTime => true,
             Self::Last15Minutes => line
                 .occurred_at()
-                .map(|timestamp| timestamp >= Utc::now() - Duration::minutes(15))
+                .map(|timestamp| self.matches_timestamp(timestamp))
                 .unwrap_or(false),
             Self::LastHour => line
                 .occurred_at()
-                .map(|timestamp| timestamp >= Utc::now() - Duration::hours(1))
+                .map(|timestamp| self.matches_timestamp(timestamp))
                 .unwrap_or(false),
             Self::Last24Hours => line
                 .occurred_at()
-                .map(|timestamp| timestamp >= Utc::now() - Duration::hours(24))
+                .map(|timestamp| self.matches_timestamp(timestamp))
                 .unwrap_or(false),
+        }
+    }
+
+    fn matches_timestamp(self, timestamp: chrono::DateTime<Utc>) -> bool {
+        match self {
+            Self::AllTime => true,
+            Self::Last15Minutes => timestamp >= Utc::now() - Duration::minutes(15),
+            Self::LastHour => timestamp >= Utc::now() - Duration::hours(1),
+            Self::Last24Hours => timestamp >= Utc::now() - Duration::hours(24),
         }
     }
 
@@ -4078,6 +4321,65 @@ impl OutputTimeFilter {
             Self::Last24Hours => " last 24h",
         }
     }
+}
+
+impl TimelineEventFilter {
+    fn next(self) -> Self {
+        match self {
+            Self::All => Self::Lifecycle,
+            Self::Lifecycle => Self::Messages,
+            Self::Messages => Self::ToolCalls,
+            Self::ToolCalls => Self::FileChanges,
+            Self::FileChanges => Self::All,
+        }
+    }
+
+    fn matches(self, event_type: TimelineEventType) -> bool {
+        match self {
+            Self::All => true,
+            Self::Lifecycle => event_type == TimelineEventType::Lifecycle,
+            Self::Messages => event_type == TimelineEventType::Message,
+            Self::ToolCalls => event_type == TimelineEventType::ToolCall,
+            Self::FileChanges => event_type == TimelineEventType::FileChange,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::All => "all events",
+            Self::Lifecycle => "lifecycle",
+            Self::Messages => "messages",
+            Self::ToolCalls => "tool calls",
+            Self::FileChanges => "file changes",
+        }
+    }
+
+    fn title_suffix(self) -> &'static str {
+        match self {
+            Self::All => "",
+            Self::Lifecycle => " lifecycle",
+            Self::Messages => " messages",
+            Self::ToolCalls => " tool calls",
+            Self::FileChanges => " file changes",
+        }
+    }
+}
+
+impl TimelineEventType {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Lifecycle => "lifecycle",
+            Self::Message => "message",
+            Self::ToolCall => "tool",
+            Self::FileChange => "file-change",
+        }
+    }
+}
+
+fn parse_rfc3339_to_utc(value: &str) -> Option<chrono::DateTime<Utc>> {
+    chrono::DateTime::parse_from_rfc3339(value)
+        .ok()
+        .map(|timestamp| timestamp.with_timezone(&Utc))
 }
 
 impl SearchScope {
@@ -5040,6 +5342,165 @@ mod tests {
         assert!(rendered.contains("Additions"));
         assert!(rendered.contains("-old line"));
         assert!(rendered.contains("+new line"));
+    }
+
+    #[test]
+    fn toggle_timeline_mode_renders_selected_session_events() {
+        let now = Utc::now();
+        let mut session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        session.created_at = now - chrono::Duration::hours(2);
+        session.updated_at = now - chrono::Duration::minutes(5);
+        session.metrics.files_changed = 3;
+
+        let mut dashboard = test_dashboard(vec![session.clone()], 0);
+        dashboard.db.insert_session(&session).unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "focus-12345678",
+                "{\"question\":\"Need review\"}",
+                "query",
+            )
+            .unwrap();
+        dashboard
+            .db
+            .insert_tool_log(
+                "focus-12345678",
+                "bash",
+                "cargo test -q",
+                "ok",
+                240,
+                0.2,
+                &(now - chrono::Duration::minutes(3)).to_rfc3339(),
+            )
+            .unwrap();
+
+        dashboard.toggle_timeline_mode();
+
+        assert_eq!(dashboard.output_mode, OutputMode::Timeline);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("showing selected session timeline")
+        );
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("Timeline"));
+        assert!(rendered.contains("created session as planner"));
+        assert!(rendered.contains("received query lead-123"));
+        assert!(rendered.contains("tool bash"));
+        assert!(rendered.contains("files changed 3"));
+    }
+
+    #[test]
+    fn cycle_timeline_event_filter_limits_rendered_events() {
+        let now = Utc::now();
+        let mut session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        session.created_at = now - chrono::Duration::hours(2);
+        session.updated_at = now - chrono::Duration::minutes(5);
+        session.metrics.files_changed = 1;
+
+        let mut dashboard = test_dashboard(vec![session.clone()], 0);
+        dashboard.db.insert_session(&session).unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "focus-12345678",
+                "{\"question\":\"Need review\"}",
+                "query",
+            )
+            .unwrap();
+        dashboard
+            .db
+            .insert_tool_log(
+                "focus-12345678",
+                "bash",
+                "cargo test -q",
+                "ok",
+                240,
+                0.2,
+                &(now - chrono::Duration::minutes(3)).to_rfc3339(),
+            )
+            .unwrap();
+        dashboard.toggle_timeline_mode();
+
+        dashboard.cycle_timeline_event_filter();
+        dashboard.cycle_timeline_event_filter();
+
+        assert_eq!(
+            dashboard.timeline_event_filter,
+            TimelineEventFilter::Messages
+        );
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("timeline filter set to messages")
+        );
+        assert_eq!(dashboard.output_title(), " Timeline messages ");
+
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("received query lead-123"));
+        assert!(!rendered.contains("tool bash"));
+        assert!(!rendered.contains("files changed 1"));
+    }
+
+    #[test]
+    fn timeline_time_filter_hides_old_events() {
+        let now = Utc::now();
+        let mut session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        session.created_at = now - chrono::Duration::hours(3);
+        session.updated_at = now - chrono::Duration::hours(2);
+
+        let mut dashboard = test_dashboard(vec![session.clone()], 0);
+        dashboard.db.insert_session(&session).unwrap();
+        dashboard
+            .db
+            .insert_tool_log(
+                "focus-12345678",
+                "bash",
+                "cargo test -q",
+                "ok",
+                240,
+                0.2,
+                &(now - chrono::Duration::minutes(3)).to_rfc3339(),
+            )
+            .unwrap();
+        dashboard.toggle_timeline_mode();
+
+        dashboard.cycle_output_time_filter();
+        dashboard.cycle_output_time_filter();
+
+        assert_eq!(dashboard.output_time_filter, OutputTimeFilter::LastHour);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("timeline range set to last 1h")
+        );
+        assert_eq!(dashboard.output_title(), " Timeline last 1h ");
+
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("tool bash"));
+        assert!(!rendered.contains("created session as planner"));
+        assert!(!rendered.contains("state running"));
     }
 
     #[test]
@@ -7875,6 +8336,7 @@ diff --git a/src/next.rs b/src/next.rs
             output_mode: OutputMode::SessionOutput,
             output_filter: OutputFilter::All,
             output_time_filter: OutputTimeFilter::AllTime,
+            timeline_event_filter: TimelineEventFilter::All,
             selected_pane: Pane::Sessions,
             selected_session,
             show_help: false,

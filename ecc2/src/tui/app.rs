@@ -78,6 +78,8 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
                     (_, KeyCode::Char('G')) => dashboard.coordinate_backlog().await,
                     (_, KeyCode::Char('h')) => dashboard.collapse_selected_pane(),
                     (_, KeyCode::Char('H')) => dashboard.restore_collapsed_panes(),
+                    (_, KeyCode::Char('y')) => dashboard.toggle_timeline_mode(),
+                    (_, KeyCode::Char('E')) => dashboard.cycle_timeline_event_filter(),
                     (_, KeyCode::Char('v')) => dashboard.toggle_output_mode(),
                     (_, KeyCode::Char('c')) => dashboard.toggle_conflict_protocol_mode(),
                     (_, KeyCode::Char('e')) => dashboard.toggle_output_filter(),
