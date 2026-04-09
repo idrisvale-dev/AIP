@@ -78,6 +78,10 @@ pub struct Dashboard {
     output_scroll_offset: usize,
     last_output_height: usize,
     pane_size_percent: u16,
+    search_input: Option<String>,
+    search_query: Option<String>,
+    search_matches: Vec<usize>,
+    selected_search_match: usize,
     session_table_state: TableState,
 }
 
@@ -196,6 +200,10 @@ impl Dashboard {
             output_scroll_offset: 0,
             last_output_height: 0,
             pane_size_percent,
+            search_input: None,
+            search_query: None,
+            search_matches: Vec::new(),
+            selected_search_match: 0,
             session_table_state,
         };
         dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap_or_default();
@@ -366,15 +374,18 @@ impl Dashboard {
                 OutputMode::SessionOutput => {
                     let lines = self.selected_output_lines();
                     let content = if lines.is_empty() {
-                        "Waiting for session output...".to_string()
+                        Text::from("Waiting for session output...")
+                    } else if self.search_query.is_some() {
+                        self.render_searchable_output(lines)
                     } else {
-                        lines
-                            .iter()
-                            .map(|line| line.text.as_str())
-                            .collect::<Vec<_>>()
-                            .join("\n")
+                        Text::from(
+                            lines
+                                .iter()
+                                .map(|line| Line::from(line.text.clone()))
+                                .collect::<Vec<_>>(),
+                        )
                     };
-                    (" Output ", content)
+                    (self.output_title(), content)
                 }
                 OutputMode::WorktreeDiff => {
                     let content = self
@@ -390,19 +401,19 @@ impl Dashboard {
                         .unwrap_or_else(|| {
                             "No worktree diff available for the selected session.".to_string()
                         });
-                    (" Diff ", content)
+                    (" Diff ".to_string(), Text::from(content))
                 }
                 OutputMode::ConflictProtocol => {
                     let content = self.selected_conflict_protocol.clone().unwrap_or_else(|| {
                         "No conflicted worktree available for the selected session.".to_string()
                     });
-                    (" Conflict Protocol ", content)
+                    (" Conflict Protocol ".to_string(), Text::from(content))
                 }
             }
         } else {
             (
-                " Output ",
-                "No sessions. Press 'n' to start one.".to_string(),
+                self.output_title(),
+                Text::from("No sessions. Press 'n' to start one."),
             )
         };
 
@@ -449,6 +460,50 @@ impl Dashboard {
             .scroll((self.output_scroll_offset as u16, 0))
             .wrap(Wrap { trim: false });
         frame.render_widget(additions, column_chunks[1]);
+    }
+
+    fn output_title(&self) -> String {
+        if let Some(input) = self.search_input.as_ref() {
+            return format!(" Output /{input}_ ");
+        }
+
+        if let Some(query) = self.search_query.as_ref() {
+            let total = self.search_matches.len();
+            let current = if total == 0 {
+                0
+            } else {
+                self.selected_search_match.min(total.saturating_sub(1)) + 1
+            };
+            return format!(" Output /{query} {current}/{total} ");
+        }
+
+        " Output ".to_string()
+    }
+
+    fn render_searchable_output(&self, lines: &[OutputLine]) -> Text<'static> {
+        let Some(query) = self.search_query.as_deref() else {
+            return Text::from(
+                lines
+                    .iter()
+                    .map(|line| Line::from(line.text.clone()))
+                    .collect::<Vec<_>>(),
+            );
+        };
+
+        Text::from(
+            lines
+                .iter()
+                .enumerate()
+                .map(|(index, line)| {
+                    highlight_output_line(
+                        &line.text,
+                        query,
+                        self.search_matches.get(self.selected_search_match).copied() == Some(index),
+                        self.theme_palette(),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        )
     }
 
     fn render_metrics(&self, frame: &mut Frame, area: Rect) {
@@ -531,15 +586,32 @@ impl Dashboard {
     }
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
-        let text = format!(
+        let base_text = format!(
             " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
-        let text = if let Some(note) = self.operator_note.as_ref() {
-            format!(" {} |{}", truncate_for_dashboard(note, 96), text)
+
+        let search_prefix = if let Some(input) = self.search_input.as_ref() {
+            format!(" /{input}_ | [Enter] apply [Esc] cancel |")
+        } else if let Some(query) = self.search_query.as_ref() {
+            let total = self.search_matches.len();
+            let current = if total == 0 {
+                0
+            } else {
+                self.selected_search_match.min(total.saturating_sub(1)) + 1
+            };
+            format!(" /{query} {current}/{total} | [n/N] navigate [Esc] clear |")
         } else {
-            text
+            String::new()
+        };
+
+        let text = if self.search_input.is_some() || self.search_query.is_some() {
+            format!(" {search_prefix}")
+        } else if let Some(note) = self.operator_note.as_ref() {
+            format!(" {} |{}", truncate_for_dashboard(note, 96), base_text)
+        } else {
+            base_text
         };
         let aggregate = self.aggregate_usage();
         let (summary_text, summary_style) = self.aggregate_cost_summary();
@@ -603,6 +675,9 @@ impl Dashboard {
             "  S-Tab   Previous pane",
             "  j/↓     Scroll down",
             "  k/↑     Scroll up",
+            "  /       Search current session output",
+            "  n/N     Next/previous search match when search is active",
+            "  Esc     Clear active search or cancel search input",
             "  +/=     Increase pane size and persist it",
             "  -       Decrease pane size and persist it",
             "  r       Refresh",
@@ -1503,6 +1578,101 @@ impl Dashboard {
         self.show_help = !self.show_help;
     }
 
+    pub fn is_search_mode(&self) -> bool {
+        self.search_input.is_some()
+    }
+
+    pub fn has_active_search(&self) -> bool {
+        self.search_query.is_some()
+    }
+
+    pub fn begin_search(&mut self) {
+        if self.output_mode != OutputMode::SessionOutput {
+            self.set_operator_note("search is only available in session output view".to_string());
+            return;
+        }
+
+        self.search_input = Some(self.search_query.clone().unwrap_or_default());
+        self.set_operator_note("search mode | type a query and press Enter".to_string());
+    }
+
+    pub fn push_search_char(&mut self, ch: char) {
+        if let Some(input) = self.search_input.as_mut() {
+            input.push(ch);
+        }
+    }
+
+    pub fn pop_search_char(&mut self) {
+        if let Some(input) = self.search_input.as_mut() {
+            input.pop();
+        }
+    }
+
+    pub fn cancel_search_input(&mut self) {
+        if self.search_input.take().is_some() {
+            self.set_operator_note("search input cancelled".to_string());
+        }
+    }
+
+    pub fn submit_search(&mut self) {
+        let Some(input) = self.search_input.take() else {
+            return;
+        };
+
+        let query = input.trim().to_string();
+        if query.is_empty() {
+            self.clear_search();
+            return;
+        }
+
+        self.search_query = Some(query.clone());
+        self.recompute_search_matches();
+        if self.search_matches.is_empty() {
+            self.set_operator_note(format!("search /{query} found no matches"));
+        } else {
+            self.set_operator_note(format!(
+                "search /{query} matched {} line(s) | n/N navigate matches",
+                self.search_matches.len()
+            ));
+        }
+    }
+
+    pub fn clear_search(&mut self) {
+        let had_query = self.search_query.take().is_some();
+        let had_input = self.search_input.take().is_some();
+        self.search_matches.clear();
+        self.selected_search_match = 0;
+        if had_query || had_input {
+            self.set_operator_note("cleared output search".to_string());
+        }
+    }
+
+    pub fn next_search_match(&mut self) {
+        if self.search_matches.is_empty() {
+            self.set_operator_note("no output search matches to navigate".to_string());
+            return;
+        }
+
+        self.selected_search_match = (self.selected_search_match + 1) % self.search_matches.len();
+        self.focus_selected_search_match();
+        self.set_operator_note(self.search_navigation_note());
+    }
+
+    pub fn prev_search_match(&mut self) {
+        if self.search_matches.is_empty() {
+            self.set_operator_note("no output search matches to navigate".to_string());
+            return;
+        }
+
+        self.selected_search_match = if self.selected_search_match == 0 {
+            self.search_matches.len() - 1
+        } else {
+            self.selected_search_match - 1
+        };
+        self.focus_selected_search_match();
+        self.set_operator_note(self.search_navigation_note());
+    }
+
     pub fn toggle_auto_dispatch_policy(&mut self) {
         self.cfg.auto_dispatch_unread_handoffs = !self.cfg.auto_dispatch_unread_handoffs;
         match self.cfg.save() {
@@ -1730,6 +1900,8 @@ impl Dashboard {
         let Some(session_id) = self.selected_session_id().map(ToOwned::to_owned) else {
             self.output_scroll_offset = 0;
             self.output_follow = true;
+            self.search_matches.clear();
+            self.selected_search_match = 0;
             return;
         };
 
@@ -1737,6 +1909,7 @@ impl Dashboard {
             Ok(lines) => {
                 self.output_store.replace_lines(&session_id, lines.clone());
                 self.session_output_cache.insert(session_id, lines);
+                self.recompute_search_matches();
             }
             Err(error) => {
                 tracing::warn!("Failed to load session output: {error}");
@@ -1963,6 +2136,54 @@ impl Dashboard {
             .and_then(|session_id| self.session_output_cache.get(session_id))
             .map(Vec::as_slice)
             .unwrap_or(&[])
+    }
+
+    fn recompute_search_matches(&mut self) {
+        let Some(query) = self.search_query.clone() else {
+            self.search_matches.clear();
+            self.selected_search_match = 0;
+            return;
+        };
+
+        self.search_matches = self
+            .selected_output_lines()
+            .iter()
+            .enumerate()
+            .filter_map(|(index, line)| line_matches_query(&line.text, &query).then_some(index))
+            .collect();
+
+        if self.search_matches.is_empty() {
+            self.selected_search_match = 0;
+            return;
+        }
+
+        self.selected_search_match = self
+            .selected_search_match
+            .min(self.search_matches.len().saturating_sub(1));
+        self.focus_selected_search_match();
+    }
+
+    fn focus_selected_search_match(&mut self) {
+        let Some(line_index) = self.search_matches.get(self.selected_search_match).copied() else {
+            return;
+        };
+
+        self.output_follow = false;
+        let viewport_height = self.last_output_height.max(1);
+        let offset = line_index.saturating_sub(viewport_height.saturating_sub(1) / 2);
+        self.output_scroll_offset = offset.min(self.max_output_scroll());
+    }
+
+    fn search_navigation_note(&self) -> String {
+        let query = self.search_query.as_deref().unwrap_or_default();
+        let total = self.search_matches.len();
+        let current = if total == 0 {
+            0
+        } else {
+            self.selected_search_match.min(total.saturating_sub(1)) + 1
+        };
+
+        format!("search /{query} match {current}/{total}")
     }
 
     fn sync_output_scroll(&mut self, viewport_height: usize) {
@@ -2736,6 +2957,60 @@ fn configured_pane_size(cfg: &Config, layout: PaneLayout) -> u16 {
     };
 
     configured.clamp(MIN_PANE_SIZE_PERCENT, MAX_PANE_SIZE_PERCENT)
+}
+
+fn line_matches_query(text: &str, query: &str) -> bool {
+    if query.is_empty() {
+        return false;
+    }
+
+    text.contains(query)
+}
+
+fn highlight_output_line(
+    text: &str,
+    query: &str,
+    is_current_match: bool,
+    palette: ThemePalette,
+) -> Line<'static> {
+    if query.is_empty() {
+        return Line::from(text.to_string());
+    }
+
+    let mut spans = Vec::new();
+    let mut cursor = 0;
+    let mut search_start = 0;
+
+    while let Some(relative_index) = text[search_start..].find(query) {
+        let start = search_start + relative_index;
+        let end = start + query.len();
+
+        if start > cursor {
+            spans.push(Span::raw(text[cursor..start].to_string()));
+        }
+
+        let match_style = if is_current_match {
+            Style::default()
+                .bg(palette.accent)
+                .fg(Color::Black)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().bg(Color::Yellow).fg(Color::Black)
+        };
+        spans.push(Span::styled(text[start..end].to_string(), match_style));
+        cursor = end;
+        search_start = end;
+    }
+
+    if cursor < text.len() {
+        spans.push(Span::raw(text[cursor..].to_string()));
+    }
+
+    if spans.is_empty() {
+        Line::from(text.to_string())
+    } else {
+        Line::from(spans)
+    }
 }
 
 fn build_worktree_diff_columns(patch: &str) -> WorktreeDiffColumns {
@@ -3783,6 +4058,120 @@ diff --git a/src/next.rs b/src/next.rs
         Ok(())
     }
 
+    #[test]
+    fn submit_search_tracks_matches_and_sets_navigation_note() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                None,
+                1,
+                1,
+            )],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![
+                OutputLine {
+                    stream: OutputStream::Stdout,
+                    text: "alpha".to_string(),
+                },
+                OutputLine {
+                    stream: OutputStream::Stdout,
+                    text: "beta".to_string(),
+                },
+                OutputLine {
+                    stream: OutputStream::Stdout,
+                    text: "alpha tail".to_string(),
+                },
+            ],
+        );
+        dashboard.last_output_height = 2;
+
+        dashboard.begin_search();
+        for ch in "alpha".chars() {
+            dashboard.push_search_char(ch);
+        }
+        dashboard.submit_search();
+
+        assert_eq!(dashboard.search_query.as_deref(), Some("alpha"));
+        assert_eq!(dashboard.search_matches, vec![0, 2]);
+        assert_eq!(dashboard.selected_search_match, 0);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("search /alpha matched 2 line(s) | n/N navigate matches")
+        );
+    }
+
+    #[test]
+    fn next_search_match_wraps_and_updates_scroll_offset() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                None,
+                1,
+                1,
+            )],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![
+                OutputLine {
+                    stream: OutputStream::Stdout,
+                    text: "alpha".to_string(),
+                },
+                OutputLine {
+                    stream: OutputStream::Stdout,
+                    text: "beta".to_string(),
+                },
+                OutputLine {
+                    stream: OutputStream::Stdout,
+                    text: "alpha tail".to_string(),
+                },
+            ],
+        );
+        dashboard.search_query = Some("alpha".to_string());
+        dashboard.last_output_height = 1;
+        dashboard.recompute_search_matches();
+
+        dashboard.next_search_match();
+        assert_eq!(dashboard.selected_search_match, 1);
+        assert_eq!(dashboard.output_scroll_offset, 2);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("search /alpha match 2/2")
+        );
+
+        dashboard.next_search_match();
+        assert_eq!(dashboard.selected_search_match, 0);
+        assert_eq!(dashboard.output_scroll_offset, 0);
+    }
+
+    #[test]
+    fn clear_search_resets_active_query_and_matches() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.search_input = Some("draft".to_string());
+        dashboard.search_query = Some("alpha".to_string());
+        dashboard.search_matches = vec![1, 3];
+        dashboard.selected_search_match = 1;
+
+        dashboard.clear_search();
+
+        assert!(dashboard.search_input.is_none());
+        assert!(dashboard.search_query.is_none());
+        assert!(dashboard.search_matches.is_empty());
+        assert_eq!(dashboard.selected_search_match, 0);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("cleared output search")
+        );
+    }
+
     #[tokio::test]
     async fn stop_selected_uses_session_manager_transition() -> Result<()> {
         let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
@@ -4516,6 +4905,10 @@ diff --git a/src/next.rs b/src/next.rs
             output_follow: true,
             output_scroll_offset: 0,
             last_output_height: 0,
+            search_input: None,
+            search_query: None,
+            search_matches: Vec::new(),
+            selected_search_match: 0,
             session_table_state,
         }
     }

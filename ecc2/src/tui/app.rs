@@ -27,6 +27,24 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
 
         if event::poll(Duration::from_millis(250))? {
             if let Event::Key(key) = event::read()? {
+                if dashboard.is_search_mode() {
+                    match (key.modifiers, key.code) {
+                        (KeyModifiers::CONTROL, KeyCode::Char('c')) => break,
+                        (_, KeyCode::Esc) => dashboard.cancel_search_input(),
+                        (_, KeyCode::Enter) => dashboard.submit_search(),
+                        (_, KeyCode::Backspace) => dashboard.pop_search_char(),
+                        (modifiers, KeyCode::Char(ch))
+                            if !modifiers.contains(KeyModifiers::CONTROL)
+                                && !modifiers.contains(KeyModifiers::ALT) =>
+                        {
+                            dashboard.push_search_char(ch);
+                        }
+                        _ => {}
+                    }
+
+                    continue;
+                }
+
                 match (key.modifiers, key.code) {
                     (KeyModifiers::CONTROL, KeyCode::Char('c')) => break,
                     (_, KeyCode::Char('q')) => break,
@@ -38,6 +56,14 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
                     (_, KeyCode::Char('-')) => dashboard.decrease_pane_size(),
                     (_, KeyCode::Char('j')) | (_, KeyCode::Down) => dashboard.scroll_down(),
                     (_, KeyCode::Char('k')) | (_, KeyCode::Up) => dashboard.scroll_up(),
+                    (_, KeyCode::Char('/')) => dashboard.begin_search(),
+                    (_, KeyCode::Esc) => dashboard.clear_search(),
+                    (_, KeyCode::Char('n')) if dashboard.has_active_search() => {
+                        dashboard.next_search_match()
+                    }
+                    (_, KeyCode::Char('N')) if dashboard.has_active_search() => {
+                        dashboard.prev_search_match()
+                    }
                     (_, KeyCode::Char('n')) => dashboard.new_session().await,
                     (_, KeyCode::Char('a')) => dashboard.assign_selected().await,
                     (_, KeyCode::Char('b')) => dashboard.rebalance_selected_team().await,
