@@ -1705,6 +1705,36 @@ impl StateStore {
         })
     }
 
+    pub fn list_tool_logs_for_session(&self, session_id: &str) -> Result<Vec<ToolLogEntry>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, session_id, tool_name, input_summary, input_params_json, output_summary, trigger_summary, duration_ms, risk_score, timestamp
+             FROM tool_log
+             WHERE session_id = ?1
+             ORDER BY timestamp ASC, id ASC",
+        )?;
+
+        let entries = stmt
+            .query_map(rusqlite::params![session_id], |row| {
+                Ok(ToolLogEntry {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    tool_name: row.get(2)?,
+                    input_summary: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
+                    input_params_json: row
+                        .get::<_, Option<String>>(4)?
+                        .unwrap_or_else(|| "{}".to_string()),
+                    output_summary: row.get::<_, Option<String>>(5)?.unwrap_or_default(),
+                    trigger_summary: row.get::<_, Option<String>>(6)?.unwrap_or_default(),
+                    duration_ms: row.get::<_, Option<u64>>(7)?.unwrap_or_default(),
+                    risk_score: row.get::<_, Option<f64>>(8)?.unwrap_or_default(),
+                    timestamp: row.get(9)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(entries)
+    }
+
     pub fn list_file_activity(
         &self,
         session_id: &str,
