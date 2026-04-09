@@ -470,6 +470,8 @@ impl Dashboard {
             "Approvals",
             "Backlog",
             "Tokens",
+            "Tools",
+            "Files",
             "Duration",
         ])
         .style(Style::default().add_modifier(Modifier::BOLD));
@@ -481,6 +483,8 @@ impl Dashboard {
             Constraint::Length(10),
             Constraint::Length(7),
             Constraint::Length(8),
+            Constraint::Length(7),
+            Constraint::Length(7),
             Constraint::Length(8),
         ];
 
@@ -4742,6 +4746,8 @@ fn session_row(
                 .add_modifier(Modifier::BOLD)
         }),
         Cell::from(session.metrics.tokens_used.to_string()),
+        Cell::from(session.metrics.tool_calls.to_string()),
+        Cell::from(session.metrics.files_changed.to_string()),
         Cell::from(format_duration(session.metrics.duration_secs)),
     ])
 }
@@ -5253,9 +5259,10 @@ mod tests {
             timestamp: Utc::now(),
         }];
 
-        let rendered = render_dashboard_text(dashboard, 180, 24);
+        let rendered = render_dashboard_text(dashboard, 220, 24);
         assert!(rendered.contains("ID"));
         assert!(rendered.contains("Branch"));
+        assert!(rendered.contains("Tool Files"));
         assert!(rendered.contains("Total 2"));
         assert!(rendered.contains("Running 1"));
         assert!(rendered.contains("Completed 1"));
