@@ -40,7 +40,7 @@ pub struct Config {
     pub risk_thresholds: RiskThresholds,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Theme {
     Dark,
     Light,
