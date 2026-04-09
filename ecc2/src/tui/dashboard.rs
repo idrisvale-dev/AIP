@@ -888,6 +888,65 @@ impl Dashboard {
         }
     }
 
+    fn auto_split_layout_after_spawn(&mut self, spawned_count: usize) -> Option<String> {
+        let config_path = crate::config::Config::config_path();
+        self.auto_split_layout_after_spawn_with_save(spawned_count, &config_path, |cfg| cfg.save())
+    }
+
+    fn auto_split_layout_after_spawn_with_save<F>(
+        &mut self,
+        spawned_count: usize,
+        config_path: &std::path::Path,
+        save: F,
+    ) -> Option<String>
+    where
+        F: FnOnce(&Config) -> anyhow::Result<()>,
+    {
+        if spawned_count <= 1 {
+            return None;
+        }
+
+        let live_session_count = self.active_session_count();
+        let target_layout = recommended_spawn_layout(live_session_count);
+        if self.cfg.pane_layout == target_layout {
+            self.selected_pane = Pane::Sessions;
+            self.ensure_selected_pane_visible();
+            return Some(format!(
+                "auto-focused sessions in {} layout for {} live session(s)",
+                pane_layout_name(target_layout),
+                live_session_count
+            ));
+        }
+
+        let previous_layout = self.cfg.pane_layout;
+        let previous_pane_size = self.pane_size_percent;
+        let previous_selected_pane = self.selected_pane;
+
+        self.cfg.pane_layout = target_layout;
+        self.pane_size_percent = configured_pane_size(&self.cfg, target_layout);
+        self.persist_current_pane_size();
+        self.selected_pane = Pane::Sessions;
+        self.ensure_selected_pane_visible();
+
+        match save(&self.cfg) {
+            Ok(()) => Some(format!(
+                "auto-split {} layout for {} live session(s)",
+                pane_layout_name(target_layout),
+                live_session_count
+            )),
+            Err(error) => {
+                self.cfg.pane_layout = previous_layout;
+                self.pane_size_percent = previous_pane_size;
+                self.selected_pane = previous_selected_pane;
+                Some(format!(
+                    "spawned {} session(s) but failed to persist auto-split layout to {}: {error}",
+                    spawned_count,
+                    config_path.display()
+                ))
+            }
+        }
+    }
+
     fn adjust_pane_size_with_save<F>(
         &mut self,
         delta: isize,
@@ -1923,7 +1982,7 @@ impl Dashboard {
                 Ok(session_id) => session_id,
                 Err(error) => {
                     self.refresh_after_spawn(created_ids.first().map(String::as_str));
-                    let summary = if created_ids.is_empty() {
+                    let mut summary = if created_ids.is_empty() {
                         format!("spawn failed: {error}")
                     } else {
                         format!(
@@ -1932,6 +1991,11 @@ impl Dashboard {
                             plan.spawn_count
                         )
                     };
+                    if let Some(layout_note) = self.auto_split_layout_after_spawn(created_ids.len())
+                    {
+                        summary.push_str(" | ");
+                        summary.push_str(&layout_note);
+                    }
                     self.set_operator_note(summary);
                     return;
                 }
@@ -1963,7 +2027,12 @@ impl Dashboard {
         }
 
         self.refresh_after_spawn(created_ids.first().map(String::as_str));
-        self.set_operator_note(build_spawn_note(&plan, created_ids.len()));
+        let mut note = build_spawn_note(&plan, created_ids.len());
+        if let Some(layout_note) = self.auto_split_layout_after_spawn(created_ids.len()) {
+            note.push_str(" | ");
+            note.push_str(&layout_note);
+        }
+        self.set_operator_note(note);
     }
 
     pub fn clear_search(&mut self) {
@@ -3851,6 +3920,22 @@ fn configured_pane_size(cfg: &Config, layout: PaneLayout) -> u16 {
     };
 
     configured.clamp(MIN_PANE_SIZE_PERCENT, MAX_PANE_SIZE_PERCENT)
+}
+
+fn recommended_spawn_layout(live_session_count: usize) -> PaneLayout {
+    if live_session_count >= 3 {
+        PaneLayout::Grid
+    } else {
+        PaneLayout::Vertical
+    }
+}
+
+fn pane_layout_name(layout: PaneLayout) -> &'static str {
+    match layout {
+        PaneLayout::Horizontal => "horizontal",
+        PaneLayout::Vertical => "vertical",
+        PaneLayout::Grid => "grid",
+    }
 }
 
 fn compile_search_regex(query: &str) -> Result<Regex, regex::Error> {
@@ -6355,6 +6440,91 @@ diff --git a/src/next.rs b/src/next.rs
 
         assert_eq!(dashboard.cfg.pane_layout, PaneLayout::Grid);
         assert_eq!(dashboard.pane_size_percent, 63);
+    }
+
+    #[test]
+    fn auto_split_layout_after_spawn_prefers_vertical_for_two_live_sessions() {
+        let mut dashboard = test_dashboard(
+            vec![
+                sample_session("running-1", "planner", SessionState::Running, None, 1, 1),
+                sample_session("idle-1", "planner", SessionState::Idle, None, 1, 1),
+            ],
+            0,
+        );
+
+        let note = dashboard.auto_split_layout_after_spawn_with_save(
+            2,
+            Path::new("/tmp/ecc2-noop.toml"),
+            |_| Ok(()),
+        );
+
+        assert_eq!(dashboard.cfg.pane_layout, PaneLayout::Vertical);
+        assert_eq!(
+            dashboard.pane_size_percent,
+            dashboard.cfg.linear_pane_size_percent
+        );
+        assert_eq!(dashboard.selected_pane, Pane::Sessions);
+        assert_eq!(
+            note.as_deref(),
+            Some("auto-split vertical layout for 2 live session(s)")
+        );
+    }
+
+    #[test]
+    fn auto_split_layout_after_spawn_prefers_grid_for_three_live_sessions() {
+        let mut dashboard = test_dashboard(
+            vec![
+                sample_session("pending-1", "planner", SessionState::Pending, None, 1, 1),
+                sample_session("running-1", "planner", SessionState::Running, None, 1, 1),
+                sample_session("idle-1", "planner", SessionState::Idle, None, 1, 1),
+            ],
+            1,
+        );
+        dashboard.selected_pane = Pane::Output;
+
+        let note = dashboard.auto_split_layout_after_spawn_with_save(
+            2,
+            Path::new("/tmp/ecc2-noop.toml"),
+            |_| Ok(()),
+        );
+
+        assert_eq!(dashboard.cfg.pane_layout, PaneLayout::Grid);
+        assert_eq!(
+            dashboard.pane_size_percent,
+            dashboard.cfg.grid_pane_size_percent
+        );
+        assert_eq!(dashboard.selected_pane, Pane::Sessions);
+        assert_eq!(
+            note.as_deref(),
+            Some("auto-split grid layout for 3 live session(s)")
+        );
+    }
+
+    #[test]
+    fn auto_split_layout_after_spawn_focuses_sessions_when_layout_already_matches() {
+        let mut dashboard = test_dashboard(
+            vec![
+                sample_session("pending-1", "planner", SessionState::Pending, None, 1, 1),
+                sample_session("running-1", "planner", SessionState::Running, None, 1, 1),
+                sample_session("idle-1", "planner", SessionState::Idle, None, 1, 1),
+            ],
+            1,
+        );
+        dashboard.cfg.pane_layout = PaneLayout::Grid;
+        dashboard.selected_pane = Pane::Output;
+
+        let note = dashboard.auto_split_layout_after_spawn_with_save(
+            3,
+            Path::new("/tmp/ecc2-noop.toml"),
+            |_| Ok(()),
+        );
+
+        assert_eq!(dashboard.cfg.pane_layout, PaneLayout::Grid);
+        assert_eq!(dashboard.selected_pane, Pane::Sessions);
+        assert_eq!(
+            note.as_deref(),
+            Some("auto-focused sessions in grid layout for 3 live session(s)")
+        );
     }
 
     #[test]
