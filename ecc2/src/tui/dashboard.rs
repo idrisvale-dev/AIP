@@ -192,6 +192,7 @@ struct AggregateUsage {
 struct DelegatedChildSummary {
     session_id: String,
     state: SessionState,
+    worktree_health: Option<worktree::WorktreeHealth>,
     approval_backlog: usize,
     handoff_backlog: usize,
     tokens_used: u64,
@@ -2514,6 +2515,10 @@ impl Dashboard {
                             }
 
                             route_candidates.push(DelegatedChildSummary {
+                                worktree_health: self
+                                    .worktree_health_by_session
+                                    .get(&child_id)
+                                    .copied(),
                                 approval_backlog,
                                 handoff_backlog,
                                 state: state.clone(),
@@ -2534,6 +2539,10 @@ impl Dashboard {
                                     .map(|line| truncate_for_dashboard(&line.text, 48)),
                             });
                             delegated.push(DelegatedChildSummary {
+                                worktree_health: self
+                                    .worktree_health_by_session
+                                    .get(&session.id)
+                                    .copied(),
                                 approval_backlog,
                                 handoff_backlog,
                                 state,
@@ -2567,6 +2576,14 @@ impl Dashboard {
                 self.selected_team_summary = if team.total > 0 { Some(team) } else { None };
                 self.selected_route_preview =
                     self.build_route_preview(team.total, &route_candidates);
+                delegated.sort_by_key(|delegate| {
+                    (
+                        delegate_attention_priority(delegate),
+                        std::cmp::Reverse(delegate.approval_backlog),
+                        std::cmp::Reverse(delegate.handoff_backlog),
+                        delegate.session_id.clone(),
+                    )
+                });
                 delegated.truncate(3);
                 delegated
             }
@@ -3019,16 +3036,26 @@ impl Dashboard {
                 lines.push("Delegates".to_string());
                 for child in &self.selected_child_sessions {
                     let mut child_line = format!(
-                        "- {} [{}] | approvals {} | backlog {} | progress {} tok / {} files / {} | task {}",
+                        "- {} [{}] | next {}",
                         format_session_id(&child.session_id),
                         session_state_label(&child.state),
+                        delegate_next_action(child)
+                    );
+                    if let Some(worktree_health) = child.worktree_health {
+                        child_line.push_str(&format!(
+                            " | worktree {}",
+                            delegate_worktree_health_label(worktree_health)
+                        ));
+                    }
+                    child_line.push_str(&format!(
+                        " | approvals {} | backlog {} | progress {} tok / {} files / {} | task {}",
                         child.approval_backlog,
                         child.handoff_backlog,
                         format_token_count(child.tokens_used),
                         child.files_changed,
                         format_duration(child.duration_secs),
                         child.task_preview
-                    );
+                    ));
                     if let Some(branch) = child.branch.as_ref() {
                         child_line.push_str(&format!(" | branch {branch}"));
                     }
@@ -4194,6 +4221,65 @@ fn assignment_action_label(action: manager::AssignmentAction) -> &'static str {
     }
 }
 
+fn delegate_worktree_health_label(health: worktree::WorktreeHealth) -> &'static str {
+    match health {
+        worktree::WorktreeHealth::Clear => "clear",
+        worktree::WorktreeHealth::InProgress => "in progress",
+        worktree::WorktreeHealth::Conflicted => "conflicted",
+    }
+}
+
+fn delegate_next_action(delegate: &DelegatedChildSummary) -> &'static str {
+    if delegate.worktree_health == Some(worktree::WorktreeHealth::Conflicted) {
+        return "resolve conflict";
+    }
+    if delegate.approval_backlog > 0 {
+        return "review approvals";
+    }
+    if delegate.handoff_backlog > 0 && delegate.state == SessionState::Idle {
+        return "process handoff";
+    }
+    if delegate.handoff_backlog > 0 {
+        return "drain backlog";
+    }
+    if delegate.worktree_health == Some(worktree::WorktreeHealth::InProgress) {
+        return "finish worktree changes";
+    }
+    match delegate.state {
+        SessionState::Pending => "wait for startup",
+        SessionState::Running => "let it run",
+        SessionState::Idle => "assign next task",
+        SessionState::Failed => "inspect failure",
+        SessionState::Stopped => "resume or reassign",
+        SessionState::Completed => "merge or cleanup",
+    }
+}
+
+fn delegate_attention_priority(delegate: &DelegatedChildSummary) -> u8 {
+    if delegate.worktree_health == Some(worktree::WorktreeHealth::Conflicted) {
+        return 0;
+    }
+    if delegate.approval_backlog > 0 {
+        return 1;
+    }
+    if matches!(delegate.state, SessionState::Failed | SessionState::Stopped) {
+        return 2;
+    }
+    if delegate.handoff_backlog > 0 {
+        return 3;
+    }
+    if delegate.worktree_health == Some(worktree::WorktreeHealth::InProgress) {
+        return 4;
+    }
+    match delegate.state {
+        SessionState::Pending => 5,
+        SessionState::Running => 6,
+        SessionState::Idle => 7,
+        SessionState::Completed => 8,
+        SessionState::Failed | SessionState::Stopped => unreachable!(),
+    }
+}
+
 fn session_branch(session: &Session) -> String {
     session
         .worktree
@@ -4524,6 +4610,7 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.selected_child_sessions = vec![DelegatedChildSummary {
             session_id: "delegate-12345678".to_string(),
             state: SessionState::Running,
+            worktree_health: Some(worktree::WorktreeHealth::Conflicted),
             approval_backlog: 1,
             handoff_backlog: 2,
             tokens_used: 1_280,
@@ -4537,7 +4624,7 @@ diff --git a/src/next.rs b/src/next.rs
         let text = dashboard.selected_session_metrics_text();
         assert!(
             text.contains(
-                "- delegate [Running] | approvals 1 | backlog 2 | progress 1,280 tok / 3 files / 00:00:12 | task Implement rust tui delegate board | branch ecc/delegate-12345678"
+                "- delegate [Running] | next resolve conflict | worktree conflicted | approvals 1 | backlog 2 | progress 1,280 tok / 3 files / 00:00:12 | task Implement rust tui delegate board | branch ecc/delegate-12345678"
             )
         );
         assert!(text.contains("  last output Investigating pane selection behavior"));
@@ -5089,10 +5176,18 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard
             .approval_queue_counts
             .insert("worker-12345678".into(), 2);
+        dashboard.worktree_health_by_session.insert(
+            "worker-12345678".into(),
+            worktree::WorktreeHealth::InProgress,
+        );
 
         dashboard.sync_selected_lineage();
 
         assert_eq!(dashboard.selected_child_sessions.len(), 1);
+        assert_eq!(
+            dashboard.selected_child_sessions[0].worktree_health,
+            Some(worktree::WorktreeHealth::InProgress)
+        );
         assert_eq!(dashboard.selected_child_sessions[0].approval_backlog, 2);
         assert_eq!(dashboard.selected_child_sessions[0].tokens_used, 128);
         assert_eq!(dashboard.selected_child_sessions[0].files_changed, 2);
@@ -5110,6 +5205,73 @@ diff --git a/src/next.rs b/src/next.rs
                 .last_output_preview
                 .as_deref(),
             Some("Reviewing delegate metrics board layout")
+        );
+    }
+
+    #[test]
+    fn sync_selected_lineage_prioritizes_conflicted_delegate_rows() {
+        let lead = sample_session(
+            "lead-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/lead"),
+            512,
+            42,
+        );
+        let conflicted = sample_session(
+            "worker-conflict",
+            "planner",
+            SessionState::Running,
+            Some("ecc/conflict"),
+            128,
+            12,
+        );
+        let idle = sample_session(
+            "worker-idle",
+            "planner",
+            SessionState::Idle,
+            Some("ecc/idle"),
+            64,
+            6,
+        );
+
+        let mut dashboard = test_dashboard(vec![lead.clone(), conflicted.clone(), idle.clone()], 0);
+        dashboard.db.insert_session(&lead).unwrap();
+        dashboard.db.insert_session(&conflicted).unwrap();
+        dashboard.db.insert_session(&idle).unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-conflict",
+                "{\"task\":\"Handle conflict\",\"context\":\"Delegated from lead\"}",
+                "task_handoff",
+            )
+            .unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-idle",
+                "{\"task\":\"Idle follow-up\",\"context\":\"Delegated from lead\"}",
+                "task_handoff",
+            )
+            .unwrap();
+        dashboard.worktree_health_by_session.insert(
+            "worker-conflict".into(),
+            worktree::WorktreeHealth::Conflicted,
+        );
+
+        dashboard.sync_selected_lineage();
+
+        assert_eq!(dashboard.selected_child_sessions.len(), 2);
+        assert_eq!(
+            dashboard.selected_child_sessions[0].session_id,
+            "worker-conflict"
+        );
+        assert_eq!(
+            dashboard.selected_child_sessions[0].worktree_health,
+            Some(worktree::WorktreeHealth::Conflicted)
         );
     }
 
