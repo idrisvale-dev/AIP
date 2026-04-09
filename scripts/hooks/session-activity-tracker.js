@@ -62,6 +62,49 @@ function pushPathCandidate(paths, value) {
   }
 }
 
+function pushFileEvent(events, value, action) {
+  const candidate = String(value || '').trim();
+  if (!candidate) {
+    return;
+  }
+  if (/^(https?:\/\/|app:\/\/|plugin:\/\/|mcp:\/\/)/i.test(candidate)) {
+    return;
+  }
+  if (!events.some(event => event.path === candidate && event.action === action)) {
+    events.push({ path: candidate, action });
+  }
+}
+
+function inferDefaultFileAction(toolName) {
+  const normalized = String(toolName || '').trim().toLowerCase();
+  if (normalized.includes('read')) {
+    return 'read';
+  }
+  if (normalized.includes('write')) {
+    return 'create';
+  }
+  if (normalized.includes('edit')) {
+    return 'modify';
+  }
+  if (normalized.includes('delete') || normalized.includes('remove')) {
+    return 'delete';
+  }
+  if (normalized.includes('move') || normalized.includes('rename')) {
+    return 'move';
+  }
+  return 'touch';
+}
+
+function actionForFileKey(toolName, key) {
+  if (key === 'source_path' || key === 'old_file_path') {
+    return 'move';
+  }
+  if (key === 'destination_path' || key === 'new_file_path') {
+    return 'move';
+  }
+  return inferDefaultFileAction(toolName);
+}
+
 function collectFilePaths(value, paths) {
   if (!value) {
     return;
@@ -97,6 +140,43 @@ function extractFilePaths(toolInput) {
   }
   collectFilePaths(toolInput, paths);
   return paths;
+}
+
+function collectFileEvents(toolName, value, events, key = null) {
+  if (!value) {
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectFileEvents(toolName, entry, events, key);
+    }
+    return;
+  }
+
+  if (typeof value === 'string') {
+    pushFileEvent(events, value, actionForFileKey(toolName, key));
+    return;
+  }
+
+  if (typeof value !== 'object') {
+    return;
+  }
+
+  for (const [nestedKey, nested] of Object.entries(value)) {
+    if (FILE_PATH_KEYS.has(nestedKey)) {
+      collectFileEvents(toolName, nested, events, nestedKey);
+    }
+  }
+}
+
+function extractFileEvents(toolName, toolInput) {
+  const events = [];
+  if (!toolInput || typeof toolInput !== 'object') {
+    return events;
+  }
+  collectFileEvents(toolName, toolInput, events);
+  return events;
 }
 
 function summarizeInput(toolName, toolInput, filePaths) {
@@ -155,6 +235,7 @@ function buildActivityRow(input, env = process.env) {
 
   const toolInput = input?.tool_input || {};
   const filePaths = extractFilePaths(toolInput);
+  const fileEvents = extractFileEvents(toolName, toolInput);
 
   return {
     id: `tool-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`,
@@ -165,6 +246,7 @@ function buildActivityRow(input, env = process.env) {
     output_summary: summarizeOutput(input?.tool_output),
     duration_ms: 0,
     file_paths: filePaths,
+    file_events: fileEvents,
   };
 }
 
@@ -205,6 +287,7 @@ if (require.main === module) {
 
 module.exports = {
   buildActivityRow,
+  extractFileEvents,
   extractFilePaths,
   summarizeInput,
   summarizeOutput,

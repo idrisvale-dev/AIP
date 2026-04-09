@@ -95,8 +95,37 @@ function runTests() {
     assert.strictEqual(row.session_id, 'ecc-session-1234');
     assert.strictEqual(row.tool_name, 'Write');
     assert.deepStrictEqual(row.file_paths, ['src/app.rs']);
+    assert.deepStrictEqual(row.file_events, [{ path: 'src/app.rs', action: 'create' }]);
     assert.ok(row.id, 'Expected stable event id');
     assert.ok(row.timestamp, 'Expected timestamp');
+
+    fs.rmSync(tmpHome, { recursive: true, force: true });
+  }) ? passed++ : failed++);
+
+  (test('captures typed move file events from source/destination inputs', () => {
+    const tmpHome = makeTempDir();
+    const input = {
+      tool_name: 'Move',
+      tool_input: {
+        source_path: 'src/old.rs',
+        destination_path: 'src/new.rs',
+      },
+      tool_output: { output: 'moved file' },
+    };
+    const result = runScript(input, {
+      ...withTempHome(tmpHome),
+      CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
+      ECC_SESSION_ID: 'ecc-session-5678',
+    });
+    assert.strictEqual(result.code, 0);
+
+    const metricsFile = path.join(tmpHome, '.claude', 'metrics', 'tool-usage.jsonl');
+    const row = JSON.parse(fs.readFileSync(metricsFile, 'utf8').trim());
+    assert.deepStrictEqual(row.file_paths, ['src/old.rs', 'src/new.rs']);
+    assert.deepStrictEqual(row.file_events, [
+      { path: 'src/old.rs', action: 'move' },
+      { path: 'src/new.rs', action: 'move' },
+    ]);
 
     fs.rmSync(tmpHome, { recursive: true, force: true });
   }) ? passed++ : failed++);

@@ -11,7 +11,9 @@ use crate::config::Config;
 use crate::observability::{ToolCallEvent, ToolLogEntry, ToolLogPage};
 
 use super::output::{OutputLine, OutputStream, OUTPUT_BUFFER_LIMIT};
-use super::{FileActivityEntry, Session, SessionMessage, SessionMetrics, SessionState};
+use super::{
+    FileActivityAction, FileActivityEntry, Session, SessionMessage, SessionMetrics, SessionState,
+};
 
 pub struct StateStore {
     conn: Connection,
@@ -146,7 +148,8 @@ impl StateStore {
                 duration_ms INTEGER,
                 risk_score REAL DEFAULT 0.0,
                 timestamp TEXT NOT NULL,
-                file_paths_json TEXT NOT NULL DEFAULT '[]'
+                file_paths_json TEXT NOT NULL DEFAULT '[]',
+                file_events_json TEXT NOT NULL DEFAULT '[]'
             );
 
             CREATE TABLE IF NOT EXISTS messages (
@@ -268,6 +271,15 @@ impl StateStore {
                     [],
                 )
                 .context("Failed to add file_paths_json column to tool_log table")?;
+        }
+
+        if !self.has_column("tool_log", "file_events_json")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE tool_log ADD COLUMN file_events_json TEXT NOT NULL DEFAULT '[]'",
+                    [],
+                )
+                .context("Failed to add file_events_json column to tool_log table")?;
         }
 
         if !self.has_column("daemon_activity", "last_dispatch_deferred")? {
@@ -738,7 +750,15 @@ impl StateStore {
             #[serde(default)]
             file_paths: Vec<String>,
             #[serde(default)]
+            file_events: Vec<ToolActivityFileEvent>,
+            #[serde(default)]
             timestamp: String,
+        }
+
+        #[derive(serde::Deserialize)]
+        struct ToolActivityFileEvent {
+            path: String,
+            action: String,
         }
 
         let file = File::open(metrics_path)
@@ -773,8 +793,35 @@ impl StateStore {
                 .map(|path| path.trim().to_string())
                 .filter(|path| !path.is_empty())
                 .collect();
+            let file_events: Vec<PersistedFileEvent> = if row.file_events.is_empty() {
+                file_paths
+                    .iter()
+                    .cloned()
+                    .map(|path| PersistedFileEvent {
+                        path,
+                        action: infer_file_activity_action(&row.tool_name),
+                    })
+                    .collect()
+            } else {
+                row.file_events
+                    .into_iter()
+                    .filter_map(|event| {
+                        let path = event.path.trim().to_string();
+                        if path.is_empty() {
+                            return None;
+                        }
+                        Some(PersistedFileEvent {
+                            path,
+                            action: parse_file_activity_action(&event.action)
+                                .unwrap_or_else(|| infer_file_activity_action(&row.tool_name)),
+                        })
+                    })
+                    .collect()
+            };
             let file_paths_json =
                 serde_json::to_string(&file_paths).unwrap_or_else(|_| "[]".to_string());
+            let file_events_json =
+                serde_json::to_string(&file_events).unwrap_or_else(|_| "[]".to_string());
             let timestamp = if row.timestamp.trim().is_empty() {
                 chrono::Utc::now().to_rfc3339()
             } else {
@@ -798,9 +845,10 @@ impl StateStore {
                     duration_ms,
                     risk_score,
                     timestamp,
-                    file_paths_json
+                    file_paths_json,
+                    file_events_json
                  )
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                 rusqlite::params![
                     row.id,
                     row.session_id,
@@ -811,6 +859,7 @@ impl StateStore {
                     risk_score,
                     timestamp,
                     file_paths_json,
+                    file_events_json,
                 ],
             )?;
 
@@ -1487,11 +1536,13 @@ impl StateStore {
         limit: usize,
     ) -> Result<Vec<FileActivityEntry>> {
         let mut stmt = self.conn.prepare(
-            "SELECT session_id, tool_name, input_summary, output_summary, timestamp, file_paths_json
+            "SELECT session_id, tool_name, input_summary, output_summary, timestamp, file_events_json, file_paths_json
              FROM tool_log
              WHERE session_id = ?1
-               AND file_paths_json IS NOT NULL
-               AND file_paths_json != '[]'
+               AND (
+                    (file_events_json IS NOT NULL AND file_events_json != '[]')
+                    OR (file_paths_json IS NOT NULL AND file_paths_json != '[]')
+               )
              ORDER BY timestamp DESC, id DESC",
         )?;
 
@@ -1505,17 +1556,23 @@ impl StateStore {
                     row.get::<_, String>(4)?,
                     row.get::<_, Option<String>>(5)?
                         .unwrap_or_else(|| "[]".to_string()),
+                    row.get::<_, Option<String>>(6)?
+                        .unwrap_or_else(|| "[]".to_string()),
                 ))
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
         let mut events = Vec::new();
-        for (session_id, tool_name, input_summary, output_summary, timestamp, file_paths_json) in
-            rows
+        for (
+            session_id,
+            tool_name,
+            input_summary,
+            output_summary,
+            timestamp,
+            file_events_json,
+            file_paths_json,
+        ) in rows
         {
-            let Ok(paths) = serde_json::from_str::<Vec<String>>(&file_paths_json) else {
-                continue;
-            };
             let occurred_at = chrono::DateTime::parse_from_rfc3339(&timestamp)
                 .unwrap_or_default()
                 .with_timezone(&chrono::Utc);
@@ -1525,16 +1582,28 @@ impl StateStore {
                 output_summary
             };
 
-            for path in paths {
-                let path = path.trim().to_string();
-                if path.is_empty() {
-                    continue;
-                }
+            let persisted = parse_persisted_file_events(&file_events_json).unwrap_or_else(|| {
+                serde_json::from_str::<Vec<String>>(&file_paths_json)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter_map(|path| {
+                        let path = path.trim().to_string();
+                        if path.is_empty() {
+                            return None;
+                        }
+                        Some(PersistedFileEvent {
+                            path,
+                            action: infer_file_activity_action(&tool_name),
+                        })
+                    })
+                    .collect()
+            });
 
+            for event in persisted {
                 events.push(FileActivityEntry {
                     session_id: session_id.clone(),
-                    tool_name: tool_name.clone(),
-                    path,
+                    action: event.action,
+                    path: event.path,
                     summary: summary.clone(),
                     timestamp: occurred_at,
                 });
@@ -1545,6 +1614,62 @@ impl StateStore {
         }
 
         Ok(events)
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct PersistedFileEvent {
+    path: String,
+    action: FileActivityAction,
+}
+
+fn parse_persisted_file_events(value: &str) -> Option<Vec<PersistedFileEvent>> {
+    let events = serde_json::from_str::<Vec<PersistedFileEvent>>(value).ok()?;
+    let events: Vec<PersistedFileEvent> = events
+        .into_iter()
+        .filter_map(|event| {
+            let path = event.path.trim().to_string();
+            if path.is_empty() {
+                return None;
+            }
+            Some(PersistedFileEvent {
+                path,
+                action: event.action,
+            })
+        })
+        .collect();
+    if events.is_empty() {
+        return None;
+    }
+    Some(events)
+}
+
+fn parse_file_activity_action(value: &str) -> Option<FileActivityAction> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "read" => Some(FileActivityAction::Read),
+        "create" => Some(FileActivityAction::Create),
+        "modify" | "edit" | "write" => Some(FileActivityAction::Modify),
+        "move" | "rename" => Some(FileActivityAction::Move),
+        "delete" | "remove" => Some(FileActivityAction::Delete),
+        "touch" => Some(FileActivityAction::Touch),
+        _ => None,
+    }
+}
+
+fn infer_file_activity_action(tool_name: &str) -> FileActivityAction {
+    let tool_name = tool_name.trim().to_ascii_lowercase();
+    if tool_name.contains("read") {
+        FileActivityAction::Read
+    } else if tool_name.contains("write") {
+        FileActivityAction::Create
+    } else if tool_name.contains("edit") {
+        FileActivityAction::Modify
+    } else if tool_name.contains("delete") || tool_name.contains("remove") {
+        FileActivityAction::Delete
+    } else if tool_name.contains("move") || tool_name.contains("rename") {
+        FileActivityAction::Move
+    } else {
+        FileActivityAction::Touch
     }
 }
 
@@ -1803,10 +1928,11 @@ mod tests {
 
         let activity = db.list_file_activity("session-1", 10)?;
         assert_eq!(activity.len(), 3);
-        assert_eq!(activity[0].tool_name, "Write");
+        assert_eq!(activity[0].action, FileActivityAction::Create);
         assert_eq!(activity[0].path, "README.md");
+        assert_eq!(activity[1].action, FileActivityAction::Create);
         assert_eq!(activity[1].path, "src/lib.rs");
-        assert_eq!(activity[2].tool_name, "Read");
+        assert_eq!(activity[2].action, FileActivityAction::Read);
         assert_eq!(activity[2].path, "src/lib.rs");
 
         Ok(())

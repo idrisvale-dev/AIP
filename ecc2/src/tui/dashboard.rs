@@ -5400,25 +5400,19 @@ fn session_state_color(state: &SessionState) -> Color {
 fn file_activity_summary(entry: &FileActivityEntry) -> String {
     format!(
         "{} {}",
-        file_activity_verb(&entry.tool_name),
+        file_activity_verb(entry.action.clone()),
         truncate_for_dashboard(&entry.path, 72)
     )
 }
 
-fn file_activity_verb(tool_name: &str) -> &'static str {
-    let tool_name = tool_name.trim().to_ascii_lowercase();
-    if tool_name.contains("read") {
-        "read"
-    } else if tool_name.contains("write") {
-        "write"
-    } else if tool_name.contains("edit") {
-        "edit"
-    } else if tool_name.contains("delete") || tool_name.contains("remove") {
-        "delete"
-    } else if tool_name.contains("move") || tool_name.contains("rename") {
-        "move"
-    } else {
-        "touch"
+fn file_activity_verb(action: crate::session::FileActivityAction) -> &'static str {
+    match action {
+        crate::session::FileActivityAction::Read => "read",
+        crate::session::FileActivityAction::Create => "create",
+        crate::session::FileActivityAction::Modify => "modify",
+        crate::session::FileActivityAction::Move => "move",
+        crate::session::FileActivityAction::Delete => "delete",
+        crate::session::FileActivityAction::Touch => "touch",
     }
 }
 
@@ -6100,12 +6094,12 @@ mod tests {
         dashboard.toggle_timeline_mode();
         let rendered = dashboard.rendered_output_text(180, 30);
         assert!(rendered.contains("read src/lib.rs"));
-        assert!(rendered.contains("write README.md"));
+        assert!(rendered.contains("create README.md"));
         assert!(!rendered.contains("files touched 2"));
 
         let metrics_text = dashboard.selected_session_metrics_text();
         assert!(metrics_text.contains("Recent file activity"));
-        assert!(metrics_text.contains("write README.md"));
+        assert!(metrics_text.contains("create README.md"));
         assert!(metrics_text.contains("read src/lib.rs"));
 
         let _ = fs::remove_dir_all(root);

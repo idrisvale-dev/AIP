@@ -131,8 +131,19 @@ pub struct SessionMessage {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FileActivityEntry {
     pub session_id: String,
-    pub tool_name: String,
+    pub action: FileActivityAction,
     pub path: String,
     pub summary: String,
     pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum FileActivityAction {
+    Read,
+    Create,
+    Modify,
+    Move,
+    Delete,
+    Touch,
 }
