@@ -227,7 +227,8 @@ impl PaneNavigationConfig {
 }
 
 fn shortcut_matches(spec: &str, key: KeyEvent) -> bool {
-    parse_shortcut(spec).is_some_and(|(modifiers, code)| key.modifiers == modifiers && key.code == code)
+    parse_shortcut(spec)
+        .is_some_and(|(modifiers, code)| key.modifiers == modifiers && key.code == code)
 }
 
 fn parse_shortcut(spec: &str) -> Option<(KeyModifiers, KeyCode)> {

@@ -545,7 +545,9 @@ impl StateStore {
                 .with_timezone(&chrono::Utc);
             let effective_end = match state {
                 SessionState::Pending | SessionState::Running | SessionState::Idle => now,
-                SessionState::Completed | SessionState::Failed | SessionState::Stopped => updated_at,
+                SessionState::Completed | SessionState::Failed | SessionState::Stopped => {
+                    updated_at
+                }
             };
             let duration_secs = effective_end
                 .signed_duration_since(created_at)
@@ -622,7 +624,9 @@ impl StateStore {
                 rusqlite::params![
                     aggregate.input_tokens,
                     aggregate.output_tokens,
-                    aggregate.input_tokens.saturating_add(aggregate.output_tokens),
+                    aggregate
+                        .input_tokens
+                        .saturating_add(aggregate.output_tokens),
                     aggregate.cost_usd,
                     session_id,
                 ],
@@ -1448,8 +1452,12 @@ mod tests {
 
         db.refresh_session_durations()?;
 
-        let running = db.get_session("running-1")?.expect("running session should exist");
-        let completed = db.get_session("done-1")?.expect("completed session should exist");
+        let running = db
+            .get_session("running-1")?
+            .expect("running session should exist");
+        let completed = db
+            .get_session("done-1")?
+            .expect("completed session should exist");
 
         assert!(running.metrics.duration_secs >= 95);
         assert!(completed.metrics.duration_secs >= 75);

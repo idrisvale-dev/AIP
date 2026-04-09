@@ -2746,27 +2746,33 @@ impl Dashboard {
         self.sync_from_store();
     }
 
-    fn sync_runtime_metrics(&mut self) {
+    fn sync_runtime_metrics(&mut self) -> Option<manager::BudgetEnforcementOutcome> {
         if let Err(error) = self.db.refresh_session_durations() {
             tracing::warn!("Failed to refresh session durations: {error}");
         }
 
         let metrics_path = self.cfg.cost_metrics_path();
         let signature = cost_metrics_signature(&metrics_path);
-        if signature == self.last_cost_metrics_signature {
-            return;
+        if signature != self.last_cost_metrics_signature {
+            self.last_cost_metrics_signature = signature;
+            if signature.is_some() {
+                if let Err(error) = self.db.sync_cost_tracker_metrics(&metrics_path) {
+                    tracing::warn!("Failed to sync cost tracker metrics: {error}");
+                }
+            }
         }
 
-        self.last_cost_metrics_signature = signature;
-        if signature.is_some() {
-            if let Err(error) = self.db.sync_cost_tracker_metrics(&metrics_path) {
-                tracing::warn!("Failed to sync cost tracker metrics: {error}");
+        match manager::enforce_budget_hard_limits(&self.db, &self.cfg) {
+            Ok(outcome) => Some(outcome),
+            Err(error) => {
+                tracing::warn!("Failed to enforce budget hard limits: {error}");
+                None
             }
         }
     }
 
     fn sync_from_store(&mut self) {
-        self.sync_runtime_metrics();
+        let budget_enforcement = self.sync_runtime_metrics();
         let selected_id = self.selected_session_id().map(ToOwned::to_owned);
         self.sessions = match self.db.list_sessions() {
             Ok(sessions) => sessions,
@@ -2794,6 +2800,56 @@ impl Dashboard {
         self.sync_selected_messages();
         self.sync_selected_lineage();
         self.refresh_logs();
+        self.sync_budget_alerts();
+
+        if let Some(outcome) =
+            budget_enforcement.filter(|outcome| !outcome.paused_sessions.is_empty())
+        {
+            self.set_operator_note(budget_auto_pause_note(&outcome));
+        }
+    }
+
+    fn sync_budget_alerts(&mut self) {
+        let aggregate = self.aggregate_usage();
+        let thresholds = self.cfg.effective_budget_alert_thresholds();
+        let current_state = aggregate.overall_state;
+        if current_state == self.last_budget_alert_state {
+            return;
+        }
+
+        let previous_state = self.last_budget_alert_state;
+        self.last_budget_alert_state = current_state;
+
+        if current_state <= previous_state {
+            return;
+        }
+
+        let Some(summary_suffix) = current_state.summary_suffix(thresholds) else {
+            return;
+        };
+
+        let token_budget = if self.cfg.token_budget > 0 {
+            format!(
+                "{} / {}",
+                format_token_count(aggregate.total_tokens),
+                format_token_count(self.cfg.token_budget)
+            )
+        } else {
+            format!("{} / no budget", format_token_count(aggregate.total_tokens))
+        };
+        let cost_budget = if self.cfg.cost_budget_usd > 0.0 {
+            format!(
+                "{} / {}",
+                format_currency(aggregate.total_cost_usd),
+                format_currency(self.cfg.cost_budget_usd)
+            )
+        } else {
+            format!("{} / no budget", format_currency(aggregate.total_cost_usd))
+        };
+
+        self.set_operator_note(format!(
+            "{summary_suffix} | tokens {token_budget} | cost {cost_budget}"
+        ));
     }
 
     fn sync_selection(&mut self) {
@@ -4102,49 +4158,6 @@ impl Dashboard {
         (text, aggregate.overall_state.style())
     }
 
-    fn sync_budget_alerts(&mut self) {
-        let aggregate = self.aggregate_usage();
-        let thresholds = self.cfg.effective_budget_alert_thresholds();
-        let current_state = aggregate.overall_state;
-        if current_state == self.last_budget_alert_state {
-            return;
-        }
-
-        let previous_state = self.last_budget_alert_state;
-        self.last_budget_alert_state = current_state;
-
-        if current_state <= previous_state {
-            return;
-        }
-
-        let Some(summary_suffix) = current_state.summary_suffix(thresholds) else {
-            return;
-        };
-
-        let token_budget = if self.cfg.token_budget > 0 {
-            format!(
-                "{} / {}",
-                format_token_count(aggregate.total_tokens),
-                format_token_count(self.cfg.token_budget)
-            )
-        } else {
-            format!("{} / no budget", format_token_count(aggregate.total_tokens))
-        };
-        let cost_budget = if self.cfg.cost_budget_usd > 0.0 {
-            format!(
-                "{} / {}",
-                format_currency(aggregate.total_cost_usd),
-                format_currency(self.cfg.cost_budget_usd)
-            )
-        } else {
-            format!("{} / no budget", format_currency(aggregate.total_cost_usd))
-        };
-
-        self.set_operator_note(format!(
-            "{summary_suffix} | tokens {token_budget} | cost {cost_budget}"
-        ));
-    }
-
     fn attention_queue_items(&self, limit: usize) -> Vec<String> {
         let mut items = Vec::new();
         let suppress_inbox_attention = self
@@ -5305,6 +5318,20 @@ fn session_state_color(state: &SessionState) -> Color {
         SessionState::Completed => Color::Blue,
         SessionState::Pending => Color::Reset,
     }
+}
+
+fn budget_auto_pause_note(outcome: &manager::BudgetEnforcementOutcome) -> String {
+    let cause = match (outcome.token_budget_exceeded, outcome.cost_budget_exceeded) {
+        (true, true) => "token and cost budgets exceeded",
+        (true, false) => "token budget exceeded",
+        (false, true) => "cost budget exceeded",
+        (false, false) => "budget exceeded",
+    };
+
+    format!(
+        "{cause} | auto-paused {} active session(s)",
+        outcome.paused_sessions.len()
+    )
 }
 
 fn format_session_id(id: &str) -> String {
@@ -7186,6 +7213,40 @@ diff --git a/src/next.rs b/src/next.rs
             Some("Budget alert 70% | tokens 710 / 1,000 | cost $2.00 / $10.00")
         );
         assert_eq!(dashboard.last_budget_alert_state, BudgetState::Alert75);
+    }
+
+    #[test]
+    fn refresh_auto_pauses_over_budget_sessions_and_sets_operator_note() {
+        let db = StateStore::open(Path::new(":memory:")).unwrap();
+        let mut cfg = Config::default();
+        cfg.token_budget = 100;
+        cfg.cost_budget_usd = 0.0;
+
+        db.insert_session(&budget_session("sess-1", 120, 0.0))
+            .expect("insert session");
+        db.update_metrics(
+            "sess-1",
+            &SessionMetrics {
+                input_tokens: 90,
+                output_tokens: 30,
+                tokens_used: 120,
+                tool_calls: 0,
+                files_changed: 0,
+                duration_secs: 0,
+                cost_usd: 0.0,
+            },
+        )
+        .expect("persist metrics");
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.refresh();
+
+        assert_eq!(dashboard.sessions.len(), 1);
+        assert_eq!(dashboard.sessions[0].state, SessionState::Stopped);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("token budget exceeded | auto-paused 1 active session(s)")
+        );
     }
 
     #[test]
