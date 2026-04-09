@@ -38,8 +38,8 @@ const MAX_FILE_ACTIVITY_PATCH_LINES: usize = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct WorktreeDiffColumns {
-    removals: String,
-    additions: String,
+    removals: Text<'static>,
+    additions: Text<'static>,
     hunk_offsets: Vec<usize>,
 }
 
@@ -591,20 +591,24 @@ impl Dashboard {
                     (self.output_title(), content)
                 }
                 OutputMode::WorktreeDiff => {
-                    let content = self
-                        .selected_diff_patch
-                        .clone()
-                        .or_else(|| {
-                            self.selected_diff_summary.as_ref().map(|summary| {
-                                format!(
-                                    "{summary}\n\nNo patch content to preview yet. The worktree may be clean or only have summary-level changes."
-                                )
-                            })
-                        })
-                        .unwrap_or_else(|| {
-                            "No worktree diff available for the selected session.".to_string()
-                        });
-                    (self.output_title(), Text::from(content))
+                    let content = if let Some(patch) = self.selected_diff_patch.as_ref() {
+                        build_unified_diff_text(patch, self.theme_palette())
+                    } else {
+                        Text::from(
+                            self.selected_diff_summary
+                                .as_ref()
+                                .map(|summary| {
+                                    format!(
+                                        "{summary}\n\nNo patch content to preview yet. The worktree may be clean or only have summary-level changes."
+                                    )
+                                })
+                                .unwrap_or_else(|| {
+                                    "No worktree diff available for the selected session."
+                                        .to_string()
+                                }),
+                        )
+                    };
+                    (self.output_title(), content)
                 }
                 OutputMode::ConflictProtocol => {
                     let content = self.selected_conflict_protocol.clone().unwrap_or_else(|| {
@@ -646,7 +650,7 @@ impl Dashboard {
         let Some(patch) = self.selected_diff_patch.as_ref() else {
             return;
         };
-        let columns = build_worktree_diff_columns(patch);
+        let columns = build_worktree_diff_columns(patch, self.theme_palette());
         let column_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -3243,7 +3247,7 @@ impl Dashboard {
         self.selected_diff_hunk_offsets_split = self
             .selected_diff_patch
             .as_deref()
-            .map(|patch| build_worktree_diff_columns(patch).hunk_offsets)
+            .map(|patch| build_worktree_diff_columns(patch, self.theme_palette()).hunk_offsets)
             .unwrap_or_default();
         if self.selected_diff_hunk >= self.current_diff_hunk_offsets().len() {
             self.selected_diff_hunk = 0;
@@ -5544,73 +5548,423 @@ fn highlight_output_line(
     }
 }
 
-fn build_worktree_diff_columns(patch: &str) -> WorktreeDiffColumns {
+fn build_worktree_diff_columns(patch: &str, palette: ThemePalette) -> WorktreeDiffColumns {
     let mut removals = Vec::new();
     let mut additions = Vec::new();
     let mut hunk_offsets = Vec::new();
+    let mut pending_removals = Vec::new();
+    let mut pending_additions = Vec::new();
 
     for line in patch.lines() {
+        if is_diff_removal_line(line) {
+            pending_removals.push(line[1..].to_string());
+            continue;
+        }
+
+        if is_diff_addition_line(line) {
+            pending_additions.push(line[1..].to_string());
+            continue;
+        }
+
+        flush_split_diff_change_block(
+            &mut removals,
+            &mut additions,
+            &mut pending_removals,
+            &mut pending_additions,
+            palette,
+        );
+
         if line.is_empty() {
             continue;
         }
 
-        if line.starts_with("--- ") && !line.starts_with("--- a/") {
-            removals.push(line.to_string());
-            additions.push(line.to_string());
-            continue;
+        if line.starts_with("@@") {
+            hunk_offsets.push(removals.len().max(additions.len()));
         }
 
-        if let Some(path) = line.strip_prefix("--- a/") {
-            removals.push(format!("File {path}"));
-            continue;
-        }
-
-        if let Some(path) = line.strip_prefix("+++ b/") {
-            additions.push(format!("File {path}"));
-            continue;
-        }
-
-        if line.starts_with("diff --git ") || line.starts_with("@@") {
-            if line.starts_with("@@") {
-                hunk_offsets.push(removals.len().max(additions.len()));
-            }
-            removals.push(line.to_string());
-            additions.push(line.to_string());
-            continue;
-        }
-
-        if line.starts_with('-') {
-            removals.push(line.to_string());
-            continue;
-        }
-
-        if line.starts_with('+') {
-            additions.push(line.to_string());
-            continue;
-        }
+        let styled_line = if line.starts_with(' ') {
+            styled_diff_context_line(line, palette)
+        } else {
+            styled_diff_meta_line(split_diff_display_line(line), palette)
+        };
+        removals.push(styled_line.clone());
+        additions.push(styled_line);
     }
+
+    flush_split_diff_change_block(
+        &mut removals,
+        &mut additions,
+        &mut pending_removals,
+        &mut pending_additions,
+        palette,
+    );
 
     WorktreeDiffColumns {
         removals: if removals.is_empty() {
-            "No removals in this bounded preview.".to_string()
+            Text::from("No removals in this bounded preview.")
         } else {
-            removals.join("\n")
+            Text::from(removals)
         },
         additions: if additions.is_empty() {
-            "No additions in this bounded preview.".to_string()
+            Text::from("No additions in this bounded preview.")
         } else {
-            additions.join("\n")
+            Text::from(additions)
         },
         hunk_offsets,
     }
 }
 
+fn build_unified_diff_text(patch: &str, palette: ThemePalette) -> Text<'static> {
+    let mut lines = Vec::new();
+    let mut pending_removals = Vec::new();
+    let mut pending_additions = Vec::new();
+
+    for line in patch.lines() {
+        if is_diff_removal_line(line) {
+            pending_removals.push(line[1..].to_string());
+            continue;
+        }
+
+        if is_diff_addition_line(line) {
+            pending_additions.push(line[1..].to_string());
+            continue;
+        }
+
+        flush_unified_diff_change_block(
+            &mut lines,
+            &mut pending_removals,
+            &mut pending_additions,
+            palette,
+        );
+
+        if line.is_empty() {
+            continue;
+        }
+
+        lines.push(if line.starts_with(' ') {
+            styled_diff_context_line(line, palette)
+        } else {
+            styled_diff_meta_line(line, palette)
+        });
+    }
+
+    flush_unified_diff_change_block(
+        &mut lines,
+        &mut pending_removals,
+        &mut pending_additions,
+        palette,
+    );
+
+    Text::from(lines)
+}
+
 fn build_unified_diff_hunk_offsets(patch: &str) -> Vec<usize> {
-    patch
-        .lines()
-        .enumerate()
-        .filter_map(|(index, line)| line.starts_with("@@").then_some(index))
-        .collect()
+    let mut offsets = Vec::new();
+    let mut rendered_index = 0usize;
+    let mut pending_removals = 0usize;
+    let mut pending_additions = 0usize;
+
+    for line in patch.lines() {
+        if is_diff_removal_line(line) {
+            pending_removals += 1;
+            continue;
+        }
+
+        if is_diff_addition_line(line) {
+            pending_additions += 1;
+            continue;
+        }
+
+        if pending_removals > 0 || pending_additions > 0 {
+            rendered_index += pending_removals + pending_additions;
+            pending_removals = 0;
+            pending_additions = 0;
+        }
+
+        if line.is_empty() {
+            continue;
+        }
+
+        if line.starts_with("@@") {
+            offsets.push(rendered_index);
+        }
+        rendered_index += 1;
+    }
+
+    offsets
+}
+
+fn flush_split_diff_change_block(
+    removals: &mut Vec<Line<'static>>,
+    additions: &mut Vec<Line<'static>>,
+    pending_removals: &mut Vec<String>,
+    pending_additions: &mut Vec<String>,
+    palette: ThemePalette,
+) {
+    let pair_count = pending_removals.len().max(pending_additions.len());
+    for index in 0..pair_count {
+        match (pending_removals.get(index), pending_additions.get(index)) {
+            (Some(removal), Some(addition)) => {
+                let (removal_mask, addition_mask) =
+                    diff_word_change_masks(removal.as_str(), addition.as_str());
+                removals.push(styled_diff_change_line(
+                    '-',
+                    removal,
+                    &removal_mask,
+                    diff_removal_style(palette),
+                    diff_removal_word_style(),
+                ));
+                additions.push(styled_diff_change_line(
+                    '+',
+                    addition,
+                    &addition_mask,
+                    diff_addition_style(palette),
+                    diff_addition_word_style(),
+                ));
+            }
+            (Some(removal), None) => {
+                removals.push(styled_diff_change_line(
+                    '-',
+                    removal,
+                    &vec![false; tokenize_diff_words(removal).len()],
+                    diff_removal_style(palette),
+                    diff_removal_word_style(),
+                ));
+                additions.push(Line::from(""));
+            }
+            (None, Some(addition)) => {
+                removals.push(Line::from(""));
+                additions.push(styled_diff_change_line(
+                    '+',
+                    addition,
+                    &vec![false; tokenize_diff_words(addition).len()],
+                    diff_addition_style(palette),
+                    diff_addition_word_style(),
+                ));
+            }
+            (None, None) => {}
+        }
+    }
+
+    pending_removals.clear();
+    pending_additions.clear();
+}
+
+fn flush_unified_diff_change_block(
+    lines: &mut Vec<Line<'static>>,
+    pending_removals: &mut Vec<String>,
+    pending_additions: &mut Vec<String>,
+    palette: ThemePalette,
+) {
+    let pair_count = pending_removals.len().max(pending_additions.len());
+    for index in 0..pair_count {
+        match (pending_removals.get(index), pending_additions.get(index)) {
+            (Some(removal), Some(addition)) => {
+                let (removal_mask, addition_mask) =
+                    diff_word_change_masks(removal.as_str(), addition.as_str());
+                lines.push(styled_diff_change_line(
+                    '-',
+                    removal,
+                    &removal_mask,
+                    diff_removal_style(palette),
+                    diff_removal_word_style(),
+                ));
+                lines.push(styled_diff_change_line(
+                    '+',
+                    addition,
+                    &addition_mask,
+                    diff_addition_style(palette),
+                    diff_addition_word_style(),
+                ));
+            }
+            (Some(removal), None) => lines.push(styled_diff_change_line(
+                '-',
+                removal,
+                &vec![false; tokenize_diff_words(removal).len()],
+                diff_removal_style(palette),
+                diff_removal_word_style(),
+            )),
+            (None, Some(addition)) => lines.push(styled_diff_change_line(
+                '+',
+                addition,
+                &vec![false; tokenize_diff_words(addition).len()],
+                diff_addition_style(palette),
+                diff_addition_word_style(),
+            )),
+            (None, None) => {}
+        }
+    }
+
+    pending_removals.clear();
+    pending_additions.clear();
+}
+
+fn split_diff_display_line(line: &str) -> String {
+    if line.starts_with("--- ") && !line.starts_with("--- a/") {
+        return line.to_string();
+    }
+
+    if let Some(path) = line.strip_prefix("--- a/") {
+        return format!("File {path}");
+    }
+
+    if let Some(path) = line.strip_prefix("+++ b/") {
+        return format!("File {path}");
+    }
+
+    line.to_string()
+}
+
+fn is_diff_removal_line(line: &str) -> bool {
+    line.starts_with('-') && !line.starts_with("--- ")
+}
+
+fn is_diff_addition_line(line: &str) -> bool {
+    line.starts_with('+') && !line.starts_with("+++ ")
+}
+
+fn styled_diff_meta_line(text: impl Into<String>, palette: ThemePalette) -> Line<'static> {
+    Line::from(vec![Span::styled(text.into(), diff_meta_style(palette))])
+}
+
+fn styled_diff_context_line(text: &str, palette: ThemePalette) -> Line<'static> {
+    Line::from(vec![Span::styled(
+        text.to_string(),
+        diff_context_style(palette),
+    )])
+}
+
+fn styled_diff_change_line(
+    prefix: char,
+    body: &str,
+    change_mask: &[bool],
+    base_style: Style,
+    changed_style: Style,
+) -> Line<'static> {
+    let tokens = tokenize_diff_words(body);
+    let mut spans = vec![Span::styled(
+        prefix.to_string(),
+        base_style.add_modifier(Modifier::BOLD),
+    )];
+
+    for (index, token) in tokens.into_iter().enumerate() {
+        let style = if change_mask.get(index).copied().unwrap_or(false) {
+            changed_style
+        } else {
+            base_style
+        };
+        spans.push(Span::styled(token, style));
+    }
+
+    Line::from(spans)
+}
+
+fn tokenize_diff_words(text: &str) -> Vec<String> {
+    if text.is_empty() {
+        return Vec::new();
+    }
+
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut current_is_whitespace: Option<bool> = None;
+
+    for ch in text.chars() {
+        let is_whitespace = ch.is_whitespace();
+        match current_is_whitespace {
+            Some(state) if state == is_whitespace => current.push(ch),
+            Some(_) => {
+                tokens.push(std::mem::take(&mut current));
+                current.push(ch);
+                current_is_whitespace = Some(is_whitespace);
+            }
+            None => {
+                current.push(ch);
+                current_is_whitespace = Some(is_whitespace);
+            }
+        }
+    }
+
+    if !current.is_empty() {
+        tokens.push(current);
+    }
+
+    tokens
+}
+
+fn diff_word_change_masks(left: &str, right: &str) -> (Vec<bool>, Vec<bool>) {
+    let left_tokens = tokenize_diff_words(left);
+    let right_tokens = tokenize_diff_words(right);
+    let left_len = left_tokens.len();
+    let right_len = right_tokens.len();
+    let mut lcs = vec![vec![0usize; right_len + 1]; left_len + 1];
+
+    for left_index in (0..left_len).rev() {
+        for right_index in (0..right_len).rev() {
+            lcs[left_index][right_index] = if left_tokens[left_index] == right_tokens[right_index] {
+                lcs[left_index + 1][right_index + 1] + 1
+            } else {
+                lcs[left_index + 1][right_index].max(lcs[left_index][right_index + 1])
+            };
+        }
+    }
+
+    let mut left_changed = vec![true; left_len];
+    let mut right_changed = vec![true; right_len];
+    let (mut left_index, mut right_index) = (0usize, 0usize);
+    while left_index < left_len && right_index < right_len {
+        if left_tokens[left_index] == right_tokens[right_index] {
+            left_changed[left_index] = false;
+            right_changed[right_index] = false;
+            left_index += 1;
+            right_index += 1;
+        } else if lcs[left_index + 1][right_index] >= lcs[left_index][right_index + 1] {
+            left_index += 1;
+        } else {
+            right_index += 1;
+        }
+    }
+
+    (left_changed, right_changed)
+}
+
+fn diff_meta_style(palette: ThemePalette) -> Style {
+    Style::default()
+        .fg(palette.accent)
+        .add_modifier(Modifier::BOLD)
+}
+
+fn diff_context_style(palette: ThemePalette) -> Style {
+    Style::default().fg(palette.muted)
+}
+
+fn diff_removal_style(palette: ThemePalette) -> Style {
+    let color = match palette.accent {
+        Color::Blue => Color::Red,
+        _ => Color::LightRed,
+    };
+    Style::default().fg(color)
+}
+
+fn diff_addition_style(palette: ThemePalette) -> Style {
+    let color = match palette.accent {
+        Color::Blue => Color::Green,
+        _ => Color::LightGreen,
+    };
+    Style::default().fg(color)
+}
+
+fn diff_removal_word_style() -> Style {
+    Style::default()
+        .bg(Color::Red)
+        .fg(Color::Black)
+        .add_modifier(Modifier::BOLD)
+}
+
+fn diff_addition_word_style() -> Style {
+    Style::default()
+        .bg(Color::Green)
+        .fg(Color::Black)
+        .add_modifier(Modifier::BOLD)
 }
 
 fn session_state_label(state: &SessionState) -> &'static str {
@@ -6262,7 +6616,7 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
         dashboard.selected_diff_summary = Some("1 file changed".to_string());
         dashboard.selected_diff_patch = Some(patch.clone());
         dashboard.selected_diff_hunk_offsets_split =
-            build_worktree_diff_columns(&patch).hunk_offsets;
+            build_worktree_diff_columns(&patch, dashboard.theme_palette()).hunk_offsets;
         dashboard.selected_diff_hunk_offsets_unified = build_unified_diff_hunk_offsets(&patch);
         dashboard.toggle_output_mode();
 
@@ -6306,7 +6660,8 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
 +second new"
             .to_string();
         dashboard.selected_diff_patch = Some(patch.clone());
-        let split_offsets = build_worktree_diff_columns(&patch).hunk_offsets;
+        let split_offsets =
+            build_worktree_diff_columns(&patch, dashboard.theme_palette()).hunk_offsets;
         dashboard.selected_diff_hunk_offsets_split = split_offsets.clone();
         dashboard.selected_diff_hunk_offsets_unified = build_unified_diff_hunk_offsets(&patch);
         dashboard.output_mode = OutputMode::WorktreeDiff;
@@ -6688,13 +7043,74 @@ diff --git a/src/next.rs b/src/next.rs
 -bye
 +hello";
 
-        let columns = build_worktree_diff_columns(patch);
-        assert!(columns.removals.contains("Branch diff vs main"));
-        assert!(columns.removals.contains("-old line"));
-        assert!(columns.removals.contains("-bye"));
-        assert!(columns.additions.contains("Working tree diff"));
-        assert!(columns.additions.contains("+new line"));
-        assert!(columns.additions.contains("+hello"));
+        let palette = test_dashboard(Vec::new(), 0).theme_palette();
+        let columns = build_worktree_diff_columns(patch, palette);
+        let removals = text_plain_text(&columns.removals);
+        let additions = text_plain_text(&columns.additions);
+        assert!(removals.contains("Branch diff vs main"));
+        assert!(removals.contains("-old line"));
+        assert!(removals.contains("-bye"));
+        assert!(additions.contains("Working tree diff"));
+        assert!(additions.contains("+new line"));
+        assert!(additions.contains("+hello"));
+    }
+
+    #[test]
+    fn split_diff_highlights_changed_words() {
+        let palette = test_dashboard(Vec::new(), 0).theme_palette();
+        let patch = "\
+diff --git a/src/lib.rs b/src/lib.rs
+@@ -1 +1 @@
+-old line
++new line";
+
+        let columns = build_worktree_diff_columns(patch, palette);
+        let removal = columns
+            .removals
+            .lines
+            .iter()
+            .find(|line| line_plain_text(line) == "-old line")
+            .expect("removal line");
+        let addition = columns
+            .additions
+            .lines
+            .iter()
+            .find(|line| line_plain_text(line) == "+new line")
+            .expect("addition line");
+
+        assert_eq!(removal.spans[1].content.as_ref(), "old");
+        assert_eq!(removal.spans[1].style, diff_removal_word_style());
+        assert_eq!(removal.spans[2].content.as_ref(), " ");
+        assert_eq!(removal.spans[2].style, diff_removal_style(palette));
+        assert_eq!(addition.spans[1].content.as_ref(), "new");
+        assert_eq!(addition.spans[1].style, diff_addition_word_style());
+    }
+
+    #[test]
+    fn unified_diff_highlights_changed_words() {
+        let palette = test_dashboard(Vec::new(), 0).theme_palette();
+        let patch = "\
+diff --git a/src/lib.rs b/src/lib.rs
+@@ -1 +1 @@
+-old line
++new line";
+
+        let text = build_unified_diff_text(patch, palette);
+        let removal = text
+            .lines
+            .iter()
+            .find(|line| line_plain_text(line) == "-old line")
+            .expect("removal line");
+        let addition = text
+            .lines
+            .iter()
+            .find(|line| line_plain_text(line) == "+new line")
+            .expect("addition line");
+
+        assert_eq!(removal.spans[1].content.as_ref(), "old");
+        assert_eq!(removal.spans[1].style, diff_removal_word_style());
+        assert_eq!(addition.spans[1].content.as_ref(), "new");
+        assert_eq!(addition.spans[1].style, diff_addition_word_style());
     }
 
     #[test]
@@ -9857,6 +10273,21 @@ diff --git a/src/next.rs b/src/next.rs
             text,
             (Utc::now() - chrono::Duration::minutes(minutes_ago)).to_rfc3339(),
         )
+    }
+
+    fn line_plain_text(line: &Line<'_>) -> String {
+        line.spans
+            .iter()
+            .map(|span| span.content.as_ref())
+            .collect::<String>()
+    }
+
+    fn text_plain_text(text: &Text<'_>) -> String {
+        text.lines
+            .iter()
+            .map(line_plain_text)
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     fn test_dashboard(sessions: Vec<Session>, selected_session: usize) -> Dashboard {
