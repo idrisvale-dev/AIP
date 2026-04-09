@@ -20,6 +20,14 @@ pub struct RiskThresholds {
     pub block: f64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BudgetAlertThresholds {
+    pub advisory: f64,
+    pub warning: f64,
+    pub critical: f64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -36,6 +44,7 @@ pub struct Config {
     pub auto_merge_ready_worktrees: bool,
     pub cost_budget_usd: f64,
     pub token_budget: u64,
+    pub budget_alert_thresholds: BudgetAlertThresholds,
     pub theme: Theme,
     pub pane_layout: PaneLayout,
     pub pane_navigation: PaneNavigationConfig,
@@ -89,6 +98,7 @@ impl Default for Config {
             auto_merge_ready_worktrees: false,
             cost_budget_usd: 10.0,
             token_budget: 500_000,
+            budget_alert_thresholds: Self::BUDGET_ALERT_THRESHOLDS,
             theme: Theme::Dark,
             pane_layout: PaneLayout::Horizontal,
             pane_navigation: PaneNavigationConfig::default(),
@@ -106,6 +116,12 @@ impl Config {
         block: 0.85,
     };
 
+    pub const BUDGET_ALERT_THRESHOLDS: BudgetAlertThresholds = BudgetAlertThresholds {
+        advisory: 0.50,
+        warning: 0.75,
+        critical: 0.90,
+    };
+
     pub fn config_path() -> PathBuf {
         dirs::home_dir()
             .unwrap_or_else(|| PathBuf::from("."))
@@ -119,6 +135,10 @@ impl Config {
             .unwrap_or_else(|| std::path::Path::new("."))
             .join("metrics")
             .join("costs.jsonl")
+    }
+
+    pub fn effective_budget_alert_thresholds(&self) -> BudgetAlertThresholds {
+        self.budget_alert_thresholds.sanitized()
     }
 
     pub fn load() -> Result<Self> {
@@ -265,9 +285,32 @@ impl Default for RiskThresholds {
     }
 }
 
+impl Default for BudgetAlertThresholds {
+    fn default() -> Self {
+        Config::BUDGET_ALERT_THRESHOLDS
+    }
+}
+
+impl BudgetAlertThresholds {
+    pub fn sanitized(self) -> Self {
+        let values = [self.advisory, self.warning, self.critical];
+        let valid = values.into_iter().all(f64::is_finite)
+            && self.advisory > 0.0
+            && self.advisory < self.warning
+            && self.warning < self.critical
+            && self.critical < 1.0;
+
+        if valid {
+            self
+        } else {
+            Self::default()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Config, PaneLayout};
+    use super::{BudgetAlertThresholds, Config, PaneLayout};
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use uuid::Uuid;
 
@@ -297,6 +340,10 @@ theme = "Dark"
 
         assert_eq!(config.cost_budget_usd, defaults.cost_budget_usd);
         assert_eq!(config.token_budget, defaults.token_budget);
+        assert_eq!(
+            config.budget_alert_thresholds,
+            defaults.budget_alert_thresholds
+        );
         assert_eq!(config.pane_layout, defaults.pane_layout);
         assert_eq!(config.pane_navigation, defaults.pane_navigation);
         assert_eq!(
@@ -413,6 +460,58 @@ move_right = "d"
     }
 
     #[test]
+    fn default_budget_alert_thresholds_are_applied() {
+        assert_eq!(
+            Config::default().budget_alert_thresholds,
+            Config::BUDGET_ALERT_THRESHOLDS
+        );
+    }
+
+    #[test]
+    fn budget_alert_thresholds_deserialize_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[budget_alert_thresholds]
+advisory = 0.40
+warning = 0.70
+critical = 0.85
+"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            config.budget_alert_thresholds,
+            BudgetAlertThresholds {
+                advisory: 0.40,
+                warning: 0.70,
+                critical: 0.85,
+            }
+        );
+        assert_eq!(
+            config.effective_budget_alert_thresholds(),
+            config.budget_alert_thresholds
+        );
+    }
+
+    #[test]
+    fn invalid_budget_alert_thresholds_fall_back_to_defaults() {
+        let config: Config = toml::from_str(
+            r#"
+[budget_alert_thresholds]
+advisory = 0.80
+warning = 0.70
+critical = 1.10
+"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            config.effective_budget_alert_thresholds(),
+            Config::BUDGET_ALERT_THRESHOLDS
+        );
+    }
+
+    #[test]
     fn save_round_trips_automation_settings() {
         let path = std::env::temp_dir().join(format!("ecc2-config-{}.toml", Uuid::new_v4()));
         let mut config = Config::default();
@@ -420,6 +519,11 @@ move_right = "d"
         config.auto_dispatch_limit_per_session = 9;
         config.auto_create_worktrees = false;
         config.auto_merge_ready_worktrees = true;
+        config.budget_alert_thresholds = BudgetAlertThresholds {
+            advisory: 0.45,
+            warning: 0.70,
+            critical: 0.88,
+        };
         config.pane_navigation.focus_metrics = "e".to_string();
         config.pane_navigation.move_right = "d".to_string();
         config.linear_pane_size_percent = 42;
@@ -433,6 +537,14 @@ move_right = "d"
         assert_eq!(loaded.auto_dispatch_limit_per_session, 9);
         assert!(!loaded.auto_create_worktrees);
         assert!(loaded.auto_merge_ready_worktrees);
+        assert_eq!(
+            loaded.budget_alert_thresholds,
+            BudgetAlertThresholds {
+                advisory: 0.45,
+                warning: 0.70,
+                critical: 0.88,
+            }
+        );
         assert_eq!(loaded.pane_navigation.focus_metrics, "e");
         assert_eq!(loaded.pane_navigation.move_right, "d");
         assert_eq!(loaded.linear_pane_size_percent, 42);

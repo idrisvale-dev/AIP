@@ -1669,6 +1669,7 @@ mod tests {
             auto_merge_ready_worktrees: false,
             cost_budget_usd: 10.0,
             token_budget: 500_000,
+            budget_alert_thresholds: Config::BUDGET_ALERT_THRESHOLDS,
             theme: Theme::Dark,
             pane_layout: PaneLayout::Horizontal,
             pane_navigation: Default::default(),

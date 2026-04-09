@@ -835,11 +835,13 @@ impl Dashboard {
             .split(inner);
 
         let aggregate = self.aggregate_usage();
+        let thresholds = self.cfg.effective_budget_alert_thresholds();
         frame.render_widget(
             TokenMeter::tokens(
                 "Token Budget",
                 aggregate.total_tokens,
                 self.cfg.token_budget,
+                thresholds,
             ),
             chunks[0],
         );
@@ -848,6 +850,7 @@ impl Dashboard {
                 "Cost Budget",
                 aggregate.total_cost_usd,
                 self.cfg.cost_budget_usd,
+                thresholds,
             ),
             chunks[1],
         );
@@ -3774,6 +3777,7 @@ impl Dashboard {
     }
 
     fn aggregate_usage(&self) -> AggregateUsage {
+        let thresholds = self.cfg.effective_budget_alert_thresholds();
         let total_tokens = self
             .sessions
             .iter()
@@ -3784,8 +3788,12 @@ impl Dashboard {
             .iter()
             .map(|session| session.metrics.cost_usd)
             .sum::<f64>();
-        let token_state = budget_state(total_tokens as f64, self.cfg.token_budget as f64);
-        let cost_state = budget_state(total_cost_usd, self.cfg.cost_budget_usd);
+        let token_state = budget_state(
+            total_tokens as f64,
+            self.cfg.token_budget as f64,
+            thresholds,
+        );
+        let cost_state = budget_state(total_cost_usd, self.cfg.cost_budget_usd, thresholds);
 
         AggregateUsage {
             total_tokens,
@@ -4072,6 +4080,7 @@ impl Dashboard {
 
     fn aggregate_cost_summary(&self) -> (String, Style) {
         let aggregate = self.aggregate_usage();
+        let thresholds = self.cfg.effective_budget_alert_thresholds();
         let mut text = if self.cfg.cost_budget_usd > 0.0 {
             format!(
                 "Aggregate cost {} / {}",
@@ -4085,9 +4094,9 @@ impl Dashboard {
             )
         };
 
-        if let Some(summary_suffix) = aggregate.overall_state.summary_suffix() {
+        if let Some(summary_suffix) = aggregate.overall_state.summary_suffix(thresholds) {
             text.push_str(" | ");
-            text.push_str(summary_suffix);
+            text.push_str(&summary_suffix);
         }
 
         (text, aggregate.overall_state.style())
@@ -4095,6 +4104,7 @@ impl Dashboard {
 
     fn sync_budget_alerts(&mut self) {
         let aggregate = self.aggregate_usage();
+        let thresholds = self.cfg.effective_budget_alert_thresholds();
         let current_state = aggregate.overall_state;
         if current_state == self.last_budget_alert_state {
             return;
@@ -4107,7 +4117,7 @@ impl Dashboard {
             return;
         }
 
-        let Some(summary_suffix) = current_state.summary_suffix() else {
+        let Some(summary_suffix) = current_state.summary_suffix(thresholds) else {
             return;
         };
 
@@ -7099,6 +7109,26 @@ diff --git a/src/next.rs b/src/next.rs
     }
 
     #[test]
+    fn aggregate_cost_summary_uses_custom_threshold_labels() {
+        let db = StateStore::open(Path::new(":memory:")).unwrap();
+        let mut cfg = Config::default();
+        cfg.cost_budget_usd = 10.0;
+        cfg.budget_alert_thresholds = crate::config::BudgetAlertThresholds {
+            advisory: 0.40,
+            warning: 0.70,
+            critical: 0.85,
+        };
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.sessions = vec![budget_session("sess-1", 1_000, 7.0)];
+
+        assert_eq!(
+            dashboard.aggregate_cost_summary_text(),
+            "Aggregate cost $7.00 / $10.00 | Budget alert 70%"
+        );
+    }
+
+    #[test]
     fn aggregate_cost_summary_mentions_ninety_percent_alert() {
         let db = StateStore::open(Path::new(":memory:")).unwrap();
         let mut cfg = Config::default();
@@ -7129,6 +7159,31 @@ diff --git a/src/next.rs b/src/next.rs
         assert_eq!(
             dashboard.operator_note.as_deref(),
             Some("Budget alert 75% | tokens 760 / 1,000 | cost $2.00 / $10.00")
+        );
+        assert_eq!(dashboard.last_budget_alert_state, BudgetState::Alert75);
+    }
+
+    #[test]
+    fn sync_budget_alerts_uses_custom_threshold_labels() {
+        let db = StateStore::open(Path::new(":memory:")).unwrap();
+        let mut cfg = Config::default();
+        cfg.token_budget = 1_000;
+        cfg.cost_budget_usd = 10.0;
+        cfg.budget_alert_thresholds = crate::config::BudgetAlertThresholds {
+            advisory: 0.40,
+            warning: 0.70,
+            critical: 0.85,
+        };
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.sessions = vec![budget_session("sess-1", 710, 2.0)];
+        dashboard.last_budget_alert_state = BudgetState::Alert50;
+
+        dashboard.sync_budget_alerts();
+
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("Budget alert 70% | tokens 710 / 1,000 | cost $2.00 / $10.00")
         );
         assert_eq!(dashboard.last_budget_alert_state, BudgetState::Alert75);
     }
@@ -9074,6 +9129,7 @@ diff --git a/src/next.rs b/src/next.rs
             auto_merge_ready_worktrees: false,
             cost_budget_usd: 10.0,
             token_budget: 500_000,
+            budget_alert_thresholds: crate::config::Config::BUDGET_ALERT_THRESHOLDS,
             theme: Theme::Dark,
             pane_layout: PaneLayout::Horizontal,
             pane_navigation: Default::default(),
