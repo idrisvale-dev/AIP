@@ -83,6 +83,7 @@ pub struct Dashboard {
     last_output_height: usize,
     pane_size_percent: u16,
     search_input: Option<String>,
+    spawn_input: Option<String>,
     search_query: Option<String>,
     search_scope: SearchScope,
     search_agent_filter: SearchAgentFilter,
@@ -153,6 +154,19 @@ enum SearchAgentFilter {
 struct SearchMatch {
     session_id: String,
     line_index: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SpawnRequest {
+    requested_count: usize,
+    task: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SpawnPlan {
+    requested_count: usize,
+    spawn_count: usize,
+    task: String,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -243,6 +257,7 @@ impl Dashboard {
             last_output_height: 0,
             pane_size_percent,
             search_input: None,
+            spawn_input: None,
             search_query: None,
             search_scope: SearchScope::SelectedSession,
             search_agent_filter: SearchAgentFilter::AllAgents,
@@ -668,12 +683,14 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
 
-        let search_prefix = if let Some(input) = self.search_input.as_ref() {
+        let search_prefix = if let Some(input) = self.spawn_input.as_ref() {
+            format!(" spawn>{input}_ | [Enter] queue [Esc] cancel |")
+        } else if let Some(input) = self.search_input.as_ref() {
             format!(
                 " /{input}_ | {} | {} | [Enter] apply [Esc] cancel |",
                 self.search_scope.label(),
@@ -695,7 +712,10 @@ impl Dashboard {
             String::new()
         };
 
-        let text = if self.search_input.is_some() || self.search_query.is_some() {
+        let text = if self.spawn_input.is_some()
+            || self.search_input.is_some()
+            || self.search_query.is_some()
+        {
             format!(" {search_prefix}")
         } else if let Some(note) = self.operator_note.as_ref() {
             format!(" {} |{}", truncate_for_dashboard(note, 96), base_text)
@@ -739,6 +759,7 @@ impl Dashboard {
             "Keyboard Shortcuts:",
             "",
             "  n       New session",
+            "  N       Natural-language multi-agent spawn prompt",
             "  a       Assign follow-up work from selected session",
             "  b       Rebalance backed-up delegate handoff backlog for selected lead",
             "  B       Rebalance backed-up delegate handoff backlog across lead teams",
@@ -1013,6 +1034,10 @@ impl Dashboard {
                 "Cannot queue new session: active session limit reached ({})",
                 self.cfg.max_parallel_sessions
             );
+            self.set_operator_note(format!(
+                "cannot queue new session: active session limit reached ({})",
+                self.cfg.max_parallel_sessions
+            ));
             return;
         }
 
@@ -1671,12 +1696,26 @@ impl Dashboard {
         self.show_help = !self.show_help;
     }
 
-    pub fn is_search_mode(&self) -> bool {
-        self.search_input.is_some()
+    pub fn is_input_mode(&self) -> bool {
+        self.spawn_input.is_some() || self.search_input.is_some()
     }
 
     pub fn has_active_search(&self) -> bool {
         self.search_query.is_some()
+    }
+
+    pub fn begin_spawn_prompt(&mut self) {
+        if self.search_input.is_some() {
+            self.set_operator_note(
+                "finish output search input before opening spawn prompt".to_string(),
+            );
+            return;
+        }
+
+        self.spawn_input = Some(self.spawn_prompt_seed());
+        self.set_operator_note(
+            "spawn mode | try: give me 3 agents working on fix flaky tests".to_string(),
+        );
     }
 
     pub fn toggle_search_scope(&mut self) {
@@ -1737,6 +1776,11 @@ impl Dashboard {
     }
 
     pub fn begin_search(&mut self) {
+        if self.spawn_input.is_some() {
+            self.set_operator_note("finish spawn prompt before searching output".to_string());
+            return;
+        }
+
         if self.output_mode != OutputMode::SessionOutput {
             self.set_operator_note("search is only available in session output view".to_string());
             return;
@@ -1746,25 +1790,39 @@ impl Dashboard {
         self.set_operator_note("search mode | type a query and press Enter".to_string());
     }
 
-    pub fn push_search_char(&mut self, ch: char) {
-        if let Some(input) = self.search_input.as_mut() {
+    pub fn push_input_char(&mut self, ch: char) {
+        if let Some(input) = self.spawn_input.as_mut() {
+            input.push(ch);
+        } else if let Some(input) = self.search_input.as_mut() {
             input.push(ch);
         }
     }
 
-    pub fn pop_search_char(&mut self) {
-        if let Some(input) = self.search_input.as_mut() {
+    pub fn pop_input_char(&mut self) {
+        if let Some(input) = self.spawn_input.as_mut() {
+            input.pop();
+        } else if let Some(input) = self.search_input.as_mut() {
             input.pop();
         }
     }
 
-    pub fn cancel_search_input(&mut self) {
-        if self.search_input.take().is_some() {
+    pub fn cancel_input(&mut self) {
+        if self.spawn_input.take().is_some() {
+            self.set_operator_note("spawn input cancelled".to_string());
+        } else if self.search_input.take().is_some() {
             self.set_operator_note("search input cancelled".to_string());
         }
     }
 
-    pub fn submit_search(&mut self) {
+    pub async fn submit_input(&mut self) {
+        if self.spawn_input.is_some() {
+            self.submit_spawn_prompt().await;
+        } else {
+            self.submit_search();
+        }
+    }
+
+    fn submit_search(&mut self) {
         let Some(input) = self.search_input.take() else {
             return;
         };
@@ -1792,6 +1850,99 @@ impl Dashboard {
                 self.search_match_session_count()
             ));
         }
+    }
+
+    async fn submit_spawn_prompt(&mut self) {
+        let Some(input) = self.spawn_input.take() else {
+            return;
+        };
+
+        let plan = match self.build_spawn_plan(&input) {
+            Ok(plan) => plan,
+            Err(error) => {
+                self.spawn_input = Some(input);
+                self.set_operator_note(error);
+                return;
+            }
+        };
+
+        let source_session = self.sessions.get(self.selected_session).cloned();
+        let handoff_context = source_session.as_ref().map(|session| {
+            format!(
+                "Dashboard handoff from {} [{}] | cwd {}{}",
+                format_session_id(&session.id),
+                session.agent_type,
+                session.working_dir.display(),
+                session
+                    .worktree
+                    .as_ref()
+                    .map(|worktree| format!(
+                        " | worktree {} ({})",
+                        worktree.branch,
+                        worktree.path.display()
+                    ))
+                    .unwrap_or_default()
+            )
+        });
+        let source_task = source_session.as_ref().map(|session| session.task.clone());
+        let source_session_id = source_session.as_ref().map(|session| session.id.clone());
+        let agent = self.cfg.default_agent.clone();
+        let mut created_ids = Vec::new();
+
+        for task in expand_spawn_tasks(&plan.task, plan.spawn_count) {
+            let session_id = match manager::create_session(
+                &self.db,
+                &self.cfg,
+                &task,
+                &agent,
+                self.cfg.auto_create_worktrees,
+            )
+            .await
+            {
+                Ok(session_id) => session_id,
+                Err(error) => {
+                    self.refresh_after_spawn(created_ids.first().map(String::as_str));
+                    let summary = if created_ids.is_empty() {
+                        format!("spawn failed: {error}")
+                    } else {
+                        format!(
+                            "spawn partially completed: {} of {} queued before failure: {error}",
+                            created_ids.len(),
+                            plan.spawn_count
+                        )
+                    };
+                    self.set_operator_note(summary);
+                    return;
+                }
+            };
+
+            if let (Some(source_id), Some(task), Some(context)) = (
+                source_session_id.as_ref(),
+                source_task.as_ref(),
+                handoff_context.as_ref(),
+            ) {
+                if let Err(error) = comms::send(
+                    &self.db,
+                    source_id,
+                    &session_id,
+                    &comms::MessageType::TaskHandoff {
+                        task: task.clone(),
+                        context: context.clone(),
+                    },
+                ) {
+                    tracing::warn!(
+                        "Failed to send handoff from session {} to {}: {error}",
+                        source_id,
+                        session_id
+                    );
+                }
+            }
+
+            created_ids.push(session_id);
+        }
+
+        self.refresh_after_spawn(created_ids.first().map(String::as_str));
+        self.set_operator_note(build_spawn_note(&plan, created_ids.len()));
     }
 
     pub fn clear_search(&mut self) {
@@ -2892,6 +3043,17 @@ impl Dashboard {
             .count()
     }
 
+    fn refresh_after_spawn(&mut self, select_session_id: Option<&str>) {
+        self.refresh();
+        self.sync_selection_by_id(select_session_id);
+        self.reset_output_view();
+        self.sync_selected_output();
+        self.sync_selected_diff();
+        self.sync_selected_messages();
+        self.sync_selected_lineage();
+        self.refresh_logs();
+    }
+
     fn new_session_task(&self) -> String {
         self.sessions
             .get(self.selected_session)
@@ -2903,6 +3065,31 @@ impl Dashboard {
                 )
             })
             .unwrap_or_else(|| "New ECC 2.0 session".to_string())
+    }
+
+    fn spawn_prompt_seed(&self) -> String {
+        format!("give me 2 agents working on {}", self.new_session_task())
+    }
+
+    fn build_spawn_plan(&self, input: &str) -> Result<SpawnPlan, String> {
+        let request = parse_spawn_request(input)?;
+        let available_slots = self
+            .cfg
+            .max_parallel_sessions
+            .saturating_sub(self.active_session_count());
+
+        if available_slots == 0 {
+            return Err(format!(
+                "cannot queue sessions: active session limit reached ({})",
+                self.cfg.max_parallel_sessions
+            ));
+        }
+
+        Ok(SpawnPlan {
+            requested_count: request.requested_count,
+            spawn_count: request.requested_count.min(available_slots),
+            task: request.task,
+        })
     }
 
     fn pane_areas(&self, area: Rect) -> PaneAreas {
@@ -3155,6 +3342,78 @@ fn looks_like_tool_call(text: &str) -> bool {
     ];
 
     TOOL_PREFIXES.iter().any(|prefix| lower.starts_with(prefix))
+}
+
+fn parse_spawn_request(input: &str) -> Result<SpawnRequest, String> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Err("spawn request cannot be empty".to_string());
+    }
+
+    let count = Regex::new(r"\b([1-9]\d*)\b")
+        .expect("spawn count regex")
+        .captures(trimmed)
+        .and_then(|captures| captures.get(1))
+        .and_then(|count| count.as_str().parse::<usize>().ok())
+        .unwrap_or(1);
+
+    let task = extract_spawn_task(trimmed);
+    if task.is_empty() {
+        return Err("spawn request must include a task description".to_string());
+    }
+
+    Ok(SpawnRequest {
+        requested_count: count,
+        task,
+    })
+}
+
+fn extract_spawn_task(input: &str) -> String {
+    let trimmed = input.trim();
+    let lower = trimmed.to_ascii_lowercase();
+
+    for marker in ["working on ", "work on ", "for ", ":"] {
+        if let Some(start) = lower.find(marker) {
+            let task = trimmed[start + marker.len()..]
+                .trim_matches(|ch: char| ch.is_whitespace() || ch == ':' || ch == '-');
+            if !task.is_empty() {
+                return task.to_string();
+            }
+        }
+    }
+
+    let stripped =
+        Regex::new(r"(?i)^\s*(give me|spawn|queue|start|launch)\s+\d+\s+(agents?|sessions?)\s*")
+            .expect("spawn command regex")
+            .replace(trimmed, "");
+    let stripped = stripped.trim_matches(|ch: char| ch.is_whitespace() || ch == ':' || ch == '-');
+    if !stripped.is_empty() && stripped != trimmed {
+        return stripped.to_string();
+    }
+
+    trimmed.to_string()
+}
+
+fn expand_spawn_tasks(task: &str, count: usize) -> Vec<String> {
+    if count <= 1 {
+        return vec![task.to_string()];
+    }
+
+    (0..count)
+        .map(|index| format!("{task} [{}/{}]", index + 1, count))
+        .collect()
+}
+
+fn build_spawn_note(plan: &SpawnPlan, created_count: usize) -> String {
+    let task = truncate_for_dashboard(&plan.task, 72);
+    if plan.spawn_count < plan.requested_count {
+        format!(
+            "spawned {created_count} session(s) for {task} (requested {}, capped at {})",
+            plan.requested_count, plan.spawn_count
+        )
+    } else {
+        format!("spawned {created_count} session(s) for {task}")
+    }
 }
 
 fn looks_like_file_change(text: &str) -> bool {
@@ -4472,6 +4731,90 @@ diff --git a/src/next.rs b/src/next.rs
     }
 
     #[test]
+    fn spawn_prompt_seed_uses_selected_session_context() {
+        let dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+
+        assert_eq!(
+            dashboard.spawn_prompt_seed(),
+            "give me 2 agents working on Follow up on focus-12: Render dashboard rows"
+        );
+    }
+
+    #[test]
+    fn parse_spawn_request_extracts_count_and_task_from_natural_language() {
+        let request = parse_spawn_request("give me 10 agents working on stabilize the queue")
+            .expect("spawn request should parse");
+
+        assert_eq!(
+            request,
+            SpawnRequest {
+                requested_count: 10,
+                task: "stabilize the queue".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn parse_spawn_request_defaults_to_single_session_without_count() {
+        let request = parse_spawn_request("stabilize the queue").expect("spawn request");
+
+        assert_eq!(
+            request,
+            SpawnRequest {
+                requested_count: 1,
+                task: "stabilize the queue".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn build_spawn_plan_caps_requested_count_to_available_slots() {
+        let dashboard = test_dashboard(
+            vec![
+                sample_session("pending-1", "planner", SessionState::Pending, None, 1, 1),
+                sample_session("running-1", "planner", SessionState::Running, None, 1, 1),
+                sample_session("idle-1", "planner", SessionState::Idle, None, 1, 1),
+            ],
+            0,
+        );
+
+        let plan = dashboard
+            .build_spawn_plan("give me 9 agents working on ship release notes")
+            .expect("spawn plan");
+
+        assert_eq!(
+            plan,
+            SpawnPlan {
+                requested_count: 9,
+                spawn_count: 5,
+                task: "ship release notes".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn expand_spawn_tasks_suffixes_multi_session_requests() {
+        assert_eq!(
+            expand_spawn_tasks("stabilize the queue", 3),
+            vec![
+                "stabilize the queue [1/3]".to_string(),
+                "stabilize the queue [2/3]".to_string(),
+                "stabilize the queue [3/3]".to_string(),
+            ]
+        );
+    }
+
+    #[test]
     fn refresh_preserves_selected_session_by_id() -> Result<()> {
         let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
         let db = StateStore::open(&db_path)?;
@@ -4612,7 +4955,7 @@ diff --git a/src/next.rs b/src/next.rs
 
         dashboard.begin_search();
         for ch in "alpha.*".chars() {
-            dashboard.push_search_char(ch);
+            dashboard.push_input_char(ch);
         }
         dashboard.submit_search();
 
@@ -4691,7 +5034,7 @@ diff --git a/src/next.rs b/src/next.rs
 
         dashboard.begin_search();
         for ch in "(".chars() {
-            dashboard.push_search_char(ch);
+            dashboard.push_input_char(ch);
         }
         dashboard.submit_search();
 
@@ -5938,6 +6281,7 @@ diff --git a/src/next.rs b/src/next.rs
             output_scroll_offset: 0,
             last_output_height: 0,
             search_input: None,
+            spawn_input: None,
             search_query: None,
             search_scope: SearchScope::SelectedSession,
             search_agent_filter: SearchAgentFilter::AllAgents,

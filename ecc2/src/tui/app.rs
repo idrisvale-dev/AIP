@@ -27,17 +27,17 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
 
         if event::poll(Duration::from_millis(250))? {
             if let Event::Key(key) = event::read()? {
-                if dashboard.is_search_mode() {
+                if dashboard.is_input_mode() {
                     match (key.modifiers, key.code) {
                         (KeyModifiers::CONTROL, KeyCode::Char('c')) => break,
-                        (_, KeyCode::Esc) => dashboard.cancel_search_input(),
-                        (_, KeyCode::Enter) => dashboard.submit_search(),
-                        (_, KeyCode::Backspace) => dashboard.pop_search_char(),
+                        (_, KeyCode::Esc) => dashboard.cancel_input(),
+                        (_, KeyCode::Enter) => dashboard.submit_input().await,
+                        (_, KeyCode::Backspace) => dashboard.pop_input_char(),
                         (modifiers, KeyCode::Char(ch))
                             if !modifiers.contains(KeyModifiers::CONTROL)
                                 && !modifiers.contains(KeyModifiers::ALT) =>
                         {
-                            dashboard.push_search_char(ch);
+                            dashboard.push_input_char(ch);
                         }
                         _ => {}
                     }
@@ -64,6 +64,7 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
                     (_, KeyCode::Char('N')) if dashboard.has_active_search() => {
                         dashboard.prev_search_match()
                     }
+                    (_, KeyCode::Char('N')) => dashboard.begin_spawn_prompt(),
                     (_, KeyCode::Char('n')) => dashboard.new_session().await,
                     (_, KeyCode::Char('a')) => dashboard.assign_selected().await,
                     (_, KeyCode::Char('b')) => dashboard.rebalance_selected_team().await,
