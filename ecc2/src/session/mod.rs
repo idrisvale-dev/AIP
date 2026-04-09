@@ -127,3 +127,12 @@ pub struct SessionMessage {
     pub read: bool,
     pub timestamp: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FileActivityEntry {
+    pub session_id: String,
+    pub tool_name: String,
+    pub path: String,
+    pub summary: String,
+    pub timestamp: DateTime<Utc>,
+}

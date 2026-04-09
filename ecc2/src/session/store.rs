@@ -11,7 +11,7 @@ use crate::config::Config;
 use crate::observability::{ToolCallEvent, ToolLogEntry, ToolLogPage};
 
 use super::output::{OutputLine, OutputStream, OUTPUT_BUFFER_LIMIT};
-use super::{Session, SessionMessage, SessionMetrics, SessionState};
+use super::{FileActivityEntry, Session, SessionMessage, SessionMetrics, SessionState};
 
 pub struct StateStore {
     conn: Connection,
@@ -1480,6 +1480,72 @@ impl StateStore {
             total,
         })
     }
+
+    pub fn list_file_activity(
+        &self,
+        session_id: &str,
+        limit: usize,
+    ) -> Result<Vec<FileActivityEntry>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT session_id, tool_name, input_summary, output_summary, timestamp, file_paths_json
+             FROM tool_log
+             WHERE session_id = ?1
+               AND file_paths_json IS NOT NULL
+               AND file_paths_json != '[]'
+             ORDER BY timestamp DESC, id DESC",
+        )?;
+
+        let rows = stmt
+            .query_map(rusqlite::params![session_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<String>>(2)?.unwrap_or_default(),
+                    row.get::<_, Option<String>>(3)?.unwrap_or_default(),
+                    row.get::<_, String>(4)?,
+                    row.get::<_, Option<String>>(5)?
+                        .unwrap_or_else(|| "[]".to_string()),
+                ))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut events = Vec::new();
+        for (session_id, tool_name, input_summary, output_summary, timestamp, file_paths_json) in
+            rows
+        {
+            let Ok(paths) = serde_json::from_str::<Vec<String>>(&file_paths_json) else {
+                continue;
+            };
+            let occurred_at = chrono::DateTime::parse_from_rfc3339(&timestamp)
+                .unwrap_or_default()
+                .with_timezone(&chrono::Utc);
+            let summary = if output_summary.trim().is_empty() {
+                input_summary
+            } else {
+                output_summary
+            };
+
+            for path in paths {
+                let path = path.trim().to_string();
+                if path.is_empty() {
+                    continue;
+                }
+
+                events.push(FileActivityEntry {
+                    session_id: session_id.clone(),
+                    tool_name: tool_name.clone(),
+                    path,
+                    summary: summary.clone(),
+                    timestamp: occurred_at,
+                });
+                if events.len() >= limit {
+                    return Ok(events);
+                }
+            }
+        }
+
+        Ok(events)
+    }
 }
 
 #[cfg(test)]
@@ -1698,6 +1764,50 @@ mod tests {
         assert_eq!(logs.total, 2);
         assert_eq!(logs.entries[0].tool_name, "Write");
         assert_eq!(logs.entries[1].tool_name, "Read");
+
+        Ok(())
+    }
+
+    #[test]
+    fn list_file_activity_expands_logged_file_paths() -> Result<()> {
+        let tempdir = TestDir::new("store-file-activity")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "sync tools".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let metrics_dir = tempdir.path().join("metrics");
+        fs::create_dir_all(&metrics_dir)?;
+        let metrics_path = metrics_dir.join("tool-usage.jsonl");
+        fs::write(
+            &metrics_path,
+            concat!(
+                "{\"id\":\"evt-1\",\"session_id\":\"session-1\",\"tool_name\":\"Read\",\"input_summary\":\"Read src/lib.rs\",\"output_summary\":\"ok\",\"file_paths\":[\"src/lib.rs\"],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
+                "{\"id\":\"evt-2\",\"session_id\":\"session-1\",\"tool_name\":\"Write\",\"input_summary\":\"Write README.md\",\"output_summary\":\"updated readme\",\"file_paths\":[\"README.md\",\"src/lib.rs\"],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n"
+            ),
+        )?;
+
+        db.sync_tool_activity_metrics(&metrics_path)?;
+
+        let activity = db.list_file_activity("session-1", 10)?;
+        assert_eq!(activity.len(), 3);
+        assert_eq!(activity[0].tool_name, "Write");
+        assert_eq!(activity[0].path, "README.md");
+        assert_eq!(activity[1].path, "src/lib.rs");
+        assert_eq!(activity[2].tool_name, "Read");
+        assert_eq!(activity[2].path, "src/lib.rs");
 
         Ok(())
     }

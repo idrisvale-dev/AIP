@@ -20,7 +20,7 @@ use crate::session::output::{
     OutputEvent, OutputLine, OutputStream, SessionOutputStore, OUTPUT_BUFFER_LIMIT,
 };
 use crate::session::store::{DaemonActivity, StateStore};
-use crate::session::{Session, SessionMessage, SessionState};
+use crate::session::{FileActivityEntry, Session, SessionMessage, SessionState};
 use crate::worktree;
 
 #[cfg(test)]
@@ -3482,13 +3482,24 @@ impl Dashboard {
             });
         }
 
-        if session.metrics.files_changed > 0 {
+        let file_activity = self
+            .db
+            .list_file_activity(&session.id, 64)
+            .unwrap_or_default();
+        if file_activity.is_empty() && session.metrics.files_changed > 0 {
             events.push(TimelineEvent {
                 occurred_at: session.updated_at,
                 session_id: session.id.clone(),
                 event_type: TimelineEventType::FileChange,
                 summary: format!("files touched {}", session.metrics.files_changed),
             });
+        } else {
+            events.extend(file_activity.into_iter().map(|entry| TimelineEvent {
+                occurred_at: entry.timestamp,
+                session_id: session.id.clone(),
+                event_type: TimelineEventType::FileChange,
+                summary: file_activity_summary(&entry),
+            }));
         }
 
         let messages = self
@@ -4125,6 +4136,20 @@ impl Dashboard {
                 "Tools {} | Files {}",
                 metrics.tool_calls, metrics.files_changed,
             ));
+            let recent_file_activity = self
+                .db
+                .list_file_activity(&session.id, 5)
+                .unwrap_or_default();
+            if !recent_file_activity.is_empty() {
+                lines.push("Recent file activity".to_string());
+                for entry in recent_file_activity {
+                    lines.push(format!(
+                        "- {} {}",
+                        self.short_timestamp(&entry.timestamp.to_rfc3339()),
+                        file_activity_summary(&entry)
+                    ));
+                }
+            }
             lines.push(format!(
                 "Cost ${:.4} | Duration {}s",
                 metrics.cost_usd, metrics.duration_secs
@@ -5372,6 +5397,31 @@ fn session_state_color(state: &SessionState) -> Color {
     }
 }
 
+fn file_activity_summary(entry: &FileActivityEntry) -> String {
+    format!(
+        "{} {}",
+        file_activity_verb(&entry.tool_name),
+        truncate_for_dashboard(&entry.path, 72)
+    )
+}
+
+fn file_activity_verb(tool_name: &str) -> &'static str {
+    let tool_name = tool_name.trim().to_ascii_lowercase();
+    if tool_name.contains("read") {
+        "read"
+    } else if tool_name.contains("write") {
+        "write"
+    } else if tool_name.contains("edit") {
+        "edit"
+    } else if tool_name.contains("delete") || tool_name.contains("remove") {
+        "delete"
+    } else if tool_name.contains("move") || tool_name.contains("rename") {
+        "move"
+    } else {
+        "touch"
+    }
+}
+
 fn heartbeat_enforcement_note(outcome: &manager::HeartbeatEnforcementOutcome) -> String {
     if !outcome.auto_terminated_sessions.is_empty() {
         return format!(
@@ -6015,6 +6065,51 @@ mod tests {
         assert!(rendered.contains("received query lead-123"));
         assert!(!rendered.contains("tool bash"));
         assert!(!rendered.contains("files touched 1"));
+    }
+
+    #[test]
+    fn timeline_and_metrics_render_recent_file_activity_details() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-file-activity-{}", Uuid::new_v4()));
+        fs::create_dir_all(&root)?;
+        let now = Utc::now();
+        let mut session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        session.created_at = now - chrono::Duration::hours(2);
+        session.updated_at = now - chrono::Duration::minutes(5);
+
+        let mut dashboard = test_dashboard(vec![session.clone()], 0);
+        dashboard.db.insert_session(&session)?;
+
+        let metrics_path = root.join("tool-usage.jsonl");
+        fs::write(
+            &metrics_path,
+            concat!(
+                "{\"id\":\"evt-1\",\"session_id\":\"focus-12345678\",\"tool_name\":\"Read\",\"input_summary\":\"Read src/lib.rs\",\"output_summary\":\"ok\",\"file_paths\":[\"src/lib.rs\"],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
+                "{\"id\":\"evt-2\",\"session_id\":\"focus-12345678\",\"tool_name\":\"Write\",\"input_summary\":\"Write README.md\",\"output_summary\":\"updated readme\",\"file_paths\":[\"README.md\"],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n"
+            ),
+        )?;
+        dashboard.db.sync_tool_activity_metrics(&metrics_path)?;
+        dashboard.sync_from_store();
+
+        dashboard.toggle_timeline_mode();
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("read src/lib.rs"));
+        assert!(rendered.contains("write README.md"));
+        assert!(!rendered.contains("files touched 2"));
+
+        let metrics_text = dashboard.selected_session_metrics_text();
+        assert!(metrics_text.contains("Recent file activity"));
+        assert!(metrics_text.contains("write README.md"));
+        assert!(metrics_text.contains("read src/lib.rs"));
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
     }
 
     #[test]
