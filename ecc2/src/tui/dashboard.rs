@@ -1,4 +1,5 @@
 use chrono::{Duration, Utc};
+use crossterm::event::KeyEvent;
 use ratatui::{
     prelude::*,
     widgets::{
@@ -11,7 +12,7 @@ use tokio::sync::broadcast;
 
 use super::widgets::{budget_state, format_currency, format_token_count, BudgetState, TokenMeter};
 use crate::comms;
-use crate::config::{Config, PaneLayout, Theme};
+use crate::config::{Config, PaneLayout, PaneNavigationAction, Theme};
 use crate::observability::ToolLogEntry;
 use crate::session::manager;
 use crate::session::output::{
@@ -883,7 +884,9 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [1-4] focus pane  [Tab] cycle pane  [Ctrl+h/j/k/l] move pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [{}] focus pane  [Tab] cycle pane  [{}] move pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            self.pane_focus_shortcuts_label(),
+            self.pane_move_shortcuts_label(),
             self.layout_label(),
             self.theme_label()
         );
@@ -956,56 +959,62 @@ impl Dashboard {
 
     fn render_help(&self, frame: &mut Frame, area: Rect) {
         let help = vec![
-            "Keyboard Shortcuts:",
-            "",
-            "  n       New session",
-            "  N       Natural-language multi-agent spawn prompt",
-            "  a       Assign follow-up work from selected session",
-            "  b       Rebalance backed-up delegate handoff backlog for selected lead",
-            "  B       Rebalance backed-up delegate handoff backlog across lead teams",
-            "  i       Drain unread task handoffs from selected lead",
-            "  I       Jump to the next unread approval/conflict target session",
-            "  g       Auto-dispatch unread handoffs across lead sessions",
-            "  G       Dispatch then rebalance backlog across lead teams",
-            "  h       Collapse the focused non-session pane",
-            "  H       Restore all collapsed panes",
-            "  y       Toggle selected-session timeline view",
-            "  E       Cycle timeline event filter",
-            "  v       Toggle selected worktree diff in output pane",
-            "  c       Show conflict-resolution protocol for selected conflicted worktree",
-            "  e       Cycle output content filter: all/errors/tool calls/file changes",
-            "  f       Cycle output or timeline time range between all/15m/1h/24h",
-            "  A       Toggle search or timeline scope between selected session and all sessions",
-            "  o       Toggle search agent filter between all agents and selected agent type",
-            "  m       Merge selected ready worktree into base and clean it up",
-            "  M       Merge all ready inactive worktrees and clean them up",
-            "  l       Cycle pane layout and persist it",
-            "  T       Toggle theme and persist it",
-            "  t       Toggle default worktree creation for new sessions and delegated work",
-            "  p       Toggle daemon auto-dispatch policy and persist config",
-            "  w       Toggle daemon auto-merge for ready inactive worktrees",
-            "  ,/.     Decrease/increase auto-dispatch limit per lead",
-            "  s       Stop selected session",
-            "  u       Resume selected session",
-            "  x       Cleanup selected worktree",
-            "  X       Prune inactive worktrees globally",
-            "  d       Delete selected inactive session",
-            "  1-4     Focus Sessions/Output/Metrics/Log directly",
-            "  Tab     Next pane",
-            "  S-Tab   Previous pane",
-            "  C-hjkl  Move pane focus left/down/up/right",
-            "  j/↓     Scroll down",
-            "  k/↑     Scroll up",
-            "  [ or ]  Focus previous/next delegate in lead Metrics board",
-            "  Enter   Open focused delegate from lead Metrics board",
-            "  /       Search current session output",
-            "  n/N     Next/previous search match when search is active",
-            "  Esc     Clear active search or cancel search input",
-            "  +/=     Increase pane size and persist it",
-            "  -       Decrease pane size and persist it",
-            "  r       Refresh",
-            "  ?       Toggle help",
-            "  q/C-c   Quit",
+            "Keyboard Shortcuts:".to_string(),
+            "".to_string(),
+            "  n       New session".to_string(),
+            "  N       Natural-language multi-agent spawn prompt".to_string(),
+            "  a       Assign follow-up work from selected session".to_string(),
+            "  b       Rebalance backed-up delegate handoff backlog for selected lead".to_string(),
+            "  B       Rebalance backed-up delegate handoff backlog across lead teams".to_string(),
+            "  i       Drain unread task handoffs from selected lead".to_string(),
+            "  I       Jump to the next unread approval/conflict target session".to_string(),
+            "  g       Auto-dispatch unread handoffs across lead sessions".to_string(),
+            "  G       Dispatch then rebalance backlog across lead teams".to_string(),
+            "  h       Collapse the focused non-session pane".to_string(),
+            "  H       Restore all collapsed panes".to_string(),
+            "  y       Toggle selected-session timeline view".to_string(),
+            "  E       Cycle timeline event filter".to_string(),
+            "  v       Toggle selected worktree diff in output pane".to_string(),
+            "  c       Show conflict-resolution protocol for selected conflicted worktree".to_string(),
+            "  e       Cycle output content filter: all/errors/tool calls/file changes".to_string(),
+            "  f       Cycle output or timeline time range between all/15m/1h/24h".to_string(),
+            "  A       Toggle search or timeline scope between selected session and all sessions".to_string(),
+            "  o       Toggle search agent filter between all agents and selected agent type".to_string(),
+            "  m       Merge selected ready worktree into base and clean it up".to_string(),
+            "  M       Merge all ready inactive worktrees and clean them up".to_string(),
+            "  l       Cycle pane layout and persist it".to_string(),
+            "  T       Toggle theme and persist it".to_string(),
+            "  t       Toggle default worktree creation for new sessions and delegated work".to_string(),
+            "  p       Toggle daemon auto-dispatch policy and persist config".to_string(),
+            "  w       Toggle daemon auto-merge for ready inactive worktrees".to_string(),
+            "  ,/.     Decrease/increase auto-dispatch limit per lead".to_string(),
+            "  s       Stop selected session".to_string(),
+            "  u       Resume selected session".to_string(),
+            "  x       Cleanup selected worktree".to_string(),
+            "  X       Prune inactive worktrees globally".to_string(),
+            "  d       Delete selected inactive session".to_string(),
+            format!(
+                "  {:<7} Focus Sessions/Output/Metrics/Log directly",
+                self.pane_focus_shortcuts_label()
+            ),
+            "  Tab     Next pane".to_string(),
+            "  S-Tab   Previous pane".to_string(),
+            format!(
+                "  {:<7} Move pane focus left/down/up/right",
+                self.pane_move_shortcuts_label()
+            ),
+            "  j/↓     Scroll down".to_string(),
+            "  k/↑     Scroll up".to_string(),
+            "  [ or ]  Focus previous/next delegate in lead Metrics board".to_string(),
+            "  Enter   Open focused delegate from lead Metrics board".to_string(),
+            "  /       Search current session output".to_string(),
+            "  n/N     Next/previous search match when search is active".to_string(),
+            "  Esc     Clear active search or cancel search input".to_string(),
+            "  +/=     Increase pane size and persist it".to_string(),
+            "  -       Decrease pane size and persist it".to_string(),
+            "  r       Refresh".to_string(),
+            "  ?       Toggle help".to_string(),
+            "  q/C-c   Quit".to_string(),
         ];
 
         let paragraph = Paragraph::new(help.join("\n")).block(
@@ -1070,6 +1079,32 @@ impl Dashboard {
 
     pub fn focus_pane_down(&mut self) {
         self.move_pane_focus(PaneDirection::Down);
+    }
+
+    pub fn handle_pane_navigation_key(&mut self, key: KeyEvent) -> bool {
+        match self.cfg.pane_navigation.action_for_key(key) {
+            Some(PaneNavigationAction::FocusSlot(slot)) => {
+                self.focus_pane_number(slot);
+                true
+            }
+            Some(PaneNavigationAction::MoveLeft) => {
+                self.focus_pane_left();
+                true
+            }
+            Some(PaneNavigationAction::MoveDown) => {
+                self.focus_pane_down();
+                true
+            }
+            Some(PaneNavigationAction::MoveUp) => {
+                self.focus_pane_up();
+                true
+            }
+            Some(PaneNavigationAction::MoveRight) => {
+                self.focus_pane_right();
+                true
+            }
+            None => false,
+        }
     }
 
     pub fn collapse_selected_pane(&mut self) {
@@ -2724,6 +2759,14 @@ impl Dashboard {
         if let Some((pane, _, _)) = candidate {
             self.focus_pane(pane);
         }
+    }
+
+    fn pane_focus_shortcuts_label(&self) -> String {
+        self.cfg.pane_navigation.focus_shortcuts_label()
+    }
+
+    fn pane_move_shortcuts_label(&self) -> String {
+        self.cfg.pane_navigation.movement_shortcuts_label()
     }
 
     fn sync_global_handoff_backlog(&mut self) {
@@ -8394,6 +8437,41 @@ diff --git a/src/next.rs b/src/next.rs
     }
 
     #[test]
+    fn configured_pane_navigation_keys_override_defaults() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.cfg.pane_navigation.focus_metrics = "e".to_string();
+        dashboard.cfg.pane_navigation.move_left = "a".to_string();
+
+        assert!(dashboard.handle_pane_navigation_key(KeyEvent::new(
+            crossterm::event::KeyCode::Char('e'),
+            crossterm::event::KeyModifiers::NONE,
+        )));
+        assert_eq!(dashboard.selected_pane, Pane::Metrics);
+
+        assert!(dashboard.handle_pane_navigation_key(KeyEvent::new(
+            crossterm::event::KeyCode::Char('a'),
+            crossterm::event::KeyModifiers::NONE,
+        )));
+        assert_eq!(dashboard.selected_pane, Pane::Sessions);
+    }
+
+    #[test]
+    fn pane_navigation_labels_use_configured_bindings() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.cfg.pane_navigation.focus_sessions = "q".to_string();
+        dashboard.cfg.pane_navigation.focus_output = "w".to_string();
+        dashboard.cfg.pane_navigation.focus_metrics = "e".to_string();
+        dashboard.cfg.pane_navigation.focus_log = "r".to_string();
+        dashboard.cfg.pane_navigation.move_left = "a".to_string();
+        dashboard.cfg.pane_navigation.move_down = "s".to_string();
+        dashboard.cfg.pane_navigation.move_up = "w".to_string();
+        dashboard.cfg.pane_navigation.move_right = "d".to_string();
+
+        assert_eq!(dashboard.pane_focus_shortcuts_label(), "q/w/e/r");
+        assert_eq!(dashboard.pane_move_shortcuts_label(), "a/s/w/d");
+    }
+
+    #[test]
     fn cycle_pane_layout_rotates_and_hides_log_when_leaving_grid() {
         let mut dashboard = test_dashboard(Vec::new(), 0);
         dashboard.cfg.pane_layout = PaneLayout::Grid;
@@ -8717,6 +8795,7 @@ diff --git a/src/next.rs b/src/next.rs
             token_budget: 500_000,
             theme: Theme::Dark,
             pane_layout: PaneLayout::Horizontal,
+            pane_navigation: Default::default(),
             linear_pane_size_percent: 35,
             grid_pane_size_percent: 50,
             risk_thresholds: Config::RISK_THRESHOLDS,
