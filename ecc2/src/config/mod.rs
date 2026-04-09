@@ -68,6 +68,11 @@ pub struct PaneNavigationConfig {
     pub move_right: String,
 }
 
+#[derive(Debug, Default, Deserialize)]
+struct ProjectWorktreeConfigOverride {
+    max_parallel_worktrees: Option<usize>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PaneNavigationAction {
     FocusSlot(usize),
@@ -155,14 +160,47 @@ impl Config {
 
     pub fn load() -> Result<Self> {
         let config_path = Self::config_path();
+        let project_path = std::env::current_dir()
+            .ok()
+            .and_then(|cwd| Self::project_config_path_from(&cwd));
+        Self::load_from_paths(&config_path, project_path.as_deref())
+    }
 
-        if config_path.exists() {
-            let content = std::fs::read_to_string(&config_path)?;
-            let config: Config = toml::from_str(&content)?;
-            Ok(config)
+    fn load_from_paths(
+        config_path: &std::path::Path,
+        project_override_path: Option<&std::path::Path>,
+    ) -> Result<Self> {
+        let mut config = if config_path.exists() {
+            let content = std::fs::read_to_string(config_path)?;
+            toml::from_str(&content)?
         } else {
-            Ok(Config::default())
+            Config::default()
+        };
+
+        if let Some(project_path) = project_override_path.filter(|path| path.exists()) {
+            let content = std::fs::read_to_string(project_path)?;
+            let overrides: ProjectWorktreeConfigOverride = toml::from_str(&content)?;
+            if let Some(limit) = overrides.max_parallel_worktrees {
+                config.max_parallel_worktrees = limit;
+            }
         }
+
+        Ok(config)
+    }
+
+    fn project_config_path_from(start: &std::path::Path) -> Option<PathBuf> {
+        let global = Self::config_path();
+        let mut current = Some(start);
+
+        while let Some(path) = current {
+            let candidate = path.join(".claude").join("ecc2.toml");
+            if candidate.exists() && candidate != global {
+                return Some(candidate);
+            }
+            current = path.parent();
+        }
+
+        None
     }
 
     pub fn save(&self) -> Result<()> {
@@ -417,6 +455,21 @@ theme = "Dark"
         let config: Config = toml::from_str(r#"worktree_branch_prefix = "bots/ecc""#).unwrap();
 
         assert_eq!(config.worktree_branch_prefix, "bots/ecc");
+    }
+
+    #[test]
+    fn project_worktree_limit_override_replaces_global_limit() {
+        let tempdir = std::env::temp_dir().join(format!("ecc2-config-{}", Uuid::new_v4()));
+        let global_path = tempdir.join("global.toml");
+        let project_path = tempdir.join("project.toml");
+        std::fs::create_dir_all(&tempdir).unwrap();
+        std::fs::write(&global_path, "max_parallel_worktrees = 6\n").unwrap();
+        std::fs::write(&project_path, "max_parallel_worktrees = 2\n").unwrap();
+
+        let config = Config::load_from_paths(&global_path, Some(&project_path)).unwrap();
+        assert_eq!(config.max_parallel_worktrees, 2);
+
+        let _ = std::fs::remove_dir_all(tempdir);
     }
 
     #[test]

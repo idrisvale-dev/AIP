@@ -1673,10 +1673,21 @@ impl Dashboard {
 
         self.refresh();
         self.sync_selection_by_id(Some(&session_id));
-        self.set_operator_note(format!(
-            "spawned session {}",
-            format_session_id(&session_id)
-        ));
+        let queued_for_worktree = self
+            .db
+            .pending_worktree_queue_contains(&session_id)
+            .unwrap_or(false);
+        if queued_for_worktree {
+            self.set_operator_note(format!(
+                "queued session {} pending worktree slot",
+                format_session_id(&session_id)
+            ));
+        } else {
+            self.set_operator_note(format!(
+                "spawned session {}",
+                format_session_id(&session_id)
+            ));
+        }
         self.reset_output_view();
         self.sync_selected_output();
         self.sync_selected_diff();
@@ -2565,7 +2576,15 @@ impl Dashboard {
         let preferred_selection =
             post_spawn_selection_id(source_session_id.as_deref(), &created_ids);
         self.refresh_after_spawn(preferred_selection.as_deref());
-        let mut note = build_spawn_note(&plan, created_ids.len());
+        let queued_count = created_ids
+            .iter()
+            .filter(|session_id| {
+                self.db
+                    .pending_worktree_queue_contains(session_id)
+                    .unwrap_or(false)
+            })
+            .count();
+        let mut note = build_spawn_note(&plan, created_ids.len(), queued_count);
         if let Some(layout_note) = self.auto_split_layout_after_spawn(created_ids.len()) {
             note.push_str(" | ");
             note.push_str(&layout_note);
@@ -2768,6 +2787,10 @@ impl Dashboard {
                 Err(broadcast::error::TryRecvError::Lagged(_)) => continue,
                 Err(broadcast::error::TryRecvError::Closed) => break,
             }
+        }
+
+        if let Err(error) = manager::activate_pending_worktree_sessions(&self.db, &self.cfg).await {
+            tracing::warn!("Failed to activate queued worktree sessions: {error}");
         }
 
         self.sync_from_store();
@@ -4768,16 +4791,22 @@ fn expand_spawn_tasks(task: &str, count: usize) -> Vec<String> {
         .collect()
 }
 
-fn build_spawn_note(plan: &SpawnPlan, created_count: usize) -> String {
+fn build_spawn_note(plan: &SpawnPlan, created_count: usize, queued_count: usize) -> String {
     let task = truncate_for_dashboard(&plan.task, 72);
-    if plan.spawn_count < plan.requested_count {
+    let mut note = if plan.spawn_count < plan.requested_count {
         format!(
             "spawned {created_count} session(s) for {task} (requested {}, capped at {})",
             plan.requested_count, plan.spawn_count
         )
     } else {
         format!("spawned {created_count} session(s) for {task}")
+    };
+
+    if queued_count > 0 {
+        note.push_str(&format!(" | {queued_count} pending worktree slot"));
     }
+
+    note
 }
 
 fn post_spawn_selection_id(

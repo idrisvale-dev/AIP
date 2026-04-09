@@ -39,6 +39,10 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
             tracing::error!("Worktree auto-prune pass failed: {e}");
         }
 
+        if let Err(e) = manager::activate_pending_worktree_sessions(&db, &cfg).await {
+            tracing::error!("Queued worktree activation pass failed: {e}");
+        }
+
         time::sleep(heartbeat_interval).await;
     }
 }

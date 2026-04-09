@@ -14,10 +14,18 @@ use crate::observability::{ToolCallEvent, ToolLogEntry, ToolLogPage};
 use super::output::{OutputLine, OutputStream, OUTPUT_BUFFER_LIMIT};
 use super::{
     FileActivityAction, FileActivityEntry, Session, SessionMessage, SessionMetrics, SessionState,
+    WorktreeInfo,
 };
 
 pub struct StateStore {
     conn: Connection,
+}
+
+#[derive(Debug, Clone)]
+pub struct PendingWorktreeRequest {
+    pub session_id: String,
+    pub repo_root: PathBuf,
+    pub _requested_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -183,6 +191,12 @@ impl StateStore {
                 timestamp TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS pending_worktree_queue (
+                session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+                repo_root TEXT NOT NULL,
+                requested_at TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS daemon_activity (
                 id INTEGER PRIMARY KEY CHECK(id = 1),
                 last_dispatch_at TEXT,
@@ -215,6 +229,8 @@ impl StateStore {
             CREATE INDEX IF NOT EXISTS idx_messages_to ON messages(to_session, read);
             CREATE INDEX IF NOT EXISTS idx_session_output_session
                 ON session_output(session_id, id);
+            CREATE INDEX IF NOT EXISTS idx_pending_worktree_queue_requested_at
+                ON pending_worktree_queue(requested_at, session_id);
 
             INSERT OR IGNORE INTO daemon_activity (id) VALUES (1);
             ",
@@ -575,15 +591,29 @@ impl StateStore {
     }
 
     pub fn clear_worktree(&self, session_id: &str) -> Result<()> {
+        let working_dir: String = self.conn.query_row(
+            "SELECT working_dir FROM sessions WHERE id = ?1",
+            [session_id],
+            |row| row.get(0),
+        )?;
+        self.clear_worktree_to_dir(session_id, Path::new(&working_dir))
+    }
+
+    pub fn clear_worktree_to_dir(&self, session_id: &str, working_dir: &Path) -> Result<()> {
         let updated = self.conn.execute(
             "UPDATE sessions
-             SET worktree_path = NULL,
+             SET working_dir = ?1,
+                 worktree_path = NULL,
                  worktree_branch = NULL,
                  worktree_base = NULL,
-                 updated_at = ?1,
-                 last_heartbeat_at = ?1
-             WHERE id = ?2",
-            rusqlite::params![chrono::Utc::now().to_rfc3339(), session_id],
+                 updated_at = ?2,
+                 last_heartbeat_at = ?2
+             WHERE id = ?3",
+            rusqlite::params![
+                working_dir.to_string_lossy().to_string(),
+                chrono::Utc::now().to_rfc3339(),
+                session_id
+            ],
         )?;
 
         if updated == 0 {
@@ -591,6 +621,90 @@ impl StateStore {
         }
 
         Ok(())
+    }
+
+    pub fn attach_worktree(&self, session_id: &str, worktree: &WorktreeInfo) -> Result<()> {
+        let updated = self.conn.execute(
+            "UPDATE sessions
+             SET working_dir = ?1,
+                 worktree_path = ?2,
+                 worktree_branch = ?3,
+                 worktree_base = ?4,
+                 updated_at = ?5,
+                 last_heartbeat_at = ?5
+             WHERE id = ?6",
+            rusqlite::params![
+                worktree.path.to_string_lossy().to_string(),
+                worktree.path.to_string_lossy().to_string(),
+                worktree.branch,
+                worktree.base_branch,
+                chrono::Utc::now().to_rfc3339(),
+                session_id
+            ],
+        )?;
+
+        if updated == 0 {
+            anyhow::bail!("Session not found: {session_id}");
+        }
+
+        Ok(())
+    }
+
+    pub fn enqueue_pending_worktree(&self, session_id: &str, repo_root: &Path) -> Result<()> {
+        self.conn.execute(
+            "INSERT OR REPLACE INTO pending_worktree_queue (session_id, repo_root, requested_at)
+             VALUES (?1, ?2, ?3)",
+            rusqlite::params![
+                session_id,
+                repo_root.to_string_lossy().to_string(),
+                chrono::Utc::now().to_rfc3339()
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn dequeue_pending_worktree(&self, session_id: &str) -> Result<()> {
+        self.conn.execute(
+            "DELETE FROM pending_worktree_queue WHERE session_id = ?1",
+            [session_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn pending_worktree_queue_contains(&self, session_id: &str) -> Result<bool> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT 1 FROM pending_worktree_queue WHERE session_id = ?1",
+                [session_id],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some())
+    }
+
+    pub fn pending_worktree_queue(&self, limit: usize) -> Result<Vec<PendingWorktreeRequest>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT session_id, repo_root, requested_at
+             FROM pending_worktree_queue
+             ORDER BY requested_at ASC, session_id ASC
+             LIMIT ?1",
+        )?;
+
+        let rows = stmt
+            .query_map([limit as i64], |row| {
+                let requested_at: String = row.get(2)?;
+                Ok(PendingWorktreeRequest {
+                    session_id: row.get(0)?,
+                    repo_root: PathBuf::from(row.get::<_, String>(1)?),
+                    _requested_at: chrono::DateTime::parse_from_rfc3339(&requested_at)
+                        .unwrap_or_default()
+                        .with_timezone(&chrono::Utc),
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(rows)
     }
 
     pub fn update_metrics(&self, session_id: &str, metrics: &SessionMetrics) -> Result<()> {
