@@ -192,7 +192,11 @@ struct AggregateUsage {
 struct DelegatedChildSummary {
     session_id: String,
     state: SessionState,
+    approval_backlog: usize,
     handoff_backlog: usize,
+    tokens_used: u64,
+    files_changed: u32,
+    duration_secs: u64,
     task_preview: String,
     branch: Option<String>,
     last_output_preview: Option<String>,
@@ -2483,6 +2487,11 @@ impl Dashboard {
                     match self.db.get_session(&child_id) {
                         Ok(Some(session)) => {
                             team.total += 1;
+                            let approval_backlog = self
+                                .approval_queue_counts
+                                .get(&child_id)
+                                .copied()
+                                .unwrap_or(0);
                             let handoff_backlog = match self.db.unread_task_handoff_count(&child_id)
                             {
                                 Ok(count) => count,
@@ -2505,9 +2514,13 @@ impl Dashboard {
                             }
 
                             route_candidates.push(DelegatedChildSummary {
+                                approval_backlog,
                                 handoff_backlog,
                                 state: state.clone(),
                                 session_id: child_id.clone(),
+                                tokens_used: session.metrics.tokens_used,
+                                files_changed: session.metrics.files_changed,
+                                duration_secs: session.metrics.duration_secs,
                                 task_preview: truncate_for_dashboard(&session.task, 40),
                                 branch: session
                                     .worktree
@@ -2521,9 +2534,13 @@ impl Dashboard {
                                     .map(|line| truncate_for_dashboard(&line.text, 48)),
                             });
                             delegated.push(DelegatedChildSummary {
+                                approval_backlog,
                                 handoff_backlog,
                                 state,
                                 session_id: child_id,
+                                tokens_used: session.metrics.tokens_used,
+                                files_changed: session.metrics.files_changed,
+                                duration_secs: session.metrics.duration_secs,
                                 task_preview: truncate_for_dashboard(&session.task, 40),
                                 branch: session
                                     .worktree
@@ -3002,10 +3019,14 @@ impl Dashboard {
                 lines.push("Delegates".to_string());
                 for child in &self.selected_child_sessions {
                     let mut child_line = format!(
-                        "- {} [{}] | backlog {} | task {}",
+                        "- {} [{}] | approvals {} | backlog {} | progress {} tok / {} files / {} | task {}",
                         format_session_id(&child.session_id),
                         session_state_label(&child.state),
+                        child.approval_backlog,
                         child.handoff_backlog,
+                        format_token_count(child.tokens_used),
+                        child.files_changed,
+                        format_duration(child.duration_secs),
                         child.task_preview
                     );
                     if let Some(branch) = child.branch.as_ref() {
@@ -4503,7 +4524,11 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.selected_child_sessions = vec![DelegatedChildSummary {
             session_id: "delegate-12345678".to_string(),
             state: SessionState::Running,
+            approval_backlog: 1,
             handoff_backlog: 2,
+            tokens_used: 1_280,
+            files_changed: 3,
+            duration_secs: 12,
             task_preview: "Implement rust tui delegate board".to_string(),
             branch: Some("ecc/delegate-12345678".to_string()),
             last_output_preview: Some("Investigating pane selection behavior".to_string()),
@@ -4512,7 +4537,7 @@ diff --git a/src/next.rs b/src/next.rs
         let text = dashboard.selected_session_metrics_text();
         assert!(
             text.contains(
-                "- delegate [Running] | backlog 2 | task Implement rust tui delegate board | branch ecc/delegate-12345678"
+                "- delegate [Running] | approvals 1 | backlog 2 | progress 1,280 tok / 3 files / 00:00:12 | task Implement rust tui delegate board | branch ecc/delegate-12345678"
             )
         );
         assert!(text.contains("  last output Investigating pane selection behavior"));
@@ -5042,6 +5067,10 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.db.insert_session(&child).unwrap();
         dashboard
             .db
+            .update_metrics("worker-12345678", &child.metrics)
+            .unwrap();
+        dashboard
+            .db
             .send_message(
                 "lead-12345678",
                 "worker-12345678",
@@ -5057,10 +5086,17 @@ diff --git a/src/next.rs b/src/next.rs
                 "Reviewing delegate metrics board layout",
             )
             .unwrap();
+        dashboard
+            .approval_queue_counts
+            .insert("worker-12345678".into(), 2);
 
         dashboard.sync_selected_lineage();
 
         assert_eq!(dashboard.selected_child_sessions.len(), 1);
+        assert_eq!(dashboard.selected_child_sessions[0].approval_backlog, 2);
+        assert_eq!(dashboard.selected_child_sessions[0].tokens_used, 128);
+        assert_eq!(dashboard.selected_child_sessions[0].files_changed, 2);
+        assert_eq!(dashboard.selected_child_sessions[0].duration_secs, 12);
         assert_eq!(
             dashboard.selected_child_sessions[0].task_preview,
             "Implement delegate metrics board for EC…"
@@ -5070,7 +5106,9 @@ diff --git a/src/next.rs b/src/next.rs
             Some("ecc/worker")
         );
         assert_eq!(
-            dashboard.selected_child_sessions[0].last_output_preview.as_deref(),
+            dashboard.selected_child_sessions[0]
+                .last_output_preview
+                .as_deref(),
             Some("Reviewing delegate metrics board layout")
         );
     }
