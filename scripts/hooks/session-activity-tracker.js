@@ -10,6 +10,7 @@
 
 const crypto = require('crypto');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const {
   appendFile,
   getClaudeDir,
@@ -161,6 +162,33 @@ function buildPatchPreviewFromContent(content, prefix) {
   return lines.map(line => `${prefix} ${line}`).join('\n');
 }
 
+function buildDiffPreviewFromPatchPreview(patchPreview) {
+  if (typeof patchPreview !== 'string' || !patchPreview.trim()) {
+    return undefined;
+  }
+
+  const lines = patchPreview
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  const removed = lines.find(line => line.startsWith('- ') || line.startsWith('-'));
+  const added = lines.find(line => line.startsWith('+ ') || line.startsWith('+'));
+
+  if (!removed && !added) {
+    return undefined;
+  }
+
+  const before = removed ? removed.replace(/^- ?/, '') : '';
+  const after = added ? added.replace(/^\+ ?/, '') : '';
+  if (before && after) {
+    return `${before} -> ${after}`;
+  }
+  if (before) {
+    return `${before} ->`;
+  }
+  return `-> ${after}`;
+}
+
 function inferDefaultFileAction(toolName) {
   const normalized = String(toolName || '').trim().toLowerCase();
   if (normalized.includes('read')) {
@@ -269,6 +297,104 @@ function fileEventPatchPreview(value, action) {
   return undefined;
 }
 
+function runGit(args, cwd) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    timeout: 2500,
+  });
+
+  if (result.error || result.status !== 0) {
+    return null;
+  }
+
+  return String(result.stdout || '').trim();
+}
+
+function gitRepoRoot(cwd) {
+  return runGit(['rev-parse', '--show-toplevel'], cwd);
+}
+
+function repoRelativePath(repoRoot, filePath) {
+  const absolute = path.isAbsolute(filePath)
+    ? path.resolve(filePath)
+    : path.resolve(process.cwd(), filePath);
+  const relative = path.relative(repoRoot, absolute);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    return null;
+  }
+  return relative.split(path.sep).join('/');
+}
+
+function patchPreviewFromGitDiff(repoRoot, repoRelative) {
+  const patch = runGit(
+    ['diff', '--no-ext-diff', '--no-color', '--unified=1', '--', repoRelative],
+    repoRoot
+  );
+  if (!patch) {
+    return undefined;
+  }
+
+  const relevant = patch
+    .split(/\r?\n/)
+    .filter(line =>
+      line.startsWith('@@')
+        || (line.startsWith('+') && !line.startsWith('+++'))
+        || (line.startsWith('-') && !line.startsWith('---'))
+    )
+    .slice(0, 6);
+
+  if (relevant.length === 0) {
+    return undefined;
+  }
+
+  return relevant.join('\n');
+}
+
+function trackedInGit(repoRoot, repoRelative) {
+  return runGit(['ls-files', '--error-unmatch', '--', repoRelative], repoRoot) !== null;
+}
+
+function enrichFileEventFromWorkingTree(toolName, event) {
+  if (!event || typeof event !== 'object' || !event.path) {
+    return event;
+  }
+
+  const repoRoot = gitRepoRoot(process.cwd());
+  if (!repoRoot) {
+    return event;
+  }
+
+  const repoRelative = repoRelativePath(repoRoot, event.path);
+  if (!repoRelative) {
+    return event;
+  }
+
+  const tool = String(toolName || '').trim().toLowerCase();
+  const tracked = trackedInGit(repoRoot, repoRelative);
+  const patchPreview = patchPreviewFromGitDiff(repoRoot, repoRelative) || event.patch_preview;
+  const diffPreview = buildDiffPreviewFromPatchPreview(patchPreview) || event.diff_preview;
+
+  if (tool.includes('write')) {
+    return {
+      ...event,
+      action: tracked ? 'modify' : event.action,
+      diff_preview: diffPreview,
+      patch_preview: patchPreview,
+    };
+  }
+
+  if (tracked && patchPreview) {
+    return {
+      ...event,
+      diff_preview: diffPreview,
+      patch_preview: patchPreview,
+    };
+  }
+
+  return event;
+}
+
 function collectFileEvents(toolName, value, events, key = null, parentValue = null) {
   if (!value) {
     return;
@@ -375,7 +501,9 @@ function buildActivityRow(input, env = process.env) {
   }
 
   const toolInput = input?.tool_input || {};
-  const fileEvents = extractFileEvents(toolName, toolInput);
+  const fileEvents = extractFileEvents(toolName, toolInput).map(event =>
+    enrichFileEventFromWorkingTree(toolName, event)
+  );
   const filePaths = fileEvents.length > 0
     ? [...new Set(fileEvents.map(event => event.path))]
     : extractFilePaths(toolInput);
