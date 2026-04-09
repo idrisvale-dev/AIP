@@ -32,6 +32,13 @@ const MAX_LOG_ENTRIES: u64 = 12;
 const MAX_DIFF_PREVIEW_LINES: usize = 6;
 const MAX_DIFF_PATCH_LINES: usize = 80;
 
+fn default_pane_size(layout: PaneLayout) -> u16 {
+    match layout {
+        PaneLayout::Grid => DEFAULT_GRID_SIZE_PERCENT,
+        PaneLayout::Horizontal | PaneLayout::Vertical => DEFAULT_PANE_SIZE_PERCENT,
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct WorktreeDiffColumns {
     removals: String,
@@ -148,10 +155,7 @@ impl Dashboard {
         cfg: Config,
         output_store: SessionOutputStore,
     ) -> Self {
-        let pane_size_percent = match cfg.pane_layout {
-            PaneLayout::Grid => DEFAULT_GRID_SIZE_PERCENT,
-            PaneLayout::Horizontal | PaneLayout::Vertical => DEFAULT_PANE_SIZE_PERCENT,
-        };
+        let pane_size_percent = default_pane_size(cfg.pane_layout);
         let sessions = db.list_sessions().unwrap_or_default();
         let output_rx = output_store.subscribe();
         let mut session_table_state = TableState::default();
@@ -526,7 +530,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [{}] layout  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [?] help  [q]uit ",
             self.layout_label()
         );
         let text = if let Some(note) = self.operator_note.as_ref() {
@@ -581,6 +585,7 @@ impl Dashboard {
             "  c       Show conflict-resolution protocol for selected conflicted worktree",
             "  m       Merge selected ready worktree into base and clean it up",
             "  M       Merge all ready inactive worktrees and clean them up",
+            "  l       Cycle pane layout and persist it",
             "  t       Toggle default worktree creation for new sessions and delegated work",
             "  p       Toggle daemon auto-dispatch policy and persist config",
             "  w       Toggle daemon auto-merge for ready inactive worktrees",
@@ -630,6 +635,42 @@ impl Dashboard {
         };
 
         self.selected_pane = visible_panes[previous_index];
+    }
+
+    pub fn cycle_pane_layout(&mut self) {
+        let config_path = crate::config::Config::config_path();
+        self.cycle_pane_layout_with_save(&config_path, |cfg| cfg.save());
+    }
+
+    fn cycle_pane_layout_with_save<F>(&mut self, config_path: &std::path::Path, save: F)
+    where
+        F: FnOnce(&Config) -> anyhow::Result<()>,
+    {
+        let previous_layout = self.cfg.pane_layout;
+        let previous_pane_size = self.pane_size_percent;
+        let previous_selected_pane = self.selected_pane;
+
+        self.cfg.pane_layout = match self.cfg.pane_layout {
+            PaneLayout::Horizontal => PaneLayout::Vertical,
+            PaneLayout::Vertical => PaneLayout::Grid,
+            PaneLayout::Grid => PaneLayout::Horizontal,
+        };
+        self.pane_size_percent = default_pane_size(self.cfg.pane_layout);
+        self.ensure_selected_pane_visible();
+
+        match save(&self.cfg) {
+            Ok(()) => self.set_operator_note(format!(
+                "pane layout set to {} | saved to {}",
+                self.layout_label(),
+                config_path.display()
+            )),
+            Err(error) => {
+                self.cfg.pane_layout = previous_layout;
+                self.pane_size_percent = previous_pane_size;
+                self.selected_pane = previous_selected_pane;
+                self.set_operator_note(format!("failed to persist pane layout: {error}"));
+            }
+        }
     }
 
     pub fn increase_pane_size(&mut self) {
@@ -4190,6 +4231,45 @@ diff --git a/src/next.rs b/src/next.rs
         assert_eq!(dashboard.selected_pane, Pane::Log);
     }
 
+    #[test]
+    fn cycle_pane_layout_rotates_and_hides_log_when_leaving_grid() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.cfg.pane_layout = PaneLayout::Grid;
+        dashboard.pane_size_percent = 77;
+        dashboard.selected_pane = Pane::Log;
+
+        dashboard.cycle_pane_layout();
+
+        assert_eq!(dashboard.cfg.pane_layout, PaneLayout::Horizontal);
+        assert_eq!(dashboard.pane_size_percent, DEFAULT_PANE_SIZE_PERCENT);
+        assert_eq!(dashboard.selected_pane, Pane::Sessions);
+    }
+
+    #[test]
+    fn cycle_pane_layout_persists_config() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        let tempdir = std::env::temp_dir().join(format!("ecc2-layout-policy-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&tempdir).unwrap();
+        let config_path = tempdir.join("ecc2.toml");
+
+        dashboard.cycle_pane_layout_with_save(&config_path, |cfg| cfg.save_to_path(&config_path));
+
+        assert_eq!(dashboard.cfg.pane_layout, PaneLayout::Vertical);
+        let expected_note = format!(
+            "pane layout set to vertical | saved to {}",
+            config_path.display()
+        );
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some(expected_note.as_str())
+        );
+
+        let saved = std::fs::read_to_string(&config_path).unwrap();
+        let loaded: Config = toml::from_str(&saved).unwrap();
+        assert_eq!(loaded.pane_layout, PaneLayout::Vertical);
+        let _ = std::fs::remove_dir_all(tempdir);
+    }
+
     fn test_dashboard(sessions: Vec<Session>, selected_session: usize) -> Dashboard {
         let selected_session = selected_session.min(sessions.len().saturating_sub(1));
         let cfg = Config::default();
@@ -4202,10 +4282,7 @@ diff --git a/src/next.rs b/src/next.rs
 
         Dashboard {
             db: StateStore::open(Path::new(":memory:")).expect("open test db"),
-            pane_size_percent: match cfg.pane_layout {
-                PaneLayout::Grid => DEFAULT_GRID_SIZE_PERCENT,
-                PaneLayout::Horizontal | PaneLayout::Vertical => DEFAULT_PANE_SIZE_PERCENT,
-            },
+            pane_size_percent: default_pane_size(cfg.pane_layout),
             cfg,
             output_store,
             output_rx,
