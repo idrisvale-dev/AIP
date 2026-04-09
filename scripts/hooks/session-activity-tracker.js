@@ -62,7 +62,7 @@ function pushPathCandidate(paths, value) {
   }
 }
 
-function pushFileEvent(events, value, action, diffPreview) {
+function pushFileEvent(events, value, action, diffPreview, patchPreview) {
   const candidate = String(value || '').trim();
   if (!candidate) {
     return;
@@ -73,14 +73,21 @@ function pushFileEvent(events, value, action, diffPreview) {
   const normalizedDiffPreview = typeof diffPreview === 'string' && diffPreview.trim()
     ? diffPreview.trim()
     : undefined;
+  const normalizedPatchPreview = typeof patchPreview === 'string' && patchPreview.trim()
+    ? patchPreview.trim()
+    : undefined;
   if (!events.some(event =>
     event.path === candidate
       && event.action === action
       && (event.diff_preview || undefined) === normalizedDiffPreview
+      && (event.patch_preview || undefined) === normalizedPatchPreview
   )) {
     const event = { path: candidate, action };
     if (normalizedDiffPreview) {
       event.diff_preview = normalizedDiffPreview;
+    }
+    if (normalizedPatchPreview) {
+      event.patch_preview = normalizedPatchPreview;
     }
     events.push(event);
   }
@@ -91,6 +98,19 @@ function sanitizeDiffText(value, maxLength = 96) {
     return '';
   }
   return truncateSummary(value, maxLength);
+}
+
+function sanitizePatchLines(value, maxLines = 4, maxLineLength = 120) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return [];
+  }
+
+  return stripAnsi(redactSecrets(value))
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .slice(0, maxLines)
+    .map(line => line.length <= maxLineLength ? line : `${line.slice(0, maxLineLength - 3)}...`);
 }
 
 function buildReplacementPreview(oldValue, newValue) {
@@ -114,6 +134,31 @@ function buildCreationPreview(content) {
     return undefined;
   }
   return `+ ${normalized}`;
+}
+
+function buildPatchPreviewFromReplacement(oldValue, newValue) {
+  const beforeLines = sanitizePatchLines(oldValue);
+  const afterLines = sanitizePatchLines(newValue);
+  if (beforeLines.length === 0 && afterLines.length === 0) {
+    return undefined;
+  }
+
+  const lines = ['@@'];
+  for (const line of beforeLines) {
+    lines.push(`- ${line}`);
+  }
+  for (const line of afterLines) {
+    lines.push(`+ ${line}`);
+  }
+  return lines.join('\n');
+}
+
+function buildPatchPreviewFromContent(content, prefix) {
+  const lines = sanitizePatchLines(content);
+  if (lines.length === 0) {
+    return undefined;
+  }
+  return lines.map(line => `${prefix} ${line}`).join('\n');
 }
 
 function inferDefaultFileAction(toolName) {
@@ -204,6 +249,26 @@ function fileEventDiffPreview(toolName, value, action) {
   return undefined;
 }
 
+function fileEventPatchPreview(value, action) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  if (typeof value.old_string === 'string' || typeof value.new_string === 'string') {
+    return buildPatchPreviewFromReplacement(value.old_string, value.new_string);
+  }
+
+  if (action === 'create') {
+    return buildPatchPreviewFromContent(value.content || value.file_text || value.text, '+');
+  }
+
+  if (action === 'delete') {
+    return buildPatchPreviewFromContent(value.content || value.old_string || value.file_text, '-');
+  }
+
+  return undefined;
+}
+
 function collectFileEvents(toolName, value, events, key = null, parentValue = null) {
   if (!value) {
     return;
@@ -219,7 +284,13 @@ function collectFileEvents(toolName, value, events, key = null, parentValue = nu
   if (typeof value === 'string') {
     if (key && FILE_PATH_KEYS.has(key)) {
       const action = actionForFileKey(toolName, key);
-      pushFileEvent(events, value, action, fileEventDiffPreview(toolName, parentValue, action));
+      pushFileEvent(
+        events,
+        value,
+        action,
+        fileEventDiffPreview(toolName, parentValue, action),
+        fileEventPatchPreview(parentValue, action)
+      );
     }
     return;
   }

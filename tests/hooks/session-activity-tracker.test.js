@@ -155,6 +155,7 @@ function runTests() {
         path: 'src/config.ts',
         action: 'modify',
         diff_preview: 'API_URL=http://localhost:3000 -> API_URL=https://api.example.com',
+        patch_preview: '@@\n- API_URL=http://localhost:3000\n+ API_URL=https://api.example.com',
       },
     ]);
 
@@ -196,11 +197,13 @@ function runTests() {
         path: 'src/a.ts',
         action: 'modify',
         diff_preview: 'const a = 1; -> const a = 2;',
+        patch_preview: '@@\n- const a = 1;\n+ const a = 2;',
       },
       {
         path: 'src/b.ts',
         action: 'modify',
         diff_preview: 'old name -> new name',
+        patch_preview: '@@\n- old name\n+ new name',
       },
     ]);
 

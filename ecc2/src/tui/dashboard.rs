@@ -34,6 +34,7 @@ const PANE_RESIZE_STEP_PERCENT: u16 = 5;
 const MAX_LOG_ENTRIES: u64 = 12;
 const MAX_DIFF_PREVIEW_LINES: usize = 6;
 const MAX_DIFF_PATCH_LINES: usize = 80;
+const MAX_FILE_ACTIVITY_PATCH_LINES: usize = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct WorktreeDiffColumns {
@@ -203,6 +204,7 @@ struct TimelineEvent {
     session_id: String,
     event_type: TimelineEventType,
     summary: String,
+    detail_lines: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -3410,19 +3412,26 @@ impl Dashboard {
             .into_iter()
             .filter(|event| self.timeline_event_filter.matches(event.event_type))
             .filter(|event| self.output_time_filter.matches_timestamp(event.occurred_at))
-            .map(|event| {
+            .flat_map(|event| {
                 let prefix = if show_session_label {
                     format!("{} ", format_session_id(&event.session_id))
                 } else {
                     String::new()
                 };
-                Line::from(format!(
+                let mut lines = vec![Line::from(format!(
                     "[{}] {}{:<11} {}",
                     event.occurred_at.format("%H:%M:%S"),
                     prefix,
                     event.event_type.label(),
                     event.summary
-                ))
+                ))];
+                lines.extend(
+                    event
+                        .detail_lines
+                        .into_iter()
+                        .map(|line| Line::from(format!("               {}", line))),
+                );
+                lines
             })
             .collect()
     }
@@ -3459,6 +3468,7 @@ impl Dashboard {
                 session.agent_type,
                 truncate_for_dashboard(&session.task, 64)
             ),
+            detail_lines: Vec::new(),
         }];
 
         if session.updated_at > session.created_at {
@@ -3467,6 +3477,7 @@ impl Dashboard {
                 session_id: session.id.clone(),
                 event_type: TimelineEventType::Lifecycle,
                 summary: format!("state {} | updated session metadata", session.state),
+                detail_lines: Vec::new(),
             });
         }
 
@@ -3479,6 +3490,7 @@ impl Dashboard {
                     "attached worktree {} from {}",
                     worktree.branch, worktree.base_branch
                 ),
+                detail_lines: Vec::new(),
             });
         }
 
@@ -3492,6 +3504,7 @@ impl Dashboard {
                 session_id: session.id.clone(),
                 event_type: TimelineEventType::FileChange,
                 summary: format!("files touched {}", session.metrics.files_changed),
+                detail_lines: Vec::new(),
             });
         } else {
             events.extend(file_activity.into_iter().map(|entry| TimelineEvent {
@@ -3499,6 +3512,7 @@ impl Dashboard {
                 session_id: session.id.clone(),
                 event_type: TimelineEventType::FileChange,
                 summary: file_activity_summary(&entry),
+                detail_lines: file_activity_patch_lines(&entry, MAX_FILE_ACTIVITY_PATCH_LINES),
             }));
         }
 
@@ -3525,6 +3539,7 @@ impl Dashboard {
                         64
                     )
                 ),
+                detail_lines: Vec::new(),
             }
         }));
 
@@ -3544,6 +3559,7 @@ impl Dashboard {
                     entry.duration_ms,
                     truncate_for_dashboard(&entry.input_summary, 56)
                 ),
+                detail_lines: Vec::new(),
             })
         }));
         events
@@ -4148,6 +4164,9 @@ impl Dashboard {
                         self.short_timestamp(&entry.timestamp.to_rfc3339()),
                         file_activity_summary(&entry)
                     ));
+                    for detail in file_activity_patch_lines(&entry, 2) {
+                        lines.push(format!("  {}", detail));
+                    }
                 }
             }
             lines.push(format!(
@@ -5412,6 +5431,22 @@ fn file_activity_summary(entry: &FileActivityEntry) -> String {
     summary
 }
 
+fn file_activity_patch_lines(entry: &FileActivityEntry, max_lines: usize) -> Vec<String> {
+    entry
+        .patch_preview
+        .as_deref()
+        .map(|patch| {
+            patch
+                .lines()
+                .map(str::trim)
+                .filter(|line| !line.is_empty() && *line != "@@" && *line != "+" && *line != "-")
+                .take(max_lines)
+                .map(|line| truncate_for_dashboard(line, 72))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 fn file_activity_verb(action: crate::session::FileActivityAction) -> &'static str {
     match action {
         crate::session::FileActivityAction::Read => "read",
@@ -6092,7 +6127,7 @@ mod tests {
             &metrics_path,
             concat!(
                 "{\"id\":\"evt-1\",\"session_id\":\"focus-12345678\",\"tool_name\":\"Read\",\"input_summary\":\"Read src/lib.rs\",\"output_summary\":\"ok\",\"file_paths\":[\"src/lib.rs\"],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
-                "{\"id\":\"evt-2\",\"session_id\":\"focus-12345678\",\"tool_name\":\"Write\",\"input_summary\":\"Write README.md\",\"output_summary\":\"updated readme\",\"file_paths\":[\"README.md\"],\"file_events\":[{\"path\":\"README.md\",\"action\":\"create\",\"diff_preview\":\"+ # ECC 2.0\"}],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n"
+                "{\"id\":\"evt-2\",\"session_id\":\"focus-12345678\",\"tool_name\":\"Write\",\"input_summary\":\"Write README.md\",\"output_summary\":\"updated readme\",\"file_paths\":[\"README.md\"],\"file_events\":[{\"path\":\"README.md\",\"action\":\"create\",\"diff_preview\":\"+ # ECC 2.0\",\"patch_preview\":\"+ # ECC 2.0\\n+ \\n+ A richer dashboard\"}],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n"
             ),
         )?;
         dashboard.db.sync_tool_activity_metrics(&metrics_path)?;
@@ -6103,12 +6138,14 @@ mod tests {
         assert!(rendered.contains("read src/lib.rs"));
         assert!(rendered.contains("create README.md"));
         assert!(rendered.contains("+ # ECC 2.0"));
+        assert!(rendered.contains("+ A richer dashboard"));
         assert!(!rendered.contains("files touched 2"));
 
         let metrics_text = dashboard.selected_session_metrics_text();
         assert!(metrics_text.contains("Recent file activity"));
         assert!(metrics_text.contains("create README.md"));
         assert!(metrics_text.contains("+ # ECC 2.0"));
+        assert!(metrics_text.contains("+ A richer dashboard"));
         assert!(metrics_text.contains("read src/lib.rs"));
 
         let _ = fs::remove_dir_all(root);

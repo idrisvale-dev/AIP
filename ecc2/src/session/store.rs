@@ -761,6 +761,8 @@ impl StateStore {
             action: String,
             #[serde(default)]
             diff_preview: Option<String>,
+            #[serde(default)]
+            patch_preview: Option<String>,
         }
 
         let file = File::open(metrics_path)
@@ -803,6 +805,7 @@ impl StateStore {
                         path,
                         action: infer_file_activity_action(&row.tool_name),
                         diff_preview: None,
+                        patch_preview: None,
                     })
                     .collect()
             } else {
@@ -818,6 +821,7 @@ impl StateStore {
                             action: parse_file_activity_action(&event.action)
                                 .unwrap_or_else(|| infer_file_activity_action(&row.tool_name)),
                             diff_preview: normalize_optional_string(event.diff_preview),
+                            patch_preview: normalize_optional_string(event.patch_preview),
                         })
                     })
                     .collect()
@@ -1599,6 +1603,7 @@ impl StateStore {
                             path,
                             action: infer_file_activity_action(&tool_name),
                             diff_preview: None,
+                            patch_preview: None,
                         })
                     })
                     .collect()
@@ -1611,6 +1616,7 @@ impl StateStore {
                     path: event.path,
                     summary: summary.clone(),
                     diff_preview: event.diff_preview,
+                    patch_preview: event.patch_preview,
                     timestamp: occurred_at,
                 });
                 if events.len() >= limit {
@@ -1629,6 +1635,8 @@ struct PersistedFileEvent {
     action: FileActivityAction,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     diff_preview: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    patch_preview: Option<String>,
 }
 
 fn parse_persisted_file_events(value: &str) -> Option<Vec<PersistedFileEvent>> {
@@ -1644,6 +1652,7 @@ fn parse_persisted_file_events(value: &str) -> Option<Vec<PersistedFileEvent>> {
                 path,
                 action: event.action,
                 diff_preview: normalize_optional_string(event.diff_preview),
+                patch_preview: normalize_optional_string(event.patch_preview),
             })
         })
         .collect();
@@ -1959,7 +1968,7 @@ mod tests {
     }
 
     #[test]
-    fn list_file_activity_preserves_diff_previews() -> Result<()> {
+    fn list_file_activity_preserves_diff_and_patch_previews() -> Result<()> {
         let tempdir = TestDir::new("store-file-activity-diffs")?;
         let db = StateStore::open(&tempdir.path().join("state.db"))?;
         let now = Utc::now();
@@ -1984,7 +1993,7 @@ mod tests {
         fs::write(
             &metrics_path,
             concat!(
-                "{\"id\":\"evt-1\",\"session_id\":\"session-1\",\"tool_name\":\"Edit\",\"input_summary\":\"Edit src/config.ts\",\"output_summary\":\"updated config\",\"file_paths\":[\"src/config.ts\"],\"file_events\":[{\"path\":\"src/config.ts\",\"action\":\"modify\",\"diff_preview\":\"API_URL=http://localhost:3000 -> API_URL=https://api.example.com\"}],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n"
+                "{\"id\":\"evt-1\",\"session_id\":\"session-1\",\"tool_name\":\"Edit\",\"input_summary\":\"Edit src/config.ts\",\"output_summary\":\"updated config\",\"file_paths\":[\"src/config.ts\"],\"file_events\":[{\"path\":\"src/config.ts\",\"action\":\"modify\",\"diff_preview\":\"API_URL=http://localhost:3000 -> API_URL=https://api.example.com\",\"patch_preview\":\"@@\\n- API_URL=http://localhost:3000\\n+ API_URL=https://api.example.com\"}],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n"
             ),
         )?;
 
@@ -1997,6 +2006,10 @@ mod tests {
         assert_eq!(
             activity[0].diff_preview.as_deref(),
             Some("API_URL=http://localhost:3000 -> API_URL=https://api.example.com")
+        );
+        assert_eq!(
+            activity[0].patch_preview.as_deref(),
+            Some("@@\n- API_URL=http://localhost:3000\n+ API_URL=https://api.example.com")
         );
 
         Ok(())
