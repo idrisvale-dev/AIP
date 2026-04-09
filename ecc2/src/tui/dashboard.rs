@@ -87,6 +87,7 @@ pub struct Dashboard {
     metrics_scroll_offset: usize,
     last_metrics_height: usize,
     pane_size_percent: u16,
+    collapsed_panes: HashSet<Pane>,
     search_input: Option<String>,
     spawn_input: Option<String>,
     search_query: Option<String>,
@@ -112,7 +113,7 @@ struct SessionSummary {
     in_progress_worktrees: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Pane {
     Sessions,
     Output,
@@ -177,9 +178,20 @@ struct SpawnPlan {
 #[derive(Debug, Clone, Copy)]
 struct PaneAreas {
     sessions: Rect,
-    output: Rect,
-    metrics: Rect,
+    output: Option<Rect>,
+    metrics: Option<Rect>,
     log: Option<Rect>,
+}
+
+impl PaneAreas {
+    fn assign(&mut self, pane: Pane, area: Rect) {
+        match pane {
+            Pane::Sessions => self.sessions = area,
+            Pane::Output => self.output = Some(area),
+            Pane::Metrics => self.metrics = Some(area),
+            Pane::Log => self.log = Some(area),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -274,6 +286,7 @@ impl Dashboard {
             metrics_scroll_offset: 0,
             last_metrics_height: 0,
             pane_size_percent,
+            collapsed_panes: HashSet::new(),
             search_input: None,
             spawn_input: None,
             search_query: None,
@@ -311,8 +324,12 @@ impl Dashboard {
         } else {
             let pane_areas = self.pane_areas(chunks[1]);
             self.render_sessions(frame, pane_areas.sessions);
-            self.render_output(frame, pane_areas.output);
-            self.render_metrics(frame, pane_areas.metrics);
+            if let Some(output_area) = pane_areas.output {
+                self.render_output(frame, output_area);
+            }
+            if let Some(metrics_area) = pane_areas.metrics {
+                self.render_metrics(frame, metrics_area);
+            }
 
             if let Some(log_area) = pane_areas.log {
                 self.render_log(frame, log_area);
@@ -721,7 +738,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
@@ -805,6 +822,8 @@ impl Dashboard {
             "  I       Jump to the next unread approval/conflict target session",
             "  g       Auto-dispatch unread handoffs across lead sessions",
             "  G       Dispatch then rebalance backlog across lead teams",
+            "  h       Collapse the focused non-session pane",
+            "  H       Restore all collapsed panes",
             "  v       Toggle selected worktree diff in output pane",
             "  c       Show conflict-resolution protocol for selected conflicted worktree",
             "  e       Cycle output content filter: all/errors/tool calls/file changes",
@@ -869,6 +888,38 @@ impl Dashboard {
         };
 
         self.selected_pane = visible_panes[previous_index];
+    }
+
+    pub fn collapse_selected_pane(&mut self) {
+        if self.selected_pane == Pane::Sessions {
+            self.set_operator_note("cannot collapse sessions pane".to_string());
+            return;
+        }
+
+        if self.visible_detail_panes().len() <= 1 {
+            self.set_operator_note("cannot collapse last detail pane".to_string());
+            return;
+        }
+
+        let collapsed = self.selected_pane;
+        self.collapsed_panes.insert(collapsed);
+        self.ensure_selected_pane_visible();
+        self.set_operator_note(format!(
+            "collapsed {} pane",
+            collapsed.title().to_lowercase()
+        ));
+    }
+
+    pub fn restore_collapsed_panes(&mut self) {
+        if self.collapsed_panes.is_empty() {
+            self.set_operator_note("no collapsed panes".to_string());
+            return;
+        }
+
+        let restored_count = self.collapsed_panes.len();
+        self.collapsed_panes.clear();
+        self.ensure_selected_pane_visible();
+        self.set_operator_note(format!("restored {restored_count} collapsed pane(s)"));
     }
 
     pub fn cycle_pane_layout(&mut self) {
@@ -3567,66 +3618,76 @@ impl Dashboard {
     }
 
     fn pane_areas(&self, area: Rect) -> PaneAreas {
+        let detail_panes = self.visible_detail_panes();
         match self.cfg.pane_layout {
             PaneLayout::Horizontal => {
                 let columns = Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints(self.primary_constraints())
                     .split(area);
-                let right_rows = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints([
-                        Constraint::Percentage(OUTPUT_PANE_PERCENT),
-                        Constraint::Percentage(100 - OUTPUT_PANE_PERCENT),
-                    ])
-                    .split(columns[1]);
-
-                PaneAreas {
+                let mut pane_areas = PaneAreas {
                     sessions: columns[0],
-                    output: right_rows[0],
-                    metrics: right_rows[1],
+                    output: None,
+                    metrics: None,
                     log: None,
+                };
+                for (pane, rect) in horizontal_detail_layout(columns[1], &detail_panes) {
+                    pane_areas.assign(pane, rect);
                 }
+                pane_areas
             }
             PaneLayout::Vertical => {
                 let rows = Layout::default()
                     .direction(Direction::Vertical)
                     .constraints(self.primary_constraints())
                     .split(area);
-                let bottom_columns = Layout::default()
-                    .direction(Direction::Horizontal)
-                    .constraints([
-                        Constraint::Percentage(OUTPUT_PANE_PERCENT),
-                        Constraint::Percentage(100 - OUTPUT_PANE_PERCENT),
-                    ])
-                    .split(rows[1]);
-
-                PaneAreas {
+                let mut pane_areas = PaneAreas {
                     sessions: rows[0],
-                    output: bottom_columns[0],
-                    metrics: bottom_columns[1],
+                    output: None,
+                    metrics: None,
                     log: None,
+                };
+                for (pane, rect) in vertical_detail_layout(rows[1], &detail_panes) {
+                    pane_areas.assign(pane, rect);
                 }
+                pane_areas
             }
             PaneLayout::Grid => {
-                let rows = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints(self.primary_constraints())
-                    .split(area);
-                let top_columns = Layout::default()
-                    .direction(Direction::Horizontal)
-                    .constraints(self.primary_constraints())
-                    .split(rows[0]);
-                let bottom_columns = Layout::default()
-                    .direction(Direction::Horizontal)
-                    .constraints(self.primary_constraints())
-                    .split(rows[1]);
+                if detail_panes.len() < 3 {
+                    let columns = Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints(self.primary_constraints())
+                        .split(area);
+                    let mut pane_areas = PaneAreas {
+                        sessions: columns[0],
+                        output: None,
+                        metrics: None,
+                        log: None,
+                    };
+                    for (pane, rect) in horizontal_detail_layout(columns[1], &detail_panes) {
+                        pane_areas.assign(pane, rect);
+                    }
+                    pane_areas
+                } else {
+                    let rows = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints(self.primary_constraints())
+                        .split(area);
+                    let top_columns = Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints(self.primary_constraints())
+                        .split(rows[0]);
+                    let bottom_columns = Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints(self.primary_constraints())
+                        .split(rows[1]);
 
-                PaneAreas {
-                    sessions: top_columns[0],
-                    output: top_columns[1],
-                    metrics: bottom_columns[0],
-                    log: Some(bottom_columns[1]),
+                    PaneAreas {
+                        sessions: top_columns[0],
+                        output: Some(top_columns[1]),
+                        metrics: Some(bottom_columns[0]),
+                        log: Some(bottom_columns[1]),
+                    }
                 }
             }
         }
@@ -3639,11 +3700,25 @@ impl Dashboard {
         ]
     }
 
-    fn visible_panes(&self) -> &'static [Pane] {
+    fn visible_panes(&self) -> Vec<Pane> {
+        self.layout_panes()
+            .into_iter()
+            .filter(|pane| !self.collapsed_panes.contains(pane))
+            .collect()
+    }
+
+    fn visible_detail_panes(&self) -> Vec<Pane> {
+        self.visible_panes()
+            .into_iter()
+            .filter(|pane| *pane != Pane::Sessions)
+            .collect()
+    }
+
+    fn layout_panes(&self) -> Vec<Pane> {
         match self.cfg.pane_layout {
-            PaneLayout::Grid => &[Pane::Sessions, Pane::Output, Pane::Metrics, Pane::Log],
+            PaneLayout::Grid => vec![Pane::Sessions, Pane::Output, Pane::Metrics, Pane::Log],
             PaneLayout::Horizontal | PaneLayout::Vertical => {
-                &[Pane::Sessions, Pane::Output, Pane::Metrics]
+                vec![Pane::Sessions, Pane::Output, Pane::Metrics]
             }
         }
     }
@@ -4312,6 +4387,42 @@ fn pane_layout_name(layout: PaneLayout) -> &'static str {
         PaneLayout::Horizontal => "horizontal",
         PaneLayout::Vertical => "vertical",
         PaneLayout::Grid => "grid",
+    }
+}
+
+fn horizontal_detail_layout(area: Rect, panes: &[Pane]) -> Vec<(Pane, Rect)> {
+    match panes {
+        [] => Vec::new(),
+        [pane] => vec![(*pane, area)],
+        [first, second] => {
+            let rows = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Percentage(OUTPUT_PANE_PERCENT),
+                    Constraint::Percentage(100 - OUTPUT_PANE_PERCENT),
+                ])
+                .split(area);
+            vec![(*first, rows[0]), (*second, rows[1])]
+        }
+        _ => unreachable!("horizontal layouts support at most two detail panes"),
+    }
+}
+
+fn vertical_detail_layout(area: Rect, panes: &[Pane]) -> Vec<(Pane, Rect)> {
+    match panes {
+        [] => Vec::new(),
+        [pane] => vec![(*pane, area)],
+        [first, second] => {
+            let columns = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage(OUTPUT_PANE_PERCENT),
+                    Constraint::Percentage(100 - OUTPUT_PANE_PERCENT),
+                ])
+                .split(area);
+            vec![(*first, columns[0]), (*second, columns[1])]
+        }
+        _ => unreachable!("vertical layouts support at most two detail panes"),
     }
 }
 
@@ -7359,11 +7470,92 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.pane_size_percent = DEFAULT_GRID_SIZE_PERCENT;
 
         let areas = dashboard.pane_areas(Rect::new(0, 0, 100, 40));
+        let output_area = areas.output.expect("grid layout should include output");
+        let metrics_area = areas.metrics.expect("grid layout should include metrics");
         let log_area = areas.log.expect("grid layout should include a log pane");
 
-        assert!(areas.output.x > areas.sessions.x);
-        assert!(areas.metrics.y > areas.sessions.y);
-        assert!(log_area.x > areas.metrics.x);
+        assert!(output_area.x > areas.sessions.x);
+        assert!(metrics_area.y > areas.sessions.y);
+        assert!(log_area.x > metrics_area.x);
+    }
+
+    #[test]
+    fn collapse_selected_pane_hides_metrics_and_moves_focus() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.selected_pane = Pane::Metrics;
+
+        dashboard.collapse_selected_pane();
+
+        assert_eq!(dashboard.selected_pane, Pane::Sessions);
+        assert_eq!(
+            dashboard.visible_panes(),
+            vec![Pane::Sessions, Pane::Output]
+        );
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("collapsed metrics pane")
+        );
+    }
+
+    #[test]
+    fn collapse_selected_pane_rejects_sessions_and_last_detail_pane() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+
+        dashboard.collapse_selected_pane();
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("cannot collapse sessions pane")
+        );
+
+        dashboard.selected_pane = Pane::Metrics;
+        dashboard.collapse_selected_pane();
+        dashboard.selected_pane = Pane::Output;
+        dashboard.collapse_selected_pane();
+
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("cannot collapse last detail pane")
+        );
+        assert_eq!(
+            dashboard.visible_panes(),
+            vec![Pane::Sessions, Pane::Output]
+        );
+    }
+
+    #[test]
+    fn restore_collapsed_panes_restores_hidden_tabs() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.selected_pane = Pane::Metrics;
+        dashboard.collapse_selected_pane();
+
+        dashboard.restore_collapsed_panes();
+
+        assert_eq!(
+            dashboard.visible_panes(),
+            vec![Pane::Sessions, Pane::Output, Pane::Metrics]
+        );
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("restored 1 collapsed pane(s)")
+        );
+    }
+
+    #[test]
+    fn collapsed_grid_reflows_to_horizontal_detail_stack() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.cfg.pane_layout = PaneLayout::Grid;
+        dashboard.pane_size_percent = DEFAULT_GRID_SIZE_PERCENT;
+        dashboard.selected_pane = Pane::Log;
+        dashboard.collapse_selected_pane();
+
+        let areas = dashboard.pane_areas(Rect::new(0, 0, 100, 40));
+        let output_area = areas.output.expect("output should stay visible");
+        let metrics_area = areas.metrics.expect("metrics should stay visible");
+
+        assert!(areas.log.is_none());
+        assert_eq!(areas.sessions.height, 40);
+        assert_eq!(output_area.width, metrics_area.width);
+        assert!(metrics_area.y > output_area.y);
     }
 
     #[test]
@@ -7692,6 +7884,7 @@ diff --git a/src/next.rs b/src/next.rs
             last_output_height: 0,
             metrics_scroll_offset: 0,
             last_metrics_height: 0,
+            collapsed_panes: HashSet::new(),
             search_input: None,
             spawn_input: None,
             search_query: None,
