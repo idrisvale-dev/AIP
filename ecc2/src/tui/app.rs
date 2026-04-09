@@ -47,7 +47,15 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
 
                 match (key.modifiers, key.code) {
                     (KeyModifiers::CONTROL, KeyCode::Char('c')) => break,
+                    (KeyModifiers::CONTROL, KeyCode::Char('h')) => dashboard.focus_pane_left(),
+                    (KeyModifiers::CONTROL, KeyCode::Char('j')) => dashboard.focus_pane_down(),
+                    (KeyModifiers::CONTROL, KeyCode::Char('k')) => dashboard.focus_pane_up(),
+                    (KeyModifiers::CONTROL, KeyCode::Char('l')) => dashboard.focus_pane_right(),
                     (_, KeyCode::Char('q')) => break,
+                    (_, KeyCode::Char('1')) => dashboard.focus_pane_number(1),
+                    (_, KeyCode::Char('2')) => dashboard.focus_pane_number(2),
+                    (_, KeyCode::Char('3')) => dashboard.focus_pane_number(3),
+                    (_, KeyCode::Char('4')) => dashboard.focus_pane_number(4),
                     (_, KeyCode::Tab) => dashboard.next_pane(),
                     (KeyModifiers::SHIFT, KeyCode::BackTab) => dashboard.prev_pane(),
                     (_, KeyCode::Char('+')) | (_, KeyCode::Char('=')) => {

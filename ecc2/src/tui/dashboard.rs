@@ -168,6 +168,14 @@ enum SearchAgentFilter {
     SelectedAgentType,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PaneDirection {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct SearchMatch {
     session_id: String,
@@ -871,7 +879,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [1-4] focus pane  [Tab] cycle pane  [Ctrl+h/j/k/l] move pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
@@ -978,8 +986,10 @@ impl Dashboard {
             "  x       Cleanup selected worktree",
             "  X       Prune inactive worktrees globally",
             "  d       Delete selected inactive session",
+            "  1-4     Focus Sessions/Output/Metrics/Log directly",
             "  Tab     Next pane",
             "  S-Tab   Previous pane",
+            "  C-hjkl  Move pane focus left/down/up/right",
             "  j/↓     Scroll down",
             "  k/↑     Scroll up",
             "  [ or ]  Focus previous/next delegate in lead Metrics board",
@@ -1023,6 +1033,39 @@ impl Dashboard {
         };
 
         self.selected_pane = visible_panes[previous_index];
+    }
+
+    pub fn focus_pane_number(&mut self, slot: usize) {
+        let Some(target) = Pane::from_shortcut(slot) else {
+            self.set_operator_note(format!("pane {slot} is not available"));
+            return;
+        };
+
+        if !self.visible_panes().contains(&target) {
+            self.set_operator_note(format!(
+                "{} pane is not visible",
+                target.title().to_lowercase()
+            ));
+            return;
+        }
+
+        self.focus_pane(target);
+    }
+
+    pub fn focus_pane_left(&mut self) {
+        self.move_pane_focus(PaneDirection::Left);
+    }
+
+    pub fn focus_pane_right(&mut self) {
+        self.move_pane_focus(PaneDirection::Right);
+    }
+
+    pub fn focus_pane_up(&mut self) {
+        self.move_pane_focus(PaneDirection::Up);
+    }
+
+    pub fn focus_pane_down(&mut self) {
+        self.move_pane_focus(PaneDirection::Down);
     }
 
     pub fn collapse_selected_pane(&mut self) {
@@ -2635,6 +2678,50 @@ impl Dashboard {
         }
     }
 
+    fn focus_pane(&mut self, pane: Pane) {
+        self.selected_pane = pane;
+        self.ensure_selected_pane_visible();
+        self.set_operator_note(format!("focused {} pane", pane.title().to_lowercase()));
+    }
+
+    fn move_pane_focus(&mut self, direction: PaneDirection) {
+        let visible_panes = self.visible_panes();
+        if visible_panes.len() <= 1 {
+            return;
+        }
+
+        let pane_areas = self.pane_areas(Rect::new(0, 0, 100, 40));
+        let Some(current_rect) = pane_rect(&pane_areas, self.selected_pane) else {
+            return;
+        };
+        let current_center = pane_center(current_rect);
+
+        let candidate = visible_panes
+            .into_iter()
+            .filter(|pane| *pane != self.selected_pane)
+            .filter_map(|pane| {
+                let rect = pane_rect(&pane_areas, pane)?;
+                let center = pane_center(rect);
+                let dx = center.0 - current_center.0;
+                let dy = center.1 - current_center.1;
+
+                let (primary, secondary) = match direction {
+                    PaneDirection::Left if dx < 0 => ((-dx) as u16, dy.unsigned_abs()),
+                    PaneDirection::Right if dx > 0 => (dx as u16, dy.unsigned_abs()),
+                    PaneDirection::Up if dy < 0 => ((-dy) as u16, dx.unsigned_abs()),
+                    PaneDirection::Down if dy > 0 => (dy as u16, dx.unsigned_abs()),
+                    _ => return None,
+                };
+
+                Some((pane, primary, secondary))
+            })
+            .min_by_key(|(pane, primary, secondary)| (*primary, *secondary, pane.sort_key()));
+
+        if let Some((pane, _, _)) = candidate {
+            self.focus_pane(pane);
+        }
+    }
+
     fn sync_global_handoff_backlog(&mut self) {
         let limit = self.sessions.len().max(1);
         match self.db.unread_task_handoff_targets(limit) {
@@ -4154,6 +4241,41 @@ impl Pane {
             Pane::Log => "Log",
         }
     }
+
+    fn from_shortcut(slot: usize) -> Option<Self> {
+        match slot {
+            1 => Some(Self::Sessions),
+            2 => Some(Self::Output),
+            3 => Some(Self::Metrics),
+            4 => Some(Self::Log),
+            _ => None,
+        }
+    }
+
+    fn sort_key(self) -> u8 {
+        match self {
+            Self::Sessions => 1,
+            Self::Output => 2,
+            Self::Metrics => 3,
+            Self::Log => 4,
+        }
+    }
+}
+
+fn pane_rect(pane_areas: &PaneAreas, pane: Pane) -> Option<Rect> {
+    match pane {
+        Pane::Sessions => Some(pane_areas.sessions),
+        Pane::Output => pane_areas.output,
+        Pane::Metrics => pane_areas.metrics,
+        Pane::Log => pane_areas.log,
+    }
+}
+
+fn pane_center(rect: Rect) -> (i16, i16) {
+    (
+        rect.x as i16 + rect.width as i16 / 2,
+        rect.y as i16 + rect.height as i16 / 2,
+    )
 }
 
 impl OutputFilter {
@@ -8218,6 +8340,50 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.next_pane();
         dashboard.next_pane();
         assert_eq!(dashboard.selected_pane, Pane::Log);
+    }
+
+    #[test]
+    fn focus_pane_number_selects_visible_panes_and_rejects_hidden_targets() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+
+        dashboard.focus_pane_number(3);
+
+        assert_eq!(dashboard.selected_pane, Pane::Metrics);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("focused metrics pane")
+        );
+
+        dashboard.focus_pane_number(4);
+
+        assert_eq!(dashboard.selected_pane, Pane::Metrics);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("log pane is not visible")
+        );
+    }
+
+    #[test]
+    fn directional_pane_focus_uses_grid_neighbors() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.cfg.pane_layout = PaneLayout::Grid;
+        dashboard.pane_size_percent = DEFAULT_GRID_SIZE_PERCENT;
+
+        dashboard.focus_pane_right();
+        assert_eq!(dashboard.selected_pane, Pane::Output);
+
+        dashboard.focus_pane_down();
+        assert_eq!(dashboard.selected_pane, Pane::Log);
+
+        dashboard.focus_pane_left();
+        assert_eq!(dashboard.selected_pane, Pane::Metrics);
+
+        dashboard.focus_pane_up();
+        assert_eq!(dashboard.selected_pane, Pane::Sessions);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("focused sessions pane")
+        );
     }
 
     #[test]
