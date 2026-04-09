@@ -19,7 +19,7 @@ use crate::session::manager;
 use crate::session::output::{
     OutputEvent, OutputLine, OutputStream, SessionOutputStore, OUTPUT_BUFFER_LIMIT,
 };
-use crate::session::store::{DaemonActivity, StateStore};
+use crate::session::store::{DaemonActivity, FileActivityOverlap, StateStore};
 use crate::session::{FileActivityEntry, Session, SessionMessage, SessionState};
 use crate::worktree;
 
@@ -4169,6 +4169,22 @@ impl Dashboard {
                     }
                 }
             }
+            let file_overlaps = self
+                .db
+                .list_file_overlaps(&session.id, 3)
+                .unwrap_or_default();
+            if !file_overlaps.is_empty() {
+                lines.push("Potential overlaps".to_string());
+                for overlap in file_overlaps {
+                    lines.push(format!(
+                        "- {}",
+                        file_overlap_summary(
+                            &overlap,
+                            &self.short_timestamp(&overlap.timestamp.to_rfc3339())
+                        )
+                    ));
+                }
+            }
             lines.push(format!(
                 "Cost ${:.4} | Duration {}s",
                 metrics.cost_usd, metrics.duration_secs
@@ -5447,6 +5463,18 @@ fn file_activity_patch_lines(entry: &FileActivityEntry, max_lines: usize) -> Vec
         .unwrap_or_default()
 }
 
+fn file_overlap_summary(entry: &FileActivityOverlap, timestamp: &str) -> String {
+    format!(
+        "{} {} | {} {} as {} | {}",
+        file_activity_verb(entry.current_action.clone()),
+        truncate_for_dashboard(&entry.path, 48),
+        entry.other_session_state,
+        format_session_id(&entry.other_session_id),
+        file_activity_verb(entry.other_action.clone()),
+        timestamp
+    )
+}
+
 fn file_activity_verb(action: crate::session::FileActivityAction) -> &'static str {
     match action {
         crate::session::FileActivityAction::Read => "read",
@@ -6147,6 +6175,58 @@ mod tests {
         assert!(metrics_text.contains("+ # ECC 2.0"));
         assert!(metrics_text.contains("+ A richer dashboard"));
         assert!(metrics_text.contains("read src/lib.rs"));
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn metrics_text_surfaces_file_activity_overlaps() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-file-overlaps-{}", Uuid::new_v4()));
+        fs::create_dir_all(&root)?;
+        let now = Utc::now();
+        let mut focus = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        focus.created_at = now - chrono::Duration::hours(1);
+        focus.updated_at = now - chrono::Duration::minutes(3);
+
+        let mut delegate = sample_session(
+            "delegate-87654321",
+            "coder",
+            SessionState::Idle,
+            Some("ecc/delegate"),
+            256,
+            12,
+        );
+        delegate.created_at = now - chrono::Duration::minutes(50);
+        delegate.updated_at = now - chrono::Duration::minutes(2);
+
+        let mut dashboard = test_dashboard(vec![focus.clone(), delegate.clone()], 0);
+        dashboard.db.insert_session(&focus)?;
+        dashboard.db.insert_session(&delegate)?;
+
+        let metrics_path = root.join("tool-usage.jsonl");
+        fs::write(
+            &metrics_path,
+            concat!(
+                "{\"id\":\"evt-1\",\"session_id\":\"focus-12345678\",\"tool_name\":\"Edit\",\"input_summary\":\"Edit src/lib.rs\",\"output_summary\":\"updated lib\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
+                "{\"id\":\"evt-2\",\"session_id\":\"delegate-87654321\",\"tool_name\":\"Write\",\"input_summary\":\"Write src/lib.rs\",\"output_summary\":\"touched lib\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n"
+            ),
+        )?;
+        dashboard.db.sync_tool_activity_metrics(&metrics_path)?;
+        dashboard.sync_from_store();
+
+        let metrics_text = dashboard.selected_session_metrics_text();
+        assert!(metrics_text.contains("Potential overlaps"));
+        assert!(metrics_text.contains("modify src/lib.rs"));
+        assert!(metrics_text.contains("idle delegate"));
+        assert!(metrics_text.contains("as modify"));
 
         let _ = fs::remove_dir_all(root);
         Ok(())

@@ -260,6 +260,54 @@ function runTests() {
     fs.rmSync(repoDir, { recursive: true, force: true });
   }) ? passed++ : failed++);
 
+  (test('captures tracked Delete activity using git diff context', () => {
+    const tmpHome = makeTempDir();
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'session-activity-tracker-delete-repo-'));
+
+    spawnSync('git', ['init'], { cwd: repoDir, encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.email', 'ecc@example.com'], { cwd: repoDir, encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.name', 'ECC Tests'], { cwd: repoDir, encoding: 'utf8' });
+
+    const srcDir = path.join(repoDir, 'src');
+    fs.mkdirSync(srcDir, { recursive: true });
+    const trackedFile = path.join(srcDir, 'obsolete.ts');
+    fs.writeFileSync(trackedFile, 'export const obsolete = true;\n', 'utf8');
+    spawnSync('git', ['add', 'src/obsolete.ts'], { cwd: repoDir, encoding: 'utf8' });
+    spawnSync('git', ['commit', '-m', 'init'], { cwd: repoDir, encoding: 'utf8' });
+
+    fs.rmSync(trackedFile, { force: true });
+
+    const input = {
+      tool_name: 'Delete',
+      tool_input: {
+        file_path: 'src/obsolete.ts',
+      },
+      tool_output: { output: 'deleted src/obsolete.ts' },
+    };
+    const result = runScript(input, {
+      ...withTempHome(tmpHome),
+      CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
+      ECC_SESSION_ID: 'ecc-session-delete',
+    }, {
+      cwd: repoDir,
+    });
+    assert.strictEqual(result.code, 0);
+
+    const metricsFile = path.join(tmpHome, '.claude', 'metrics', 'tool-usage.jsonl');
+    const row = JSON.parse(fs.readFileSync(metricsFile, 'utf8').trim());
+    assert.deepStrictEqual(row.file_events, [
+      {
+        path: 'src/obsolete.ts',
+        action: 'delete',
+        diff_preview: 'export const obsolete = true; ->',
+        patch_preview: '@@ -1 +0,0 @@\n-export const obsolete = true;',
+      },
+    ]);
+
+    fs.rmSync(tmpHome, { recursive: true, force: true });
+    fs.rmSync(repoDir, { recursive: true, force: true });
+  }) ? passed++ : failed++);
+
   (test('prefers ECC_SESSION_ID over CLAUDE_SESSION_ID and redacts bash summaries', () => {
     const tmpHome = makeTempDir();
     const input = {

@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use rusqlite::{Connection, OptionalExtension};
 use serde::Serialize;
+use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -17,6 +18,16 @@ use super::{
 
 pub struct StateStore {
     conn: Connection,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct FileActivityOverlap {
+    pub path: String,
+    pub current_action: FileActivityAction,
+    pub other_action: FileActivityAction,
+    pub other_session_id: String,
+    pub other_session_state: SessionState,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -1627,6 +1638,67 @@ impl StateStore {
 
         Ok(events)
     }
+
+    pub fn list_file_overlaps(
+        &self,
+        session_id: &str,
+        limit: usize,
+    ) -> Result<Vec<FileActivityOverlap>> {
+        if limit == 0 {
+            return Ok(Vec::new());
+        }
+
+        let current_activity = self.list_file_activity(session_id, 64)?;
+        if current_activity.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut current_by_path = HashMap::new();
+        for entry in current_activity {
+            current_by_path.entry(entry.path.clone()).or_insert(entry);
+        }
+
+        let mut overlaps = Vec::new();
+        let mut seen = HashSet::new();
+
+        for session in self.list_sessions()? {
+            if session.id == session_id || !session_state_supports_overlap(&session.state) {
+                continue;
+            }
+
+            for entry in self.list_file_activity(&session.id, 32)? {
+                let Some(current) = current_by_path.get(&entry.path) else {
+                    continue;
+                };
+                if !file_overlap_is_relevant(current, &entry) {
+                    continue;
+                }
+                if !seen.insert((session.id.clone(), entry.path.clone())) {
+                    continue;
+                }
+
+                overlaps.push(FileActivityOverlap {
+                    path: entry.path.clone(),
+                    current_action: current.action.clone(),
+                    other_action: entry.action.clone(),
+                    other_session_id: session.id.clone(),
+                    other_session_state: session.state.clone(),
+                    timestamp: entry.timestamp,
+                });
+            }
+        }
+
+        overlaps.sort_by_key(|entry| {
+            (
+                overlap_state_priority(&entry.other_session_state),
+                Reverse(entry.timestamp),
+                entry.other_session_id.clone(),
+                entry.path.clone(),
+            )
+        });
+        overlaps.truncate(limit);
+        Ok(overlaps)
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -1699,6 +1771,31 @@ fn infer_file_activity_action(tool_name: &str) -> FileActivityAction {
         FileActivityAction::Move
     } else {
         FileActivityAction::Touch
+    }
+}
+
+fn session_state_supports_overlap(state: &SessionState) -> bool {
+    matches!(
+        state,
+        SessionState::Pending | SessionState::Running | SessionState::Idle | SessionState::Stale
+    )
+}
+
+fn file_overlap_is_relevant(current: &FileActivityEntry, other: &FileActivityEntry) -> bool {
+    current.path == other.path
+        && !(matches!(current.action, FileActivityAction::Read)
+            && matches!(other.action, FileActivityAction::Read))
+}
+
+fn overlap_state_priority(state: &SessionState) -> u8 {
+    match state {
+        SessionState::Running => 0,
+        SessionState::Idle => 1,
+        SessionState::Pending => 2,
+        SessionState::Stale => 3,
+        SessionState::Completed => 4,
+        SessionState::Failed => 5,
+        SessionState::Stopped => 6,
     }
 }
 
@@ -2011,6 +2108,77 @@ mod tests {
             activity[0].patch_preview.as_deref(),
             Some("@@\n- API_URL=http://localhost:3000\n+ API_URL=https://api.example.com")
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn list_file_overlaps_reports_other_active_sessions_sharing_paths() -> Result<()> {
+        let tempdir = TestDir::new("store-file-overlaps")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "focus".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "session-2".to_string(),
+            task: "delegate".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Idle,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "session-3".to_string(),
+            task: "done".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Completed,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let metrics_dir = tempdir.path().join("metrics");
+        fs::create_dir_all(&metrics_dir)?;
+        let metrics_path = metrics_dir.join("tool-usage.jsonl");
+        fs::write(
+            &metrics_path,
+            concat!(
+                "{\"id\":\"evt-1\",\"session_id\":\"session-1\",\"tool_name\":\"Edit\",\"input_summary\":\"Edit src/lib.rs\",\"output_summary\":\"updated lib\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:02:00Z\"}\n",
+                "{\"id\":\"evt-2\",\"session_id\":\"session-2\",\"tool_name\":\"Write\",\"input_summary\":\"Write src/lib.rs\",\"output_summary\":\"touched lib\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:03:00Z\"}\n",
+                "{\"id\":\"evt-3\",\"session_id\":\"session-3\",\"tool_name\":\"Write\",\"input_summary\":\"Write src/lib.rs\",\"output_summary\":\"completed overlap\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:04:00Z\"}\n"
+            ),
+        )?;
+
+        db.sync_tool_activity_metrics(&metrics_path)?;
+
+        let overlaps = db.list_file_overlaps("session-1", 10)?;
+        assert_eq!(overlaps.len(), 1);
+        assert_eq!(overlaps[0].path, "src/lib.rs");
+        assert_eq!(overlaps[0].current_action, FileActivityAction::Modify);
+        assert_eq!(overlaps[0].other_action, FileActivityAction::Modify);
+        assert_eq!(overlaps[0].other_session_id, "session-2");
+        assert_eq!(overlaps[0].other_session_state, SessionState::Idle);
 
         Ok(())
     }
