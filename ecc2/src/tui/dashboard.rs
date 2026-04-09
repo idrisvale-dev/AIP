@@ -6,7 +6,7 @@ use ratatui::{
     },
 };
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tokio::sync::broadcast;
 
 use super::widgets::{budget_state, format_currency, format_token_count, BudgetState, TokenMeter};
@@ -84,7 +84,8 @@ pub struct Dashboard {
     pane_size_percent: u16,
     search_input: Option<String>,
     search_query: Option<String>,
-    search_matches: Vec<usize>,
+    search_scope: SearchScope,
+    search_matches: Vec<SearchMatch>,
     selected_search_match: usize,
     session_table_state: TableState,
 }
@@ -131,6 +132,18 @@ enum OutputTimeFilter {
     Last15Minutes,
     LastHour,
     Last24Hours,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SearchScope {
+    SelectedSession,
+    AllSessions,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SearchMatch {
+    session_id: String,
+    line_index: usize,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -222,6 +235,7 @@ impl Dashboard {
             pane_size_percent,
             search_input: None,
             search_query: None,
+            search_scope: SearchScope::SelectedSession,
             search_matches: Vec::new(),
             selected_search_match: 0,
             session_table_state,
@@ -488,8 +502,9 @@ impl Dashboard {
             self.output_filter.title_suffix(),
             self.output_time_filter.title_suffix()
         );
+        let scope = self.search_scope.title_suffix();
         if let Some(input) = self.search_input.as_ref() {
-            return format!(" Output{filter} /{input}_ ");
+            return format!(" Output{filter}{scope} /{input}_ ");
         }
 
         if let Some(query) = self.search_query.as_ref() {
@@ -499,10 +514,10 @@ impl Dashboard {
             } else {
                 self.selected_search_match.min(total.saturating_sub(1)) + 1
             };
-            return format!(" Output{filter} /{query} {current}/{total} ");
+            return format!(" Output{filter}{scope} /{query} {current}/{total} ");
         }
 
-        format!(" Output{filter} ")
+        format!(" Output{filter}{scope} ")
     }
 
     fn empty_output_message(&self) -> &'static str {
@@ -526,6 +541,9 @@ impl Dashboard {
             );
         };
 
+        let selected_session_id = self.selected_session_id();
+        let active_match = self.search_matches.get(self.selected_search_match);
+
         Text::from(
             lines
                 .iter()
@@ -534,7 +552,13 @@ impl Dashboard {
                     highlight_output_line(
                         &line.text,
                         query,
-                        self.search_matches.get(self.selected_search_match).copied() == Some(index),
+                        active_match
+                            .zip(selected_session_id)
+                            .map(|(search_match, session_id)| {
+                                search_match.session_id == session_id
+                                    && search_match.line_index == index
+                            })
+                            .unwrap_or(false),
                         self.theme_palette(),
                     )
                 })
@@ -623,13 +647,16 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [e]rrors  time [f]ilter  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [e]rrors  time [f]ilter  search scope [A]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
 
         let search_prefix = if let Some(input) = self.search_input.as_ref() {
-            format!(" /{input}_ | [Enter] apply [Esc] cancel |")
+            format!(
+                " /{input}_ | {} | [Enter] apply [Esc] cancel |",
+                self.search_scope.label()
+            )
         } else if let Some(query) = self.search_query.as_ref() {
             let total = self.search_matches.len();
             let current = if total == 0 {
@@ -637,7 +664,10 @@ impl Dashboard {
             } else {
                 self.selected_search_match.min(total.saturating_sub(1)) + 1
             };
-            format!(" /{query} {current}/{total} | [n/N] navigate [Esc] clear |")
+            format!(
+                " /{query} {current}/{total} | {} | [n/N] navigate [Esc] clear |",
+                self.search_scope.label()
+            )
         } else {
             String::new()
         };
@@ -696,6 +726,7 @@ impl Dashboard {
             "  c       Show conflict-resolution protocol for selected conflicted worktree",
             "  e       Toggle output filter between all lines and stderr only",
             "  f       Cycle output time filter between all/15m/1h/24h",
+            "  A       Toggle search scope between selected session and all sessions",
             "  m       Merge selected ready worktree into base and clean it up",
             "  M       Merge all ready inactive worktrees and clean them up",
             "  l       Cycle pane layout and persist it",
@@ -1624,6 +1655,29 @@ impl Dashboard {
         self.search_query.is_some()
     }
 
+    pub fn toggle_search_scope(&mut self) {
+        if self.output_mode != OutputMode::SessionOutput {
+            self.set_operator_note(
+                "search scope is only available in session output view".to_string(),
+            );
+            return;
+        }
+
+        self.search_scope = self.search_scope.next();
+        self.recompute_search_matches();
+        self.sync_output_scroll(self.last_output_height.max(1));
+
+        if self.search_query.is_some() {
+            self.set_operator_note(format!(
+                "search scope set to {} | {} match(es)",
+                self.search_scope.label(),
+                self.search_matches.len()
+            ));
+        } else {
+            self.set_operator_note(format!("search scope set to {}", self.search_scope.label()));
+        }
+    }
+
     pub fn begin_search(&mut self) {
         if self.output_mode != OutputMode::SessionOutput {
             self.set_operator_note("search is only available in session output view".to_string());
@@ -1675,8 +1729,9 @@ impl Dashboard {
             self.set_operator_note(format!("search /{query} found no matches"));
         } else {
             self.set_operator_note(format!(
-                "search /{query} matched {} line(s) | n/N navigate matches",
-                self.search_matches.len()
+                "search /{query} matched {} line(s) across {} session(s) | n/N navigate matches",
+                self.search_matches.len(),
+                self.search_match_session_count()
             ));
         }
     }
@@ -1878,6 +1933,7 @@ impl Dashboard {
         self.sync_worktree_health_by_session();
         self.sync_global_handoff_backlog();
         self.sync_daemon_activity();
+        self.sync_output_cache();
         self.sync_selection_by_id(selected_id.as_deref());
         self.ensure_selected_pane_visible();
         self.sync_selected_output();
@@ -1908,6 +1964,28 @@ impl Dashboard {
             }
         }
         self.sync_selection();
+    }
+
+    fn sync_output_cache(&mut self) {
+        let active_session_ids: HashSet<_> = self
+            .sessions
+            .iter()
+            .map(|session| session.id.as_str())
+            .collect();
+        self.session_output_cache
+            .retain(|session_id, _| active_session_ids.contains(session_id.as_str()));
+
+        for session in &self.sessions {
+            match self.db.get_output_lines(&session.id, OUTPUT_BUFFER_LIMIT) {
+                Ok(lines) => {
+                    self.output_store.replace_lines(&session.id, lines.clone());
+                    self.session_output_cache.insert(session.id.clone(), lines);
+                }
+                Err(error) => {
+                    tracing::warn!("Failed to load session output for {}: {error}", session.id);
+                }
+            }
+        }
     }
 
     fn ensure_selected_pane_visible(&mut self) {
@@ -1978,24 +2056,15 @@ impl Dashboard {
     }
 
     fn sync_selected_output(&mut self) {
-        let Some(session_id) = self.selected_session_id().map(ToOwned::to_owned) else {
+        if self.selected_session_id().is_none() {
             self.output_scroll_offset = 0;
             self.output_follow = true;
             self.search_matches.clear();
             self.selected_search_match = 0;
             return;
-        };
-
-        match self.db.get_output_lines(&session_id, OUTPUT_BUFFER_LIMIT) {
-            Ok(lines) => {
-                self.output_store.replace_lines(&session_id, lines.clone());
-                self.session_output_cache.insert(session_id, lines);
-                self.recompute_search_matches();
-            }
-            Err(error) => {
-                tracing::warn!("Failed to load session output: {error}");
-            }
         }
+
+        self.recompute_search_matches();
     }
 
     fn sync_selected_diff(&mut self) {
@@ -2219,13 +2288,25 @@ impl Dashboard {
             .unwrap_or(&[])
     }
 
-    fn visible_output_lines(&self) -> Vec<&OutputLine> {
-        self.selected_output_lines()
-            .iter()
-            .filter(|line| {
-                self.output_filter.matches(line.stream) && self.output_time_filter.matches(line)
+    fn visible_output_lines_for_session(&self, session_id: &str) -> Vec<&OutputLine> {
+        self.session_output_cache
+            .get(session_id)
+            .map(|lines| {
+                lines
+                    .iter()
+                    .filter(|line| {
+                        self.output_filter.matches(line.stream)
+                            && self.output_time_filter.matches(line)
+                    })
+                    .collect()
             })
-            .collect()
+            .unwrap_or_default()
+    }
+
+    fn visible_output_lines(&self) -> Vec<&OutputLine> {
+        self.selected_session_id()
+            .map(|session_id| self.visible_output_lines_for_session(session_id))
+            .unwrap_or_default()
     }
 
     fn recompute_search_matches(&mut self) {
@@ -2242,10 +2323,21 @@ impl Dashboard {
         };
 
         self.search_matches = self
-            .visible_output_lines()
-            .iter()
-            .enumerate()
-            .filter_map(|(index, line)| regex.is_match(&line.text).then_some(index))
+            .search_scope
+            .session_ids(self.selected_session_id(), &self.sessions)
+            .into_iter()
+            .flat_map(|session_id| {
+                self.visible_output_lines_for_session(session_id)
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(index, line)| {
+                        regex.is_match(&line.text).then_some(SearchMatch {
+                            session_id: session_id.to_string(),
+                            line_index: index,
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })
             .collect();
 
         if self.search_matches.is_empty() {
@@ -2260,13 +2352,25 @@ impl Dashboard {
     }
 
     fn focus_selected_search_match(&mut self) {
-        let Some(line_index) = self.search_matches.get(self.selected_search_match).copied() else {
+        let Some(search_match) = self.search_matches.get(self.selected_search_match).cloned()
+        else {
             return;
         };
 
+        if self.selected_session_id() != Some(search_match.session_id.as_str()) {
+            self.sync_selection_by_id(Some(&search_match.session_id));
+            self.sync_selected_output();
+            self.sync_selected_diff();
+            self.sync_selected_messages();
+            self.sync_selected_lineage();
+            self.refresh_logs();
+        }
+
         self.output_follow = false;
         let viewport_height = self.last_output_height.max(1);
-        let offset = line_index.saturating_sub(viewport_height.saturating_sub(1) / 2);
+        let offset = search_match
+            .line_index
+            .saturating_sub(viewport_height.saturating_sub(1) / 2);
         self.output_scroll_offset = offset.min(self.max_output_scroll());
     }
 
@@ -2279,7 +2383,18 @@ impl Dashboard {
             self.selected_search_match.min(total.saturating_sub(1)) + 1
         };
 
-        format!("search /{query} match {current}/{total}")
+        format!(
+            "search /{query} match {current}/{total} | {}",
+            self.search_scope.label()
+        )
+    }
+
+    fn search_match_session_count(&self) -> usize {
+        self.search_matches
+            .iter()
+            .map(|search_match| search_match.session_id.as_str())
+            .collect::<HashSet<_>>()
+            .len()
     }
 
     fn sync_output_scroll(&mut self, viewport_height: usize) {
@@ -2948,6 +3063,40 @@ impl OutputTimeFilter {
             Self::Last15Minutes => " last 15m",
             Self::LastHour => " last 1h",
             Self::Last24Hours => " last 24h",
+        }
+    }
+}
+
+impl SearchScope {
+    fn next(self) -> Self {
+        match self {
+            Self::SelectedSession => Self::AllSessions,
+            Self::AllSessions => Self::SelectedSession,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::SelectedSession => "selected session",
+            Self::AllSessions => "all sessions",
+        }
+    }
+
+    fn title_suffix(self) -> &'static str {
+        match self {
+            Self::SelectedSession => "",
+            Self::AllSessions => " all sessions",
+        }
+    }
+
+    fn session_ids<'a>(
+        self,
+        selected_session_id: Option<&'a str>,
+        sessions: &'a [Session],
+    ) -> Vec<&'a str> {
+        match self {
+            Self::SelectedSession => selected_session_id.into_iter().collect(),
+            Self::AllSessions => sessions.iter().map(|session| session.id.as_str()).collect(),
         }
     }
 }
@@ -4257,11 +4406,23 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.submit_search();
 
         assert_eq!(dashboard.search_query.as_deref(), Some("alpha.*"));
-        assert_eq!(dashboard.search_matches, vec![0, 2]);
+        assert_eq!(
+            dashboard.search_matches,
+            vec![
+                SearchMatch {
+                    session_id: "focus-12345678".to_string(),
+                    line_index: 0,
+                },
+                SearchMatch {
+                    session_id: "focus-12345678".to_string(),
+                    line_index: 2,
+                },
+            ]
+        );
         assert_eq!(dashboard.selected_search_match, 0);
         assert_eq!(
             dashboard.operator_note.as_deref(),
-            Some("search /alpha.* matched 2 line(s) | n/N navigate matches")
+            Some("search /alpha.* matched 2 line(s) across 1 session(s) | n/N navigate matches")
         );
     }
 
@@ -4295,7 +4456,7 @@ diff --git a/src/next.rs b/src/next.rs
         assert_eq!(dashboard.output_scroll_offset, 2);
         assert_eq!(
             dashboard.operator_note.as_deref(),
-            Some(r"search /alpha-\d match 2/2")
+            Some(r"search /alpha-\d match 2/2 | selected session")
         );
 
         dashboard.next_search_match();
@@ -4338,7 +4499,16 @@ diff --git a/src/next.rs b/src/next.rs
         let mut dashboard = test_dashboard(Vec::new(), 0);
         dashboard.search_input = Some("draft".to_string());
         dashboard.search_query = Some("alpha".to_string());
-        dashboard.search_matches = vec![1, 3];
+        dashboard.search_matches = vec![
+            SearchMatch {
+                session_id: "focus-12345678".to_string(),
+                line_index: 1,
+            },
+            SearchMatch {
+                session_id: "focus-12345678".to_string(),
+                line_index: 3,
+            },
+        ];
         dashboard.selected_search_match = 1;
 
         dashboard.clear_search();
@@ -4412,7 +4582,13 @@ diff --git a/src/next.rs b/src/next.rs
 
         dashboard.recompute_search_matches();
 
-        assert_eq!(dashboard.search_matches, vec![0]);
+        assert_eq!(
+            dashboard.search_matches,
+            vec![SearchMatch {
+                session_id: "focus-12345678".to_string(),
+                line_index: 0,
+            }]
+        );
         assert_eq!(dashboard.visible_output_text(), "alpha stderr\nbeta stderr");
     }
 
@@ -4479,8 +4655,119 @@ diff --git a/src/next.rs b/src/next.rs
 
         dashboard.recompute_search_matches();
 
-        assert_eq!(dashboard.search_matches, vec![0]);
+        assert_eq!(
+            dashboard.search_matches,
+            vec![SearchMatch {
+                session_id: "focus-12345678".to_string(),
+                line_index: 0,
+            }]
+        );
         assert_eq!(dashboard.visible_output_text(), "alpha recent\nbeta recent");
+    }
+
+    #[test]
+    fn search_scope_all_sessions_matches_across_output_buffers() {
+        let mut dashboard = test_dashboard(
+            vec![
+                sample_session(
+                    "focus-12345678",
+                    "planner",
+                    SessionState::Running,
+                    None,
+                    1,
+                    1,
+                ),
+                sample_session(
+                    "review-87654321",
+                    "reviewer",
+                    SessionState::Running,
+                    None,
+                    1,
+                    1,
+                ),
+            ],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![test_output_line(OutputStream::Stdout, "alpha local")],
+        );
+        dashboard.session_output_cache.insert(
+            "review-87654321".to_string(),
+            vec![test_output_line(OutputStream::Stdout, "alpha global")],
+        );
+        dashboard.search_query = Some("alpha.*".to_string());
+
+        dashboard.toggle_search_scope();
+
+        assert_eq!(dashboard.search_scope, SearchScope::AllSessions);
+        assert_eq!(
+            dashboard.search_matches,
+            vec![
+                SearchMatch {
+                    session_id: "focus-12345678".to_string(),
+                    line_index: 0,
+                },
+                SearchMatch {
+                    session_id: "review-87654321".to_string(),
+                    line_index: 0,
+                },
+            ]
+        );
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("search scope set to all sessions | 2 match(es)")
+        );
+        assert_eq!(
+            dashboard.output_title(),
+            " Output all sessions /alpha.* 1/2 "
+        );
+    }
+
+    #[test]
+    fn next_search_match_switches_selected_session_in_all_sessions_scope() {
+        let mut dashboard = test_dashboard(
+            vec![
+                sample_session(
+                    "focus-12345678",
+                    "planner",
+                    SessionState::Running,
+                    None,
+                    1,
+                    1,
+                ),
+                sample_session(
+                    "review-87654321",
+                    "reviewer",
+                    SessionState::Running,
+                    None,
+                    1,
+                    1,
+                ),
+            ],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![test_output_line(OutputStream::Stdout, "alpha local")],
+        );
+        dashboard.session_output_cache.insert(
+            "review-87654321".to_string(),
+            vec![test_output_line(OutputStream::Stdout, "alpha global")],
+        );
+        dashboard.search_scope = SearchScope::AllSessions;
+        dashboard.search_query = Some("alpha.*".to_string());
+        dashboard.last_output_height = 1;
+        dashboard.recompute_search_matches();
+
+        dashboard.next_search_match();
+
+        assert_eq!(dashboard.selected_session_id(), Some("review-87654321"));
+        assert_eq!(dashboard.selected_search_match, 1);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("search /alpha.* match 2/2 | all sessions")
+        );
     }
 
     #[tokio::test]
@@ -5236,6 +5523,7 @@ diff --git a/src/next.rs b/src/next.rs
             last_output_height: 0,
             search_input: None,
             search_query: None,
+            search_scope: SearchScope::SelectedSession,
             search_matches: Vec::new(),
             selected_search_match: 0,
             session_table_state,
