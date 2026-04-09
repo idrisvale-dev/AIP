@@ -13,13 +13,13 @@ use crate::comms;
 use crate::config::{Config, PaneLayout, Theme};
 use crate::observability::ToolLogEntry;
 use crate::session::manager;
-use crate::session::output::{OutputEvent, OutputLine, SessionOutputStore, OUTPUT_BUFFER_LIMIT};
+use crate::session::output::{
+    OutputEvent, OutputLine, OutputStream, SessionOutputStore, OUTPUT_BUFFER_LIMIT,
+};
 use crate::session::store::{DaemonActivity, StateStore};
 use crate::session::{Session, SessionMessage, SessionState};
 use crate::worktree;
 
-#[cfg(test)]
-use crate::session::output::OutputStream;
 #[cfg(test)]
 use crate::session::{SessionMetrics, WorktreeInfo};
 
@@ -71,6 +71,7 @@ pub struct Dashboard {
     selected_conflict_protocol: Option<String>,
     selected_merge_readiness: Option<worktree::MergeReadiness>,
     output_mode: OutputMode,
+    output_filter: OutputFilter,
     selected_pane: Pane,
     selected_session: usize,
     show_help: bool,
@@ -114,6 +115,12 @@ enum OutputMode {
     SessionOutput,
     WorktreeDiff,
     ConflictProtocol,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OutputFilter {
+    All,
+    ErrorsOnly,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -193,6 +200,7 @@ impl Dashboard {
             selected_conflict_protocol: None,
             selected_merge_readiness: None,
             output_mode: OutputMode::SessionOutput,
+            output_filter: OutputFilter::All,
             selected_pane: Pane::Sessions,
             selected_session: 0,
             show_help: false,
@@ -373,11 +381,11 @@ impl Dashboard {
         let (title, content) = if self.sessions.get(self.selected_session).is_some() {
             match self.output_mode {
                 OutputMode::SessionOutput => {
-                    let lines = self.selected_output_lines();
+                    let lines = self.visible_output_lines();
                     let content = if lines.is_empty() {
-                        Text::from("Waiting for session output...")
+                        Text::from(self.empty_output_message())
                     } else if self.search_query.is_some() {
-                        self.render_searchable_output(lines)
+                        self.render_searchable_output(&lines)
                     } else {
                         Text::from(
                             lines
@@ -464,8 +472,9 @@ impl Dashboard {
     }
 
     fn output_title(&self) -> String {
+        let filter = self.output_filter_label();
         if let Some(input) = self.search_input.as_ref() {
-            return format!(" Output /{input}_ ");
+            return format!(" Output{filter} /{input}_ ");
         }
 
         if let Some(query) = self.search_query.as_ref() {
@@ -475,13 +484,27 @@ impl Dashboard {
             } else {
                 self.selected_search_match.min(total.saturating_sub(1)) + 1
             };
-            return format!(" Output /{query} {current}/{total} ");
+            return format!(" Output{filter} /{query} {current}/{total} ");
         }
 
-        " Output ".to_string()
+        format!(" Output{filter} ")
     }
 
-    fn render_searchable_output(&self, lines: &[OutputLine]) -> Text<'static> {
+    fn output_filter_label(&self) -> &'static str {
+        match self.output_filter {
+            OutputFilter::All => "",
+            OutputFilter::ErrorsOnly => " errors",
+        }
+    }
+
+    fn empty_output_message(&self) -> &'static str {
+        match self.output_filter {
+            OutputFilter::All => "Waiting for session output...",
+            OutputFilter::ErrorsOnly => "No stderr output for this session yet.",
+        }
+    }
+
+    fn render_searchable_output(&self, lines: &[&OutputLine]) -> Text<'static> {
         let Some(query) = self.search_query.as_deref() else {
             return Text::from(
                 lines
@@ -588,7 +611,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [e]rrors  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
@@ -659,6 +682,7 @@ impl Dashboard {
             "  G       Dispatch then rebalance backlog across lead teams",
             "  v       Toggle selected worktree diff in output pane",
             "  c       Show conflict-resolution protocol for selected conflicted worktree",
+            "  e       Toggle output filter between all lines and stderr only",
             "  m       Merge selected ready worktree into base and clean it up",
             "  M       Merge all ready inactive worktrees and clean them up",
             "  l       Cycle pane layout and persist it",
@@ -1680,6 +1704,26 @@ impl Dashboard {
         self.set_operator_note(self.search_navigation_note());
     }
 
+    pub fn toggle_output_filter(&mut self) {
+        if self.output_mode != OutputMode::SessionOutput {
+            self.set_operator_note(
+                "output filters are only available in session output view".to_string(),
+            );
+            return;
+        }
+
+        self.output_filter = match self.output_filter {
+            OutputFilter::All => OutputFilter::ErrorsOnly,
+            OutputFilter::ErrorsOnly => OutputFilter::All,
+        };
+        self.recompute_search_matches();
+        self.sync_output_scroll(self.last_output_height.max(1));
+        self.set_operator_note(format!(
+            "output filter set to {}",
+            self.output_filter.label()
+        ));
+    }
+
     pub fn toggle_auto_dispatch_policy(&mut self) {
         self.cfg.auto_dispatch_unread_handoffs = !self.cfg.auto_dispatch_unread_handoffs;
         match self.cfg.save() {
@@ -2145,6 +2189,13 @@ impl Dashboard {
             .unwrap_or(&[])
     }
 
+    fn visible_output_lines(&self) -> Vec<&OutputLine> {
+        self.selected_output_lines()
+            .iter()
+            .filter(|line| self.output_filter.matches(line.stream))
+            .collect()
+    }
+
     fn recompute_search_matches(&mut self) {
         let Some(query) = self.search_query.clone() else {
             self.search_matches.clear();
@@ -2159,7 +2210,7 @@ impl Dashboard {
         };
 
         self.search_matches = self
-            .selected_output_lines()
+            .visible_output_lines()
             .iter()
             .enumerate()
             .filter_map(|(index, line)| regex.is_match(&line.text).then_some(index))
@@ -2211,9 +2262,18 @@ impl Dashboard {
     }
 
     fn max_output_scroll(&self) -> usize {
-        self.selected_output_lines()
+        self.visible_output_lines()
             .len()
             .saturating_sub(self.last_output_height.max(1))
+    }
+
+    #[cfg(test)]
+    fn visible_output_text(&self) -> String {
+        self.visible_output_lines()
+            .iter()
+            .map(|line| line.text.clone())
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     fn reset_output_view(&mut self) {
@@ -2786,6 +2846,22 @@ impl Pane {
             Pane::Output => "Output",
             Pane::Metrics => "Metrics",
             Pane::Log => "Log",
+        }
+    }
+}
+
+impl OutputFilter {
+    fn matches(self, stream: OutputStream) -> bool {
+        match self {
+            OutputFilter::All => true,
+            OutputFilter::ErrorsOnly => stream == OutputStream::Stderr,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            OutputFilter::All => "all",
+            OutputFilter::ErrorsOnly => "errors",
         }
     }
 }
@@ -4212,6 +4288,84 @@ diff --git a/src/next.rs b/src/next.rs
         );
     }
 
+    #[test]
+    fn toggle_output_filter_keeps_only_stderr_lines() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                None,
+                1,
+                1,
+            )],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![
+                OutputLine {
+                    stream: OutputStream::Stdout,
+                    text: "stdout line".to_string(),
+                },
+                OutputLine {
+                    stream: OutputStream::Stderr,
+                    text: "stderr line".to_string(),
+                },
+            ],
+        );
+
+        dashboard.toggle_output_filter();
+
+        assert_eq!(dashboard.output_filter, OutputFilter::ErrorsOnly);
+        assert_eq!(dashboard.visible_output_text(), "stderr line");
+        assert_eq!(dashboard.output_title(), " Output errors ");
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("output filter set to errors")
+        );
+    }
+
+    #[test]
+    fn search_matches_respect_error_only_filter() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                None,
+                1,
+                1,
+            )],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![
+                OutputLine {
+                    stream: OutputStream::Stdout,
+                    text: "alpha stdout".to_string(),
+                },
+                OutputLine {
+                    stream: OutputStream::Stderr,
+                    text: "alpha stderr".to_string(),
+                },
+                OutputLine {
+                    stream: OutputStream::Stderr,
+                    text: "beta stderr".to_string(),
+                },
+            ],
+        );
+        dashboard.output_filter = OutputFilter::ErrorsOnly;
+        dashboard.search_query = Some("alpha.*".to_string());
+        dashboard.last_output_height = 1;
+
+        dashboard.recompute_search_matches();
+
+        assert_eq!(dashboard.search_matches, vec![0]);
+        assert_eq!(dashboard.visible_output_text(), "alpha stderr\nbeta stderr");
+    }
+
     #[tokio::test]
     async fn stop_selected_uses_session_manager_transition() -> Result<()> {
         let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
@@ -4938,6 +5092,7 @@ diff --git a/src/next.rs b/src/next.rs
             selected_conflict_protocol: None,
             selected_merge_readiness: None,
             output_mode: OutputMode::SessionOutput,
+            output_filter: OutputFilter::All,
             selected_pane: Pane::Sessions,
             selected_session,
             show_help: false,
