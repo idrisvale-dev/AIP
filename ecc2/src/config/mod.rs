@@ -137,6 +137,14 @@ impl Config {
             .join("costs.jsonl")
     }
 
+    pub fn tool_activity_metrics_path(&self) -> PathBuf {
+        self.db_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .join("metrics")
+            .join("tool-usage.jsonl")
+    }
+
     pub fn effective_budget_alert_thresholds(&self) -> BudgetAlertThresholds {
         self.budget_alert_thresholds.sanitized()
     }

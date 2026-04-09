@@ -102,6 +102,7 @@ pub struct Dashboard {
     selected_search_match: usize,
     session_table_state: TableState,
     last_cost_metrics_signature: Option<(u64, u128)>,
+    last_tool_activity_signature: Option<(u64, u128)>,
     last_budget_alert_state: BudgetState,
 }
 
@@ -280,10 +281,15 @@ impl Dashboard {
         output_store: SessionOutputStore,
     ) -> Self {
         let pane_size_percent = configured_pane_size(&cfg, cfg.pane_layout);
-        let initial_cost_metrics_signature = cost_metrics_signature(&cfg.cost_metrics_path());
+        let initial_cost_metrics_signature = metrics_file_signature(&cfg.cost_metrics_path());
+        let initial_tool_activity_signature =
+            metrics_file_signature(&cfg.tool_activity_metrics_path());
         let _ = db.refresh_session_durations();
         if initial_cost_metrics_signature.is_some() {
             let _ = db.sync_cost_tracker_metrics(&cfg.cost_metrics_path());
+        }
+        if initial_tool_activity_signature.is_some() {
+            let _ = db.sync_tool_activity_metrics(&cfg.tool_activity_metrics_path());
         }
         let sessions = db.list_sessions().unwrap_or_default();
         let output_rx = output_store.subscribe();
@@ -345,6 +351,7 @@ impl Dashboard {
             selected_search_match: 0,
             session_table_state,
             last_cost_metrics_signature: initial_cost_metrics_signature,
+            last_tool_activity_signature: initial_tool_activity_signature,
             last_budget_alert_state: BudgetState::Normal,
         };
         dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap_or_default();
@@ -2752,12 +2759,23 @@ impl Dashboard {
         }
 
         let metrics_path = self.cfg.cost_metrics_path();
-        let signature = cost_metrics_signature(&metrics_path);
+        let signature = metrics_file_signature(&metrics_path);
         if signature != self.last_cost_metrics_signature {
             self.last_cost_metrics_signature = signature;
             if signature.is_some() {
                 if let Err(error) = self.db.sync_cost_tracker_metrics(&metrics_path) {
                     tracing::warn!("Failed to sync cost tracker metrics: {error}");
+                }
+            }
+        }
+
+        let activity_path = self.cfg.tool_activity_metrics_path();
+        let activity_signature = metrics_file_signature(&activity_path);
+        if activity_signature != self.last_tool_activity_signature {
+            self.last_tool_activity_signature = activity_signature;
+            if activity_signature.is_some() {
+                if let Err(error) = self.db.sync_tool_activity_metrics(&activity_path) {
+                    tracing::warn!("Failed to sync tool activity metrics: {error}");
                 }
             }
         }
@@ -3446,7 +3464,7 @@ impl Dashboard {
                 occurred_at: session.updated_at,
                 session_id: session.id.clone(),
                 event_type: TimelineEventType::FileChange,
-                summary: format!("files changed {}", session.metrics.files_changed),
+                summary: format!("files touched {}", session.metrics.files_changed),
             });
         }
 
@@ -5464,7 +5482,7 @@ fn format_duration(duration_secs: u64) -> String {
     format!("{hours:02}:{minutes:02}:{seconds:02}")
 }
 
-fn cost_metrics_signature(path: &std::path::Path) -> Option<(u64, u128)> {
+fn metrics_file_signature(path: &std::path::Path) -> Option<(u64, u128)> {
     let metadata = std::fs::metadata(path).ok()?;
     let modified = metadata
         .modified()
@@ -5885,7 +5903,7 @@ mod tests {
         assert!(rendered.contains("created session as planner"));
         assert!(rendered.contains("received query lead-123"));
         assert!(rendered.contains("tool bash"));
-        assert!(rendered.contains("files changed 3"));
+        assert!(rendered.contains("files touched 3"));
     }
 
     #[test]
@@ -5944,7 +5962,7 @@ mod tests {
         let rendered = dashboard.rendered_output_text(180, 30);
         assert!(rendered.contains("received query lead-123"));
         assert!(!rendered.contains("tool bash"));
-        assert!(!rendered.contains("files changed 1"));
+        assert!(!rendered.contains("files touched 1"));
     }
 
     #[test]
@@ -7247,6 +7265,47 @@ diff --git a/src/next.rs b/src/next.rs
             dashboard.operator_note.as_deref(),
             Some("token budget exceeded | auto-paused 1 active session(s)")
         );
+    }
+
+    #[test]
+    fn refresh_syncs_tool_activity_metrics_from_hook_file() {
+        let tempdir = std::env::temp_dir().join(format!("ecc2-activity-sync-{}", Uuid::new_v4()));
+        fs::create_dir_all(tempdir.join("metrics")).unwrap();
+        let db_path = tempdir.join("state.db");
+        let db = StateStore::open(&db_path).unwrap();
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "sess-1".to_string(),
+            task: "sync activity".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            metrics: SessionMetrics::default(),
+        })
+        .unwrap();
+
+        let mut cfg = Config::default();
+        cfg.db_path = db_path;
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        fs::write(
+            tempdir.join("metrics").join("tool-usage.jsonl"),
+            "{\"id\":\"evt-1\",\"session_id\":\"sess-1\",\"tool_name\":\"Read\",\"input_summary\":\"Read README.md\",\"output_summary\":\"ok\",\"file_paths\":[\"README.md\"],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
+        )
+        .unwrap();
+
+        dashboard.refresh();
+
+        assert_eq!(dashboard.sessions.len(), 1);
+        assert_eq!(dashboard.sessions[0].metrics.tool_calls, 1);
+        assert_eq!(dashboard.sessions[0].metrics.files_changed, 1);
+
+        let _ = fs::remove_dir_all(tempdir);
     }
 
     #[test]
@@ -9171,6 +9230,7 @@ diff --git a/src/next.rs b/src/next.rs
             selected_search_match: 0,
             session_table_state,
             last_cost_metrics_signature: None,
+            last_tool_activity_signature: None,
             last_budget_alert_state: BudgetState::Normal,
         }
     }

@@ -899,6 +899,7 @@ fn sync_runtime_session_metrics(
 ) -> Result<()> {
     db.refresh_session_durations()?;
     db.sync_cost_tracker_metrics(&cfg.cost_metrics_path())?;
+    db.sync_tool_activity_metrics(&cfg.tool_activity_metrics_path())?;
     let _ = session::manager::enforce_budget_hard_limits(db, cfg)?;
     Ok(())
 }
