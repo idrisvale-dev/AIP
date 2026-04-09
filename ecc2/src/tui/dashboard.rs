@@ -1981,7 +1981,9 @@ impl Dashboard {
             {
                 Ok(session_id) => session_id,
                 Err(error) => {
-                    self.refresh_after_spawn(created_ids.first().map(String::as_str));
+                    let preferred_selection =
+                        post_spawn_selection_id(source_session_id.as_deref(), &created_ids);
+                    self.refresh_after_spawn(preferred_selection.as_deref());
                     let mut summary = if created_ids.is_empty() {
                         format!("spawn failed: {error}")
                     } else {
@@ -2026,7 +2028,9 @@ impl Dashboard {
             created_ids.push(session_id);
         }
 
-        self.refresh_after_spawn(created_ids.first().map(String::as_str));
+        let preferred_selection =
+            post_spawn_selection_id(source_session_id.as_deref(), &created_ids);
+        self.refresh_after_spawn(preferred_selection.as_deref());
         let mut note = build_spawn_note(&plan, created_ids.len());
         if let Some(layout_note) = self.auto_split_layout_after_spawn(created_ids.len()) {
             note.push_str(" | ");
@@ -3523,6 +3527,19 @@ fn build_spawn_note(plan: &SpawnPlan, created_count: usize) -> String {
         )
     } else {
         format!("spawned {created_count} session(s) for {task}")
+    }
+}
+
+fn post_spawn_selection_id(
+    source_session_id: Option<&str>,
+    created_ids: &[String],
+) -> Option<String> {
+    if created_ids.len() > 1 {
+        source_session_id
+            .map(ToOwned::to_owned)
+            .or_else(|| created_ids.first().cloned())
+    } else {
+        created_ids.first().cloned()
     }
 }
 
@@ -6525,6 +6542,31 @@ diff --git a/src/next.rs b/src/next.rs
             note.as_deref(),
             Some("auto-focused sessions in grid layout for 3 live session(s)")
         );
+    }
+
+    #[test]
+    fn post_spawn_selection_prefers_lead_for_multi_spawn() {
+        let preferred = post_spawn_selection_id(
+            Some("lead-12345678"),
+            &["child-a".to_string(), "child-b".to_string()],
+        );
+
+        assert_eq!(preferred.as_deref(), Some("lead-12345678"));
+    }
+
+    #[test]
+    fn post_spawn_selection_keeps_single_spawn_on_created_session() {
+        let preferred = post_spawn_selection_id(Some("lead-12345678"), &["child-a".to_string()]);
+
+        assert_eq!(preferred.as_deref(), Some("child-a"));
+    }
+
+    #[test]
+    fn post_spawn_selection_falls_back_to_first_created_when_no_lead_exists() {
+        let preferred =
+            post_spawn_selection_id(None, &["child-a".to_string(), "child-b".to_string()]);
+
+        assert_eq!(preferred.as_deref(), Some("child-a"));
     }
 
     #[test]
