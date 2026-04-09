@@ -1136,6 +1136,7 @@ fn build_agent_command(
 ) -> Command {
     let mut command = Command::new(agent_program);
     command
+        .env("ECC_SESSION_ID", session_id)
         .arg("--print")
         .arg("--name")
         .arg(format!("ecc-{session_id}"))
@@ -1412,7 +1413,13 @@ impl fmt::Display for SessionStatus {
             writeln!(f, "Branch:  {}", wt.branch)?;
             writeln!(f, "Worktree: {}", wt.path.display())?;
         }
-        writeln!(f, "Tokens:  {}", s.metrics.tokens_used)?;
+        writeln!(
+            f,
+            "Tokens:  {} total (in {} / out {})",
+            s.metrics.tokens_used,
+            s.metrics.input_tokens,
+            s.metrics.output_tokens
+        )?;
         writeln!(f, "Tools:   {}", s.metrics.tool_calls)?;
         writeln!(f, "Files:   {}", s.metrics.files_changed)?;
         writeln!(f, "Cost:    ${:.4}", s.metrics.cost_usd)?;
@@ -1741,7 +1748,7 @@ mod tests {
         let script_path = root.join("fake-claude.sh");
         let log_path = root.join("fake-claude.log");
         let script = format!(
-            "#!/usr/bin/env python3\nimport os\nimport pathlib\nimport signal\nimport sys\nimport time\n\nlog_path = pathlib.Path(r\"{}\")\nlog_path.write_text(os.getcwd() + \"\\n\", encoding=\"utf-8\")\nwith log_path.open(\"a\", encoding=\"utf-8\") as handle:\n    handle.write(\" \".join(sys.argv[1:]) + \"\\n\")\n\ndef handle_term(signum, frame):\n    raise SystemExit(0)\n\nsignal.signal(signal.SIGTERM, handle_term)\nwhile True:\n    time.sleep(0.1)\n",
+            "#!/usr/bin/env python3\nimport os\nimport pathlib\nimport signal\nimport sys\nimport time\n\nlog_path = pathlib.Path(r\"{}\")\nlog_path.write_text(os.getcwd() + \"\\n\", encoding=\"utf-8\")\nwith log_path.open(\"a\", encoding=\"utf-8\") as handle:\n    handle.write(\" \".join(sys.argv[1:]) + \"\\n\")\n    handle.write(\"ECC_SESSION_ID=\" + os.environ.get(\"ECC_SESSION_ID\", \"\") + \"\\n\")\n\ndef handle_term(signum, frame):\n    raise SystemExit(0)\n\nsignal.signal(signal.SIGTERM, handle_term)\nwhile True:\n    time.sleep(0.1)\n",
             log_path.display()
         );
 
@@ -1803,6 +1810,7 @@ mod tests {
         assert!(log.contains(repo_root.to_string_lossy().as_ref()));
         assert!(log.contains("--print"));
         assert!(log.contains("implement lifecycle"));
+        assert!(log.contains(&format!("ECC_SESSION_ID={session_id}")));
 
         stop_session_with_options(&db, &session_id, false).await?;
         Ok(())

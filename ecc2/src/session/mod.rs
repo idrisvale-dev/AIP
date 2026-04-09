@@ -95,6 +95,8 @@ pub struct WorktreeInfo {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SessionMetrics {
+    pub input_tokens: u64,
+    pub output_tokens: u64,
     pub tokens_used: u64,
     pub tool_calls: u64,
     pub files_changed: u32,

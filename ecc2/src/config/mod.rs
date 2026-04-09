@@ -113,6 +113,14 @@ impl Config {
             .join("ecc2.toml")
     }
 
+    pub fn cost_metrics_path(&self) -> PathBuf {
+        self.db_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .join("metrics")
+            .join("costs.jsonl")
+    }
+
     pub fn load() -> Result<Self> {
         let config_path = Self::config_path();
 

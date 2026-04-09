@@ -8,6 +8,7 @@ use ratatui::{
 };
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
+use std::time::UNIX_EPOCH;
 use tokio::sync::broadcast;
 
 use super::widgets::{budget_state, format_currency, format_token_count, BudgetState, TokenMeter};
@@ -100,6 +101,7 @@ pub struct Dashboard {
     search_matches: Vec<SearchMatch>,
     selected_search_match: usize,
     session_table_state: TableState,
+    last_cost_metrics_signature: Option<(u64, u128)>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -277,6 +279,11 @@ impl Dashboard {
         output_store: SessionOutputStore,
     ) -> Self {
         let pane_size_percent = configured_pane_size(&cfg, cfg.pane_layout);
+        let initial_cost_metrics_signature = cost_metrics_signature(&cfg.cost_metrics_path());
+        let _ = db.refresh_session_durations();
+        if initial_cost_metrics_signature.is_some() {
+            let _ = db.sync_cost_tracker_metrics(&cfg.cost_metrics_path());
+        }
         let sessions = db.list_sessions().unwrap_or_default();
         let output_rx = output_store.subscribe();
         let mut session_table_state = TableState::default();
@@ -336,6 +343,7 @@ impl Dashboard {
             search_matches: Vec::new(),
             selected_search_match: 0,
             session_table_state,
+            last_cost_metrics_signature: initial_cost_metrics_signature,
         };
         dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap_or_default();
         dashboard.sync_handoff_backlog_counts();
@@ -2729,7 +2737,27 @@ impl Dashboard {
         self.sync_from_store();
     }
 
+    fn sync_runtime_metrics(&mut self) {
+        if let Err(error) = self.db.refresh_session_durations() {
+            tracing::warn!("Failed to refresh session durations: {error}");
+        }
+
+        let metrics_path = self.cfg.cost_metrics_path();
+        let signature = cost_metrics_signature(&metrics_path);
+        if signature == self.last_cost_metrics_signature {
+            return;
+        }
+
+        self.last_cost_metrics_signature = signature;
+        if signature.is_some() {
+            if let Err(error) = self.db.sync_cost_tracker_metrics(&metrics_path) {
+                tracing::warn!("Failed to sync cost tracker metrics: {error}");
+            }
+        }
+    }
+
     fn sync_from_store(&mut self) {
+        self.sync_runtime_metrics();
         let selected_id = self.selected_session_id().map(ToOwned::to_owned);
         self.sessions = match self.db.list_sessions() {
             Ok(sessions) => sessions,
@@ -3977,8 +4005,13 @@ impl Dashboard {
             }
 
             lines.push(format!(
-                "Tokens {} | Tools {} | Files {}",
+                "Tokens {} total | In {} | Out {}",
                 format_token_count(metrics.tokens_used),
+                format_token_count(metrics.input_tokens),
+                format_token_count(metrics.output_tokens),
+            ));
+            lines.push(format!(
+                "Tools {} | Files {}",
                 metrics.tool_calls,
                 metrics.files_changed,
             ));
@@ -5348,6 +5381,17 @@ fn format_duration(duration_secs: u64) -> String {
     format!("{hours:02}:{minutes:02}:{seconds:02}")
 }
 
+fn cost_metrics_signature(path: &std::path::Path) -> Option<(u64, u128)> {
+    let metadata = std::fs::metadata(path).ok()?;
+    let modified = metadata
+        .modified()
+        .ok()?
+        .duration_since(UNIX_EPOCH)
+        .ok()?
+        .as_nanos();
+    Some((metadata.len(), modified))
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::{Context, Result};
@@ -5668,6 +5712,7 @@ mod tests {
         assert!(text.contains("- Working ?? notes.txt"));
         assert!(text.contains("Merge blocked by 1 conflict(s): src/main.rs"));
         assert!(text.contains("- conflict src/main.rs"));
+        assert!(text.contains("Tokens 512 total | In 384 | Out 128"));
         assert!(text.contains("Last output last useful output"));
         assert!(text.contains("Needs attention:"));
         assert!(text.contains("Failed failed-8 | Render dashboard rows"));
@@ -8915,6 +8960,7 @@ diff --git a/src/next.rs b/src/next.rs
             search_matches: Vec::new(),
             selected_search_match: 0,
             session_table_state,
+            last_cost_metrics_signature: None,
         }
     }
 
@@ -8990,6 +9036,8 @@ diff --git a/src/next.rs b/src/next.rs
             created_at: Utc::now(),
             updated_at: Utc::now(),
             metrics: SessionMetrics {
+                input_tokens: tokens_used.saturating_mul(3) / 4,
+                output_tokens: tokens_used / 4,
                 tokens_used,
                 tool_calls: 4,
                 files_changed: 2,
@@ -9012,6 +9060,8 @@ diff --git a/src/next.rs b/src/next.rs
             created_at: now,
             updated_at: now,
             metrics: SessionMetrics {
+                input_tokens: tokens_used.saturating_mul(3) / 4,
+                output_tokens: tokens_used / 4,
                 tokens_used,
                 tool_calls: 0,
                 files_changed: 0,

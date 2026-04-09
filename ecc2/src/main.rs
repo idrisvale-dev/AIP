@@ -673,17 +673,20 @@ async fn main() -> Result<()> {
             }
         }
         Some(Commands::Sessions) => {
+            sync_runtime_session_metrics(&db, &cfg)?;
             let sessions = session::manager::list_sessions(&db)?;
             for s in sessions {
                 println!("{} [{}] {}", s.id, s.state, s.task);
             }
         }
         Some(Commands::Status { session_id }) => {
+            sync_runtime_session_metrics(&db, &cfg)?;
             let id = session_id.unwrap_or_else(|| "latest".to_string());
             let status = session::manager::get_status(&db, &id)?;
             println!("{status}");
         }
         Some(Commands::Team { session_id, depth }) => {
+            sync_runtime_session_metrics(&db, &cfg)?;
             let id = session_id.unwrap_or_else(|| "latest".to_string());
             let team = session::manager::get_team_status(&db, &id, depth)?;
             println!("{team}");
@@ -888,6 +891,15 @@ fn resolve_session_id(db: &session::store::StateStore, value: &str) -> Result<St
     db.get_session(value)?
         .map(|session| session.id)
         .ok_or_else(|| anyhow::anyhow!("Session not found: {value}"))
+}
+
+fn sync_runtime_session_metrics(
+    db: &session::store::StateStore,
+    cfg: &config::Config,
+) -> Result<()> {
+    db.refresh_session_durations()?;
+    db.sync_cost_tracker_metrics(&cfg.cost_metrics_path())?;
+    Ok(())
 }
 
 fn build_message(
