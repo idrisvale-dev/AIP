@@ -193,6 +193,9 @@ struct DelegatedChildSummary {
     session_id: String,
     state: SessionState,
     handoff_backlog: usize,
+    task_preview: String,
+    branch: Option<String>,
+    last_output_preview: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -2505,11 +2508,33 @@ impl Dashboard {
                                 handoff_backlog,
                                 state: state.clone(),
                                 session_id: child_id.clone(),
+                                task_preview: truncate_for_dashboard(&session.task, 40),
+                                branch: session
+                                    .worktree
+                                    .as_ref()
+                                    .map(|worktree| worktree.branch.clone()),
+                                last_output_preview: self
+                                    .db
+                                    .get_output_lines(&child_id, 1)
+                                    .ok()
+                                    .and_then(|lines| lines.last().cloned())
+                                    .map(|line| truncate_for_dashboard(&line.text, 48)),
                             });
                             delegated.push(DelegatedChildSummary {
                                 handoff_backlog,
                                 state,
                                 session_id: child_id,
+                                task_preview: truncate_for_dashboard(&session.task, 40),
+                                branch: session
+                                    .worktree
+                                    .as_ref()
+                                    .map(|worktree| worktree.branch.clone()),
+                                last_output_preview: self
+                                    .db
+                                    .get_output_lines(&session.id, 1)
+                                    .ok()
+                                    .and_then(|lines| lines.last().cloned())
+                                    .map(|line| truncate_for_dashboard(&line.text, 48)),
                             });
                         }
                         Ok(None) => {}
@@ -2976,12 +3001,20 @@ impl Dashboard {
             if !self.selected_child_sessions.is_empty() {
                 lines.push("Delegates".to_string());
                 for child in &self.selected_child_sessions {
-                    lines.push(format!(
-                        "- {} [{}] | backlog {}",
+                    let mut child_line = format!(
+                        "- {} [{}] | backlog {} | task {}",
                         format_session_id(&child.session_id),
                         session_state_label(&child.state),
-                        child.handoff_backlog
-                    ));
+                        child.handoff_backlog,
+                        child.task_preview
+                    );
+                    if let Some(branch) = child.branch.as_ref() {
+                        child_line.push_str(&format!(" | branch {branch}"));
+                    }
+                    lines.push(child_line);
+                    if let Some(last_output_preview) = child.last_output_preview.as_ref() {
+                        lines.push(format!("  last output {last_output_preview}"));
+                    }
                 }
             }
 
@@ -4455,6 +4488,37 @@ diff --git a/src/next.rs b/src/next.rs
     }
 
     #[test]
+    fn selected_session_metrics_text_includes_delegate_task_board() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.selected_child_sessions = vec![DelegatedChildSummary {
+            session_id: "delegate-12345678".to_string(),
+            state: SessionState::Running,
+            handoff_backlog: 2,
+            task_preview: "Implement rust tui delegate board".to_string(),
+            branch: Some("ecc/delegate-12345678".to_string()),
+            last_output_preview: Some("Investigating pane selection behavior".to_string()),
+        }];
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(
+            text.contains(
+                "- delegate [Running] | backlog 2 | task Implement rust tui delegate board | branch ecc/delegate-12345678"
+            )
+        );
+        assert!(text.contains("  last output Investigating pane selection behavior"));
+    }
+
+    #[test]
     fn selected_session_metrics_text_shows_worktree_and_auto_merge_policy_state() {
         let mut dashboard = test_dashboard(
             vec![sample_session(
@@ -4951,6 +5015,64 @@ diff --git a/src/next.rs b/src/next.rs
         );
         assert_eq!(dashboard.selected_child_sessions.len(), 1);
         assert_eq!(dashboard.selected_child_sessions[0].handoff_backlog, 0);
+    }
+
+    #[test]
+    fn sync_selected_lineage_populates_delegate_task_and_output_previews() {
+        let lead = sample_session(
+            "lead-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/lead"),
+            512,
+            42,
+        );
+        let mut child = sample_session(
+            "worker-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/worker"),
+            128,
+            12,
+        );
+        child.task = "Implement delegate metrics board for ECC 2.0".to_string();
+
+        let mut dashboard = test_dashboard(vec![lead.clone(), child.clone()], 0);
+        dashboard.db.insert_session(&lead).unwrap();
+        dashboard.db.insert_session(&child).unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-12345678",
+                "{\"task\":\"Delegated work\",\"context\":\"Delegated from lead\"}",
+                "task_handoff",
+            )
+            .unwrap();
+        dashboard
+            .db
+            .append_output_line(
+                "worker-12345678",
+                OutputStream::Stdout,
+                "Reviewing delegate metrics board layout",
+            )
+            .unwrap();
+
+        dashboard.sync_selected_lineage();
+
+        assert_eq!(dashboard.selected_child_sessions.len(), 1);
+        assert_eq!(
+            dashboard.selected_child_sessions[0].task_preview,
+            "Implement delegate metrics board for EC…"
+        );
+        assert_eq!(
+            dashboard.selected_child_sessions[0].branch.as_deref(),
+            Some("ecc/worker")
+        );
+        assert_eq!(
+            dashboard.selected_child_sessions[0].last_output_preview.as_deref(),
+            Some("Reviewing delegate metrics board layout")
+        );
     }
 
     #[test]
