@@ -134,6 +134,7 @@ pub struct FileActivityEntry {
     pub action: FileActivityAction,
     pub path: String,
     pub summary: String,
+    pub diff_preview: Option<String>,
     pub timestamp: DateTime<Utc>,
 }
 

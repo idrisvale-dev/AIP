@@ -62,7 +62,7 @@ function pushPathCandidate(paths, value) {
   }
 }
 
-function pushFileEvent(events, value, action) {
+function pushFileEvent(events, value, action, diffPreview) {
   const candidate = String(value || '').trim();
   if (!candidate) {
     return;
@@ -70,9 +70,50 @@ function pushFileEvent(events, value, action) {
   if (/^(https?:\/\/|app:\/\/|plugin:\/\/|mcp:\/\/)/i.test(candidate)) {
     return;
   }
-  if (!events.some(event => event.path === candidate && event.action === action)) {
-    events.push({ path: candidate, action });
+  const normalizedDiffPreview = typeof diffPreview === 'string' && diffPreview.trim()
+    ? diffPreview.trim()
+    : undefined;
+  if (!events.some(event =>
+    event.path === candidate
+      && event.action === action
+      && (event.diff_preview || undefined) === normalizedDiffPreview
+  )) {
+    const event = { path: candidate, action };
+    if (normalizedDiffPreview) {
+      event.diff_preview = normalizedDiffPreview;
+    }
+    events.push(event);
   }
+}
+
+function sanitizeDiffText(value, maxLength = 96) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return '';
+  }
+  return truncateSummary(value, maxLength);
+}
+
+function buildReplacementPreview(oldValue, newValue) {
+  const before = sanitizeDiffText(oldValue);
+  const after = sanitizeDiffText(newValue);
+  if (!before && !after) {
+    return undefined;
+  }
+  if (!before) {
+    return `-> ${after}`;
+  }
+  if (!after) {
+    return `${before} ->`;
+  }
+  return `${before} -> ${after}`;
+}
+
+function buildCreationPreview(content) {
+  const normalized = sanitizeDiffText(content);
+  if (!normalized) {
+    return undefined;
+  }
+  return `+ ${normalized}`;
 }
 
 function inferDefaultFileAction(toolName) {
@@ -129,6 +170,11 @@ function collectFilePaths(value, paths) {
   for (const [key, nested] of Object.entries(value)) {
     if (FILE_PATH_KEYS.has(key)) {
       collectFilePaths(nested, paths);
+      continue;
+    }
+
+    if (nested && (Array.isArray(nested) || typeof nested === 'object')) {
+      collectFilePaths(nested, paths);
     }
   }
 }
@@ -142,20 +188,39 @@ function extractFilePaths(toolInput) {
   return paths;
 }
 
-function collectFileEvents(toolName, value, events, key = null) {
+function fileEventDiffPreview(toolName, value, action) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  if (typeof value.old_string === 'string' || typeof value.new_string === 'string') {
+    return buildReplacementPreview(value.old_string, value.new_string);
+  }
+
+  if (action === 'create') {
+    return buildCreationPreview(value.content || value.file_text || value.text);
+  }
+
+  return undefined;
+}
+
+function collectFileEvents(toolName, value, events, key = null, parentValue = null) {
   if (!value) {
     return;
   }
 
   if (Array.isArray(value)) {
     for (const entry of value) {
-      collectFileEvents(toolName, entry, events, key);
+      collectFileEvents(toolName, entry, events, key, parentValue);
     }
     return;
   }
 
   if (typeof value === 'string') {
-    pushFileEvent(events, value, actionForFileKey(toolName, key));
+    if (key && FILE_PATH_KEYS.has(key)) {
+      const action = actionForFileKey(toolName, key);
+      pushFileEvent(events, value, action, fileEventDiffPreview(toolName, parentValue, action));
+    }
     return;
   }
 
@@ -165,7 +230,12 @@ function collectFileEvents(toolName, value, events, key = null) {
 
   for (const [nestedKey, nested] of Object.entries(value)) {
     if (FILE_PATH_KEYS.has(nestedKey)) {
-      collectFileEvents(toolName, nested, events, nestedKey);
+      collectFileEvents(toolName, nested, events, nestedKey, value);
+      continue;
+    }
+
+    if (nested && (Array.isArray(nested) || typeof nested === 'object')) {
+      collectFileEvents(toolName, nested, events, null, nested);
     }
   }
 }
@@ -234,8 +304,10 @@ function buildActivityRow(input, env = process.env) {
   }
 
   const toolInput = input?.tool_input || {};
-  const filePaths = extractFilePaths(toolInput);
   const fileEvents = extractFileEvents(toolName, toolInput);
+  const filePaths = fileEvents.length > 0
+    ? [...new Set(fileEvents.map(event => event.path))]
+    : extractFilePaths(toolInput);
 
   return {
     id: `tool-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`,

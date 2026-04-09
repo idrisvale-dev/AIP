@@ -759,6 +759,8 @@ impl StateStore {
         struct ToolActivityFileEvent {
             path: String,
             action: String,
+            #[serde(default)]
+            diff_preview: Option<String>,
         }
 
         let file = File::open(metrics_path)
@@ -800,6 +802,7 @@ impl StateStore {
                     .map(|path| PersistedFileEvent {
                         path,
                         action: infer_file_activity_action(&row.tool_name),
+                        diff_preview: None,
                     })
                     .collect()
             } else {
@@ -814,6 +817,7 @@ impl StateStore {
                             path,
                             action: parse_file_activity_action(&event.action)
                                 .unwrap_or_else(|| infer_file_activity_action(&row.tool_name)),
+                            diff_preview: normalize_optional_string(event.diff_preview),
                         })
                     })
                     .collect()
@@ -1594,6 +1598,7 @@ impl StateStore {
                         Some(PersistedFileEvent {
                             path,
                             action: infer_file_activity_action(&tool_name),
+                            diff_preview: None,
                         })
                     })
                     .collect()
@@ -1605,6 +1610,7 @@ impl StateStore {
                     action: event.action,
                     path: event.path,
                     summary: summary.clone(),
+                    diff_preview: event.diff_preview,
                     timestamp: occurred_at,
                 });
                 if events.len() >= limit {
@@ -1621,6 +1627,8 @@ impl StateStore {
 struct PersistedFileEvent {
     path: String,
     action: FileActivityAction,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    diff_preview: Option<String>,
 }
 
 fn parse_persisted_file_events(value: &str) -> Option<Vec<PersistedFileEvent>> {
@@ -1635,6 +1643,7 @@ fn parse_persisted_file_events(value: &str) -> Option<Vec<PersistedFileEvent>> {
             Some(PersistedFileEvent {
                 path,
                 action: event.action,
+                diff_preview: normalize_optional_string(event.diff_preview),
             })
         })
         .collect();
@@ -1654,6 +1663,17 @@ fn parse_file_activity_action(value: &str) -> Option<FileActivityAction> {
         "touch" => Some(FileActivityAction::Touch),
         _ => None,
     }
+}
+
+fn normalize_optional_string(value: Option<String>) -> Option<String> {
+    value.and_then(|value| {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    })
 }
 
 fn infer_file_activity_action(tool_name: &str) -> FileActivityAction {
@@ -1934,6 +1954,50 @@ mod tests {
         assert_eq!(activity[1].path, "src/lib.rs");
         assert_eq!(activity[2].action, FileActivityAction::Read);
         assert_eq!(activity[2].path, "src/lib.rs");
+
+        Ok(())
+    }
+
+    #[test]
+    fn list_file_activity_preserves_diff_previews() -> Result<()> {
+        let tempdir = TestDir::new("store-file-activity-diffs")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "sync tools".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let metrics_dir = tempdir.path().join("metrics");
+        fs::create_dir_all(&metrics_dir)?;
+        let metrics_path = metrics_dir.join("tool-usage.jsonl");
+        fs::write(
+            &metrics_path,
+            concat!(
+                "{\"id\":\"evt-1\",\"session_id\":\"session-1\",\"tool_name\":\"Edit\",\"input_summary\":\"Edit src/config.ts\",\"output_summary\":\"updated config\",\"file_paths\":[\"src/config.ts\"],\"file_events\":[{\"path\":\"src/config.ts\",\"action\":\"modify\",\"diff_preview\":\"API_URL=http://localhost:3000 -> API_URL=https://api.example.com\"}],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n"
+            ),
+        )?;
+
+        db.sync_tool_activity_metrics(&metrics_path)?;
+
+        let activity = db.list_file_activity("session-1", 10)?;
+        assert_eq!(activity.len(), 1);
+        assert_eq!(activity[0].action, FileActivityAction::Modify);
+        assert_eq!(activity[0].path, "src/config.ts");
+        assert_eq!(
+            activity[0].diff_preview.as_deref(),
+            Some("API_URL=http://localhost:3000 -> API_URL=https://api.example.com")
+        );
 
         Ok(())
     }

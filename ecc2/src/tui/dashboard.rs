@@ -5398,11 +5398,18 @@ fn session_state_color(state: &SessionState) -> Color {
 }
 
 fn file_activity_summary(entry: &FileActivityEntry) -> String {
-    format!(
+    let mut summary = format!(
         "{} {}",
         file_activity_verb(entry.action.clone()),
         truncate_for_dashboard(&entry.path, 72)
-    )
+    );
+
+    if let Some(diff_preview) = entry.diff_preview.as_ref() {
+        summary.push_str(" | ");
+        summary.push_str(&truncate_for_dashboard(diff_preview, 56));
+    }
+
+    summary
 }
 
 fn file_activity_verb(action: crate::session::FileActivityAction) -> &'static str {
@@ -6085,7 +6092,7 @@ mod tests {
             &metrics_path,
             concat!(
                 "{\"id\":\"evt-1\",\"session_id\":\"focus-12345678\",\"tool_name\":\"Read\",\"input_summary\":\"Read src/lib.rs\",\"output_summary\":\"ok\",\"file_paths\":[\"src/lib.rs\"],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
-                "{\"id\":\"evt-2\",\"session_id\":\"focus-12345678\",\"tool_name\":\"Write\",\"input_summary\":\"Write README.md\",\"output_summary\":\"updated readme\",\"file_paths\":[\"README.md\"],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n"
+                "{\"id\":\"evt-2\",\"session_id\":\"focus-12345678\",\"tool_name\":\"Write\",\"input_summary\":\"Write README.md\",\"output_summary\":\"updated readme\",\"file_paths\":[\"README.md\"],\"file_events\":[{\"path\":\"README.md\",\"action\":\"create\",\"diff_preview\":\"+ # ECC 2.0\"}],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n"
             ),
         )?;
         dashboard.db.sync_tool_activity_metrics(&metrics_path)?;
@@ -6095,11 +6102,13 @@ mod tests {
         let rendered = dashboard.rendered_output_text(180, 30);
         assert!(rendered.contains("read src/lib.rs"));
         assert!(rendered.contains("create README.md"));
+        assert!(rendered.contains("+ # ECC 2.0"));
         assert!(!rendered.contains("files touched 2"));
 
         let metrics_text = dashboard.selected_session_metrics_text();
         assert!(metrics_text.contains("Recent file activity"));
         assert!(metrics_text.contains("create README.md"));
+        assert!(metrics_text.contains("+ # ECC 2.0"));
         assert!(metrics_text.contains("read src/lib.rs"));
 
         let _ = fs::remove_dir_all(root);

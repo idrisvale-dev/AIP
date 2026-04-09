@@ -130,6 +130,83 @@ function runTests() {
     fs.rmSync(tmpHome, { recursive: true, force: true });
   }) ? passed++ : failed++);
 
+  (test('captures replacement diff previews for edit tool input', () => {
+    const tmpHome = makeTempDir();
+    const input = {
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: 'src/config.ts',
+        old_string: 'API_URL=http://localhost:3000',
+        new_string: 'API_URL=https://api.example.com',
+      },
+      tool_output: { output: 'updated config' },
+    };
+    const result = runScript(input, {
+      ...withTempHome(tmpHome),
+      CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
+      ECC_SESSION_ID: 'ecc-session-edit',
+    });
+    assert.strictEqual(result.code, 0);
+
+    const metricsFile = path.join(tmpHome, '.claude', 'metrics', 'tool-usage.jsonl');
+    const row = JSON.parse(fs.readFileSync(metricsFile, 'utf8').trim());
+    assert.deepStrictEqual(row.file_events, [
+      {
+        path: 'src/config.ts',
+        action: 'modify',
+        diff_preview: 'API_URL=http://localhost:3000 -> API_URL=https://api.example.com',
+      },
+    ]);
+
+    fs.rmSync(tmpHome, { recursive: true, force: true });
+  }) ? passed++ : failed++);
+
+  (test('captures MultiEdit nested edits with typed diff previews', () => {
+    const tmpHome = makeTempDir();
+    const input = {
+      tool_name: 'MultiEdit',
+      tool_input: {
+        edits: [
+          {
+            file_path: 'src/a.ts',
+            old_string: 'const a = 1;',
+            new_string: 'const a = 2;',
+          },
+          {
+            file_path: 'src/b.ts',
+            old_string: 'old name',
+            new_string: 'new name',
+          },
+        ],
+      },
+      tool_output: { output: 'updated two files' },
+    };
+    const result = runScript(input, {
+      ...withTempHome(tmpHome),
+      CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
+      ECC_SESSION_ID: 'ecc-session-multiedit',
+    });
+    assert.strictEqual(result.code, 0);
+
+    const metricsFile = path.join(tmpHome, '.claude', 'metrics', 'tool-usage.jsonl');
+    const row = JSON.parse(fs.readFileSync(metricsFile, 'utf8').trim());
+    assert.deepStrictEqual(row.file_paths, ['src/a.ts', 'src/b.ts']);
+    assert.deepStrictEqual(row.file_events, [
+      {
+        path: 'src/a.ts',
+        action: 'modify',
+        diff_preview: 'const a = 1; -> const a = 2;',
+      },
+      {
+        path: 'src/b.ts',
+        action: 'modify',
+        diff_preview: 'old name -> new name',
+      },
+    ]);
+
+    fs.rmSync(tmpHome, { recursive: true, force: true });
+  }) ? passed++ : failed++);
+
   (test('prefers ECC_SESSION_ID over CLAUDE_SESSION_ID and redacts bash summaries', () => {
     const tmpHome = makeTempDir();
     const input = {
