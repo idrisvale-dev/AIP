@@ -4,6 +4,7 @@ use ratatui::{
         Block, Borders, Cell, HighlightSpacing, Paragraph, Row, Table, TableState, Tabs, Wrap,
     },
 };
+use regex::Regex;
 use std::collections::HashMap;
 use tokio::sync::broadcast;
 
@@ -1625,6 +1626,12 @@ impl Dashboard {
             return;
         }
 
+        if let Err(error) = compile_search_regex(&query) {
+            self.search_input = Some(query.clone());
+            self.set_operator_note(format!("invalid regex /{query}: {error}"));
+            return;
+        }
+
         self.search_query = Some(query.clone());
         self.recompute_search_matches();
         if self.search_matches.is_empty() {
@@ -2145,11 +2152,17 @@ impl Dashboard {
             return;
         };
 
+        let Ok(regex) = compile_search_regex(&query) else {
+            self.search_matches.clear();
+            self.selected_search_match = 0;
+            return;
+        };
+
         self.search_matches = self
             .selected_output_lines()
             .iter()
             .enumerate()
-            .filter_map(|(index, line)| line_matches_query(&line.text, &query).then_some(index))
+            .filter_map(|(index, line)| regex.is_match(&line.text).then_some(index))
             .collect();
 
         if self.search_matches.is_empty() {
@@ -2959,12 +2972,8 @@ fn configured_pane_size(cfg: &Config, layout: PaneLayout) -> u16 {
     configured.clamp(MIN_PANE_SIZE_PERCENT, MAX_PANE_SIZE_PERCENT)
 }
 
-fn line_matches_query(text: &str, query: &str) -> bool {
-    if query.is_empty() {
-        return false;
-    }
-
-    text.contains(query)
+fn compile_search_regex(query: &str) -> Result<Regex, regex::Error> {
+    Regex::new(query)
 }
 
 fn highlight_output_line(
@@ -2977,13 +2986,15 @@ fn highlight_output_line(
         return Line::from(text.to_string());
     }
 
+    let Ok(regex) = compile_search_regex(query) else {
+        return Line::from(text.to_string());
+    };
+
     let mut spans = Vec::new();
     let mut cursor = 0;
-    let mut search_start = 0;
-
-    while let Some(relative_index) = text[search_start..].find(query) {
-        let start = search_start + relative_index;
-        let end = start + query.len();
+    for matched in regex.find_iter(text) {
+        let start = matched.start();
+        let end = matched.end();
 
         if start > cursor {
             spans.push(Span::raw(text[cursor..start].to_string()));
@@ -2999,7 +3010,6 @@ fn highlight_output_line(
         };
         spans.push(Span::styled(text[start..end].to_string(), match_style));
         cursor = end;
-        search_start = end;
     }
 
     if cursor < text.len() {
@@ -4091,17 +4101,17 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.last_output_height = 2;
 
         dashboard.begin_search();
-        for ch in "alpha".chars() {
+        for ch in "alpha.*".chars() {
             dashboard.push_search_char(ch);
         }
         dashboard.submit_search();
 
-        assert_eq!(dashboard.search_query.as_deref(), Some("alpha"));
+        assert_eq!(dashboard.search_query.as_deref(), Some("alpha.*"));
         assert_eq!(dashboard.search_matches, vec![0, 2]);
         assert_eq!(dashboard.selected_search_match, 0);
         assert_eq!(
             dashboard.operator_note.as_deref(),
-            Some("search /alpha matched 2 line(s) | n/N navigate matches")
+            Some("search /alpha.* matched 2 line(s) | n/N navigate matches")
         );
     }
 
@@ -4123,7 +4133,7 @@ diff --git a/src/next.rs b/src/next.rs
             vec![
                 OutputLine {
                     stream: OutputStream::Stdout,
-                    text: "alpha".to_string(),
+                    text: "alpha-1".to_string(),
                 },
                 OutputLine {
                     stream: OutputStream::Stdout,
@@ -4131,11 +4141,11 @@ diff --git a/src/next.rs b/src/next.rs
                 },
                 OutputLine {
                     stream: OutputStream::Stdout,
-                    text: "alpha tail".to_string(),
+                    text: "alpha-2".to_string(),
                 },
             ],
         );
-        dashboard.search_query = Some("alpha".to_string());
+        dashboard.search_query = Some(r"alpha-\d".to_string());
         dashboard.last_output_height = 1;
         dashboard.recompute_search_matches();
 
@@ -4144,12 +4154,42 @@ diff --git a/src/next.rs b/src/next.rs
         assert_eq!(dashboard.output_scroll_offset, 2);
         assert_eq!(
             dashboard.operator_note.as_deref(),
-            Some("search /alpha match 2/2")
+            Some(r"search /alpha-\d match 2/2")
         );
 
         dashboard.next_search_match();
         assert_eq!(dashboard.selected_search_match, 0);
         assert_eq!(dashboard.output_scroll_offset, 0);
+    }
+
+    #[test]
+    fn submit_search_rejects_invalid_regex_and_keeps_input() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                None,
+                1,
+                1,
+            )],
+            0,
+        );
+
+        dashboard.begin_search();
+        for ch in "(".chars() {
+            dashboard.push_search_char(ch);
+        }
+        dashboard.submit_search();
+
+        assert_eq!(dashboard.search_input.as_deref(), Some("("));
+        assert!(dashboard.search_query.is_none());
+        assert!(dashboard.search_matches.is_empty());
+        assert!(dashboard
+            .operator_note
+            .as_deref()
+            .unwrap_or_default()
+            .starts_with("invalid regex /(:"));
     }
 
     #[test]

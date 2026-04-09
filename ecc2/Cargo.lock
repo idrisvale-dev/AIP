@@ -497,6 +497,7 @@ dependencies = [
  "git2",
  "libc",
  "ratatui",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",
