@@ -22,7 +22,6 @@ use crate::session::output::OutputStream;
 #[cfg(test)]
 use crate::session::{SessionMetrics, WorktreeInfo};
 
-const DEFAULT_PANE_SIZE_PERCENT: u16 = 35;
 const DEFAULT_GRID_SIZE_PERCENT: u16 = 50;
 const OUTPUT_PANE_PERCENT: u16 = 70;
 const MIN_PANE_SIZE_PERCENT: u16 = 20;
@@ -31,13 +30,6 @@ const PANE_RESIZE_STEP_PERCENT: u16 = 5;
 const MAX_LOG_ENTRIES: u64 = 12;
 const MAX_DIFF_PREVIEW_LINES: usize = 6;
 const MAX_DIFF_PATCH_LINES: usize = 80;
-
-fn default_pane_size(layout: PaneLayout) -> u16 {
-    match layout {
-        PaneLayout::Grid => DEFAULT_GRID_SIZE_PERCENT,
-        PaneLayout::Horizontal | PaneLayout::Vertical => DEFAULT_PANE_SIZE_PERCENT,
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct WorktreeDiffColumns {
@@ -163,7 +155,7 @@ impl Dashboard {
         cfg: Config,
         output_store: SessionOutputStore,
     ) -> Self {
-        let pane_size_percent = default_pane_size(cfg.pane_layout);
+        let pane_size_percent = configured_pane_size(&cfg, cfg.pane_layout);
         let sessions = db.list_sessions().unwrap_or_default();
         let output_rx = output_store.subscribe();
         let mut session_table_state = TableState::default();
@@ -611,8 +603,8 @@ impl Dashboard {
             "  S-Tab   Previous pane",
             "  j/↓     Scroll down",
             "  k/↑     Scroll up",
-            "  +/=     Increase pane size",
-            "  -       Decrease pane size",
+            "  +/=     Increase pane size and persist it",
+            "  -       Decrease pane size and persist it",
             "  r       Refresh",
             "  ?       Toggle help",
             "  q/C-c   Quit",
@@ -667,7 +659,8 @@ impl Dashboard {
             PaneLayout::Vertical => PaneLayout::Grid,
             PaneLayout::Grid => PaneLayout::Horizontal,
         };
-        self.pane_size_percent = default_pane_size(self.cfg.pane_layout);
+        self.pane_size_percent = configured_pane_size(&self.cfg, self.cfg.pane_layout);
+        self.persist_current_pane_size();
         self.ensure_selected_pane_visible();
 
         match save(&self.cfg) {
@@ -681,6 +674,61 @@ impl Dashboard {
                 self.pane_size_percent = previous_pane_size;
                 self.selected_pane = previous_selected_pane;
                 self.set_operator_note(format!("failed to persist pane layout: {error}"));
+            }
+        }
+    }
+
+    fn adjust_pane_size_with_save<F>(
+        &mut self,
+        delta: isize,
+        config_path: &std::path::Path,
+        save: F,
+    ) where
+        F: FnOnce(&Config) -> anyhow::Result<()>,
+    {
+        let previous_size = self.pane_size_percent;
+        let previous_linear = self.cfg.linear_pane_size_percent;
+        let previous_grid = self.cfg.grid_pane_size_percent;
+        let next = (self.pane_size_percent as isize + delta).clamp(
+            MIN_PANE_SIZE_PERCENT as isize,
+            MAX_PANE_SIZE_PERCENT as isize,
+        ) as u16;
+
+        if next == self.pane_size_percent {
+            self.set_operator_note(format!(
+                "pane size unchanged at {}% for {} layout",
+                self.pane_size_percent,
+                self.layout_label()
+            ));
+            return;
+        }
+
+        self.pane_size_percent = next;
+        self.persist_current_pane_size();
+
+        match save(&self.cfg) {
+            Ok(()) => self.set_operator_note(format!(
+                "pane size set to {}% for {} layout | saved to {}",
+                self.pane_size_percent,
+                self.layout_label(),
+                config_path.display()
+            )),
+            Err(error) => {
+                self.pane_size_percent = previous_size;
+                self.cfg.linear_pane_size_percent = previous_linear;
+                self.cfg.grid_pane_size_percent = previous_grid;
+                self.set_operator_note(format!("failed to persist pane size: {error}"));
+            }
+        }
+    }
+
+    fn persist_current_pane_size(&mut self) {
+        match self.cfg.pane_layout {
+            PaneLayout::Horizontal | PaneLayout::Vertical => {
+                self.cfg.linear_pane_size_percent = self.pane_size_percent;
+            }
+            PaneLayout::Grid => {
+                self.cfg.grid_pane_size_percent = self.pane_size_percent;
             }
         }
     }
@@ -714,15 +762,19 @@ impl Dashboard {
     }
 
     pub fn increase_pane_size(&mut self) {
-        self.pane_size_percent =
-            (self.pane_size_percent + PANE_RESIZE_STEP_PERCENT).min(MAX_PANE_SIZE_PERCENT);
+        let config_path = crate::config::Config::config_path();
+        self.adjust_pane_size_with_save(PANE_RESIZE_STEP_PERCENT as isize, &config_path, |cfg| {
+            cfg.save()
+        });
     }
 
     pub fn decrease_pane_size(&mut self) {
-        self.pane_size_percent = self
-            .pane_size_percent
-            .saturating_sub(PANE_RESIZE_STEP_PERCENT)
-            .max(MIN_PANE_SIZE_PERCENT);
+        let config_path = crate::config::Config::config_path();
+        self.adjust_pane_size_with_save(
+            -(PANE_RESIZE_STEP_PERCENT as isize),
+            &config_path,
+            |cfg| cfg.save(),
+        );
     }
 
     pub fn scroll_down(&mut self) {
@@ -2677,6 +2729,15 @@ fn truncate_for_dashboard(value: &str, max_chars: usize) -> String {
     format!("{truncated}…")
 }
 
+fn configured_pane_size(cfg: &Config, layout: PaneLayout) -> u16 {
+    let configured = match layout {
+        PaneLayout::Horizontal | PaneLayout::Vertical => cfg.linear_pane_size_percent,
+        PaneLayout::Grid => cfg.grid_pane_size_percent,
+    };
+
+    configured.clamp(MIN_PANE_SIZE_PERCENT, MAX_PANE_SIZE_PERCENT)
+}
+
 fn build_worktree_diff_columns(patch: &str) -> WorktreeDiffColumns {
     let mut removals = Vec::new();
     let mut additions = Vec::new();
@@ -4269,12 +4330,12 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.pane_size_percent = DEFAULT_GRID_SIZE_PERCENT;
 
         for _ in 0..20 {
-            dashboard.increase_pane_size();
+            dashboard.adjust_pane_size_with_save(5, Path::new("/tmp/ecc2-noop.toml"), |_| Ok(()));
         }
         assert_eq!(dashboard.pane_size_percent, MAX_PANE_SIZE_PERCENT);
 
         for _ in 0..40 {
-            dashboard.decrease_pane_size();
+            dashboard.adjust_pane_size_with_save(-5, Path::new("/tmp/ecc2-noop.toml"), |_| Ok(()));
         }
         assert_eq!(dashboard.pane_size_percent, MIN_PANE_SIZE_PERCENT);
     }
@@ -4299,13 +4360,15 @@ diff --git a/src/next.rs b/src/next.rs
     fn cycle_pane_layout_rotates_and_hides_log_when_leaving_grid() {
         let mut dashboard = test_dashboard(Vec::new(), 0);
         dashboard.cfg.pane_layout = PaneLayout::Grid;
+        dashboard.cfg.linear_pane_size_percent = 44;
+        dashboard.cfg.grid_pane_size_percent = 77;
         dashboard.pane_size_percent = 77;
         dashboard.selected_pane = Pane::Log;
 
         dashboard.cycle_pane_layout();
 
         assert_eq!(dashboard.cfg.pane_layout, PaneLayout::Horizontal);
-        assert_eq!(dashboard.pane_size_percent, DEFAULT_PANE_SIZE_PERCENT);
+        assert_eq!(dashboard.pane_size_percent, 44);
         assert_eq!(dashboard.selected_pane, Pane::Sessions);
     }
 
@@ -4332,6 +4395,47 @@ diff --git a/src/next.rs b/src/next.rs
         let loaded: Config = toml::from_str(&saved).unwrap();
         assert_eq!(loaded.pane_layout, PaneLayout::Vertical);
         let _ = std::fs::remove_dir_all(tempdir);
+    }
+
+    #[test]
+    fn pane_resize_persists_linear_setting() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        let tempdir = std::env::temp_dir().join(format!("ecc2-pane-size-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&tempdir).unwrap();
+        let config_path = tempdir.join("ecc2.toml");
+
+        dashboard.adjust_pane_size_with_save(5, &config_path, |cfg| cfg.save_to_path(&config_path));
+
+        assert_eq!(dashboard.pane_size_percent, 40);
+        assert_eq!(dashboard.cfg.linear_pane_size_percent, 40);
+        let expected_note = format!(
+            "pane size set to 40% for horizontal layout | saved to {}",
+            config_path.display()
+        );
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some(expected_note.as_str())
+        );
+
+        let saved = std::fs::read_to_string(&config_path).unwrap();
+        let loaded: Config = toml::from_str(&saved).unwrap();
+        assert_eq!(loaded.linear_pane_size_percent, 40);
+        assert_eq!(loaded.grid_pane_size_percent, 50);
+        let _ = std::fs::remove_dir_all(tempdir);
+    }
+
+    #[test]
+    fn cycle_pane_layout_uses_persisted_grid_size() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.cfg.pane_layout = PaneLayout::Vertical;
+        dashboard.cfg.linear_pane_size_percent = 41;
+        dashboard.cfg.grid_pane_size_percent = 63;
+        dashboard.pane_size_percent = 41;
+
+        dashboard.cycle_pane_layout_with_save(Path::new("/tmp/ecc2-noop.toml"), |_| Ok(()));
+
+        assert_eq!(dashboard.cfg.pane_layout, PaneLayout::Grid);
+        assert_eq!(dashboard.pane_size_percent, 63);
     }
 
     #[test]
@@ -4381,7 +4485,7 @@ diff --git a/src/next.rs b/src/next.rs
 
         Dashboard {
             db: StateStore::open(Path::new(":memory:")).expect("open test db"),
-            pane_size_percent: default_pane_size(cfg.pane_layout),
+            pane_size_percent: configured_pane_size(&cfg, cfg.pane_layout),
             cfg,
             output_store,
             output_rx,
@@ -4433,6 +4537,8 @@ diff --git a/src/next.rs b/src/next.rs
             token_budget: 500_000,
             theme: Theme::Dark,
             pane_layout: PaneLayout::Horizontal,
+            linear_pane_size_percent: 35,
+            grid_pane_size_percent: 50,
             risk_thresholds: Config::RISK_THRESHOLDS,
         }
     }

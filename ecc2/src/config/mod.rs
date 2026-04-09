@@ -37,6 +37,8 @@ pub struct Config {
     pub token_budget: u64,
     pub theme: Theme,
     pub pane_layout: PaneLayout,
+    pub linear_pane_size_percent: u16,
+    pub grid_pane_size_percent: u16,
     pub risk_thresholds: RiskThresholds,
 }
 
@@ -65,6 +67,8 @@ impl Default for Config {
             token_budget: 500_000,
             theme: Theme::Dark,
             pane_layout: PaneLayout::Horizontal,
+            linear_pane_size_percent: 35,
+            grid_pane_size_percent: 50,
             risk_thresholds: Self::RISK_THRESHOLDS,
         }
     }
@@ -149,6 +153,14 @@ theme = "Dark"
         assert_eq!(config.cost_budget_usd, defaults.cost_budget_usd);
         assert_eq!(config.token_budget, defaults.token_budget);
         assert_eq!(config.pane_layout, defaults.pane_layout);
+        assert_eq!(
+            config.linear_pane_size_percent,
+            defaults.linear_pane_size_percent
+        );
+        assert_eq!(
+            config.grid_pane_size_percent,
+            defaults.grid_pane_size_percent
+        );
         assert_eq!(config.risk_thresholds, defaults.risk_thresholds);
         assert_eq!(
             config.auto_dispatch_unread_handoffs,
@@ -171,6 +183,14 @@ theme = "Dark"
     }
 
     #[test]
+    fn default_pane_sizes_match_dashboard_defaults() {
+        let config = Config::default();
+
+        assert_eq!(config.linear_pane_size_percent, 35);
+        assert_eq!(config.grid_pane_size_percent, 50);
+    }
+
+    #[test]
     fn pane_layout_deserializes_from_toml() {
         let config: Config = toml::from_str(r#"pane_layout = "grid""#).unwrap();
 
@@ -190,6 +210,8 @@ theme = "Dark"
         config.auto_dispatch_limit_per_session = 9;
         config.auto_create_worktrees = false;
         config.auto_merge_ready_worktrees = true;
+        config.linear_pane_size_percent = 42;
+        config.grid_pane_size_percent = 55;
 
         config.save_to_path(&path).unwrap();
         let content = std::fs::read_to_string(&path).unwrap();
@@ -199,6 +221,8 @@ theme = "Dark"
         assert_eq!(loaded.auto_dispatch_limit_per_session, 9);
         assert!(!loaded.auto_create_worktrees);
         assert!(loaded.auto_merge_ready_worktrees);
+        assert_eq!(loaded.linear_pane_size_percent, 42);
+        assert_eq!(loaded.grid_pane_size_percent, 55);
 
         let _ = std::fs::remove_file(path);
     }

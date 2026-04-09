@@ -1664,6 +1664,8 @@ mod tests {
             token_budget: 500_000,
             theme: Theme::Dark,
             pane_layout: PaneLayout::Horizontal,
+            linear_pane_size_percent: 35,
+            grid_pane_size_percent: 50,
             risk_thresholds: Config::RISK_THRESHOLDS,
         }
     }
