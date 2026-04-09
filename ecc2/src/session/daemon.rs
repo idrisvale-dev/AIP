@@ -22,10 +22,8 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
     resume_crashed_sessions(&db)?;
 
     let heartbeat_interval = Duration::from_secs(cfg.heartbeat_interval_secs);
-    let timeout = Duration::from_secs(cfg.session_timeout_secs);
-
     loop {
-        if let Err(e) = check_sessions(&db, timeout) {
+        if let Err(e) = check_sessions(&db, &cfg) {
             tracing::error!("Session check failed: {e}");
         }
 
@@ -82,25 +80,8 @@ where
     Ok(failed_sessions)
 }
 
-fn check_sessions(db: &StateStore, timeout: Duration) -> Result<()> {
-    let sessions = db.list_sessions()?;
-
-    for session in sessions {
-        if session.state != SessionState::Running {
-            continue;
-        }
-
-        let elapsed = chrono::Utc::now()
-            .signed_duration_since(session.updated_at)
-            .to_std()
-            .unwrap_or(Duration::ZERO);
-
-        if elapsed > timeout {
-            tracing::warn!("Session {} timed out after {:?}", session.id, elapsed);
-            db.update_state_and_pid(&session.id, &SessionState::Failed, None)?;
-        }
-    }
-
+fn check_sessions(db: &StateStore, cfg: &Config) -> Result<()> {
+    let _ = manager::enforce_session_heartbeats(db, cfg)?;
     Ok(())
 }
 
@@ -498,6 +479,7 @@ mod tests {
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         }
     }

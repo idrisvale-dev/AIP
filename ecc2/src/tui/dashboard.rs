@@ -112,6 +112,7 @@ struct SessionSummary {
     pending: usize,
     running: usize,
     idle: usize,
+    stale: usize,
     completed: usize,
     failed: usize,
     stopped: usize,
@@ -266,6 +267,7 @@ struct TeamSummary {
     idle: usize,
     running: usize,
     pending: usize,
+    stale: usize,
     failed: usize,
     stopped: usize,
 }
@@ -2753,7 +2755,12 @@ impl Dashboard {
         self.sync_from_store();
     }
 
-    fn sync_runtime_metrics(&mut self) -> Option<manager::BudgetEnforcementOutcome> {
+    fn sync_runtime_metrics(
+        &mut self,
+    ) -> (
+        Option<manager::HeartbeatEnforcementOutcome>,
+        Option<manager::BudgetEnforcementOutcome>,
+    ) {
         if let Err(error) = self.db.refresh_session_durations() {
             tracing::warn!("Failed to refresh session durations: {error}");
         }
@@ -2780,17 +2787,27 @@ impl Dashboard {
             }
         }
 
-        match manager::enforce_budget_hard_limits(&self.db, &self.cfg) {
+        let heartbeat_enforcement = match manager::enforce_session_heartbeats(&self.db, &self.cfg) {
+            Ok(outcome) => Some(outcome),
+            Err(error) => {
+                tracing::warn!("Failed to enforce session heartbeats: {error}");
+                None
+            }
+        };
+
+        let budget_enforcement = match manager::enforce_budget_hard_limits(&self.db, &self.cfg) {
             Ok(outcome) => Some(outcome),
             Err(error) => {
                 tracing::warn!("Failed to enforce budget hard limits: {error}");
                 None
             }
-        }
+        };
+
+        (heartbeat_enforcement, budget_enforcement)
     }
 
     fn sync_from_store(&mut self) {
-        let budget_enforcement = self.sync_runtime_metrics();
+        let (heartbeat_enforcement, budget_enforcement) = self.sync_runtime_metrics();
         let selected_id = self.selected_session_id().map(ToOwned::to_owned);
         self.sessions = match self.db.list_sessions() {
             Ok(sessions) => sessions,
@@ -2824,6 +2841,11 @@ impl Dashboard {
             budget_enforcement.filter(|outcome| !outcome.paused_sessions.is_empty())
         {
             self.set_operator_note(budget_auto_pause_note(&outcome));
+        }
+        if let Some(outcome) = heartbeat_enforcement.filter(|outcome| {
+            !outcome.stale_sessions.is_empty() || !outcome.auto_terminated_sessions.is_empty()
+        }) {
+            self.set_operator_note(heartbeat_enforcement_note(&outcome));
         }
     }
 
@@ -3183,6 +3205,7 @@ impl Dashboard {
                                 SessionState::Pending => team.pending += 1,
                                 SessionState::Failed => team.failed += 1,
                                 SessionState::Stopped => team.stopped += 1,
+                                SessionState::Stale => team.stale += 1,
                                 SessionState::Completed => {}
                             }
 
@@ -4239,7 +4262,10 @@ impl Dashboard {
             .filter(|session| {
                 matches!(
                     session.state,
-                    SessionState::Pending | SessionState::Running | SessionState::Idle
+                    SessionState::Pending
+                        | SessionState::Running
+                        | SessionState::Idle
+                        | SessionState::Stale
                 )
             })
             .count()
@@ -4944,6 +4970,7 @@ impl SessionSummary {
                     SessionState::Pending => summary.pending += 1,
                     SessionState::Running => summary.running += 1,
                     SessionState::Idle => summary.idle += 1,
+                    SessionState::Stale => summary.stale += 1,
                     SessionState::Completed => summary.completed += 1,
                     SessionState::Failed => summary.failed += 1,
                     SessionState::Stopped => summary.stopped += 1,
@@ -4968,12 +4995,14 @@ fn session_row(
     approval_requests: usize,
     unread_messages: usize,
 ) -> Row<'static> {
+    let state_label = session_state_label(&session.state);
+    let state_color = session_state_color(&session.state);
     Row::new(vec![
         Cell::from(format_session_id(&session.id)),
         Cell::from(session.agent_type.clone()),
-        Cell::from(session_state_label(&session.state)).style(
+        Cell::from(state_label).style(
             Style::default()
-                .fg(session_state_color(&session.state))
+                .fg(state_color)
                 .add_modifier(Modifier::BOLD),
         ),
         Cell::from(session_branch(session)),
@@ -5016,6 +5045,7 @@ fn summary_line(summary: &SessionSummary) -> Line<'static> {
         ),
         summary_span("Running", summary.running, Color::Green),
         summary_span("Idle", summary.idle, Color::Yellow),
+        summary_span("Stale", summary.stale, Color::LightRed),
         summary_span("Completed", summary.completed, Color::Blue),
         summary_span("Failed", summary.failed, Color::Red),
         summary_span("Stopped", summary.stopped, Color::DarkGray),
@@ -5052,6 +5082,7 @@ fn attention_queue_line(summary: &SessionSummary, stabilized: bool) -> Line<'sta
     if summary.failed == 0
         && summary.stopped == 0
         && summary.pending == 0
+        && summary.stale == 0
         && summary.unread_messages == 0
         && summary.conflicted_worktrees == 0
     {
@@ -5086,6 +5117,7 @@ fn attention_queue_line(summary: &SessionSummary, stabilized: bool) -> Line<'sta
     }
 
     spans.extend([
+        summary_span("Stale", summary.stale, Color::LightRed),
         summary_span("Backlog", summary.unread_messages, Color::Magenta),
         summary_span("Failed", summary.failed, Color::Red),
         summary_span("Stopped", summary.stopped, Color::DarkGray),
@@ -5321,6 +5353,7 @@ fn session_state_label(state: &SessionState) -> &'static str {
         SessionState::Pending => "Pending",
         SessionState::Running => "Running",
         SessionState::Idle => "Idle",
+        SessionState::Stale => "Stale",
         SessionState::Completed => "Completed",
         SessionState::Failed => "Failed",
         SessionState::Stopped => "Stopped",
@@ -5331,11 +5364,26 @@ fn session_state_color(state: &SessionState) -> Color {
     match state {
         SessionState::Running => Color::Green,
         SessionState::Idle => Color::Yellow,
+        SessionState::Stale => Color::LightRed,
         SessionState::Failed => Color::Red,
         SessionState::Stopped => Color::DarkGray,
         SessionState::Completed => Color::Blue,
         SessionState::Pending => Color::Reset,
     }
+}
+
+fn heartbeat_enforcement_note(outcome: &manager::HeartbeatEnforcementOutcome) -> String {
+    if !outcome.auto_terminated_sessions.is_empty() {
+        return format!(
+            "stale heartbeat detected | auto-terminated {} session(s)",
+            outcome.auto_terminated_sessions.len()
+        );
+    }
+
+    format!(
+        "stale heartbeat detected | flagged {} session(s) for attention",
+        outcome.stale_sessions.len()
+    )
 }
 
 fn budget_auto_pause_note(outcome: &manager::BudgetEnforcementOutcome) -> String {
@@ -5436,6 +5484,7 @@ fn delegate_next_action(delegate: &DelegatedChildSummary) -> &'static str {
         SessionState::Pending => "wait for startup",
         SessionState::Running => "let it run",
         SessionState::Idle => "assign next task",
+        SessionState::Stale => "inspect stale heartbeat",
         SessionState::Failed => "inspect failure",
         SessionState::Stopped => "resume or reassign",
         SessionState::Completed => "merge or cleanup",
@@ -5449,7 +5498,10 @@ fn delegate_attention_priority(delegate: &DelegatedChildSummary) -> u8 {
     if delegate.approval_backlog > 0 {
         return 1;
     }
-    if matches!(delegate.state, SessionState::Failed | SessionState::Stopped) {
+    if matches!(
+        delegate.state,
+        SessionState::Stale | SessionState::Failed | SessionState::Stopped
+    ) {
         return 2;
     }
     if delegate.handoff_backlog > 0 {
@@ -5463,7 +5515,7 @@ fn delegate_attention_priority(delegate: &DelegatedChildSummary) -> u8 {
         SessionState::Running => 6,
         SessionState::Idle => 7,
         SessionState::Completed => 8,
-        SessionState::Failed | SessionState::Stopped => unreachable!(),
+        SessionState::Stale | SessionState::Failed | SessionState::Stopped => unreachable!(),
     }
 }
 
@@ -6160,6 +6212,7 @@ diff --git a/src/next.rs b/src/next.rs
             idle: 1,
             running: 1,
             pending: 1,
+            stale: 0,
             failed: 0,
             stopped: 0,
         });
@@ -7285,6 +7338,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })
         .unwrap();
@@ -7306,6 +7360,39 @@ diff --git a/src/next.rs b/src/next.rs
         assert_eq!(dashboard.sessions[0].metrics.files_changed, 1);
 
         let _ = fs::remove_dir_all(tempdir);
+    }
+
+    #[test]
+    fn refresh_flags_stale_sessions_and_sets_operator_note() {
+        let db = StateStore::open(Path::new(":memory:")).unwrap();
+        let mut cfg = Config::default();
+        cfg.session_timeout_secs = 60;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "stale-1".to_string(),
+            task: "stale session".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: Some(4242),
+            worktree: None,
+            created_at: now - Duration::minutes(5),
+            updated_at: now - Duration::minutes(5),
+            last_heartbeat_at: now - Duration::minutes(5),
+            metrics: SessionMetrics::default(),
+        })
+        .unwrap();
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.refresh();
+
+        assert_eq!(dashboard.sessions.len(), 1);
+        assert_eq!(dashboard.sessions[0].state, SessionState::Stale);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("stale heartbeat detected | flagged 1 session(s) for attention")
+        );
     }
 
     #[test]
@@ -7445,6 +7532,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -7458,6 +7546,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now + chrono::Duration::seconds(1),
+            last_heartbeat_at: now + chrono::Duration::seconds(1),
             metrics: SessionMetrics::default(),
         })?;
 
@@ -7487,6 +7576,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -7529,6 +7619,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8163,6 +8254,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8200,6 +8292,7 @@ diff --git a/src/next.rs b/src/next.rs
             }),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8239,6 +8332,7 @@ diff --git a/src/next.rs b/src/next.rs
             }),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8275,6 +8369,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8315,6 +8410,7 @@ diff --git a/src/next.rs b/src/next.rs
             }),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -8331,6 +8427,7 @@ diff --git a/src/next.rs b/src/next.rs
             }),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8380,6 +8477,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: Some(worktree.clone()),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8461,6 +8559,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: Some(merged_worktree.clone()),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8476,6 +8575,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: Some(active_worktree.clone()),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8519,6 +8619,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8551,6 +8652,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8583,6 +8685,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8615,6 +8718,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -8647,6 +8751,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -9243,6 +9348,7 @@ diff --git a/src/next.rs b/src/next.rs
             max_parallel_worktrees: 4,
             session_timeout_secs: 60,
             heartbeat_interval_secs: 5,
+            auto_terminate_stale_sessions: false,
             default_agent: "claude".to_string(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
@@ -9307,6 +9413,7 @@ diff --git a/src/next.rs b/src/next.rs
             }),
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            last_heartbeat_at: Utc::now(),
             metrics: SessionMetrics {
                 input_tokens: tokens_used.saturating_mul(3) / 4,
                 output_tokens: tokens_used / 4,
@@ -9331,6 +9438,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics {
                 input_tokens: tokens_used.saturating_mul(3) / 4,
                 output_tokens: tokens_used / 4,

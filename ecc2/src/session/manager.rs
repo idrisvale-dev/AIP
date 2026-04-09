@@ -68,6 +68,58 @@ pub fn get_team_status(db: &StateStore, id: &str, depth: usize) -> Result<TeamSt
     })
 }
 
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct HeartbeatEnforcementOutcome {
+    pub stale_sessions: Vec<String>,
+    pub auto_terminated_sessions: Vec<String>,
+}
+
+pub fn enforce_session_heartbeats(
+    db: &StateStore,
+    cfg: &Config,
+) -> Result<HeartbeatEnforcementOutcome> {
+    enforce_session_heartbeats_with(db, cfg, kill_process)
+}
+
+fn enforce_session_heartbeats_with<F>(
+    db: &StateStore,
+    cfg: &Config,
+    terminate_pid: F,
+) -> Result<HeartbeatEnforcementOutcome>
+where
+    F: Fn(u32) -> Result<()>,
+{
+    let timeout = chrono::Duration::seconds(cfg.session_timeout_secs as i64);
+    let now = chrono::Utc::now();
+    let mut outcome = HeartbeatEnforcementOutcome::default();
+
+    for session in db.list_sessions()? {
+        if !matches!(session.state, SessionState::Running | SessionState::Stale) {
+            continue;
+        }
+
+        if now.signed_duration_since(session.last_heartbeat_at) <= timeout {
+            continue;
+        }
+
+        if cfg.auto_terminate_stale_sessions {
+            if let Some(pid) = session.pid {
+                let _ = terminate_pid(pid);
+            }
+            db.update_state_and_pid(&session.id, &SessionState::Failed, None)?;
+            outcome.auto_terminated_sessions.push(session.id);
+            continue;
+        }
+
+        if session.state != SessionState::Stale {
+            db.update_state(&session.id, &SessionState::Stale)?;
+            outcome.stale_sessions.push(session.id);
+        }
+    }
+
+    Ok(outcome)
+}
+
 pub async fn assign_session(
     db: &StateStore,
     cfg: &Config,
@@ -685,7 +737,7 @@ pub async fn merge_session_worktree(
 
     if matches!(
         session.state,
-        SessionState::Pending | SessionState::Running | SessionState::Idle
+        SessionState::Pending | SessionState::Running | SessionState::Idle | SessionState::Stale
     ) {
         anyhow::bail!(
             "Cannot merge active session {} while it is {}",
@@ -747,7 +799,10 @@ pub async fn merge_ready_worktrees(
 
         if matches!(
             session.state,
-            SessionState::Pending | SessionState::Running | SessionState::Idle
+            SessionState::Pending
+                | SessionState::Running
+                | SessionState::Idle
+                | SessionState::Stale
         ) {
             active_with_worktree_ids.push(session.id);
             continue;
@@ -902,6 +957,7 @@ pub async fn run_session(
         session_id.to_string(),
         command,
         SessionOutputStore::default(),
+        std::time::Duration::from_secs(cfg.heartbeat_interval_secs),
     )
     .await?;
     Ok(())
@@ -997,6 +1053,7 @@ fn build_session_record(
         worktree,
         created_at: now,
         updated_at: now,
+        last_heartbeat_at: now,
         metrics: SessionMetrics::default(),
     })
 }
@@ -1488,6 +1545,15 @@ impl fmt::Display for SessionStatus {
         writeln!(f, "Tools:   {}", s.metrics.tool_calls)?;
         writeln!(f, "Files:   {}", s.metrics.files_changed)?;
         writeln!(f, "Cost:    ${:.4}", s.metrics.cost_usd)?;
+        writeln!(
+            f,
+            "Heartbeat: {} ({}s ago)",
+            s.last_heartbeat_at,
+            chrono::Utc::now()
+                .signed_duration_since(s.last_heartbeat_at)
+                .num_seconds()
+                .max(0)
+        )?;
         if !self.delegated_children.is_empty() {
             writeln!(f, "Children: {}", self.delegated_children.join(", "))?;
         }
@@ -1528,6 +1594,7 @@ impl fmt::Display for TeamStatus {
         for lane in [
             "Running",
             "Idle",
+            "Stale",
             "Pending",
             "Failed",
             "Stopped",
@@ -1676,6 +1743,7 @@ fn session_state_label(state: &SessionState) -> &'static str {
         SessionState::Pending => "Pending",
         SessionState::Running => "Running",
         SessionState::Idle => "Idle",
+        SessionState::Stale => "Stale",
         SessionState::Completed => "Completed",
         SessionState::Failed => "Failed",
         SessionState::Stopped => "Stopped",
@@ -1727,6 +1795,7 @@ mod tests {
             max_parallel_worktrees: 4,
             session_timeout_secs: 60,
             heartbeat_interval_secs: 5,
+            auto_terminate_stale_sessions: false,
             default_agent: "claude".to_string(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
@@ -1755,8 +1824,83 @@ mod tests {
             worktree: None,
             created_at: updated_at - Duration::minutes(1),
             updated_at,
+            last_heartbeat_at: updated_at,
             metrics: SessionMetrics::default(),
         }
+    }
+
+    #[test]
+    fn enforce_session_heartbeats_marks_overdue_running_sessions_stale() -> Result<()> {
+        let tempdir = TestDir::new("manager-heartbeat-stale")?;
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "stale-1".to_string(),
+            task: "heartbeat overdue".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: Some(4242),
+            worktree: None,
+            created_at: now - Duration::minutes(5),
+            updated_at: now - Duration::minutes(5),
+            last_heartbeat_at: now - Duration::minutes(5),
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let outcome = enforce_session_heartbeats(&db, &cfg)?;
+        let session = db.get_session("stale-1")?.expect("session should exist");
+
+        assert_eq!(outcome.stale_sessions, vec!["stale-1".to_string()]);
+        assert!(outcome.auto_terminated_sessions.is_empty());
+        assert_eq!(session.state, SessionState::Stale);
+        assert_eq!(session.pid, Some(4242));
+
+        Ok(())
+    }
+
+    #[test]
+    fn enforce_session_heartbeats_auto_terminates_when_enabled() -> Result<()> {
+        let tempdir = TestDir::new("manager-heartbeat-terminate")?;
+        let mut cfg = build_config(tempdir.path());
+        cfg.auto_terminate_stale_sessions = true;
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+        let killed = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let killed_clone = killed.clone();
+
+        db.insert_session(&Session {
+            id: "stale-2".to_string(),
+            task: "terminate overdue".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: Some(7777),
+            worktree: None,
+            created_at: now - Duration::minutes(5),
+            updated_at: now - Duration::minutes(5),
+            last_heartbeat_at: now - Duration::minutes(5),
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let outcome = enforce_session_heartbeats_with(&db, &cfg, move |pid| {
+            killed_clone.lock().unwrap().push(pid);
+            Ok(())
+        })?;
+        let session = db.get_session("stale-2")?.expect("session should exist");
+
+        assert!(outcome.stale_sessions.is_empty());
+        assert_eq!(
+            outcome.auto_terminated_sessions,
+            vec!["stale-2".to_string()]
+        );
+        assert_eq!(*killed.lock().unwrap(), vec![7777]);
+        assert_eq!(session.state, SessionState::Failed);
+        assert_eq!(session.pid, None);
+
+        Ok(())
     }
 
     fn build_daemon_activity() -> super::super::store::DaemonActivity {
@@ -1976,6 +2120,7 @@ mod tests {
             }),
             created_at: now - Duration::minutes(1),
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
         db.update_metrics(
@@ -2032,6 +2177,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(1),
+            last_heartbeat_at: now - Duration::minutes(1),
             metrics: SessionMetrics::default(),
         })?;
         db.update_metrics(
@@ -2076,6 +2222,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(1),
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -2328,6 +2475,7 @@ mod tests {
             worktree: Some(merged_worktree.clone()),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -2343,6 +2491,7 @@ mod tests {
             worktree: Some(active_worktree.clone()),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -2359,6 +2508,7 @@ mod tests {
             worktree: Some(dirty_worktree.clone()),
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -2584,6 +2734,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2596,6 +2747,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(1),
             updated_at: now - Duration::minutes(1),
+            last_heartbeat_at: now - Duration::minutes(1),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -2651,6 +2803,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2663,6 +2816,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -2727,6 +2881,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2739,6 +2894,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -2794,6 +2950,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2806,6 +2963,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -2865,6 +3023,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2877,6 +3036,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -2930,6 +3090,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
 
@@ -2977,6 +3138,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -2989,6 +3151,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
         db.send_message(
@@ -3044,6 +3207,7 @@ mod tests {
                 worktree: None,
                 created_at: now - Duration::minutes(3),
                 updated_at: now - Duration::minutes(3),
+                last_heartbeat_at: now - Duration::minutes(3),
                 metrics: SessionMetrics::default(),
             })?;
         }
@@ -3103,6 +3267,7 @@ mod tests {
                 worktree: None,
                 created_at: now - Duration::minutes(3),
                 updated_at: now - Duration::minutes(3),
+                last_heartbeat_at: now - Duration::minutes(3),
                 metrics: SessionMetrics::default(),
             })?;
         }
@@ -3154,6 +3319,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
 
@@ -3167,6 +3333,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
 
@@ -3222,6 +3389,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(4),
             updated_at: now - Duration::minutes(4),
+            last_heartbeat_at: now - Duration::minutes(4),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -3234,6 +3402,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -3246,6 +3415,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(2),
             updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
             metrics: SessionMetrics::default(),
         })?;
 
@@ -3307,6 +3477,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(4),
             updated_at: now - Duration::minutes(4),
+            last_heartbeat_at: now - Duration::minutes(4),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -3319,6 +3490,7 @@ mod tests {
             worktree: None,
             created_at: now - Duration::minutes(3),
             updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
             metrics: SessionMetrics::default(),
         })?;
 

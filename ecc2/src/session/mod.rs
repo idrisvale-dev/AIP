@@ -20,6 +20,7 @@ pub struct Session {
     pub worktree: Option<WorktreeInfo>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub last_heartbeat_at: DateTime<Utc>,
     pub metrics: SessionMetrics,
 }
 
@@ -28,6 +29,7 @@ pub enum SessionState {
     Pending,
     Running,
     Idle,
+    Stale,
     Completed,
     Failed,
     Stopped,
@@ -39,6 +41,7 @@ impl fmt::Display for SessionState {
             SessionState::Pending => write!(f, "pending"),
             SessionState::Running => write!(f, "running"),
             SessionState::Idle => write!(f, "idle"),
+            SessionState::Stale => write!(f, "stale"),
             SessionState::Completed => write!(f, "completed"),
             SessionState::Failed => write!(f, "failed"),
             SessionState::Stopped => write!(f, "stopped"),
@@ -60,12 +63,21 @@ impl SessionState {
             ) | (
                 SessionState::Running,
                 SessionState::Idle
+                    | SessionState::Stale
                     | SessionState::Completed
                     | SessionState::Failed
                     | SessionState::Stopped
             ) | (
                 SessionState::Idle,
                 SessionState::Running
+                    | SessionState::Stale
+                    | SessionState::Completed
+                    | SessionState::Failed
+                    | SessionState::Stopped
+            ) | (
+                SessionState::Stale,
+                SessionState::Running
+                    | SessionState::Idle
                     | SessionState::Completed
                     | SessionState::Failed
                     | SessionState::Stopped
@@ -78,6 +90,7 @@ impl SessionState {
         match value {
             "running" => SessionState::Running,
             "idle" => SessionState::Idle,
+            "stale" => SessionState::Stale,
             "completed" => SessionState::Completed,
             "failed" => SessionState::Failed,
             "stopped" => SessionState::Stopped,

@@ -37,6 +37,7 @@ pub struct Config {
     pub max_parallel_worktrees: usize,
     pub session_timeout_secs: u64,
     pub heartbeat_interval_secs: u64,
+    pub auto_terminate_stale_sessions: bool,
     pub default_agent: String,
     pub auto_dispatch_unread_handoffs: bool,
     pub auto_dispatch_limit_per_session: usize,
@@ -91,6 +92,7 @@ impl Default for Config {
             max_parallel_worktrees: 6,
             session_timeout_secs: 3600,
             heartbeat_interval_secs: 30,
+            auto_terminate_stale_sessions: false,
             default_agent: "claude".to_string(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
@@ -340,6 +342,7 @@ max_parallel_sessions = 8
 max_parallel_worktrees = 6
 session_timeout_secs = 3600
 heartbeat_interval_secs = 30
+auto_terminate_stale_sessions = false
 default_agent = "claude"
 theme = "Dark"
 "#;
@@ -376,6 +379,10 @@ theme = "Dark"
         assert_eq!(
             config.auto_merge_ready_worktrees,
             defaults.auto_merge_ready_worktrees
+        );
+        assert_eq!(
+            config.auto_terminate_stale_sessions,
+            defaults.auto_terminate_stale_sessions
         );
     }
 

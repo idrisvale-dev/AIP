@@ -313,6 +313,7 @@ mod tests {
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         }
     }

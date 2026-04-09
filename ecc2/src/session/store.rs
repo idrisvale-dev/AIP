@@ -132,7 +132,8 @@ impl StateStore {
                 duration_secs INTEGER DEFAULT 0,
                 cost_usd REAL DEFAULT 0.0,
                 created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
+                updated_at TEXT NOT NULL,
+                last_heartbeat_at TEXT NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS tool_log (
@@ -238,6 +239,20 @@ impl StateStore {
                     [],
                 )
                 .context("Failed to add output_tokens column to sessions table")?;
+        }
+
+        if !self.has_column("sessions", "last_heartbeat_at")? {
+            self.conn
+                .execute("ALTER TABLE sessions ADD COLUMN last_heartbeat_at TEXT", [])
+                .context("Failed to add last_heartbeat_at column to sessions table")?;
+            self.conn
+                .execute(
+                    "UPDATE sessions
+                     SET last_heartbeat_at = updated_at
+                     WHERE last_heartbeat_at IS NULL",
+                    [],
+                )
+                .context("Failed to backfill last_heartbeat_at column")?;
         }
 
         if !self.has_column("tool_log", "hook_event_id")? {
@@ -404,8 +419,8 @@ impl StateStore {
 
     pub fn insert_session(&self, session: &Session) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO sessions (id, task, agent_type, working_dir, state, pid, worktree_path, worktree_branch, worktree_base, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT INTO sessions (id, task, agent_type, working_dir, state, pid, worktree_path, worktree_branch, worktree_base, created_at, updated_at, last_heartbeat_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             rusqlite::params![
                 session.id,
                 session.task,
@@ -421,6 +436,7 @@ impl StateStore {
                 session.worktree.as_ref().map(|w| w.base_branch.clone()),
                 session.created_at.to_rfc3339(),
                 session.updated_at.to_rfc3339(),
+                session.last_heartbeat_at.to_rfc3339(),
             ],
         )?;
         Ok(())
@@ -433,7 +449,12 @@ impl StateStore {
         pid: Option<u32>,
     ) -> Result<()> {
         let updated = self.conn.execute(
-            "UPDATE sessions SET state = ?1, pid = ?2, updated_at = ?3 WHERE id = ?4",
+            "UPDATE sessions
+             SET state = ?1,
+                 pid = ?2,
+                 updated_at = ?3,
+                 last_heartbeat_at = ?3
+             WHERE id = ?4",
             rusqlite::params![
                 state.to_string(),
                 pid.map(i64::from),
@@ -470,7 +491,11 @@ impl StateStore {
         }
 
         let updated = self.conn.execute(
-            "UPDATE sessions SET state = ?1, updated_at = ?2 WHERE id = ?3",
+            "UPDATE sessions
+             SET state = ?1,
+                 updated_at = ?2,
+                 last_heartbeat_at = ?2
+             WHERE id = ?3",
             rusqlite::params![
                 state.to_string(),
                 chrono::Utc::now().to_rfc3339(),
@@ -487,7 +512,11 @@ impl StateStore {
 
     pub fn update_pid(&self, session_id: &str, pid: Option<u32>) -> Result<()> {
         let updated = self.conn.execute(
-            "UPDATE sessions SET pid = ?1, updated_at = ?2 WHERE id = ?3",
+            "UPDATE sessions
+             SET pid = ?1,
+                 updated_at = ?2,
+                 last_heartbeat_at = ?2
+             WHERE id = ?3",
             rusqlite::params![
                 pid.map(i64::from),
                 chrono::Utc::now().to_rfc3339(),
@@ -505,7 +534,11 @@ impl StateStore {
     pub fn clear_worktree(&self, session_id: &str) -> Result<()> {
         let updated = self.conn.execute(
             "UPDATE sessions
-             SET worktree_path = NULL, worktree_branch = NULL, worktree_base = NULL, updated_at = ?1
+             SET worktree_path = NULL,
+                 worktree_branch = NULL,
+                 worktree_base = NULL,
+                 updated_at = ?1,
+                 last_heartbeat_at = ?1
              WHERE id = ?2",
             rusqlite::params![chrono::Utc::now().to_rfc3339(), session_id],
         )?;
@@ -571,7 +604,10 @@ impl StateStore {
                 .unwrap_or_default()
                 .with_timezone(&chrono::Utc);
             let effective_end = match state {
-                SessionState::Pending | SessionState::Running | SessionState::Idle => now,
+                SessionState::Pending
+                | SessionState::Running
+                | SessionState::Idle
+                | SessionState::Stale => now,
                 SessionState::Completed | SessionState::Failed | SessionState::Stopped => {
                     updated_at
                 }
@@ -587,6 +623,20 @@ impl StateStore {
                     rusqlite::params![duration_secs, session_id],
                 )?;
             }
+        }
+
+        Ok(())
+    }
+
+    pub fn touch_heartbeat(&self, session_id: &str) -> Result<()> {
+        let now = chrono::Utc::now().to_rfc3339();
+        let updated = self.conn.execute(
+            "UPDATE sessions SET last_heartbeat_at = ?1 WHERE id = ?2",
+            rusqlite::params![now, session_id],
+        )?;
+
+        if updated == 0 {
+            anyhow::bail!("Session not found: {session_id}");
         }
 
         Ok(())
@@ -786,7 +836,11 @@ impl StateStore {
 
     pub fn increment_tool_calls(&self, session_id: &str) -> Result<()> {
         self.conn.execute(
-            "UPDATE sessions SET tool_calls = tool_calls + 1, updated_at = ?1 WHERE id = ?2",
+            "UPDATE sessions
+             SET tool_calls = tool_calls + 1,
+                 updated_at = ?1,
+                 last_heartbeat_at = ?1
+             WHERE id = ?2",
             rusqlite::params![chrono::Utc::now().to_rfc3339(), session_id],
         )?;
         Ok(())
@@ -796,7 +850,7 @@ impl StateStore {
         let mut stmt = self.conn.prepare(
             "SELECT id, task, agent_type, working_dir, state, pid, worktree_path, worktree_branch, worktree_base,
                     input_tokens, output_tokens, tokens_used, tool_calls, files_changed, duration_secs, cost_usd,
-                    created_at, updated_at
+                    created_at, updated_at, last_heartbeat_at
              FROM sessions ORDER BY updated_at DESC",
         )?;
 
@@ -814,6 +868,7 @@ impl StateStore {
 
                 let created_str: String = row.get(16)?;
                 let updated_str: String = row.get(17)?;
+                let heartbeat_str: String = row.get(18)?;
 
                 Ok(Session {
                     id: row.get(0)?,
@@ -828,6 +883,11 @@ impl StateStore {
                         .with_timezone(&chrono::Utc),
                     updated_at: chrono::DateTime::parse_from_rfc3339(&updated_str)
                         .unwrap_or_default()
+                        .with_timezone(&chrono::Utc),
+                    last_heartbeat_at: chrono::DateTime::parse_from_rfc3339(&heartbeat_str)
+                        .unwrap_or_else(|_| {
+                            chrono::DateTime::parse_from_rfc3339(&updated_str).unwrap_or_default()
+                        })
                         .with_timezone(&chrono::Utc),
                     metrics: SessionMetrics {
                         input_tokens: row.get(9)?,
@@ -1299,7 +1359,10 @@ impl StateStore {
         )?;
 
         self.conn.execute(
-            "UPDATE sessions SET updated_at = ?1 WHERE id = ?2",
+            "UPDATE sessions
+             SET updated_at = ?1,
+                 last_heartbeat_at = ?1
+             WHERE id = ?2",
             rusqlite::params![chrono::Utc::now().to_rfc3339(), session_id],
         )?;
 
@@ -1460,6 +1523,7 @@ mod tests {
             worktree: None,
             created_at: now - ChronoDuration::minutes(1),
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         }
     }
@@ -1520,6 +1584,9 @@ mod tests {
         assert!(column_names.iter().any(|column| column == "pid"));
         assert!(column_names.iter().any(|column| column == "input_tokens"));
         assert!(column_names.iter().any(|column| column == "output_tokens"));
+        assert!(column_names
+            .iter()
+            .any(|column| column == "last_heartbeat_at"));
         Ok(())
     }
 
@@ -1539,6 +1606,7 @@ mod tests {
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -1583,6 +1651,7 @@ mod tests {
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -1595,6 +1664,7 @@ mod tests {
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
@@ -1648,6 +1718,7 @@ mod tests {
             worktree: None,
             created_at: now - ChronoDuration::seconds(95),
             updated_at: now - ChronoDuration::seconds(1),
+            last_heartbeat_at: now - ChronoDuration::seconds(1),
             metrics: SessionMetrics::default(),
         })?;
         db.insert_session(&Session {
@@ -1660,6 +1731,7 @@ mod tests {
             worktree: None,
             created_at: now - ChronoDuration::seconds(80),
             updated_at: now - ChronoDuration::seconds(5),
+            last_heartbeat_at: now - ChronoDuration::seconds(5),
             metrics: SessionMetrics::default(),
         })?;
 
@@ -1674,6 +1746,36 @@ mod tests {
 
         assert!(running.metrics.duration_secs >= 95);
         assert!(completed.metrics.duration_secs >= 75);
+
+        Ok(())
+    }
+
+    #[test]
+    fn touch_heartbeat_updates_last_heartbeat_timestamp() -> Result<()> {
+        let tempdir = TestDir::new("store-touch-heartbeat")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now() - ChronoDuration::seconds(30);
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "heartbeat".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: Some(1234),
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        db.touch_heartbeat("session-1")?;
+
+        let session = db
+            .get_session("session-1")?
+            .expect("session should still exist");
+        assert!(session.last_heartbeat_at > now);
 
         Ok(())
     }
@@ -1694,6 +1796,7 @@ mod tests {
             worktree: None,
             created_at: now,
             updated_at: now,
+            last_heartbeat_at: now,
             metrics: SessionMetrics::default(),
         })?;
 
