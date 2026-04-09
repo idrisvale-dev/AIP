@@ -85,6 +85,7 @@ pub struct Dashboard {
     search_input: Option<String>,
     search_query: Option<String>,
     search_scope: SearchScope,
+    search_agent_filter: SearchAgentFilter,
     search_matches: Vec<SearchMatch>,
     selected_search_match: usize,
     session_table_state: TableState,
@@ -138,6 +139,12 @@ enum OutputTimeFilter {
 enum SearchScope {
     SelectedSession,
     AllSessions,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SearchAgentFilter {
+    AllAgents,
+    SelectedAgentType,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -236,6 +243,7 @@ impl Dashboard {
             search_input: None,
             search_query: None,
             search_scope: SearchScope::SelectedSession,
+            search_agent_filter: SearchAgentFilter::AllAgents,
             search_matches: Vec::new(),
             selected_search_match: 0,
             session_table_state,
@@ -503,8 +511,9 @@ impl Dashboard {
             self.output_time_filter.title_suffix()
         );
         let scope = self.search_scope.title_suffix();
+        let agent = self.search_agent_title_suffix();
         if let Some(input) = self.search_input.as_ref() {
-            return format!(" Output{filter}{scope} /{input}_ ");
+            return format!(" Output{filter}{scope}{agent} /{input}_ ");
         }
 
         if let Some(query) = self.search_query.as_ref() {
@@ -514,10 +523,10 @@ impl Dashboard {
             } else {
                 self.selected_search_match.min(total.saturating_sub(1)) + 1
             };
-            return format!(" Output{filter}{scope} /{query} {current}/{total} ");
+            return format!(" Output{filter}{scope}{agent} /{query} {current}/{total} ");
         }
 
-        format!(" Output{filter}{scope} ")
+        format!(" Output{filter}{scope}{agent} ")
     }
 
     fn empty_output_message(&self) -> &'static str {
@@ -647,15 +656,16 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [e]rrors  time [f]ilter  search scope [A]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [e]rrors  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
 
         let search_prefix = if let Some(input) = self.search_input.as_ref() {
             format!(
-                " /{input}_ | {} | [Enter] apply [Esc] cancel |",
-                self.search_scope.label()
+                " /{input}_ | {} | {} | [Enter] apply [Esc] cancel |",
+                self.search_scope.label(),
+                self.search_agent_filter_label()
             )
         } else if let Some(query) = self.search_query.as_ref() {
             let total = self.search_matches.len();
@@ -665,8 +675,9 @@ impl Dashboard {
                 self.selected_search_match.min(total.saturating_sub(1)) + 1
             };
             format!(
-                " /{query} {current}/{total} | {} | [n/N] navigate [Esc] clear |",
-                self.search_scope.label()
+                " /{query} {current}/{total} | {} | {} | [n/N] navigate [Esc] clear |",
+                self.search_scope.label(),
+                self.search_agent_filter_label()
             )
         } else {
             String::new()
@@ -727,6 +738,7 @@ impl Dashboard {
             "  e       Toggle output filter between all lines and stderr only",
             "  f       Cycle output time filter between all/15m/1h/24h",
             "  A       Toggle search scope between selected session and all sessions",
+            "  o       Toggle search agent filter between all agents and selected agent type",
             "  m       Merge selected ready worktree into base and clean it up",
             "  M       Merge all ready inactive worktrees and clean them up",
             "  l       Cycle pane layout and persist it",
@@ -1678,6 +1690,40 @@ impl Dashboard {
         }
     }
 
+    pub fn toggle_search_agent_filter(&mut self) {
+        if self.output_mode != OutputMode::SessionOutput {
+            self.set_operator_note(
+                "search agent filter is only available in session output view".to_string(),
+            );
+            return;
+        }
+
+        let Some(selected_agent_type) = self.selected_agent_type().map(str::to_owned) else {
+            self.set_operator_note("search agent filter requires a selected session".to_string());
+            return;
+        };
+
+        self.search_agent_filter = match self.search_agent_filter {
+            SearchAgentFilter::AllAgents => SearchAgentFilter::SelectedAgentType,
+            SearchAgentFilter::SelectedAgentType => SearchAgentFilter::AllAgents,
+        };
+        self.recompute_search_matches();
+        self.sync_output_scroll(self.last_output_height.max(1));
+
+        if self.search_query.is_some() {
+            self.set_operator_note(format!(
+                "search agent filter set to {} | {} match(es)",
+                self.search_agent_filter.label(&selected_agent_type),
+                self.search_matches.len()
+            ));
+        } else {
+            self.set_operator_note(format!(
+                "search agent filter set to {}",
+                self.search_agent_filter.label(&selected_agent_type)
+            ));
+        }
+    }
+
     pub fn begin_search(&mut self) {
         if self.output_mode != OutputMode::SessionOutput {
             self.set_operator_note("search is only available in session output view".to_string());
@@ -2288,6 +2334,28 @@ impl Dashboard {
             .unwrap_or(&[])
     }
 
+    fn selected_agent_type(&self) -> Option<&str> {
+        self.sessions
+            .get(self.selected_session)
+            .map(|session| session.agent_type.as_str())
+    }
+
+    fn search_agent_filter_label(&self) -> String {
+        self.search_agent_filter
+            .label(self.selected_agent_type().unwrap_or("selected agent"))
+            .to_string()
+    }
+
+    fn search_agent_title_suffix(&self) -> String {
+        match self.selected_agent_type() {
+            Some(agent_type) => self
+                .search_agent_filter
+                .title_suffix(agent_type)
+                .to_string(),
+            None => String::new(),
+        }
+    }
+
     fn visible_output_lines_for_session(&self, session_id: &str) -> Vec<&OutputLine> {
         self.session_output_cache
             .get(session_id)
@@ -2323,8 +2391,7 @@ impl Dashboard {
         };
 
         self.search_matches = self
-            .search_scope
-            .session_ids(self.selected_session_id(), &self.sessions)
+            .search_target_session_ids()
             .into_iter()
             .flat_map(|session_id| {
                 self.visible_output_lines_for_session(session_id)
@@ -2395,6 +2462,23 @@ impl Dashboard {
             .map(|search_match| search_match.session_id.as_str())
             .collect::<HashSet<_>>()
             .len()
+    }
+
+    fn search_target_session_ids(&self) -> Vec<&str> {
+        let selected_session_id = self.selected_session_id();
+        let selected_agent_type = self.selected_agent_type();
+
+        self.sessions
+            .iter()
+            .filter(|session| {
+                self.search_scope
+                    .matches(selected_session_id, session.id.as_str())
+                    && self
+                        .search_agent_filter
+                        .matches(selected_agent_type, session.agent_type.as_str())
+            })
+            .map(|session| session.id.as_str())
+            .collect()
     }
 
     fn sync_output_scroll(&mut self, viewport_height: usize) {
@@ -3089,14 +3173,33 @@ impl SearchScope {
         }
     }
 
-    fn session_ids<'a>(
-        self,
-        selected_session_id: Option<&'a str>,
-        sessions: &'a [Session],
-    ) -> Vec<&'a str> {
+    fn matches(self, selected_session_id: Option<&str>, session_id: &str) -> bool {
         match self {
-            Self::SelectedSession => selected_session_id.into_iter().collect(),
-            Self::AllSessions => sessions.iter().map(|session| session.id.as_str()).collect(),
+            Self::SelectedSession => selected_session_id == Some(session_id),
+            Self::AllSessions => true,
+        }
+    }
+}
+
+impl SearchAgentFilter {
+    fn matches(self, selected_agent_type: Option<&str>, session_agent_type: &str) -> bool {
+        match self {
+            Self::AllAgents => true,
+            Self::SelectedAgentType => selected_agent_type == Some(session_agent_type),
+        }
+    }
+
+    fn label(self, selected_agent_type: &str) -> String {
+        match self {
+            Self::AllAgents => "all agents".to_string(),
+            Self::SelectedAgentType => format!("agent {}", selected_agent_type),
+        }
+    }
+
+    fn title_suffix(self, selected_agent_type: &str) -> String {
+        match self {
+            Self::AllAgents => String::new(),
+            Self::SelectedAgentType => format!(" {}", self.label(selected_agent_type)),
         }
     }
 }
@@ -4770,6 +4873,82 @@ diff --git a/src/next.rs b/src/next.rs
         );
     }
 
+    #[test]
+    fn search_agent_filter_selected_agent_type_limits_global_search() {
+        let mut dashboard = test_dashboard(
+            vec![
+                sample_session(
+                    "focus-12345678",
+                    "planner",
+                    SessionState::Running,
+                    None,
+                    1,
+                    1,
+                ),
+                sample_session(
+                    "planner-2222222",
+                    "planner",
+                    SessionState::Running,
+                    None,
+                    1,
+                    1,
+                ),
+                sample_session(
+                    "review-87654321",
+                    "reviewer",
+                    SessionState::Running,
+                    None,
+                    1,
+                    1,
+                ),
+            ],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![test_output_line(OutputStream::Stdout, "alpha local")],
+        );
+        dashboard.session_output_cache.insert(
+            "planner-2222222".to_string(),
+            vec![test_output_line(OutputStream::Stdout, "alpha planner")],
+        );
+        dashboard.session_output_cache.insert(
+            "review-87654321".to_string(),
+            vec![test_output_line(OutputStream::Stdout, "alpha reviewer")],
+        );
+        dashboard.search_scope = SearchScope::AllSessions;
+        dashboard.search_query = Some("alpha.*".to_string());
+        dashboard.recompute_search_matches();
+
+        dashboard.toggle_search_agent_filter();
+
+        assert_eq!(
+            dashboard.search_agent_filter,
+            SearchAgentFilter::SelectedAgentType
+        );
+        assert_eq!(
+            dashboard.search_matches,
+            vec![
+                SearchMatch {
+                    session_id: "focus-12345678".to_string(),
+                    line_index: 0,
+                },
+                SearchMatch {
+                    session_id: "planner-2222222".to_string(),
+                    line_index: 0,
+                },
+            ]
+        );
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("search agent filter set to agent planner | 2 match(es)")
+        );
+        assert_eq!(
+            dashboard.output_title(),
+            " Output all sessions agent planner /alpha.* 1/2 "
+        );
+    }
+
     #[tokio::test]
     async fn stop_selected_uses_session_manager_transition() -> Result<()> {
         let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
@@ -5524,6 +5703,7 @@ diff --git a/src/next.rs b/src/next.rs
             search_input: None,
             search_query: None,
             search_scope: SearchScope::SelectedSession,
+            search_agent_filter: SearchAgentFilter::AllAgents,
             search_matches: Vec::new(),
             selected_search_match: 0,
             session_table_state,
