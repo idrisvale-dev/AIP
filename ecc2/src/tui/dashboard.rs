@@ -125,6 +125,8 @@ enum OutputMode {
 enum OutputFilter {
     All,
     ErrorsOnly,
+    ToolCallsOnly,
+    FileChangesOnly,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -535,8 +537,18 @@ impl Dashboard {
             (OutputFilter::ErrorsOnly, OutputTimeFilter::AllTime) => {
                 "No stderr output for this session yet."
             }
+            (OutputFilter::ToolCallsOnly, OutputTimeFilter::AllTime) => {
+                "No tool-call output for this session yet."
+            }
+            (OutputFilter::FileChangesOnly, OutputTimeFilter::AllTime) => {
+                "No file-change output for this session yet."
+            }
             (OutputFilter::All, _) => "No output lines in the selected time range.",
             (OutputFilter::ErrorsOnly, _) => "No stderr output in the selected time range.",
+            (OutputFilter::ToolCallsOnly, _) => "No tool-call output in the selected time range.",
+            (OutputFilter::FileChangesOnly, _) => {
+                "No file-change output in the selected time range."
+            }
         }
     }
 
@@ -656,7 +668,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [e]rrors  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
@@ -735,7 +747,7 @@ impl Dashboard {
             "  G       Dispatch then rebalance backlog across lead teams",
             "  v       Toggle selected worktree diff in output pane",
             "  c       Show conflict-resolution protocol for selected conflicted worktree",
-            "  e       Toggle output filter between all lines and stderr only",
+            "  e       Cycle output content filter: all/errors/tool calls/file changes",
             "  f       Cycle output time filter between all/15m/1h/24h",
             "  A       Toggle search scope between selected session and all sessions",
             "  o       Toggle search agent filter between all agents and selected agent type",
@@ -1826,10 +1838,7 @@ impl Dashboard {
             return;
         }
 
-        self.output_filter = match self.output_filter {
-            OutputFilter::All => OutputFilter::ErrorsOnly,
-            OutputFilter::ErrorsOnly => OutputFilter::All,
-        };
+        self.output_filter = self.output_filter.next();
         self.recompute_search_matches();
         self.sync_output_scroll(self.last_output_height.max(1));
         self.set_operator_note(format!(
@@ -2363,8 +2372,7 @@ impl Dashboard {
                 lines
                     .iter()
                     .filter(|line| {
-                        self.output_filter.matches(line.stream)
-                            && self.output_time_filter.matches(line)
+                        self.output_filter.matches(line) && self.output_time_filter.matches(line)
                     })
                     .collect()
             })
@@ -3082,10 +3090,21 @@ impl Pane {
 }
 
 impl OutputFilter {
-    fn matches(self, stream: OutputStream) -> bool {
+    fn next(self) -> Self {
+        match self {
+            Self::All => Self::ErrorsOnly,
+            Self::ErrorsOnly => Self::ToolCallsOnly,
+            Self::ToolCallsOnly => Self::FileChangesOnly,
+            Self::FileChangesOnly => Self::All,
+        }
+    }
+
+    fn matches(self, line: &OutputLine) -> bool {
         match self {
             OutputFilter::All => true,
-            OutputFilter::ErrorsOnly => stream == OutputStream::Stderr,
+            OutputFilter::ErrorsOnly => line.stream == OutputStream::Stderr,
+            OutputFilter::ToolCallsOnly => looks_like_tool_call(&line.text),
+            OutputFilter::FileChangesOnly => looks_like_file_change(&line.text),
         }
     }
 
@@ -3093,6 +3112,8 @@ impl OutputFilter {
         match self {
             OutputFilter::All => "all",
             OutputFilter::ErrorsOnly => "errors",
+            OutputFilter::ToolCallsOnly => "tool calls",
+            OutputFilter::FileChangesOnly => "file changes",
         }
     }
 
@@ -3100,8 +3121,95 @@ impl OutputFilter {
         match self {
             OutputFilter::All => "",
             OutputFilter::ErrorsOnly => " errors",
+            OutputFilter::ToolCallsOnly => " tool calls",
+            OutputFilter::FileChangesOnly => " file changes",
         }
     }
+}
+
+fn looks_like_tool_call(text: &str) -> bool {
+    let lower = text.trim().to_ascii_lowercase();
+    if lower.is_empty() {
+        return false;
+    }
+
+    const TOOL_PREFIXES: &[&str] = &[
+        "tool ",
+        "tool:",
+        "[tool",
+        "tool call",
+        "calling tool",
+        "running tool",
+        "invoking tool",
+        "using tool",
+        "read(",
+        "write(",
+        "edit(",
+        "multi_edit(",
+        "bash(",
+        "grep(",
+        "glob(",
+        "search(",
+        "ls(",
+        "apply_patch(",
+    ];
+
+    TOOL_PREFIXES.iter().any(|prefix| lower.starts_with(prefix))
+}
+
+fn looks_like_file_change(text: &str) -> bool {
+    let lower = text.trim().to_ascii_lowercase();
+    if lower.is_empty() {
+        return false;
+    }
+
+    if lower.contains("applied patch")
+        || lower.contains("patch applied")
+        || lower.starts_with("diff --git ")
+    {
+        return true;
+    }
+
+    const FILE_CHANGE_VERBS: &[&str] = &[
+        "updated ",
+        "created ",
+        "deleted ",
+        "renamed ",
+        "modified ",
+        "wrote ",
+        "editing ",
+        "edited ",
+        "writing ",
+    ];
+
+    FILE_CHANGE_VERBS
+        .iter()
+        .any(|prefix| lower.starts_with(prefix) && contains_path_like_token(text))
+}
+
+fn contains_path_like_token(text: &str) -> bool {
+    text.split_whitespace().any(|token| {
+        let trimmed = token.trim_matches(|ch: char| {
+            matches!(
+                ch,
+                '[' | ']' | '(' | ')' | '{' | '}' | ',' | ':' | ';' | '"' | '\''
+            )
+        });
+
+        trimmed.contains('/')
+            || trimmed.contains('\\')
+            || trimmed.starts_with("./")
+            || trimmed.starts_with("../")
+            || trimmed
+                .rsplit_once('.')
+                .map(|(stem, ext)| {
+                    !stem.is_empty()
+                        && !ext.is_empty()
+                        && ext.len() <= 10
+                        && ext.chars().all(|ch| ch.is_ascii_alphanumeric())
+                })
+                .unwrap_or(false)
+    })
 }
 
 impl OutputTimeFilter {
@@ -4659,6 +4767,55 @@ diff --git a/src/next.rs b/src/next.rs
     }
 
     #[test]
+    fn toggle_output_filter_cycles_tool_calls_and_file_changes() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                None,
+                1,
+                1,
+            )],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![
+                test_output_line(OutputStream::Stdout, "normal output"),
+                test_output_line(OutputStream::Stdout, "Read(src/lib.rs)"),
+                test_output_line(OutputStream::Stdout, "Updated ecc2/src/tui/dashboard.rs"),
+                test_output_line(OutputStream::Stderr, "stderr line"),
+            ],
+        );
+
+        dashboard.toggle_output_filter();
+        assert_eq!(dashboard.output_filter, OutputFilter::ErrorsOnly);
+        assert_eq!(dashboard.visible_output_text(), "stderr line");
+
+        dashboard.toggle_output_filter();
+        assert_eq!(dashboard.output_filter, OutputFilter::ToolCallsOnly);
+        assert_eq!(dashboard.visible_output_text(), "Read(src/lib.rs)");
+        assert_eq!(dashboard.output_title(), " Output tool calls ");
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("output filter set to tool calls")
+        );
+
+        dashboard.toggle_output_filter();
+        assert_eq!(dashboard.output_filter, OutputFilter::FileChangesOnly);
+        assert_eq!(
+            dashboard.visible_output_text(),
+            "Updated ecc2/src/tui/dashboard.rs"
+        );
+        assert_eq!(dashboard.output_title(), " Output file changes ");
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("output filter set to file changes")
+        );
+    }
+
+    #[test]
     fn search_matches_respect_error_only_filter() {
         let mut dashboard = test_dashboard(
             vec![sample_session(
@@ -4693,6 +4850,86 @@ diff --git a/src/next.rs b/src/next.rs
             }]
         );
         assert_eq!(dashboard.visible_output_text(), "alpha stderr\nbeta stderr");
+    }
+
+    #[test]
+    fn search_matches_respect_tool_call_filter() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                None,
+                1,
+                1,
+            )],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![
+                test_output_line(OutputStream::Stdout, "alpha normal"),
+                test_output_line(OutputStream::Stdout, "Read(alpha.rs)"),
+                test_output_line(OutputStream::Stdout, "Write(beta.rs)"),
+            ],
+        );
+        dashboard.output_filter = OutputFilter::ToolCallsOnly;
+        dashboard.search_query = Some("alpha.*".to_string());
+        dashboard.last_output_height = 1;
+
+        dashboard.recompute_search_matches();
+
+        assert_eq!(
+            dashboard.search_matches,
+            vec![SearchMatch {
+                session_id: "focus-12345678".to_string(),
+                line_index: 0,
+            }]
+        );
+        assert_eq!(
+            dashboard.visible_output_text(),
+            "Read(alpha.rs)\nWrite(beta.rs)"
+        );
+    }
+
+    #[test]
+    fn search_matches_respect_file_change_filter() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                None,
+                1,
+                1,
+            )],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![
+                test_output_line(OutputStream::Stdout, "alpha normal"),
+                test_output_line(OutputStream::Stdout, "Updated alpha.rs"),
+                test_output_line(OutputStream::Stdout, "Renamed beta.rs to gamma.rs"),
+            ],
+        );
+        dashboard.output_filter = OutputFilter::FileChangesOnly;
+        dashboard.search_query = Some("alpha.*".to_string());
+        dashboard.last_output_height = 1;
+
+        dashboard.recompute_search_matches();
+
+        assert_eq!(
+            dashboard.search_matches,
+            vec![SearchMatch {
+                session_id: "focus-12345678".to_string(),
+                line_index: 0,
+            }]
+        );
+        assert_eq!(
+            dashboard.visible_output_text(),
+            "Updated alpha.rs\nRenamed beta.rs to gamma.rs"
+        );
     }
 
     #[test]
