@@ -102,6 +102,7 @@ pub struct Dashboard {
     selected_search_match: usize,
     session_table_state: TableState,
     last_cost_metrics_signature: Option<(u64, u128)>,
+    last_budget_alert_state: BudgetState,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -344,6 +345,7 @@ impl Dashboard {
             selected_search_match: 0,
             session_table_state,
             last_cost_metrics_signature: initial_cost_metrics_signature,
+            last_budget_alert_state: BudgetState::Normal,
         };
         dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap_or_default();
         dashboard.sync_handoff_backlog_counts();
@@ -353,6 +355,7 @@ impl Dashboard {
         dashboard.sync_selected_messages();
         dashboard.sync_selected_lineage();
         dashboard.refresh_logs();
+        dashboard.last_budget_alert_state = dashboard.aggregate_usage().overall_state;
         dashboard
     }
 
@@ -989,16 +992,20 @@ impl Dashboard {
             "  y       Toggle selected-session timeline view".to_string(),
             "  E       Cycle timeline event filter".to_string(),
             "  v       Toggle selected worktree diff in output pane".to_string(),
-            "  c       Show conflict-resolution protocol for selected conflicted worktree".to_string(),
+            "  c       Show conflict-resolution protocol for selected conflicted worktree"
+                .to_string(),
             "  e       Cycle output content filter: all/errors/tool calls/file changes".to_string(),
             "  f       Cycle output or timeline time range between all/15m/1h/24h".to_string(),
-            "  A       Toggle search or timeline scope between selected session and all sessions".to_string(),
-            "  o       Toggle search agent filter between all agents and selected agent type".to_string(),
+            "  A       Toggle search or timeline scope between selected session and all sessions"
+                .to_string(),
+            "  o       Toggle search agent filter between all agents and selected agent type"
+                .to_string(),
             "  m       Merge selected ready worktree into base and clean it up".to_string(),
             "  M       Merge all ready inactive worktrees and clean them up".to_string(),
             "  l       Cycle pane layout and persist it".to_string(),
             "  T       Toggle theme and persist it".to_string(),
-            "  t       Toggle default worktree creation for new sessions and delegated work".to_string(),
+            "  t       Toggle default worktree creation for new sessions and delegated work"
+                .to_string(),
             "  p       Toggle daemon auto-dispatch policy and persist config".to_string(),
             "  w       Toggle daemon auto-merge for ready inactive worktrees".to_string(),
             "  ,/.     Decrease/increase auto-dispatch limit per lead".to_string(),
@@ -1100,8 +1107,7 @@ impl Dashboard {
     pub fn begin_pane_command_mode(&mut self) {
         self.pane_command_mode = true;
         self.set_operator_note(
-            "pane command mode | h/j/k/l move | s/v/g layout | 1-4 focus | +/- resize"
-                .to_string(),
+            "pane command mode | h/j/k/l move | s/v/g layout | 1-4 focus | +/- resize".to_string(),
         );
     }
 
@@ -1164,7 +1170,6 @@ impl Dashboard {
         }
         true
     }
-
 
     pub fn collapse_selected_pane(&mut self) {
         if self.selected_pane == Pane::Sessions {
@@ -1648,6 +1653,7 @@ impl Dashboard {
         self.sync_selected_messages();
         self.sync_selected_lineage();
         self.refresh_logs();
+        self.sync_budget_alerts();
     }
 
     pub fn toggle_output_mode(&mut self) {
@@ -4012,8 +4018,7 @@ impl Dashboard {
             ));
             lines.push(format!(
                 "Tools {} | Files {}",
-                metrics.tool_calls,
-                metrics.files_changed,
+                metrics.tool_calls, metrics.files_changed,
             ));
             lines.push(format!(
                 "Cost ${:.4} | Duration {}s",
@@ -4080,13 +4085,54 @@ impl Dashboard {
             )
         };
 
-        match aggregate.overall_state {
-            BudgetState::Warning => text.push_str(" | Budget warning"),
-            BudgetState::OverBudget => text.push_str(" | Budget exceeded"),
-            _ => {}
+        if let Some(summary_suffix) = aggregate.overall_state.summary_suffix() {
+            text.push_str(" | ");
+            text.push_str(summary_suffix);
         }
 
         (text, aggregate.overall_state.style())
+    }
+
+    fn sync_budget_alerts(&mut self) {
+        let aggregate = self.aggregate_usage();
+        let current_state = aggregate.overall_state;
+        if current_state == self.last_budget_alert_state {
+            return;
+        }
+
+        let previous_state = self.last_budget_alert_state;
+        self.last_budget_alert_state = current_state;
+
+        if current_state <= previous_state {
+            return;
+        }
+
+        let Some(summary_suffix) = current_state.summary_suffix() else {
+            return;
+        };
+
+        let token_budget = if self.cfg.token_budget > 0 {
+            format!(
+                "{} / {}",
+                format_token_count(aggregate.total_tokens),
+                format_token_count(self.cfg.token_budget)
+            )
+        } else {
+            format!("{} / no budget", format_token_count(aggregate.total_tokens))
+        };
+        let cost_budget = if self.cfg.cost_budget_usd > 0.0 {
+            format!(
+                "{} / {}",
+                format_currency(aggregate.total_cost_usd),
+                format_currency(self.cfg.cost_budget_usd)
+            )
+        } else {
+            format!("{} / no budget", format_currency(aggregate.total_cost_usd))
+        };
+
+        self.set_operator_note(format!(
+            "{summary_suffix} | tokens {token_budget} | cost {cost_budget}"
+        ));
     }
 
     fn attention_queue_items(&self, limit: usize) -> Vec<String> {
@@ -7033,8 +7079,58 @@ diff --git a/src/next.rs b/src/next.rs
 
         assert_eq!(
             dashboard.aggregate_cost_summary_text(),
-            "Aggregate cost $8.25 / $10.00 | Budget warning"
+            "Aggregate cost $8.25 / $10.00 | Budget alert 75%"
         );
+    }
+
+    #[test]
+    fn aggregate_cost_summary_mentions_fifty_percent_alert() {
+        let db = StateStore::open(Path::new(":memory:")).unwrap();
+        let mut cfg = Config::default();
+        cfg.cost_budget_usd = 10.0;
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.sessions = vec![budget_session("sess-1", 1_000, 5.0)];
+
+        assert_eq!(
+            dashboard.aggregate_cost_summary_text(),
+            "Aggregate cost $5.00 / $10.00 | Budget alert 50%"
+        );
+    }
+
+    #[test]
+    fn aggregate_cost_summary_mentions_ninety_percent_alert() {
+        let db = StateStore::open(Path::new(":memory:")).unwrap();
+        let mut cfg = Config::default();
+        cfg.cost_budget_usd = 10.0;
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.sessions = vec![budget_session("sess-1", 1_000, 9.0)];
+
+        assert_eq!(
+            dashboard.aggregate_cost_summary_text(),
+            "Aggregate cost $9.00 / $10.00 | Budget alert 90%"
+        );
+    }
+
+    #[test]
+    fn sync_budget_alerts_sets_operator_note_when_threshold_is_crossed() {
+        let db = StateStore::open(Path::new(":memory:")).unwrap();
+        let mut cfg = Config::default();
+        cfg.token_budget = 1_000;
+        cfg.cost_budget_usd = 10.0;
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.sessions = vec![budget_session("sess-1", 760, 2.0)];
+        dashboard.last_budget_alert_state = BudgetState::Alert50;
+
+        dashboard.sync_budget_alerts();
+
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("Budget alert 75% | tokens 760 / 1,000 | cost $2.00 / $10.00")
+        );
+        assert_eq!(dashboard.last_budget_alert_state, BudgetState::Alert75);
     }
 
     #[test]
@@ -8647,12 +8743,10 @@ diff --git a/src/next.rs b/src/next.rs
         )));
 
         assert_eq!(dashboard.cfg.pane_layout, PaneLayout::Grid);
-        assert!(
-            dashboard
-                .operator_note
-                .as_deref()
-                .is_some_and(|note| note.contains("pane layout set to grid | saved to "))
-        );
+        assert!(dashboard
+            .operator_note
+            .as_deref()
+            .is_some_and(|note| note.contains("pane layout set to grid | saved to ")));
     }
 
     #[test]
@@ -8961,6 +9055,7 @@ diff --git a/src/next.rs b/src/next.rs
             selected_search_match: 0,
             session_table_state,
             last_cost_metrics_signature: None,
+            last_budget_alert_state: BudgetState::Normal,
         }
     }
 

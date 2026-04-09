@@ -4,27 +4,39 @@ use ratatui::{
     widgets::{Gauge, Paragraph, Widget},
 };
 
-pub(crate) const WARNING_THRESHOLD: f64 = 0.8;
+pub(crate) const ALERT_THRESHOLD_50: f64 = 0.50;
+pub(crate) const ALERT_THRESHOLD_75: f64 = 0.75;
+pub(crate) const ALERT_THRESHOLD_90: f64 = 0.90;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum BudgetState {
     Unconfigured,
     Normal,
-    Warning,
+    Alert50,
+    Alert75,
+    Alert90,
     OverBudget,
 }
 
 impl BudgetState {
-    pub(crate) const fn is_warning(self) -> bool {
-        matches!(self, Self::Warning | Self::OverBudget)
-    }
-
     fn badge(self) -> Option<&'static str> {
         match self {
-            Self::Warning => Some("warning"),
+            Self::Alert50 => Some("50%"),
+            Self::Alert75 => Some("75%"),
+            Self::Alert90 => Some("90%"),
             Self::OverBudget => Some("over budget"),
             Self::Unconfigured => Some("no budget"),
             Self::Normal => None,
+        }
+    }
+
+    pub(crate) const fn summary_suffix(self) -> Option<&'static str> {
+        match self {
+            Self::Alert50 => Some("Budget alert 50%"),
+            Self::Alert75 => Some("Budget alert 75%"),
+            Self::Alert90 => Some("Budget alert 90%"),
+            Self::OverBudget => Some("Budget exceeded"),
+            Self::Unconfigured | Self::Normal => None,
         }
     }
 
@@ -32,11 +44,13 @@ impl BudgetState {
         let base = Style::default().fg(match self {
             Self::Unconfigured => Color::DarkGray,
             Self::Normal => Color::DarkGray,
-            Self::Warning => Color::Yellow,
+            Self::Alert50 => Color::Cyan,
+            Self::Alert75 => Color::Yellow,
+            Self::Alert90 => Color::LightRed,
             Self::OverBudget => Color::Red,
         });
 
-        if self.is_warning() {
+        if matches!(self, Self::Alert75 | Self::Alert90 | Self::OverBudget) {
             base.add_modifier(Modifier::BOLD)
         } else {
             base
@@ -187,8 +201,12 @@ pub(crate) fn budget_state(used: f64, budget: f64) -> BudgetState {
         BudgetState::Unconfigured
     } else if used / budget >= 1.0 {
         BudgetState::OverBudget
-    } else if used / budget >= WARNING_THRESHOLD {
-        BudgetState::Warning
+    } else if used / budget >= ALERT_THRESHOLD_90 {
+        BudgetState::Alert90
+    } else if used / budget >= ALERT_THRESHOLD_75 {
+        BudgetState::Alert75
+    } else if used / budget >= ALERT_THRESHOLD_50 {
+        BudgetState::Alert50
     } else {
         BudgetState::Normal
     }
@@ -200,13 +218,13 @@ pub(crate) fn gradient_color(ratio: f64) -> Color {
     const RED: (u8, u8, u8) = (239, 68, 68);
 
     let clamped = ratio.clamp(0.0, 1.0);
-    if clamped <= WARNING_THRESHOLD {
-        interpolate_rgb(GREEN, YELLOW, clamped / WARNING_THRESHOLD)
+    if clamped <= ALERT_THRESHOLD_75 {
+        interpolate_rgb(GREEN, YELLOW, clamped / ALERT_THRESHOLD_75)
     } else {
         interpolate_rgb(
             YELLOW,
             RED,
-            (clamped - WARNING_THRESHOLD) / (1.0 - WARNING_THRESHOLD),
+            (clamped - ALERT_THRESHOLD_75) / (1.0 - ALERT_THRESHOLD_75),
         )
     }
 }
@@ -249,16 +267,29 @@ mod tests {
     use super::{gradient_color, BudgetState, TokenMeter};
 
     #[test]
-    fn warning_state_starts_at_eighty_percent() {
-        let meter = TokenMeter::tokens("Token Budget", 80, 100);
-
-        assert_eq!(meter.state(), BudgetState::Warning);
+    fn budget_state_uses_alert_threshold_ladder() {
+        assert_eq!(
+            TokenMeter::tokens("Token Budget", 50, 100).state(),
+            BudgetState::Alert50
+        );
+        assert_eq!(
+            TokenMeter::tokens("Token Budget", 75, 100).state(),
+            BudgetState::Alert75
+        );
+        assert_eq!(
+            TokenMeter::tokens("Token Budget", 90, 100).state(),
+            BudgetState::Alert90
+        );
+        assert_eq!(
+            TokenMeter::tokens("Token Budget", 100, 100).state(),
+            BudgetState::OverBudget
+        );
     }
 
     #[test]
     fn gradient_runs_from_green_to_yellow_to_red() {
         assert_eq!(gradient_color(0.0), Color::Rgb(34, 197, 94));
-        assert_eq!(gradient_color(0.8), Color::Rgb(234, 179, 8));
+        assert_eq!(gradient_color(0.75), Color::Rgb(234, 179, 8));
         assert_eq!(gradient_color(1.0), Color::Rgb(239, 68, 68));
     }
 
