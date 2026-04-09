@@ -74,6 +74,7 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
                     (_, KeyCode::Char('v')) => dashboard.toggle_output_mode(),
                     (_, KeyCode::Char('c')) => dashboard.toggle_conflict_protocol_mode(),
                     (_, KeyCode::Char('e')) => dashboard.toggle_output_filter(),
+                    (_, KeyCode::Char('f')) => dashboard.cycle_output_time_filter(),
                     (_, KeyCode::Char('m')) => dashboard.merge_selected_worktree().await,
                     (_, KeyCode::Char('M')) => dashboard.merge_ready_worktrees().await,
                     (_, KeyCode::Char('l')) => dashboard.cycle_pane_layout(),

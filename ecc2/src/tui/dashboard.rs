@@ -1,3 +1,4 @@
+use chrono::{Duration, Utc};
 use ratatui::{
     prelude::*,
     widgets::{
@@ -72,6 +73,7 @@ pub struct Dashboard {
     selected_merge_readiness: Option<worktree::MergeReadiness>,
     output_mode: OutputMode,
     output_filter: OutputFilter,
+    output_time_filter: OutputTimeFilter,
     selected_pane: Pane,
     selected_session: usize,
     show_help: bool,
@@ -121,6 +123,14 @@ enum OutputMode {
 enum OutputFilter {
     All,
     ErrorsOnly,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OutputTimeFilter {
+    AllTime,
+    Last15Minutes,
+    LastHour,
+    Last24Hours,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -201,6 +211,7 @@ impl Dashboard {
             selected_merge_readiness: None,
             output_mode: OutputMode::SessionOutput,
             output_filter: OutputFilter::All,
+            output_time_filter: OutputTimeFilter::AllTime,
             selected_pane: Pane::Sessions,
             selected_session: 0,
             show_help: false,
@@ -472,7 +483,11 @@ impl Dashboard {
     }
 
     fn output_title(&self) -> String {
-        let filter = self.output_filter_label();
+        let filter = format!(
+            "{}{}",
+            self.output_filter.title_suffix(),
+            self.output_time_filter.title_suffix()
+        );
         if let Some(input) = self.search_input.as_ref() {
             return format!(" Output{filter} /{input}_ ");
         }
@@ -490,17 +505,14 @@ impl Dashboard {
         format!(" Output{filter} ")
     }
 
-    fn output_filter_label(&self) -> &'static str {
-        match self.output_filter {
-            OutputFilter::All => "",
-            OutputFilter::ErrorsOnly => " errors",
-        }
-    }
-
     fn empty_output_message(&self) -> &'static str {
-        match self.output_filter {
-            OutputFilter::All => "Waiting for session output...",
-            OutputFilter::ErrorsOnly => "No stderr output for this session yet.",
+        match (self.output_filter, self.output_time_filter) {
+            (OutputFilter::All, OutputTimeFilter::AllTime) => "Waiting for session output...",
+            (OutputFilter::ErrorsOnly, OutputTimeFilter::AllTime) => {
+                "No stderr output for this session yet."
+            }
+            (OutputFilter::All, _) => "No output lines in the selected time range.",
+            (OutputFilter::ErrorsOnly, _) => "No stderr output in the selected time range.",
         }
     }
 
@@ -611,7 +623,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [e]rrors  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  [e]rrors  time [f]ilter  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
@@ -683,6 +695,7 @@ impl Dashboard {
             "  v       Toggle selected worktree diff in output pane",
             "  c       Show conflict-resolution protocol for selected conflicted worktree",
             "  e       Toggle output filter between all lines and stderr only",
+            "  f       Cycle output time filter between all/15m/1h/24h",
             "  m       Merge selected ready worktree into base and clean it up",
             "  M       Merge all ready inactive worktrees and clean them up",
             "  l       Cycle pane layout and persist it",
@@ -1724,6 +1737,23 @@ impl Dashboard {
         ));
     }
 
+    pub fn cycle_output_time_filter(&mut self) {
+        if self.output_mode != OutputMode::SessionOutput {
+            self.set_operator_note(
+                "output time filters are only available in session output view".to_string(),
+            );
+            return;
+        }
+
+        self.output_time_filter = self.output_time_filter.next();
+        self.recompute_search_matches();
+        self.sync_output_scroll(self.last_output_height.max(1));
+        self.set_operator_note(format!(
+            "output time filter set to {}",
+            self.output_time_filter.label()
+        ));
+    }
+
     pub fn toggle_auto_dispatch_policy(&mut self) {
         self.cfg.auto_dispatch_unread_handoffs = !self.cfg.auto_dispatch_unread_handoffs;
         match self.cfg.save() {
@@ -2192,7 +2222,9 @@ impl Dashboard {
     fn visible_output_lines(&self) -> Vec<&OutputLine> {
         self.selected_output_lines()
             .iter()
-            .filter(|line| self.output_filter.matches(line.stream))
+            .filter(|line| {
+                self.output_filter.matches(line.stream) && self.output_time_filter.matches(line)
+            })
             .collect()
     }
 
@@ -2864,6 +2896,60 @@ impl OutputFilter {
             OutputFilter::ErrorsOnly => "errors",
         }
     }
+
+    fn title_suffix(self) -> &'static str {
+        match self {
+            OutputFilter::All => "",
+            OutputFilter::ErrorsOnly => " errors",
+        }
+    }
+}
+
+impl OutputTimeFilter {
+    fn next(self) -> Self {
+        match self {
+            Self::AllTime => Self::Last15Minutes,
+            Self::Last15Minutes => Self::LastHour,
+            Self::LastHour => Self::Last24Hours,
+            Self::Last24Hours => Self::AllTime,
+        }
+    }
+
+    fn matches(self, line: &OutputLine) -> bool {
+        match self {
+            Self::AllTime => true,
+            Self::Last15Minutes => line
+                .occurred_at()
+                .map(|timestamp| timestamp >= Utc::now() - Duration::minutes(15))
+                .unwrap_or(false),
+            Self::LastHour => line
+                .occurred_at()
+                .map(|timestamp| timestamp >= Utc::now() - Duration::hours(1))
+                .unwrap_or(false),
+            Self::Last24Hours => line
+                .occurred_at()
+                .map(|timestamp| timestamp >= Utc::now() - Duration::hours(24))
+                .unwrap_or(false),
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::AllTime => "all time",
+            Self::Last15Minutes => "last 15m",
+            Self::LastHour => "last 1h",
+            Self::Last24Hours => "last 24h",
+        }
+    }
+
+    fn title_suffix(self) -> &'static str {
+        match self {
+            Self::AllTime => "",
+            Self::Last15Minutes => " last 15m",
+            Self::LastHour => " last 1h",
+            Self::Last24Hours => " last 24h",
+        }
+    }
 }
 
 impl SessionSummary {
@@ -3320,10 +3406,7 @@ mod tests {
         );
         dashboard.session_output_cache.insert(
             "focus-12345678".to_string(),
-            vec![OutputLine {
-                stream: OutputStream::Stdout,
-                text: "last useful output".to_string(),
-            }],
+            vec![test_output_line(OutputStream::Stdout, "last useful output")],
         );
         dashboard.selected_diff_summary = Some("1 file changed, 2 insertions(+)".to_string());
         dashboard.selected_diff_preview = vec![
@@ -4160,18 +4243,9 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.session_output_cache.insert(
             "focus-12345678".to_string(),
             vec![
-                OutputLine {
-                    stream: OutputStream::Stdout,
-                    text: "alpha".to_string(),
-                },
-                OutputLine {
-                    stream: OutputStream::Stdout,
-                    text: "beta".to_string(),
-                },
-                OutputLine {
-                    stream: OutputStream::Stdout,
-                    text: "alpha tail".to_string(),
-                },
+                test_output_line(OutputStream::Stdout, "alpha"),
+                test_output_line(OutputStream::Stdout, "beta"),
+                test_output_line(OutputStream::Stdout, "alpha tail"),
             ],
         );
         dashboard.last_output_height = 2;
@@ -4207,18 +4281,9 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.session_output_cache.insert(
             "focus-12345678".to_string(),
             vec![
-                OutputLine {
-                    stream: OutputStream::Stdout,
-                    text: "alpha-1".to_string(),
-                },
-                OutputLine {
-                    stream: OutputStream::Stdout,
-                    text: "beta".to_string(),
-                },
-                OutputLine {
-                    stream: OutputStream::Stdout,
-                    text: "alpha-2".to_string(),
-                },
+                test_output_line(OutputStream::Stdout, "alpha-1"),
+                test_output_line(OutputStream::Stdout, "beta"),
+                test_output_line(OutputStream::Stdout, "alpha-2"),
             ],
         );
         dashboard.search_query = Some(r"alpha-\d".to_string());
@@ -4304,14 +4369,8 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.session_output_cache.insert(
             "focus-12345678".to_string(),
             vec![
-                OutputLine {
-                    stream: OutputStream::Stdout,
-                    text: "stdout line".to_string(),
-                },
-                OutputLine {
-                    stream: OutputStream::Stderr,
-                    text: "stderr line".to_string(),
-                },
+                test_output_line(OutputStream::Stdout, "stdout line"),
+                test_output_line(OutputStream::Stderr, "stderr line"),
             ],
         );
 
@@ -4342,18 +4401,9 @@ diff --git a/src/next.rs b/src/next.rs
         dashboard.session_output_cache.insert(
             "focus-12345678".to_string(),
             vec![
-                OutputLine {
-                    stream: OutputStream::Stdout,
-                    text: "alpha stdout".to_string(),
-                },
-                OutputLine {
-                    stream: OutputStream::Stderr,
-                    text: "alpha stderr".to_string(),
-                },
-                OutputLine {
-                    stream: OutputStream::Stderr,
-                    text: "beta stderr".to_string(),
-                },
+                test_output_line(OutputStream::Stdout, "alpha stdout"),
+                test_output_line(OutputStream::Stderr, "alpha stderr"),
+                test_output_line(OutputStream::Stderr, "beta stderr"),
             ],
         );
         dashboard.output_filter = OutputFilter::ErrorsOnly;
@@ -4364,6 +4414,73 @@ diff --git a/src/next.rs b/src/next.rs
 
         assert_eq!(dashboard.search_matches, vec![0]);
         assert_eq!(dashboard.visible_output_text(), "alpha stderr\nbeta stderr");
+    }
+
+    #[test]
+    fn cycle_output_time_filter_keeps_only_recent_lines() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                None,
+                1,
+                1,
+            )],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![
+                test_output_line_minutes_ago(OutputStream::Stdout, "recent line", 5),
+                test_output_line_minutes_ago(OutputStream::Stdout, "older line", 45),
+                test_output_line_minutes_ago(OutputStream::Stdout, "stale line", 180),
+            ],
+        );
+
+        dashboard.cycle_output_time_filter();
+
+        assert_eq!(
+            dashboard.output_time_filter,
+            OutputTimeFilter::Last15Minutes
+        );
+        assert_eq!(dashboard.visible_output_text(), "recent line");
+        assert_eq!(dashboard.output_title(), " Output last 15m ");
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("output time filter set to last 15m")
+        );
+    }
+
+    #[test]
+    fn search_matches_respect_time_filter() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                None,
+                1,
+                1,
+            )],
+            0,
+        );
+        dashboard.session_output_cache.insert(
+            "focus-12345678".to_string(),
+            vec![
+                test_output_line_minutes_ago(OutputStream::Stdout, "alpha recent", 10),
+                test_output_line_minutes_ago(OutputStream::Stdout, "beta recent", 10),
+                test_output_line_minutes_ago(OutputStream::Stdout, "alpha stale", 180),
+            ],
+        );
+        dashboard.output_time_filter = OutputTimeFilter::Last15Minutes;
+        dashboard.search_query = Some("alpha.*".to_string());
+        dashboard.last_output_height = 1;
+
+        dashboard.recompute_search_matches();
+
+        assert_eq!(dashboard.search_matches, vec![0]);
+        assert_eq!(dashboard.visible_output_text(), "alpha recent\nbeta recent");
     }
 
     #[tokio::test]
@@ -5056,6 +5173,22 @@ diff --git a/src/next.rs b/src/next.rs
         assert_eq!(dashboard.theme_palette().row_highlight_bg, Color::Gray);
     }
 
+    fn test_output_line(stream: OutputStream, text: &str) -> OutputLine {
+        OutputLine::new(stream, text, Utc::now().to_rfc3339())
+    }
+
+    fn test_output_line_minutes_ago(
+        stream: OutputStream,
+        text: &str,
+        minutes_ago: i64,
+    ) -> OutputLine {
+        OutputLine::new(
+            stream,
+            text,
+            (Utc::now() - chrono::Duration::minutes(minutes_ago)).to_rfc3339(),
+        )
+    }
+
     fn test_dashboard(sessions: Vec<Session>, selected_session: usize) -> Dashboard {
         let selected_session = selected_session.min(sessions.len().saturating_sub(1));
         let cfg = Config::default();
@@ -5093,6 +5226,7 @@ diff --git a/src/next.rs b/src/next.rs
             selected_merge_readiness: None,
             output_mode: OutputMode::SessionOutput,
             output_filter: OutputFilter::All,
+            output_time_filter: OutputTimeFilter::AllTime,
             selected_pane: Pane::Sessions,
             selected_session,
             show_help: false,

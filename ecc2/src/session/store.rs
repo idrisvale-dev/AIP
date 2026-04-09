@@ -961,9 +961,9 @@ impl StateStore {
 
     pub fn get_output_lines(&self, session_id: &str, limit: usize) -> Result<Vec<OutputLine>> {
         let mut stmt = self.conn.prepare(
-            "SELECT stream, line
+            "SELECT stream, line, timestamp
              FROM (
-                 SELECT id, stream, line
+                 SELECT id, stream, line, timestamp
                  FROM session_output
                  WHERE session_id = ?1
                  ORDER BY id DESC
@@ -976,11 +976,13 @@ impl StateStore {
             .query_map(rusqlite::params![session_id, limit as i64], |row| {
                 let stream: String = row.get(0)?;
                 let text: String = row.get(1)?;
+                let timestamp: String = row.get(2)?;
 
-                Ok(OutputLine {
-                    stream: OutputStream::from_db_value(&stream),
+                Ok(OutputLine::new(
+                    OutputStream::from_db_value(&stream),
                     text,
-                })
+                    timestamp,
+                ))
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
