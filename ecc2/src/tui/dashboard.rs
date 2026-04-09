@@ -65,6 +65,7 @@ pub struct Dashboard {
     selected_messages: Vec<SessionMessage>,
     selected_parent_session: Option<String>,
     selected_child_sessions: Vec<DelegatedChildSummary>,
+    focused_delegate_session_id: Option<String>,
     selected_team_summary: Option<TeamSummary>,
     selected_route_preview: Option<String>,
     logs: Vec<ToolLogEntry>,
@@ -251,6 +252,7 @@ impl Dashboard {
             selected_messages: Vec::new(),
             selected_parent_session: None,
             selected_child_sessions: Vec::new(),
+            focused_delegate_session_id: None,
             selected_team_summary: None,
             selected_route_preview: None,
             logs: Vec::new(),
@@ -719,7 +721,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
@@ -825,6 +827,8 @@ impl Dashboard {
             "  S-Tab   Previous pane",
             "  j/↓     Scroll down",
             "  k/↑     Scroll up",
+            "  [ or ]  Focus previous/next delegate in lead Metrics board",
+            "  Enter   Open focused delegate from lead Metrics board",
             "  /       Search current session output",
             "  n/N     Next/previous search match when search is active",
             "  Esc     Clear active search or cancel search input",
@@ -1129,6 +1133,49 @@ impl Dashboard {
                 self.output_scroll_offset = self.output_scroll_offset.saturating_sub(1);
             }
         }
+    }
+
+    pub fn focus_next_delegate(&mut self) {
+        let Some(current_index) = self.focused_delegate_index() else {
+            return;
+        };
+        let next_index = (current_index + 1) % self.selected_child_sessions.len();
+        self.set_focused_delegate_by_index(next_index);
+    }
+
+    pub fn focus_previous_delegate(&mut self) {
+        let Some(current_index) = self.focused_delegate_index() else {
+            return;
+        };
+        let previous_index = if current_index == 0 {
+            self.selected_child_sessions.len() - 1
+        } else {
+            current_index - 1
+        };
+        self.set_focused_delegate_by_index(previous_index);
+    }
+
+    pub fn open_focused_delegate(&mut self) {
+        let Some(delegate_session_id) = self
+            .focused_delegate_index()
+            .and_then(|index| self.selected_child_sessions.get(index))
+            .map(|delegate| delegate.session_id.clone())
+        else {
+            return;
+        };
+
+        self.sync_selection_by_id(Some(&delegate_session_id));
+        self.reset_output_view();
+        self.reset_metrics_view();
+        self.sync_selected_output();
+        self.sync_selected_diff();
+        self.sync_selected_messages();
+        self.sync_selected_lineage();
+        self.refresh_logs();
+        self.set_operator_note(format!(
+            "opened delegate {}",
+            format_session_id(&delegate_session_id)
+        ));
     }
 
     pub async fn new_session(&mut self) {
@@ -2480,6 +2527,7 @@ impl Dashboard {
         let Some(session_id) = self.selected_session_id().map(ToOwned::to_owned) else {
             self.selected_parent_session = None;
             self.selected_child_sessions.clear();
+            self.focused_delegate_session_id = None;
             self.selected_team_summary = None;
             self.selected_route_preview = None;
             return;
@@ -2608,6 +2656,7 @@ impl Dashboard {
                 Vec::new()
             }
         };
+        self.sync_focused_delegate_selection();
     }
 
     fn build_route_preview(
@@ -2857,6 +2906,136 @@ impl Dashboard {
             .saturating_sub(self.last_metrics_height.max(1))
     }
 
+    fn focused_delegate_index(&self) -> Option<usize> {
+        if self.selected_child_sessions.is_empty() {
+            return None;
+        }
+
+        self.focused_delegate_session_id
+            .as_deref()
+            .and_then(|session_id| {
+                self.selected_child_sessions
+                    .iter()
+                    .position(|delegate| delegate.session_id == session_id)
+            })
+            .or(Some(0))
+    }
+
+    fn set_focused_delegate_by_index(&mut self, index: usize) {
+        let Some(delegate) = self.selected_child_sessions.get(index) else {
+            return;
+        };
+        let delegate_session_id = delegate.session_id.clone();
+
+        self.focused_delegate_session_id = Some(delegate_session_id.clone());
+        self.ensure_focused_delegate_visible();
+        self.set_operator_note(format!(
+            "focused delegate {}",
+            format_session_id(&delegate_session_id)
+        ));
+    }
+
+    fn sync_focused_delegate_selection(&mut self) {
+        self.focused_delegate_session_id = self
+            .focused_delegate_index()
+            .and_then(|index| self.selected_child_sessions.get(index))
+            .map(|delegate| delegate.session_id.clone());
+        self.ensure_focused_delegate_visible();
+    }
+
+    fn ensure_focused_delegate_visible(&mut self) {
+        let Some(delegate_index) = self.focused_delegate_index() else {
+            return;
+        };
+        let Some(line_index) = self.delegate_metrics_line_index(delegate_index) else {
+            return;
+        };
+
+        let viewport_height = self.last_metrics_height.max(1);
+        if line_index < self.metrics_scroll_offset {
+            self.metrics_scroll_offset = line_index;
+        } else if line_index >= self.metrics_scroll_offset + viewport_height {
+            self.metrics_scroll_offset =
+                line_index.saturating_sub(viewport_height.saturating_sub(1));
+        }
+        self.metrics_scroll_offset = self.metrics_scroll_offset.min(self.max_metrics_scroll());
+    }
+
+    fn delegate_metrics_line_index(&self, target_index: usize) -> Option<usize> {
+        if target_index >= self.selected_child_sessions.len() {
+            return None;
+        }
+
+        let mut line_index = self.metrics_line_count_before_delegates();
+        for delegate in self.selected_child_sessions.iter().take(target_index) {
+            line_index += 1;
+            if delegate.last_output_preview.is_some() {
+                line_index += 1;
+            }
+        }
+
+        Some(line_index)
+    }
+
+    fn metrics_line_count_before_delegates(&self) -> usize {
+        if self.sessions.get(self.selected_session).is_none() {
+            return 0;
+        }
+
+        let mut line_count = 2;
+        if self.selected_parent_session.is_some() {
+            line_count += 1;
+        }
+        if self.selected_team_summary.is_some() {
+            line_count += 1;
+        }
+        line_count += 1;
+        line_count += 1;
+
+        let stabilized = self.daemon_activity.stabilized_after_recovery_at();
+        if self.daemon_activity.chronic_saturation_streak > 0 {
+            line_count += 1;
+        }
+        if self.daemon_activity.operator_escalation_required() {
+            line_count += 1;
+        }
+        if self
+            .daemon_activity
+            .chronic_saturation_cleared_at()
+            .is_some()
+        {
+            line_count += 1;
+        }
+        if stabilized.is_some() {
+            line_count += 1;
+        }
+        if self.daemon_activity.last_dispatch_at.is_some() {
+            line_count += 1;
+        }
+        if stabilized.is_none() {
+            if self.daemon_activity.last_recovery_dispatch_at.is_some() {
+                line_count += 1;
+            }
+            if self.daemon_activity.last_rebalance_at.is_some() {
+                line_count += 1;
+            }
+        }
+        if self.daemon_activity.last_auto_merge_at.is_some() {
+            line_count += 1;
+        }
+        if self.daemon_activity.last_auto_prune_at.is_some() {
+            line_count += 1;
+        }
+        if self.selected_route_preview.is_some() {
+            line_count += 1;
+        }
+        if !self.selected_child_sessions.is_empty() {
+            line_count += 1;
+        }
+
+        line_count
+    }
+
     #[cfg(test)]
     fn visible_output_text(&self) -> String {
         self.visible_output_lines()
@@ -3067,7 +3246,14 @@ impl Dashboard {
                 lines.push("Delegates".to_string());
                 for child in &self.selected_child_sessions {
                     let mut child_line = format!(
-                        "- {} [{}] | next {}",
+                        "{} {} [{}] | next {}",
+                        if self.focused_delegate_session_id.as_deref()
+                            == Some(child.session_id.as_str())
+                        {
+                            ">>"
+                        } else {
+                            "-"
+                        },
                         format_session_id(&child.session_id),
                         session_state_label(&child.state),
                         delegate_next_action(child)
@@ -4663,6 +4849,164 @@ diff --git a/src/next.rs b/src/next.rs
     }
 
     #[test]
+    fn selected_session_metrics_text_marks_focused_delegate_row() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.selected_child_sessions = vec![
+            DelegatedChildSummary {
+                session_id: "delegate-12345678".to_string(),
+                state: SessionState::Running,
+                worktree_health: None,
+                approval_backlog: 0,
+                handoff_backlog: 0,
+                tokens_used: 128,
+                files_changed: 1,
+                duration_secs: 5,
+                task_preview: "First delegate".to_string(),
+                branch: None,
+                last_output_preview: None,
+            },
+            DelegatedChildSummary {
+                session_id: "delegate-22345678".to_string(),
+                state: SessionState::Idle,
+                worktree_health: Some(worktree::WorktreeHealth::InProgress),
+                approval_backlog: 1,
+                handoff_backlog: 2,
+                tokens_used: 64,
+                files_changed: 2,
+                duration_secs: 10,
+                task_preview: "Second delegate".to_string(),
+                branch: Some("ecc/delegate-22345678".to_string()),
+                last_output_preview: Some("Waiting on approval".to_string()),
+            },
+        ];
+        dashboard.focused_delegate_session_id = Some("delegate-22345678".to_string());
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("- delegate [Running] | next let it run"));
+        assert!(text.contains(
+            ">> delegate [Idle] | next review approvals | worktree in progress | approvals 1 | backlog 2 | progress 64 tok / 2 files / 00:00:10 | task Second delegate | branch ecc/delegate-22345678"
+        ));
+        assert!(text.contains("  last output Waiting on approval"));
+    }
+
+    #[test]
+    fn focus_next_delegate_wraps_across_delegate_board() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.selected_child_sessions = vec![
+            DelegatedChildSummary {
+                session_id: "delegate-12345678".to_string(),
+                state: SessionState::Running,
+                worktree_health: None,
+                approval_backlog: 0,
+                handoff_backlog: 0,
+                tokens_used: 128,
+                files_changed: 1,
+                duration_secs: 5,
+                task_preview: "First delegate".to_string(),
+                branch: None,
+                last_output_preview: None,
+            },
+            DelegatedChildSummary {
+                session_id: "delegate-22345678".to_string(),
+                state: SessionState::Idle,
+                worktree_health: None,
+                approval_backlog: 0,
+                handoff_backlog: 0,
+                tokens_used: 64,
+                files_changed: 2,
+                duration_secs: 10,
+                task_preview: "Second delegate".to_string(),
+                branch: None,
+                last_output_preview: None,
+            },
+        ];
+        dashboard.focused_delegate_session_id = Some("delegate-12345678".to_string());
+
+        dashboard.focus_next_delegate();
+        assert_eq!(
+            dashboard.focused_delegate_session_id.as_deref(),
+            Some("delegate-22345678")
+        );
+
+        dashboard.focus_next_delegate();
+        assert_eq!(
+            dashboard.focused_delegate_session_id.as_deref(),
+            Some("delegate-12345678")
+        );
+    }
+
+    #[test]
+    fn open_focused_delegate_switches_selected_session() {
+        let sessions = vec![
+            sample_session(
+                "lead-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/lead"),
+                512,
+                42,
+            ),
+            sample_session(
+                "delegate-12345678",
+                "claude",
+                SessionState::Running,
+                Some("ecc/delegate"),
+                256,
+                12,
+            ),
+        ];
+        let mut dashboard = test_dashboard(sessions, 0);
+        dashboard.selected_child_sessions = vec![DelegatedChildSummary {
+            session_id: "delegate-12345678".to_string(),
+            state: SessionState::Running,
+            worktree_health: Some(worktree::WorktreeHealth::InProgress),
+            approval_backlog: 1,
+            handoff_backlog: 0,
+            tokens_used: 256,
+            files_changed: 2,
+            duration_secs: 12,
+            task_preview: "Investigate focused delegate navigation".to_string(),
+            branch: Some("ecc/delegate".to_string()),
+            last_output_preview: Some("Reviewing lead metrics".to_string()),
+        }];
+        dashboard.focused_delegate_session_id = Some("delegate-12345678".to_string());
+        dashboard.output_follow = false;
+        dashboard.output_scroll_offset = 9;
+        dashboard.metrics_scroll_offset = 4;
+
+        dashboard.open_focused_delegate();
+
+        assert_eq!(dashboard.selected_session_id(), Some("delegate-12345678"));
+        assert!(dashboard.output_follow);
+        assert_eq!(dashboard.output_scroll_offset, 0);
+        assert_eq!(dashboard.metrics_scroll_offset, 0);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("opened delegate delegate")
+        );
+    }
+
+    #[test]
     fn selected_session_metrics_text_shows_worktree_and_auto_merge_policy_state() {
         let mut dashboard = test_dashboard(
             vec![sample_session(
@@ -5304,6 +5648,70 @@ diff --git a/src/next.rs b/src/next.rs
         assert_eq!(
             dashboard.selected_child_sessions[0].worktree_health,
             Some(worktree::WorktreeHealth::Conflicted)
+        );
+    }
+
+    #[test]
+    fn sync_selected_lineage_preserves_focused_delegate_by_session_id() {
+        let lead = sample_session(
+            "lead-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/lead"),
+            512,
+            42,
+        );
+        let conflicted = sample_session(
+            "worker-conflict",
+            "planner",
+            SessionState::Running,
+            Some("ecc/conflict"),
+            128,
+            12,
+        );
+        let idle = sample_session(
+            "worker-idle",
+            "planner",
+            SessionState::Idle,
+            Some("ecc/idle"),
+            64,
+            6,
+        );
+
+        let mut dashboard = test_dashboard(vec![lead.clone(), conflicted.clone(), idle.clone()], 0);
+        dashboard.db.insert_session(&lead).unwrap();
+        dashboard.db.insert_session(&conflicted).unwrap();
+        dashboard.db.insert_session(&idle).unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-conflict",
+                "{\"task\":\"Handle conflict\",\"context\":\"Delegated from lead\"}",
+                "task_handoff",
+            )
+            .unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-idle",
+                "{\"task\":\"Idle follow-up\",\"context\":\"Delegated from lead\"}",
+                "task_handoff",
+            )
+            .unwrap();
+        dashboard.sync_selected_lineage();
+        dashboard.focused_delegate_session_id = Some("worker-idle".to_string());
+        dashboard.worktree_health_by_session.insert(
+            "worker-conflict".into(),
+            worktree::WorktreeHealth::Conflicted,
+        );
+
+        dashboard.sync_selected_lineage();
+
+        assert_eq!(
+            dashboard.focused_delegate_session_id.as_deref(),
+            Some("worker-idle")
         );
     }
 
@@ -7050,6 +7458,7 @@ diff --git a/src/next.rs b/src/next.rs
             selected_messages: Vec::new(),
             selected_parent_session: None,
             selected_child_sessions: Vec::new(),
+            focused_delegate_session_id: None,
             selected_team_summary: None,
             selected_route_preview: None,
             logs: Vec::new(),

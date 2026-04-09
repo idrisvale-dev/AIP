@@ -56,6 +56,9 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
                     (_, KeyCode::Char('-')) => dashboard.decrease_pane_size(),
                     (_, KeyCode::Char('j')) | (_, KeyCode::Down) => dashboard.scroll_down(),
                     (_, KeyCode::Char('k')) | (_, KeyCode::Up) => dashboard.scroll_up(),
+                    (_, KeyCode::Char('[')) => dashboard.focus_previous_delegate(),
+                    (_, KeyCode::Char(']')) => dashboard.focus_next_delegate(),
+                    (_, KeyCode::Enter) => dashboard.open_focused_delegate(),
                     (_, KeyCode::Char('/')) => dashboard.begin_search(),
                     (_, KeyCode::Esc) => dashboard.clear_search(),
                     (_, KeyCode::Char('n')) if dashboard.has_active_search() => {
