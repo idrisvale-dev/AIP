@@ -2256,22 +2256,43 @@ impl Dashboard {
     }
 
     pub async fn prune_inactive_worktrees(&mut self) {
-        match manager::prune_inactive_worktrees(&self.db).await {
+        match manager::prune_inactive_worktrees(&self.db, &self.cfg).await {
             Ok(outcome) => {
                 self.refresh();
-                if outcome.cleaned_session_ids.is_empty() {
+                if outcome.cleaned_session_ids.is_empty() && outcome.retained_session_ids.is_empty()
+                {
                     self.set_operator_note("no inactive worktrees to prune".to_string());
-                } else if outcome.active_with_worktree_ids.is_empty() {
+                } else if outcome.cleaned_session_ids.is_empty() {
                     self.set_operator_note(format!(
-                        "pruned {} inactive worktree(s)",
-                        outcome.cleaned_session_ids.len()
+                        "deferred {} inactive worktree(s) within retention",
+                        outcome.retained_session_ids.len()
                     ));
+                } else if outcome.active_with_worktree_ids.is_empty() {
+                    if outcome.retained_session_ids.is_empty() {
+                        self.set_operator_note(format!(
+                            "pruned {} inactive worktree(s)",
+                            outcome.cleaned_session_ids.len()
+                        ));
+                    } else {
+                        self.set_operator_note(format!(
+                            "pruned {} inactive worktree(s); deferred {} within retention",
+                            outcome.cleaned_session_ids.len(),
+                            outcome.retained_session_ids.len()
+                        ));
+                    }
                 } else {
-                    self.set_operator_note(format!(
+                    let mut note = format!(
                         "pruned {} inactive worktree(s); skipped {} active session(s)",
                         outcome.cleaned_session_ids.len(),
                         outcome.active_with_worktree_ids.len()
-                    ));
+                    );
+                    if !outcome.retained_session_ids.is_empty() {
+                        note.push_str(&format!(
+                            "; deferred {} within retention",
+                            outcome.retained_session_ids.len()
+                        ));
+                    }
+                    self.set_operator_note(note);
                 }
             }
             Err(error) => {
@@ -8745,6 +8766,55 @@ diff --git a/src/next.rs b/src/next.rs
         Ok(())
     }
 
+    #[tokio::test]
+    async fn prune_inactive_worktrees_reports_retained_sessions_within_retention() -> Result<()> {
+        let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
+        let db = StateStore::open(&db_path)?;
+        let now = Utc::now();
+        let retained_path = std::env::temp_dir().join(format!("ecc2-retained-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&retained_path)?;
+
+        db.insert_session(&Session {
+            id: "stopped-1".to_string(),
+            task: "retain me".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: retained_path.clone(),
+            state: SessionState::Stopped,
+            pid: None,
+            worktree: Some(WorktreeInfo {
+                path: retained_path.clone(),
+                branch: "ecc/stopped-1".to_string(),
+                base_branch: "main".to_string(),
+            }),
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let mut cfg = Config::default();
+        cfg.db_path = db_path.clone();
+        cfg.worktree_retention_secs = 3600;
+
+        let dashboard_store = StateStore::open(&db_path)?;
+        let mut dashboard = Dashboard::new(dashboard_store, cfg);
+        dashboard.prune_inactive_worktrees().await;
+
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("deferred 1 inactive worktree(s) within retention")
+        );
+        assert!(db
+            .get_session("stopped-1")?
+            .expect("stopped session should exist")
+            .worktree
+            .is_some());
+
+        let _ = std::fs::remove_dir_all(retained_path);
+        let _ = std::fs::remove_file(db_path);
+        Ok(())
+    }
+
     #[tokio::test(flavor = "current_thread")]
     async fn merge_selected_worktree_sets_operator_note_when_ready() -> Result<()> {
         let tempdir = std::env::temp_dir().join(format!("dashboard-merge-{}", Uuid::new_v4()));
@@ -9636,6 +9706,7 @@ diff --git a/src/next.rs b/src/next.rs
             worktree_branch_prefix: "ecc".to_string(),
             max_parallel_sessions: 4,
             max_parallel_worktrees: 4,
+            worktree_retention_secs: 0,
             session_timeout_secs: 60,
             heartbeat_interval_secs: 5,
             auto_terminate_stale_sessions: false,

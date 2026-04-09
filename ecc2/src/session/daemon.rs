@@ -35,7 +35,7 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
             tracing::error!("Worktree auto-merge pass failed: {e}");
         }
 
-        if let Err(e) = maybe_auto_prune_inactive_worktrees(&db).await {
+        if let Err(e) = maybe_auto_prune_inactive_worktrees(&db, &cfg).await {
             tracing::error!("Worktree auto-prune pass failed: {e}");
         }
 
@@ -393,9 +393,9 @@ where
     Ok(merged)
 }
 
-async fn maybe_auto_prune_inactive_worktrees(db: &StateStore) -> Result<usize> {
+async fn maybe_auto_prune_inactive_worktrees(db: &StateStore, cfg: &Config) -> Result<usize> {
     maybe_auto_prune_inactive_worktrees_with_recorder(
-        || manager::prune_inactive_worktrees(db),
+        || manager::prune_inactive_worktrees(db, cfg),
         |pruned, active| db.record_daemon_auto_prune_pass(pruned, active),
     )
     .await
@@ -421,6 +421,7 @@ where
     let outcome = prune().await?;
     let pruned = outcome.cleaned_session_ids.len();
     let active = outcome.active_with_worktree_ids.len();
+    let retained = outcome.retained_session_ids.len();
     record(pruned, active)?;
 
     if pruned > 0 {
@@ -428,6 +429,9 @@ where
     }
     if active > 0 {
         tracing::info!("Skipped {active} active worktree(s) during auto-prune");
+    }
+    if retained > 0 {
+        tracing::info!("Deferred {retained} inactive worktree(s) within retention");
     }
 
     Ok(pruned)
@@ -1255,6 +1259,7 @@ mod tests {
                 Ok(manager::WorktreePruneOutcome {
                     cleaned_session_ids: vec!["stopped-a".to_string(), "stopped-b".to_string()],
                     active_with_worktree_ids: vec!["running-a".to_string()],
+                    retained_session_ids: vec!["retained-a".to_string()],
                 })
             },
             move |pruned, active| {

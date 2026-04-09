@@ -801,7 +801,7 @@ async fn main() -> Result<()> {
             }
         }
         Some(Commands::PruneWorktrees { json }) => {
-            let outcome = session::manager::prune_inactive_worktrees(&db).await?;
+            let outcome = session::manager::prune_inactive_worktrees(&db, &cfg).await?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&outcome)?);
             } else {
@@ -1431,6 +1431,18 @@ fn format_prune_worktrees_human(outcome: &session::manager::WorktreePruneOutcome
         ));
         for session_id in &outcome.active_with_worktree_ids {
             lines.push(format!("- active {}", short_session(session_id)));
+        }
+    }
+
+    if outcome.retained_session_ids.is_empty() {
+        lines.push("No inactive worktrees are being retained".to_string());
+    } else {
+        lines.push(format!(
+            "Deferred {} inactive worktree(s) still within retention",
+            outcome.retained_session_ids.len()
+        ));
+        for session_id in &outcome.retained_session_ids {
+            lines.push(format!("- retained {}", short_session(session_id)));
         }
     }
 
@@ -2105,12 +2117,15 @@ mod tests {
         let text = format_prune_worktrees_human(&session::manager::WorktreePruneOutcome {
             cleaned_session_ids: vec!["deadbeefcafefeed".to_string()],
             active_with_worktree_ids: vec!["facefeed12345678".to_string()],
+            retained_session_ids: vec!["retain1234567890".to_string()],
         });
 
         assert!(text.contains("Pruned 1 inactive worktree(s)"));
         assert!(text.contains("- cleaned deadbeef"));
         assert!(text.contains("Skipped 1 active session(s) still holding worktrees"));
         assert!(text.contains("- active facefeed"));
+        assert!(text.contains("Deferred 1 inactive worktree(s) still within retention"));
+        assert!(text.contains("- retained retain12"));
     }
 
     #[test]

@@ -36,6 +36,7 @@ pub struct Config {
     pub worktree_branch_prefix: String,
     pub max_parallel_sessions: usize,
     pub max_parallel_worktrees: usize,
+    pub worktree_retention_secs: u64,
     pub session_timeout_secs: u64,
     pub heartbeat_interval_secs: u64,
     pub auto_terminate_stale_sessions: bool,
@@ -97,6 +98,7 @@ impl Default for Config {
             worktree_branch_prefix: "ecc".to_string(),
             max_parallel_sessions: 8,
             max_parallel_worktrees: 6,
+            worktree_retention_secs: 0,
             session_timeout_secs: 3600,
             heartbeat_interval_secs: 30,
             auto_terminate_stale_sessions: false,
@@ -380,6 +382,7 @@ db_path = "/tmp/ecc2.db"
 worktree_root = "/tmp/ecc-worktrees"
 max_parallel_sessions = 8
 max_parallel_worktrees = 6
+worktree_retention_secs = 0
 session_timeout_secs = 3600
 heartbeat_interval_secs = 30
 auto_terminate_stale_sessions = false
@@ -393,6 +396,10 @@ theme = "Dark"
         assert_eq!(
             config.worktree_branch_prefix,
             defaults.worktree_branch_prefix
+        );
+        assert_eq!(
+            config.worktree_retention_secs,
+            defaults.worktree_retention_secs
         );
         assert_eq!(config.cost_budget_usd, defaults.cost_budget_usd);
         assert_eq!(config.token_budget, defaults.token_budget);

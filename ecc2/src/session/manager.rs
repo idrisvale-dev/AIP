@@ -862,12 +862,19 @@ pub async fn merge_ready_worktrees(
 pub struct WorktreePruneOutcome {
     pub cleaned_session_ids: Vec<String>,
     pub active_with_worktree_ids: Vec<String>,
+    pub retained_session_ids: Vec<String>,
 }
 
-pub async fn prune_inactive_worktrees(db: &StateStore) -> Result<WorktreePruneOutcome> {
+pub async fn prune_inactive_worktrees(
+    db: &StateStore,
+    cfg: &Config,
+) -> Result<WorktreePruneOutcome> {
     let sessions = db.list_sessions()?;
     let mut cleaned_session_ids = Vec::new();
     let mut active_with_worktree_ids = Vec::new();
+    let mut retained_session_ids = Vec::new();
+    let retention = chrono::Duration::seconds(cfg.worktree_retention_secs as i64);
+    let now = chrono::Utc::now();
 
     for session in sessions {
         let Some(_) = session.worktree.as_ref() else {
@@ -882,6 +889,13 @@ pub async fn prune_inactive_worktrees(db: &StateStore) -> Result<WorktreePruneOu
             continue;
         }
 
+        if retention > chrono::Duration::zero()
+            && now.signed_duration_since(session.last_heartbeat_at) < retention
+        {
+            retained_session_ids.push(session.id);
+            continue;
+        }
+
         cleanup_session_worktree(db, &session.id).await?;
         cleaned_session_ids.push(session.id);
     }
@@ -889,6 +903,7 @@ pub async fn prune_inactive_worktrees(db: &StateStore) -> Result<WorktreePruneOu
     Ok(WorktreePruneOutcome {
         cleaned_session_ids,
         active_with_worktree_ids,
+        retained_session_ids,
     })
 }
 
@@ -1922,6 +1937,7 @@ mod tests {
             worktree_branch_prefix: "ecc".to_string(),
             max_parallel_sessions: 4,
             max_parallel_worktrees: 4,
+            worktree_retention_secs: 0,
             session_timeout_secs: 60,
             heartbeat_interval_secs: 5,
             auto_terminate_stale_sessions: false,
@@ -2607,10 +2623,11 @@ mod tests {
             .context("stopped session worktree missing")?
             .path;
 
-        let outcome = prune_inactive_worktrees(&db).await?;
+        let outcome = prune_inactive_worktrees(&db, &cfg).await?;
 
         assert_eq!(outcome.cleaned_session_ids, vec![stopped_id.clone()]);
         assert_eq!(outcome.active_with_worktree_ids, vec![active_id.clone()]);
+        assert!(outcome.retained_session_ids.is_empty());
         assert!(active_path.exists(), "active worktree should remain");
         assert!(!stopped_path.exists(), "stopped worktree should be removed");
 
@@ -2629,6 +2646,64 @@ mod tests {
             stopped_after.worktree.is_none(),
             "stopped session worktree metadata should be cleared"
         );
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn prune_inactive_worktrees_defers_recent_sessions_within_retention() -> Result<()> {
+        let tempdir = TestDir::new("manager-prune-worktree-retention")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.worktree_retention_secs = 3600;
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_claude, _) = write_fake_claude(tempdir.path())?;
+
+        let session_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "recently completed worktree",
+            "claude",
+            true,
+            &repo_root,
+            &fake_claude,
+        )
+        .await?;
+
+        stop_session_with_options(&db, &session_id, false).await?;
+
+        let before = db
+            .get_session(&session_id)?
+            .context("retained session should exist")?;
+        let worktree_path = before
+            .worktree
+            .clone()
+            .context("retained session worktree missing")?
+            .path;
+
+        let outcome = prune_inactive_worktrees(&db, &cfg).await?;
+
+        assert!(outcome.cleaned_session_ids.is_empty());
+        assert!(outcome.active_with_worktree_ids.is_empty());
+        assert_eq!(outcome.retained_session_ids, vec![session_id.clone()]);
+        assert!(worktree_path.exists(), "retained worktree should remain");
+        assert!(
+            db.get_session(&session_id)?
+                .context("retained session should still exist")?
+                .worktree
+                .is_some(),
+            "retained session should keep worktree metadata"
+        );
+
+        crate::worktree::remove(
+            &db.get_session(&session_id)?
+                .context("retained session should still exist")?
+                .worktree
+                .context("retained session should still have worktree")?,
+        )?;
+        db.clear_worktree_to_dir(&session_id, &repo_root)?;
 
         Ok(())
     }
