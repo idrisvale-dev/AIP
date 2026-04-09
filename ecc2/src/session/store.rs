@@ -155,7 +155,9 @@ impl StateStore {
                 session_id TEXT NOT NULL REFERENCES sessions(id),
                 tool_name TEXT NOT NULL,
                 input_summary TEXT,
+                input_params_json TEXT NOT NULL DEFAULT '{}',
                 output_summary TEXT,
+                trigger_summary TEXT NOT NULL DEFAULT '',
                 duration_ms INTEGER,
                 risk_score REAL DEFAULT 0.0,
                 timestamp TEXT NOT NULL,
@@ -291,6 +293,24 @@ impl StateStore {
                     [],
                 )
                 .context("Failed to add file_events_json column to tool_log table")?;
+        }
+
+        if !self.has_column("tool_log", "input_params_json")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE tool_log ADD COLUMN input_params_json TEXT NOT NULL DEFAULT '{}'",
+                    [],
+                )
+                .context("Failed to add input_params_json column to tool_log table")?;
+        }
+
+        if !self.has_column("tool_log", "trigger_summary")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE tool_log ADD COLUMN trigger_summary TEXT NOT NULL DEFAULT ''",
+                    [],
+                )
+                .context("Failed to add trigger_summary column to tool_log table")?;
         }
 
         if !self.has_column("daemon_activity", "last_dispatch_deferred")? {
@@ -754,6 +774,8 @@ impl StateStore {
             tool_name: String,
             #[serde(default)]
             input_summary: String,
+            #[serde(default = "default_input_params_json")]
+            input_params_json: String,
             #[serde(default)]
             output_summary: String,
             #[serde(default)]
@@ -781,6 +803,11 @@ impl StateStore {
         let reader = BufReader::new(file);
         let mut aggregates: HashMap<String, ActivityAggregate> = HashMap::new();
         let mut seen_event_ids = HashSet::new();
+        let session_tasks = self
+            .list_sessions()?
+            .into_iter()
+            .map(|session| (session.id, session.task))
+            .collect::<HashMap<_, _>>();
 
         for line in reader.lines() {
             let line = line?;
@@ -853,6 +880,7 @@ impl StateStore {
             )
             .score;
             let session_id = row.session_id.clone();
+            let trigger_summary = session_tasks.get(&session_id).cloned().unwrap_or_default();
 
             self.conn.execute(
                 "INSERT OR IGNORE INTO tool_log (
@@ -860,20 +888,24 @@ impl StateStore {
                     session_id,
                     tool_name,
                     input_summary,
+                    input_params_json,
                     output_summary,
+                    trigger_summary,
                     duration_ms,
                     risk_score,
                     timestamp,
                     file_paths_json,
                     file_events_json
                  )
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                 rusqlite::params![
                     row.id,
                     row.session_id,
                     row.tool_name,
                     row.input_summary,
+                    row.input_params_json,
                     row.output_summary,
+                    trigger_summary,
                     row.duration_ms,
                     risk_score,
                     timestamp,
@@ -1472,19 +1504,23 @@ impl StateStore {
         session_id: &str,
         tool_name: &str,
         input_summary: &str,
+        input_params_json: &str,
         output_summary: &str,
+        trigger_summary: &str,
         duration_ms: u64,
         risk_score: f64,
         timestamp: &str,
     ) -> Result<ToolLogEntry> {
         self.conn.execute(
-            "INSERT INTO tool_log (session_id, tool_name, input_summary, output_summary, duration_ms, risk_score, timestamp)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT INTO tool_log (session_id, tool_name, input_summary, input_params_json, output_summary, trigger_summary, duration_ms, risk_score, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             rusqlite::params![
                 session_id,
                 tool_name,
                 input_summary,
+                input_params_json,
                 output_summary,
+                trigger_summary,
                 duration_ms,
                 risk_score,
                 timestamp,
@@ -1496,7 +1532,9 @@ impl StateStore {
             session_id: session_id.to_string(),
             tool_name: tool_name.to_string(),
             input_summary: input_summary.to_string(),
+            input_params_json: input_params_json.to_string(),
             output_summary: output_summary.to_string(),
+            trigger_summary: trigger_summary.to_string(),
             duration_ms,
             risk_score,
             timestamp: timestamp.to_string(),
@@ -1519,7 +1557,7 @@ impl StateStore {
         )?;
 
         let mut stmt = self.conn.prepare(
-            "SELECT id, session_id, tool_name, input_summary, output_summary, duration_ms, risk_score, timestamp
+            "SELECT id, session_id, tool_name, input_summary, input_params_json, output_summary, trigger_summary, duration_ms, risk_score, timestamp
              FROM tool_log
              WHERE session_id = ?1
              ORDER BY timestamp DESC, id DESC
@@ -1533,10 +1571,14 @@ impl StateStore {
                     session_id: row.get(1)?,
                     tool_name: row.get(2)?,
                     input_summary: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
-                    output_summary: row.get::<_, Option<String>>(4)?.unwrap_or_default(),
-                    duration_ms: row.get::<_, Option<u64>>(5)?.unwrap_or_default(),
-                    risk_score: row.get::<_, Option<f64>>(6)?.unwrap_or_default(),
-                    timestamp: row.get(7)?,
+                    input_params_json: row
+                        .get::<_, Option<String>>(4)?
+                        .unwrap_or_else(|| "{}".to_string()),
+                    output_summary: row.get::<_, Option<String>>(5)?.unwrap_or_default(),
+                    trigger_summary: row.get::<_, Option<String>>(6)?.unwrap_or_default(),
+                    duration_ms: row.get::<_, Option<u64>>(7)?.unwrap_or_default(),
+                    risk_score: row.get::<_, Option<f64>>(8)?.unwrap_or_default(),
+                    timestamp: row.get(9)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -1755,6 +1797,10 @@ fn normalize_optional_string(value: Option<String>) -> Option<String> {
             Some(trimmed.to_string())
         }
     })
+}
+
+fn default_input_params_json() -> String {
+    "{}".to_string()
 }
 
 fn infer_file_activity_action(tool_name: &str) -> FileActivityAction {
@@ -1991,9 +2037,9 @@ mod tests {
         fs::write(
             &metrics_path,
             concat!(
-                "{\"id\":\"evt-1\",\"session_id\":\"session-1\",\"tool_name\":\"Read\",\"input_summary\":\"Read src/lib.rs\",\"output_summary\":\"ok\",\"file_paths\":[\"src/lib.rs\"],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
-                "{\"id\":\"evt-1\",\"session_id\":\"session-1\",\"tool_name\":\"Read\",\"input_summary\":\"Read src/lib.rs\",\"output_summary\":\"ok\",\"file_paths\":[\"src/lib.rs\"],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
-                "{\"id\":\"evt-2\",\"session_id\":\"session-1\",\"tool_name\":\"Write\",\"input_summary\":\"Write README.md\",\"output_summary\":\"ok\",\"file_paths\":[\"src/lib.rs\",\"README.md\"],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n"
+                "{\"id\":\"evt-1\",\"session_id\":\"session-1\",\"tool_name\":\"Read\",\"input_summary\":\"Read src/lib.rs\",\"input_params_json\":\"{\\\"file_path\\\":\\\"src/lib.rs\\\"}\",\"output_summary\":\"ok\",\"file_paths\":[\"src/lib.rs\"],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
+                "{\"id\":\"evt-1\",\"session_id\":\"session-1\",\"tool_name\":\"Read\",\"input_summary\":\"Read src/lib.rs\",\"input_params_json\":\"{\\\"file_path\\\":\\\"src/lib.rs\\\"}\",\"output_summary\":\"ok\",\"file_paths\":[\"src/lib.rs\"],\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
+                "{\"id\":\"evt-2\",\"session_id\":\"session-1\",\"tool_name\":\"Write\",\"input_summary\":\"Write README.md\",\"input_params_json\":\"{\\\"file_path\\\":\\\"README.md\\\",\\\"content\\\":\\\"hello\\\"}\",\"output_summary\":\"ok\",\"file_paths\":[\"src/lib.rs\",\"README.md\"],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n"
             ),
         )?;
 
@@ -2015,6 +2061,16 @@ mod tests {
         assert_eq!(logs.total, 2);
         assert_eq!(logs.entries[0].tool_name, "Write");
         assert_eq!(logs.entries[1].tool_name, "Read");
+        assert_eq!(
+            logs.entries[0].input_params_json,
+            "{\"file_path\":\"README.md\",\"content\":\"hello\"}"
+        );
+        assert_eq!(logs.entries[0].trigger_summary, "sync tools");
+        assert_eq!(
+            logs.entries[1].input_params_json,
+            "{\"file_path\":\"src/lib.rs\"}"
+        );
+        assert_eq!(logs.entries[1].trigger_summary, "sync tools");
 
         Ok(())
     }

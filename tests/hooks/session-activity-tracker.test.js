@@ -95,6 +95,7 @@ function runTests() {
     const row = JSON.parse(fs.readFileSync(metricsFile, 'utf8').trim());
     assert.strictEqual(row.session_id, 'ecc-session-1234');
     assert.strictEqual(row.tool_name, 'Write');
+    assert.strictEqual(row.input_params_json, '{"file_path":"src/app.rs"}');
     assert.deepStrictEqual(row.file_paths, ['src/app.rs']);
     assert.deepStrictEqual(row.file_events, [{ path: 'src/app.rs', action: 'create' }]);
     assert.ok(row.id, 'Expected stable event id');
@@ -331,6 +332,9 @@ function runTests() {
     assert.ok(row.input_summary.includes('<REDACTED>'));
     assert.ok(!row.input_summary.includes('abc123'));
     assert.ok(!row.input_summary.includes('topsecret'));
+    assert.ok(row.input_params_json.includes('<REDACTED>'));
+    assert.ok(!row.input_params_json.includes('abc123'));
+    assert.ok(!row.input_params_json.includes('topsecret'));
 
     fs.rmSync(tmpHome, { recursive: true, force: true });
   }) ? passed++ : failed++);

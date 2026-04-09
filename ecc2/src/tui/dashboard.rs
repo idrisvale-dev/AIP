@@ -883,15 +883,31 @@ impl Dashboard {
             self.logs
                 .iter()
                 .map(|entry| {
-                    format!(
-                        "[{}] {} | {}ms | risk {:.0}%\ninput: {}\noutput: {}",
+                    let mut block = format!(
+                        "[{}] {} | {}ms | risk {:.0}%",
                         self.short_timestamp(&entry.timestamp),
                         entry.tool_name,
                         entry.duration_ms,
                         entry.risk_score * 100.0,
+                    );
+                    if !entry.trigger_summary.trim().is_empty() {
+                        block.push_str(&format!(
+                            "\nwhy: {}",
+                            self.log_field(&entry.trigger_summary)
+                        ));
+                    }
+                    if entry.input_params_json.trim() != "{}" {
+                        block.push_str(&format!(
+                            "\nparams: {}",
+                            self.log_field(&entry.input_params_json)
+                        ));
+                    }
+                    block.push_str(&format!(
+                        "\ninput: {}\noutput: {}",
                         self.log_field(&entry.input_summary),
                         self.log_field(&entry.output_summary)
-                    )
+                    ));
+                    block
                 })
                 .collect::<Vec<_>>()
                 .join("\n\n")
@@ -3559,7 +3575,7 @@ impl Dashboard {
                     entry.duration_ms,
                     truncate_for_dashboard(&entry.input_summary, 56)
                 ),
-                detail_lines: Vec::new(),
+                detail_lines: tool_log_detail_lines(&entry),
             })
         }));
         events
@@ -5475,6 +5491,23 @@ fn file_overlap_summary(entry: &FileActivityOverlap, timestamp: &str) -> String 
     )
 }
 
+fn tool_log_detail_lines(entry: &ToolLogEntry) -> Vec<String> {
+    let mut lines = Vec::new();
+    if !entry.trigger_summary.trim().is_empty() {
+        lines.push(format!(
+            "why {}",
+            truncate_for_dashboard(&entry.trigger_summary, 72)
+        ));
+    }
+    if entry.input_params_json.trim() != "{}" {
+        lines.push(format!(
+            "params {}",
+            truncate_for_dashboard(&entry.input_params_json, 72)
+        ));
+    }
+    lines
+}
+
 fn file_activity_verb(action: crate::session::FileActivityAction) -> &'static str {
     match action {
         crate::session::FileActivityAction::Read => "read",
@@ -6050,7 +6083,9 @@ mod tests {
                 "focus-12345678",
                 "bash",
                 "cargo test -q",
+                "{\"command\":\"cargo test -q\"}",
                 "ok",
+                "stabilize planner session",
                 240,
                 0.2,
                 &(now - chrono::Duration::minutes(3)).to_rfc3339(),
@@ -6069,6 +6104,8 @@ mod tests {
         assert!(rendered.contains("created session as planner"));
         assert!(rendered.contains("received query lead-123"));
         assert!(rendered.contains("tool bash"));
+        assert!(rendered.contains("why stabilize planner session"));
+        assert!(rendered.contains("params {\"command\":\"cargo test -q\"}"));
         assert!(rendered.contains("files touched 3"));
     }
 
@@ -6104,7 +6141,9 @@ mod tests {
                 "focus-12345678",
                 "bash",
                 "cargo test -q",
+                "{}",
                 "ok",
+                "",
                 240,
                 0.2,
                 &(now - chrono::Duration::minutes(3)).to_rfc3339(),
@@ -6254,7 +6293,9 @@ mod tests {
                 "focus-12345678",
                 "bash",
                 "cargo test -q",
+                "{}",
                 "ok",
+                "",
                 240,
                 0.2,
                 &(now - chrono::Duration::minutes(3)).to_rfc3339(),
@@ -6313,7 +6354,9 @@ mod tests {
                 "focus-12345678",
                 "bash",
                 "cargo test -q",
+                "{}",
                 "ok",
+                "",
                 240,
                 0.2,
                 &(now - chrono::Duration::minutes(4)).to_rfc3339(),
@@ -6325,7 +6368,9 @@ mod tests {
                 "review-87654321",
                 "git",
                 "git status --short",
+                "{}",
                 "ok",
+                "",
                 120,
                 0.1,
                 &(now - chrono::Duration::minutes(2)).to_rfc3339(),

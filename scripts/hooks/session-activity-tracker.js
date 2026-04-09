@@ -50,6 +50,50 @@ function truncateSummary(value, maxLength = 220) {
   return `${normalized.slice(0, maxLength - 3)}...`;
 }
 
+function sanitizeParamValue(value, depth = 0) {
+  if (depth >= 4) {
+    return '[Truncated]';
+  }
+
+  if (value == null) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    return truncateSummary(value, 160);
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 8).map(entry => sanitizeParamValue(entry, depth + 1));
+  }
+
+  if (typeof value === 'object') {
+    const output = {};
+    for (const [key, nested] of Object.entries(value).slice(0, 20)) {
+      output[key] = sanitizeParamValue(nested, depth + 1);
+    }
+    return output;
+  }
+
+  return truncateSummary(String(value), 160);
+}
+
+function sanitizeInputParams(toolInput) {
+  if (!toolInput || typeof toolInput !== 'object' || Array.isArray(toolInput)) {
+    return '{}';
+  }
+
+  try {
+    return JSON.stringify(sanitizeParamValue(toolInput));
+  } catch {
+    return '{}';
+  }
+}
+
 function pushPathCandidate(paths, value) {
   const candidate = String(value || '').trim();
   if (!candidate) {
@@ -514,6 +558,7 @@ function buildActivityRow(input, env = process.env) {
     session_id: sessionId,
     tool_name: toolName,
     input_summary: summarizeInput(toolName, toolInput, filePaths),
+    input_params_json: sanitizeInputParams(toolInput),
     output_summary: summarizeOutput(input?.tool_output),
     duration_ms: 0,
     file_paths: filePaths,
