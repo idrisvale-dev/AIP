@@ -721,7 +721,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
@@ -802,6 +802,7 @@ impl Dashboard {
             "  b       Rebalance backed-up delegate handoff backlog for selected lead",
             "  B       Rebalance backed-up delegate handoff backlog across lead teams",
             "  i       Drain unread task handoffs from selected lead",
+            "  I       Jump to the next unread approval/conflict target session",
             "  g       Auto-dispatch unread handoffs across lead sessions",
             "  G       Dispatch then rebalance backlog across lead teams",
             "  v       Toggle selected worktree diff in output pane",
@@ -1175,6 +1176,28 @@ impl Dashboard {
         self.set_operator_note(format!(
             "opened delegate {}",
             format_session_id(&delegate_session_id)
+        ));
+    }
+
+    pub fn focus_next_approval_target(&mut self) {
+        self.sync_approval_queue();
+        let Some(target_session_id) = self.next_approval_target_session_id() else {
+            self.set_operator_note("approval queue clear".to_string());
+            return;
+        };
+
+        self.sync_selection_by_id(Some(&target_session_id));
+        self.reset_output_view();
+        self.reset_metrics_view();
+        self.sync_selected_output();
+        self.sync_selected_diff();
+        self.unread_message_counts = self.db.unread_message_counts().unwrap_or_default();
+        self.sync_selected_messages();
+        self.sync_selected_lineage();
+        self.refresh_logs();
+        self.set_operator_note(format!(
+            "focused approval target {}",
+            format_session_id(&target_session_id)
         ));
     }
 
@@ -2874,6 +2897,44 @@ impl Dashboard {
             })
             .map(|session| session.id.as_str())
             .collect()
+    }
+
+    fn next_approval_target_session_id(&self) -> Option<String> {
+        let pending_items: usize = self.approval_queue_counts.values().sum();
+        if pending_items == 0 {
+            return None;
+        }
+
+        let active_session_ids: HashSet<_> =
+            self.sessions.iter().map(|session| &session.id).collect();
+        let queue = self.db.unread_approval_queue(pending_items).ok()?;
+        let mut seen = HashSet::new();
+        let ordered_targets = queue
+            .into_iter()
+            .filter_map(|message| {
+                if active_session_ids.contains(&message.to_session)
+                    && seen.insert(message.to_session.clone())
+                {
+                    Some(message.to_session)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        if ordered_targets.is_empty() {
+            return None;
+        }
+
+        let current_session_id = self.selected_session_id();
+        current_session_id
+            .and_then(|session_id| {
+                ordered_targets
+                    .iter()
+                    .position(|target_session_id| target_session_id == session_id)
+                    .map(|index| ordered_targets[(index + 1) % ordered_targets.len()].clone())
+            })
+            .or_else(|| ordered_targets.first().cloned())
     }
 
     fn sync_output_scroll(&mut self, viewport_height: usize) {
@@ -4631,6 +4692,158 @@ mod tests {
 
         assert_eq!(dashboard.approval_queue_counts.get("worker-123456"), None);
         assert!(dashboard.approval_queue_preview.is_empty());
+    }
+
+    #[test]
+    fn focus_next_approval_target_selects_oldest_unread_target() {
+        let sessions = vec![
+            sample_session(
+                "lead-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/lead"),
+                512,
+                42,
+            ),
+            sample_session(
+                "worker-a",
+                "reviewer",
+                SessionState::Idle,
+                Some("ecc/worker-a"),
+                64,
+                5,
+            ),
+            sample_session(
+                "worker-b",
+                "reviewer",
+                SessionState::Idle,
+                Some("ecc/worker-b"),
+                64,
+                5,
+            ),
+        ];
+        let mut dashboard = test_dashboard(sessions, 0);
+        for session in &dashboard.sessions {
+            dashboard.db.insert_session(session).unwrap();
+        }
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-b",
+                "{\"question\":\"Need approval on B\"}",
+                "query",
+            )
+            .unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-a",
+                "{\"question\":\"Need approval on A\"}",
+                "query",
+            )
+            .unwrap();
+        dashboard.sync_approval_queue();
+
+        dashboard.focus_next_approval_target();
+
+        assert_eq!(dashboard.selected_session_id(), Some("worker-b"));
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("focused approval target worker-b")
+        );
+    }
+
+    #[test]
+    fn focus_next_approval_target_cycles_distinct_targets() {
+        let sessions = vec![
+            sample_session(
+                "lead-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/lead"),
+                512,
+                42,
+            ),
+            sample_session(
+                "worker-a",
+                "reviewer",
+                SessionState::Idle,
+                Some("ecc/worker-a"),
+                64,
+                5,
+            ),
+            sample_session(
+                "worker-b",
+                "reviewer",
+                SessionState::Idle,
+                Some("ecc/worker-b"),
+                64,
+                5,
+            ),
+        ];
+        let mut dashboard = test_dashboard(sessions, 1);
+        for session in &dashboard.sessions {
+            dashboard.db.insert_session(session).unwrap();
+        }
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-a",
+                "{\"question\":\"Need approval on A\"}",
+                "query",
+            )
+            .unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-a",
+                "{\"question\":\"Need another approval on A\"}",
+                "conflict",
+            )
+            .unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-b",
+                "{\"question\":\"Need approval on B\"}",
+                "query",
+            )
+            .unwrap();
+        dashboard.sync_approval_queue();
+
+        dashboard.focus_next_approval_target();
+
+        assert_eq!(dashboard.selected_session_id(), Some("worker-b"));
+        assert_eq!(dashboard.approval_queue_counts.get("worker-a"), Some(&2));
+        assert_eq!(dashboard.approval_queue_counts.get("worker-b"), None);
+    }
+
+    #[test]
+    fn focus_next_approval_target_reports_clear_queue() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "lead-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/lead"),
+                512,
+                42,
+            )],
+            0,
+        );
+
+        dashboard.focus_next_approval_target();
+
+        assert_eq!(dashboard.selected_session_id(), Some("lead-12345678"));
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("approval queue clear")
+        );
     }
 
     #[test]

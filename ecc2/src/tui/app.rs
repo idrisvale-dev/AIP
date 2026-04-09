@@ -73,6 +73,7 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
                     (_, KeyCode::Char('b')) => dashboard.rebalance_selected_team().await,
                     (_, KeyCode::Char('B')) => dashboard.rebalance_all_teams().await,
                     (_, KeyCode::Char('i')) => dashboard.drain_inbox_selected().await,
+                    (_, KeyCode::Char('I')) => dashboard.focus_next_approval_target(),
                     (_, KeyCode::Char('g')) => dashboard.auto_dispatch_backlog().await,
                     (_, KeyCode::Char('G')) => dashboard.coordinate_backlog().await,
                     (_, KeyCode::Char('v')) => dashboard.toggle_output_mode(),
