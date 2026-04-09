@@ -83,6 +83,8 @@ pub struct Dashboard {
     output_follow: bool,
     output_scroll_offset: usize,
     last_output_height: usize,
+    metrics_scroll_offset: usize,
+    last_metrics_height: usize,
     pane_size_percent: u16,
     search_input: Option<String>,
     spawn_input: Option<String>,
@@ -267,6 +269,8 @@ impl Dashboard {
             output_follow: true,
             output_scroll_offset: 0,
             last_output_height: 0,
+            metrics_scroll_offset: 0,
+            last_metrics_height: 0,
             pane_size_percent,
             search_input: None,
             spawn_input: None,
@@ -631,7 +635,7 @@ impl Dashboard {
         )
     }
 
-    fn render_metrics(&self, frame: &mut Frame, area: Rect) {
+    fn render_metrics(&mut self, frame: &mut Frame, area: Rect) {
         let block = Block::default()
             .borders(Borders::ALL)
             .title(" Metrics ")
@@ -670,9 +674,12 @@ impl Dashboard {
             chunks[1],
         );
         frame.render_widget(
-            Paragraph::new(self.selected_session_metrics_text()).wrap(Wrap { trim: true }),
+            Paragraph::new(self.selected_session_metrics_text())
+                .scroll((self.metrics_scroll_offset as u16, 0))
+                .wrap(Wrap { trim: true }),
             chunks[2],
         );
+        self.sync_metrics_scroll(chunks[2].height as usize);
     }
 
     fn render_log(&self, frame: &mut Frame, area: Rect) {
@@ -1060,6 +1067,7 @@ impl Dashboard {
                 self.selected_session = (self.selected_session + 1).min(self.sessions.len() - 1);
                 self.sync_selection();
                 self.reset_output_view();
+                self.reset_metrics_view();
                 self.sync_selected_output();
                 self.sync_selected_diff();
                 self.sync_selected_messages();
@@ -1079,7 +1087,11 @@ impl Dashboard {
                     self.output_scroll_offset = self.output_scroll_offset.saturating_add(1);
                 }
             }
-            Pane::Metrics => {}
+            Pane::Metrics => {
+                let max_scroll = self.max_metrics_scroll();
+                self.metrics_scroll_offset =
+                    self.metrics_scroll_offset.saturating_add(1).min(max_scroll);
+            }
             Pane::Log => {
                 self.output_follow = false;
                 self.output_scroll_offset = self.output_scroll_offset.saturating_add(1);
@@ -1094,6 +1106,7 @@ impl Dashboard {
                 self.selected_session = self.selected_session.saturating_sub(1);
                 self.sync_selection();
                 self.reset_output_view();
+                self.reset_metrics_view();
                 self.sync_selected_output();
                 self.sync_selected_diff();
                 self.sync_selected_messages();
@@ -1108,7 +1121,9 @@ impl Dashboard {
 
                 self.output_scroll_offset = self.output_scroll_offset.saturating_sub(1);
             }
-            Pane::Metrics => {}
+            Pane::Metrics => {
+                self.metrics_scroll_offset = self.metrics_scroll_offset.saturating_sub(1);
+            }
             Pane::Log => {
                 self.output_follow = false;
                 self.output_scroll_offset = self.output_scroll_offset.saturating_sub(1);
@@ -2584,7 +2599,6 @@ impl Dashboard {
                         delegate.session_id.clone(),
                     )
                 });
-                delegated.truncate(3);
                 delegated
             }
             Err(error) => {
@@ -2830,6 +2844,19 @@ impl Dashboard {
             .saturating_sub(self.last_output_height.max(1))
     }
 
+    fn sync_metrics_scroll(&mut self, viewport_height: usize) {
+        self.last_metrics_height = viewport_height.max(1);
+        let max_scroll = self.max_metrics_scroll();
+        self.metrics_scroll_offset = self.metrics_scroll_offset.min(max_scroll);
+    }
+
+    fn max_metrics_scroll(&self) -> usize {
+        self.selected_session_metrics_text()
+            .lines()
+            .count()
+            .saturating_sub(self.last_metrics_height.max(1))
+    }
+
     #[cfg(test)]
     fn visible_output_text(&self) -> String {
         self.visible_output_lines()
@@ -2842,6 +2869,10 @@ impl Dashboard {
     fn reset_output_view(&mut self) {
         self.output_follow = true;
         self.output_scroll_offset = 0;
+    }
+
+    fn reset_metrics_view(&mut self) {
+        self.metrics_scroll_offset = 0;
     }
 
     fn refresh_logs(&mut self) {
@@ -3242,6 +3273,7 @@ impl Dashboard {
         self.refresh();
         self.sync_selection_by_id(select_session_id);
         self.reset_output_view();
+        self.reset_metrics_view();
         self.sync_selected_output();
         self.sync_selected_diff();
         self.sync_selected_messages();
@@ -5276,6 +5308,50 @@ diff --git a/src/next.rs b/src/next.rs
     }
 
     #[test]
+    fn sync_selected_lineage_keeps_all_delegate_rows() {
+        let lead = sample_session(
+            "lead-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/lead"),
+            512,
+            42,
+        );
+
+        let mut sessions = vec![lead.clone()];
+        let mut dashboard = test_dashboard(vec![lead.clone()], 0);
+        dashboard.db.insert_session(&lead).unwrap();
+
+        for index in 0..5 {
+            let child_id = format!("worker-{index}");
+            let child = sample_session(
+                &child_id,
+                "planner",
+                SessionState::Running,
+                Some(&format!("ecc/{child_id}")),
+                64,
+                6,
+            );
+            sessions.push(child.clone());
+            dashboard.db.insert_session(&child).unwrap();
+            dashboard
+                .db
+                .send_message(
+                    "lead-12345678",
+                    &child_id,
+                    "{\"task\":\"Delegated work\",\"context\":\"Delegated from lead\"}",
+                    "task_handoff",
+                )
+                .unwrap();
+        }
+
+        dashboard.sessions = sessions;
+        dashboard.sync_selected_lineage();
+
+        assert_eq!(dashboard.selected_child_sessions.len(), 5);
+    }
+
+    #[test]
     fn aggregate_cost_summary_mentions_total_cost() {
         let db = StateStore::open(Path::new(":memory:")).unwrap();
         let mut cfg = Config::default();
@@ -5454,7 +5530,7 @@ diff --git a/src/next.rs b/src/next.rs
     }
 
     #[test]
-    fn metrics_scroll_does_not_mutate_output_scroll() -> Result<()> {
+    fn metrics_scroll_uses_independent_offset() -> Result<()> {
         let db_path = std::env::temp_dir().join(format!("ecc2-dashboard-{}.db", Uuid::new_v4()));
         let db = StateStore::open(&db_path)?;
         let now = Utc::now();
@@ -5484,10 +5560,13 @@ diff --git a/src/next.rs b/src/next.rs
         let previous_scroll = dashboard.output_scroll_offset;
 
         dashboard.selected_pane = Pane::Metrics;
+        dashboard.last_metrics_height = 2;
         dashboard.scroll_up();
+        dashboard.scroll_down();
         dashboard.scroll_down();
 
         assert_eq!(dashboard.output_scroll_offset, previous_scroll);
+        assert_eq!(dashboard.metrics_scroll_offset, 2);
         let _ = std::fs::remove_file(db_path);
         Ok(())
     }
@@ -6989,6 +7068,8 @@ diff --git a/src/next.rs b/src/next.rs
             output_follow: true,
             output_scroll_offset: 0,
             last_output_height: 0,
+            metrics_scroll_offset: 0,
+            last_metrics_height: 0,
             search_input: None,
             spawn_input: None,
             search_query: None,
