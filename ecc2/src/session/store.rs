@@ -641,6 +641,51 @@ impl StateStore {
         Ok(counts)
     }
 
+    pub fn unread_approval_counts(&self) -> Result<HashMap<String, usize>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT to_session, COUNT(*)
+             FROM messages
+             WHERE read = 0 AND msg_type IN ('query', 'conflict')
+             GROUP BY to_session",
+        )?;
+
+        let counts = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+            })?
+            .collect::<Result<HashMap<_, _>, _>>()?;
+
+        Ok(counts)
+    }
+
+    pub fn unread_approval_queue(&self, limit: usize) -> Result<Vec<SessionMessage>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, from_session, to_session, content, msg_type, read, timestamp
+             FROM messages
+             WHERE read = 0 AND msg_type IN ('query', 'conflict')
+             ORDER BY id ASC
+             LIMIT ?1",
+        )?;
+
+        let messages = stmt.query_map(rusqlite::params![limit as i64], |row| {
+            let timestamp: String = row.get(6)?;
+
+            Ok(SessionMessage {
+                id: row.get(0)?,
+                from_session: row.get(1)?,
+                to_session: row.get(2)?,
+                content: row.get(3)?,
+                msg_type: row.get(4)?,
+                read: row.get::<_, i64>(5)? != 0,
+                timestamp: chrono::DateTime::parse_from_rfc3339(&timestamp)
+                    .unwrap_or_default()
+                    .with_timezone(&chrono::Utc),
+            })
+        })?;
+
+        messages.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
     pub fn unread_task_handoffs_for_session(
         &self,
         session_id: &str,
@@ -1270,6 +1315,53 @@ mod tests {
             db.unread_task_handoff_targets(10)?,
             vec![("worker-2".to_string(), 1), ("worker-3".to_string(), 1),]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn approval_queue_counts_only_queries_and_conflicts() -> Result<()> {
+        let tempdir = TestDir::new("store-approval-queue")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+
+        db.insert_session(&build_session("planner", SessionState::Running))?;
+        db.insert_session(&build_session("worker", SessionState::Pending))?;
+        db.insert_session(&build_session("worker-2", SessionState::Pending))?;
+
+        db.send_message(
+            "planner",
+            "worker",
+            "{\"question\":\"Need operator approval\"}",
+            "query",
+        )?;
+        db.send_message(
+            "planner",
+            "worker",
+            "{\"file\":\"src/main.rs\",\"description\":\"Merge conflict\"}",
+            "conflict",
+        )?;
+        db.send_message(
+            "worker",
+            "planner",
+            "{\"summary\":\"Finished pass\",\"files_changed\":[]}",
+            "completed",
+        )?;
+        db.send_message(
+            "planner",
+            "worker-2",
+            "{\"task\":\"Review auth flow\",\"context\":\"Delegated from planner\"}",
+            "task_handoff",
+        )?;
+
+        let counts = db.unread_approval_counts()?;
+        assert_eq!(counts.get("worker"), Some(&2));
+        assert_eq!(counts.get("planner"), None);
+        assert_eq!(counts.get("worker-2"), None);
+
+        let queue = db.unread_approval_queue(10)?;
+        assert_eq!(queue.len(), 2);
+        assert_eq!(queue[0].msg_type, "query");
+        assert_eq!(queue[1].msg_type, "conflict");
 
         Ok(())
     }
