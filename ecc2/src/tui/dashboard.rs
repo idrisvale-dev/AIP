@@ -84,6 +84,7 @@ pub struct Dashboard {
     selected_session: usize,
     show_help: bool,
     operator_note: Option<String>,
+    pane_command_mode: bool,
     output_follow: bool,
     output_scroll_offset: usize,
     last_output_height: usize,
@@ -319,6 +320,7 @@ impl Dashboard {
             selected_session: 0,
             show_help: false,
             operator_note: None,
+            pane_command_mode: false,
             output_follow: true,
             output_scroll_offset: 0,
             last_output_height: 0,
@@ -911,6 +913,9 @@ impl Dashboard {
                 self.search_scope.label(),
                 self.search_agent_filter_label()
             )
+        } else if self.pane_command_mode {
+            " Ctrl+w | [h/j/k/l] move [1-4] focus [s/v/g] layout [+/-] resize [Esc] cancel |"
+                .to_string()
         } else {
             String::new()
         };
@@ -918,6 +923,7 @@ impl Dashboard {
         let text = if self.spawn_input.is_some()
             || self.search_input.is_some()
             || self.search_query.is_some()
+            || self.pane_command_mode
         {
             format!(" {search_prefix}")
         } else if let Some(note) = self.operator_note.as_ref() {
@@ -997,6 +1003,8 @@ impl Dashboard {
                 "  {:<7} Focus Sessions/Output/Metrics/Log directly",
                 self.pane_focus_shortcuts_label()
             ),
+            "  Ctrl+w  Pane command mode: h/j/k/l move, s/v/g layout, 1-4 focus, +/- resize"
+                .to_string(),
             "  Tab     Next pane".to_string(),
             "  S-Tab   Previous pane".to_string(),
             format!(
@@ -1081,6 +1089,18 @@ impl Dashboard {
         self.move_pane_focus(PaneDirection::Down);
     }
 
+    pub fn begin_pane_command_mode(&mut self) {
+        self.pane_command_mode = true;
+        self.set_operator_note(
+            "pane command mode | h/j/k/l move | s/v/g layout | 1-4 focus | +/- resize"
+                .to_string(),
+        );
+    }
+
+    pub fn is_pane_command_mode(&self) -> bool {
+        self.pane_command_mode
+    }
+
     pub fn handle_pane_navigation_key(&mut self, key: KeyEvent) -> bool {
         match self.cfg.pane_navigation.action_for_key(key) {
             Some(PaneNavigationAction::FocusSlot(slot)) => {
@@ -1106,6 +1126,37 @@ impl Dashboard {
             None => false,
         }
     }
+
+    pub fn handle_pane_command_key(&mut self, key: KeyEvent) -> bool {
+        if !self.pane_command_mode {
+            return false;
+        }
+
+        self.pane_command_mode = false;
+        match key.code {
+            crossterm::event::KeyCode::Esc => {
+                self.set_operator_note("pane command cancelled".to_string());
+            }
+            crossterm::event::KeyCode::Char('h') => self.focus_pane_left(),
+            crossterm::event::KeyCode::Char('j') => self.focus_pane_down(),
+            crossterm::event::KeyCode::Char('k') => self.focus_pane_up(),
+            crossterm::event::KeyCode::Char('l') => self.focus_pane_right(),
+            crossterm::event::KeyCode::Char('1') => self.focus_pane_number(1),
+            crossterm::event::KeyCode::Char('2') => self.focus_pane_number(2),
+            crossterm::event::KeyCode::Char('3') => self.focus_pane_number(3),
+            crossterm::event::KeyCode::Char('4') => self.focus_pane_number(4),
+            crossterm::event::KeyCode::Char('+') | crossterm::event::KeyCode::Char('=') => {
+                self.increase_pane_size()
+            }
+            crossterm::event::KeyCode::Char('-') => self.decrease_pane_size(),
+            crossterm::event::KeyCode::Char('s') => self.set_pane_layout(PaneLayout::Horizontal),
+            crossterm::event::KeyCode::Char('v') => self.set_pane_layout(PaneLayout::Vertical),
+            crossterm::event::KeyCode::Char('g') => self.set_pane_layout(PaneLayout::Grid),
+            _ => self.set_operator_note("unknown pane command".to_string()),
+        }
+        true
+    }
+
 
     pub fn collapse_selected_pane(&mut self) {
         if self.selected_pane == Pane::Sessions {
@@ -1144,6 +1195,11 @@ impl Dashboard {
         self.cycle_pane_layout_with_save(&config_path, |cfg| cfg.save());
     }
 
+    pub fn set_pane_layout(&mut self, layout: PaneLayout) {
+        let config_path = crate::config::Config::config_path();
+        self.set_pane_layout_with_save(layout, &config_path, |cfg| cfg.save());
+    }
+
     fn cycle_pane_layout_with_save<F>(&mut self, config_path: &std::path::Path, save: F)
     where
         F: FnOnce(&Config) -> anyhow::Result<()>,
@@ -1157,6 +1213,43 @@ impl Dashboard {
             PaneLayout::Vertical => PaneLayout::Grid,
             PaneLayout::Grid => PaneLayout::Horizontal,
         };
+        self.pane_size_percent = configured_pane_size(&self.cfg, self.cfg.pane_layout);
+        self.persist_current_pane_size();
+        self.ensure_selected_pane_visible();
+
+        match save(&self.cfg) {
+            Ok(()) => self.set_operator_note(format!(
+                "pane layout set to {} | saved to {}",
+                self.layout_label(),
+                config_path.display()
+            )),
+            Err(error) => {
+                self.cfg.pane_layout = previous_layout;
+                self.pane_size_percent = previous_pane_size;
+                self.selected_pane = previous_selected_pane;
+                self.set_operator_note(format!("failed to persist pane layout: {error}"));
+            }
+        }
+    }
+
+    fn set_pane_layout_with_save<F>(
+        &mut self,
+        layout: PaneLayout,
+        config_path: &std::path::Path,
+        save: F,
+    ) where
+        F: FnOnce(&Config) -> anyhow::Result<()>,
+    {
+        if self.cfg.pane_layout == layout {
+            self.set_operator_note(format!("pane layout already {}", self.layout_label()));
+            return;
+        }
+
+        let previous_layout = self.cfg.pane_layout;
+        let previous_pane_size = self.pane_size_percent;
+        let previous_selected_pane = self.selected_pane;
+
+        self.cfg.pane_layout = layout;
         self.pane_size_percent = configured_pane_size(&self.cfg, self.cfg.pane_layout);
         self.persist_current_pane_size();
         self.ensure_selected_pane_visible();
@@ -8472,6 +8565,52 @@ diff --git a/src/next.rs b/src/next.rs
     }
 
     #[test]
+    fn pane_command_mode_handles_focus_and_cancel() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+
+        dashboard.begin_pane_command_mode();
+        assert!(dashboard.is_pane_command_mode());
+
+        assert!(dashboard.handle_pane_command_key(KeyEvent::new(
+            crossterm::event::KeyCode::Char('3'),
+            crossterm::event::KeyModifiers::NONE,
+        )));
+        assert_eq!(dashboard.selected_pane, Pane::Metrics);
+        assert!(!dashboard.is_pane_command_mode());
+
+        dashboard.begin_pane_command_mode();
+        assert!(dashboard.handle_pane_command_key(KeyEvent::new(
+            crossterm::event::KeyCode::Esc,
+            crossterm::event::KeyModifiers::NONE,
+        )));
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("pane command cancelled")
+        );
+        assert!(!dashboard.is_pane_command_mode());
+    }
+
+    #[test]
+    fn pane_command_mode_sets_layout() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.cfg.pane_layout = PaneLayout::Horizontal;
+
+        dashboard.begin_pane_command_mode();
+        assert!(dashboard.handle_pane_command_key(KeyEvent::new(
+            crossterm::event::KeyCode::Char('g'),
+            crossterm::event::KeyModifiers::NONE,
+        )));
+
+        assert_eq!(dashboard.cfg.pane_layout, PaneLayout::Grid);
+        assert!(
+            dashboard
+                .operator_note
+                .as_deref()
+                .is_some_and(|note| note.contains("pane layout set to grid | saved to "))
+        );
+    }
+
+    #[test]
     fn cycle_pane_layout_rotates_and_hides_log_when_leaving_grid() {
         let mut dashboard = test_dashboard(Vec::new(), 0);
         dashboard.cfg.pane_layout = PaneLayout::Grid;
@@ -8761,6 +8900,7 @@ diff --git a/src/next.rs b/src/next.rs
             selected_session,
             show_help: false,
             operator_note: None,
+            pane_command_mode: false,
             output_follow: true,
             output_scroll_offset: 0,
             last_output_height: 0,

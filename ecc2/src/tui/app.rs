@@ -45,8 +45,15 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
                     continue;
                 }
 
+                if dashboard.is_pane_command_mode() {
+                    if dashboard.handle_pane_command_key(key) {
+                        continue;
+                    }
+                }
+
                 match (key.modifiers, key.code) {
                     (KeyModifiers::CONTROL, KeyCode::Char('c')) => break,
+                    (KeyModifiers::CONTROL, KeyCode::Char('w')) => dashboard.begin_pane_command_mode(),
                     (_, KeyCode::Char('q')) => break,
                     _ if dashboard.handle_pane_navigation_key(key) => {}
                     (_, KeyCode::Tab) => dashboard.next_pane(),
