@@ -40,6 +40,7 @@ const MAX_FILE_ACTIVITY_PATCH_LINES: usize = 3;
 struct WorktreeDiffColumns {
     removals: String,
     additions: String,
+    hunk_offsets: Vec<usize>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -75,6 +76,10 @@ pub struct Dashboard {
     selected_diff_summary: Option<String>,
     selected_diff_preview: Vec<String>,
     selected_diff_patch: Option<String>,
+    selected_diff_hunk_offsets_unified: Vec<usize>,
+    selected_diff_hunk_offsets_split: Vec<usize>,
+    selected_diff_hunk: usize,
+    diff_view_mode: DiffViewMode,
     selected_conflict_protocol: Option<String>,
     selected_merge_readiness: Option<worktree::MergeReadiness>,
     output_mode: OutputMode,
@@ -137,6 +142,12 @@ enum OutputMode {
     Timeline,
     WorktreeDiff,
     ConflictProtocol,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DiffViewMode {
+    Split,
+    Unified,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -327,6 +338,10 @@ impl Dashboard {
             selected_diff_summary: None,
             selected_diff_preview: Vec::new(),
             selected_diff_patch: None,
+            selected_diff_hunk_offsets_unified: Vec::new(),
+            selected_diff_hunk_offsets_split: Vec::new(),
+            selected_diff_hunk: 0,
+            diff_view_mode: DiffViewMode::Split,
             selected_conflict_protocol: None,
             selected_merge_readiness: None,
             output_mode: OutputMode::SessionOutput,
@@ -542,6 +557,7 @@ impl Dashboard {
         if self.sessions.get(self.selected_session).is_some()
             && self.output_mode == OutputMode::WorktreeDiff
             && self.selected_diff_patch.is_some()
+            && self.diff_view_mode == DiffViewMode::Split
         {
             self.render_split_diff_output(frame, area);
             return;
@@ -588,7 +604,7 @@ impl Dashboard {
                         .unwrap_or_else(|| {
                             "No worktree diff available for the selected session.".to_string()
                         });
-                    (" Diff ".to_string(), Text::from(content))
+                    (self.output_title(), Text::from(content))
                 }
                 OutputMode::ConflictProtocol => {
                     let content = self.selected_conflict_protocol.clone().unwrap_or_else(|| {
@@ -618,7 +634,7 @@ impl Dashboard {
     fn render_split_diff_output(&mut self, frame: &mut Frame, area: Rect) {
         let block = Block::default()
             .borders(Borders::ALL)
-            .title(" Diff ")
+            .title(self.output_title())
             .border_style(self.pane_border_style(Pane::Output));
         let inner_area = block.inner(area);
         frame.render_widget(block, area);
@@ -656,6 +672,14 @@ impl Dashboard {
                 self.timeline_scope.title_suffix(),
                 self.timeline_event_filter.title_suffix(),
                 self.output_time_filter.title_suffix()
+            );
+        }
+
+        if self.output_mode == OutputMode::WorktreeDiff {
+            return format!(
+                " Diff{}{} ",
+                self.diff_view_mode.title_suffix(),
+                self.diff_hunk_title_suffix()
             );
         }
 
@@ -1022,6 +1046,8 @@ impl Dashboard {
             "  y       Toggle selected-session timeline view".to_string(),
             "  E       Cycle timeline event filter".to_string(),
             "  v       Toggle selected worktree diff in output pane".to_string(),
+            "  V       Toggle diff view mode between split and unified".to_string(),
+            "  {/}     Jump to previous/next diff hunk in the active diff view".to_string(),
             "  c       Show conflict-resolution protocol for selected conflicted worktree"
                 .to_string(),
             "  e       Cycle output content filter: all/errors/tool calls/file changes".to_string(),
@@ -1704,7 +1730,7 @@ impl Dashboard {
                     self.output_mode = OutputMode::WorktreeDiff;
                     self.selected_pane = Pane::Output;
                     self.output_follow = false;
-                    self.output_scroll_offset = 0;
+                    self.output_scroll_offset = self.current_diff_hunk_offset();
                     self.set_operator_note("showing selected worktree diff".to_string());
                 } else {
                     self.set_operator_note("no worktree diff for selected session".to_string());
@@ -1726,6 +1752,54 @@ impl Dashboard {
                 self.set_operator_note("showing session output".to_string());
             }
         }
+    }
+
+    pub fn toggle_diff_view_mode(&mut self) {
+        if self.output_mode != OutputMode::WorktreeDiff || self.selected_diff_patch.is_none() {
+            self.set_operator_note("no active worktree diff view to toggle".to_string());
+            return;
+        }
+
+        self.diff_view_mode = match self.diff_view_mode {
+            DiffViewMode::Split => DiffViewMode::Unified,
+            DiffViewMode::Unified => DiffViewMode::Split,
+        };
+        self.output_follow = false;
+        self.output_scroll_offset = self.current_diff_hunk_offset();
+        self.set_operator_note(format!("diff view set to {}", self.diff_view_mode.label()));
+    }
+
+    pub fn next_diff_hunk(&mut self) {
+        self.move_diff_hunk(1);
+    }
+
+    pub fn prev_diff_hunk(&mut self) {
+        self.move_diff_hunk(-1);
+    }
+
+    fn move_diff_hunk(&mut self, delta: isize) {
+        if self.output_mode != OutputMode::WorktreeDiff || self.selected_diff_patch.is_none() {
+            self.set_operator_note("no active worktree diff to navigate".to_string());
+            return;
+        }
+
+        let (len, next_offset) = {
+            let offsets = self.current_diff_hunk_offsets();
+            if offsets.is_empty() {
+                self.set_operator_note("no diff hunks in bounded preview".to_string());
+                return;
+            }
+
+            let len = offsets.len();
+            let next = (self.selected_diff_hunk as isize + delta).rem_euclid(len as isize) as usize;
+            (len, offsets[next])
+        };
+
+        let next = (self.selected_diff_hunk as isize + delta).rem_euclid(len as isize) as usize;
+        self.selected_diff_hunk = next;
+        self.output_follow = false;
+        self.output_scroll_offset = next_offset;
+        self.set_operator_note(format!("diff hunk {}/{}", next + 1, len));
     }
 
     pub fn toggle_timeline_mode(&mut self) {
@@ -3161,6 +3235,19 @@ impl Dashboard {
                 .ok()
                 .flatten()
         });
+        self.selected_diff_hunk_offsets_unified = self
+            .selected_diff_patch
+            .as_deref()
+            .map(build_unified_diff_hunk_offsets)
+            .unwrap_or_default();
+        self.selected_diff_hunk_offsets_split = self
+            .selected_diff_patch
+            .as_deref()
+            .map(|patch| build_worktree_diff_columns(patch).hunk_offsets)
+            .unwrap_or_default();
+        if self.selected_diff_hunk >= self.current_diff_hunk_offsets().len() {
+            self.selected_diff_hunk = 0;
+        }
         self.selected_merge_readiness =
             worktree.and_then(|worktree| worktree::merge_readiness(worktree).ok());
         self.selected_conflict_protocol = session
@@ -3176,6 +3263,29 @@ impl Dashboard {
             && self.selected_conflict_protocol.is_none()
         {
             self.output_mode = OutputMode::SessionOutput;
+        }
+    }
+
+    fn current_diff_hunk_offsets(&self) -> &[usize] {
+        match self.diff_view_mode {
+            DiffViewMode::Split => &self.selected_diff_hunk_offsets_split,
+            DiffViewMode::Unified => &self.selected_diff_hunk_offsets_unified,
+        }
+    }
+
+    fn current_diff_hunk_offset(&self) -> usize {
+        self.current_diff_hunk_offsets()
+            .get(self.selected_diff_hunk)
+            .copied()
+            .unwrap_or(0)
+    }
+
+    fn diff_hunk_title_suffix(&self) -> String {
+        let total = self.current_diff_hunk_offsets().len();
+        if total == 0 {
+            String::new()
+        } else {
+            format!(" {}/{}", self.selected_diff_hunk + 1, total)
         }
     }
 
@@ -4954,6 +5064,22 @@ impl OutputTimeFilter {
     }
 }
 
+impl DiffViewMode {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Split => "split",
+            Self::Unified => "unified",
+        }
+    }
+
+    fn title_suffix(self) -> &'static str {
+        match self {
+            Self::Split => " split",
+            Self::Unified => " unified",
+        }
+    }
+}
+
 impl TimelineEventFilter {
     fn next(self) -> Self {
         match self {
@@ -5421,6 +5547,7 @@ fn highlight_output_line(
 fn build_worktree_diff_columns(patch: &str) -> WorktreeDiffColumns {
     let mut removals = Vec::new();
     let mut additions = Vec::new();
+    let mut hunk_offsets = Vec::new();
 
     for line in patch.lines() {
         if line.is_empty() {
@@ -5444,6 +5571,9 @@ fn build_worktree_diff_columns(patch: &str) -> WorktreeDiffColumns {
         }
 
         if line.starts_with("diff --git ") || line.starts_with("@@") {
+            if line.starts_with("@@") {
+                hunk_offsets.push(removals.len().max(additions.len()));
+            }
             removals.push(line.to_string());
             additions.push(line.to_string());
             continue;
@@ -5471,7 +5601,16 @@ fn build_worktree_diff_columns(patch: &str) -> WorktreeDiffColumns {
         } else {
             additions.join("\n")
         },
+        hunk_offsets,
     }
+}
+
+fn build_unified_diff_hunk_offsets(patch: &str) -> Vec<usize> {
+    patch
+        .lines()
+        .enumerate()
+        .filter_map(|(index, line)| line.starts_with("@@").then_some(index))
+        .collect()
 }
 
 fn session_state_label(state: &SessionState) -> &'static str {
@@ -6099,6 +6238,95 @@ mod tests {
         assert!(rendered.contains("Additions"));
         assert!(rendered.contains("-old line"));
         assert!(rendered.contains("+new line"));
+    }
+
+    #[test]
+    fn toggle_diff_view_mode_switches_to_unified_rendering() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        let patch = "--- Branch diff vs main ---\n\
+diff --git a/src/lib.rs b/src/lib.rs\n\
+@@ -1 +1 @@\n\
+-old line\n\
++new line"
+            .to_string();
+        dashboard.selected_diff_summary = Some("1 file changed".to_string());
+        dashboard.selected_diff_patch = Some(patch.clone());
+        dashboard.selected_diff_hunk_offsets_split =
+            build_worktree_diff_columns(&patch).hunk_offsets;
+        dashboard.selected_diff_hunk_offsets_unified = build_unified_diff_hunk_offsets(&patch);
+        dashboard.toggle_output_mode();
+
+        dashboard.toggle_diff_view_mode();
+
+        assert_eq!(dashboard.diff_view_mode, DiffViewMode::Unified);
+        assert_eq!(dashboard.output_title(), " Diff unified 1/1 ");
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("diff view set to unified")
+        );
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("Diff unified 1/1"));
+        assert!(rendered.contains("@@ -1 +1 @@"));
+        assert!(rendered.contains("-old line"));
+        assert!(rendered.contains("+new line"));
+        assert!(!rendered.contains("Removals"));
+        assert!(!rendered.contains("Additions"));
+    }
+
+    #[test]
+    fn diff_hunk_navigation_updates_scroll_offset_and_wraps() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        let patch = "--- Branch diff vs main ---\n\
+diff --git a/src/lib.rs b/src/lib.rs\n\
+@@ -1 +1 @@\n\
+-old line\n\
++new line\n\
+@@ -5 +5 @@\n\
+-second old\n\
++second new"
+            .to_string();
+        dashboard.selected_diff_patch = Some(patch.clone());
+        let split_offsets = build_worktree_diff_columns(&patch).hunk_offsets;
+        dashboard.selected_diff_hunk_offsets_split = split_offsets.clone();
+        dashboard.selected_diff_hunk_offsets_unified = build_unified_diff_hunk_offsets(&patch);
+        dashboard.output_mode = OutputMode::WorktreeDiff;
+
+        dashboard.next_diff_hunk();
+        assert_eq!(dashboard.selected_diff_hunk, 1);
+        assert_eq!(dashboard.output_scroll_offset, split_offsets[1]);
+        assert_eq!(dashboard.output_title(), " Diff split 2/2 ");
+        assert_eq!(dashboard.operator_note.as_deref(), Some("diff hunk 2/2"));
+
+        dashboard.next_diff_hunk();
+        assert_eq!(dashboard.selected_diff_hunk, 0);
+        assert_eq!(dashboard.output_scroll_offset, split_offsets[0]);
+        assert_eq!(dashboard.output_title(), " Diff split 1/2 ");
+        assert_eq!(dashboard.operator_note.as_deref(), Some("diff hunk 1/2"));
+
+        dashboard.prev_diff_hunk();
+        assert_eq!(dashboard.selected_diff_hunk, 1);
+        assert_eq!(dashboard.output_scroll_offset, split_offsets[1]);
+        assert_eq!(dashboard.operator_note.as_deref(), Some("diff hunk 2/2"));
     }
 
     #[test]
@@ -9667,6 +9895,10 @@ diff --git a/src/next.rs b/src/next.rs
             selected_diff_summary: None,
             selected_diff_preview: Vec::new(),
             selected_diff_patch: None,
+            selected_diff_hunk_offsets_unified: Vec::new(),
+            selected_diff_hunk_offsets_split: Vec::new(),
+            selected_diff_hunk: 0,
+            diff_view_mode: DiffViewMode::Split,
             selected_conflict_protocol: None,
             selected_merge_readiness: None,
             output_mode: OutputMode::SessionOutput,
