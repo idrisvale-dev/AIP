@@ -78,6 +78,7 @@ pub struct Dashboard {
     output_filter: OutputFilter,
     output_time_filter: OutputTimeFilter,
     timeline_event_filter: TimelineEventFilter,
+    timeline_scope: SearchScope,
     selected_pane: Pane,
     selected_session: usize,
     show_help: bool,
@@ -184,6 +185,7 @@ enum TimelineEventType {
 #[derive(Debug, Clone)]
 struct TimelineEvent {
     occurred_at: chrono::DateTime<Utc>,
+    session_id: String,
     event_type: TimelineEventType,
     summary: String,
 }
@@ -303,6 +305,7 @@ impl Dashboard {
             output_filter: OutputFilter::All,
             output_time_filter: OutputTimeFilter::AllTime,
             timeline_event_filter: TimelineEventFilter::All,
+            timeline_scope: SearchScope::SelectedSession,
             selected_pane: Pane::Sessions,
             selected_session: 0,
             show_help: false,
@@ -612,7 +615,8 @@ impl Dashboard {
     fn output_title(&self) -> String {
         if self.output_mode == OutputMode::Timeline {
             return format!(
-                " Timeline{}{} ",
+                " Timeline{}{}{} ",
+                self.timeline_scope.title_suffix(),
                 self.timeline_event_filter.title_suffix(),
                 self.output_time_filter.title_suffix()
             );
@@ -664,31 +668,85 @@ impl Dashboard {
     }
 
     fn empty_timeline_message(&self) -> &'static str {
-        match (self.timeline_event_filter, self.output_time_filter) {
-            (TimelineEventFilter::All, OutputTimeFilter::AllTime) => {
+        match (
+            self.timeline_scope,
+            self.timeline_event_filter,
+            self.output_time_filter,
+        ) {
+            (SearchScope::AllSessions, TimelineEventFilter::All, OutputTimeFilter::AllTime) => {
+                "No timeline events across all sessions yet."
+            }
+            (
+                SearchScope::AllSessions,
+                TimelineEventFilter::Lifecycle,
+                OutputTimeFilter::AllTime,
+            ) => "No lifecycle events across all sessions yet.",
+            (
+                SearchScope::AllSessions,
+                TimelineEventFilter::Messages,
+                OutputTimeFilter::AllTime,
+            ) => "No message events across all sessions yet.",
+            (
+                SearchScope::AllSessions,
+                TimelineEventFilter::ToolCalls,
+                OutputTimeFilter::AllTime,
+            ) => "No tool-call events across all sessions yet.",
+            (
+                SearchScope::AllSessions,
+                TimelineEventFilter::FileChanges,
+                OutputTimeFilter::AllTime,
+            ) => "No file-change events across all sessions yet.",
+            (SearchScope::AllSessions, TimelineEventFilter::All, _) => {
+                "No timeline events across all sessions in the selected time range."
+            }
+            (SearchScope::AllSessions, TimelineEventFilter::Lifecycle, _) => {
+                "No lifecycle events across all sessions in the selected time range."
+            }
+            (SearchScope::AllSessions, TimelineEventFilter::Messages, _) => {
+                "No message events across all sessions in the selected time range."
+            }
+            (SearchScope::AllSessions, TimelineEventFilter::ToolCalls, _) => {
+                "No tool-call events across all sessions in the selected time range."
+            }
+            (SearchScope::AllSessions, TimelineEventFilter::FileChanges, _) => {
+                "No file-change events across all sessions in the selected time range."
+            }
+            (SearchScope::SelectedSession, TimelineEventFilter::All, OutputTimeFilter::AllTime) => {
                 "No timeline events for this session yet."
             }
-            (TimelineEventFilter::Lifecycle, OutputTimeFilter::AllTime) => {
-                "No lifecycle events for this session yet."
+            (
+                SearchScope::SelectedSession,
+                TimelineEventFilter::Lifecycle,
+                OutputTimeFilter::AllTime,
+            ) => "No lifecycle events for this session yet.",
+            (
+                SearchScope::SelectedSession,
+                TimelineEventFilter::Messages,
+                OutputTimeFilter::AllTime,
+            ) => "No message events for this session yet.",
+            (
+                SearchScope::SelectedSession,
+                TimelineEventFilter::ToolCalls,
+                OutputTimeFilter::AllTime,
+            ) => "No tool-call events for this session yet.",
+            (
+                SearchScope::SelectedSession,
+                TimelineEventFilter::FileChanges,
+                OutputTimeFilter::AllTime,
+            ) => "No file-change events for this session yet.",
+            (SearchScope::SelectedSession, TimelineEventFilter::All, _) => {
+                "No timeline events in the selected time range."
             }
-            (TimelineEventFilter::Messages, OutputTimeFilter::AllTime) => {
-                "No message events for this session yet."
-            }
-            (TimelineEventFilter::ToolCalls, OutputTimeFilter::AllTime) => {
-                "No tool-call events for this session yet."
-            }
-            (TimelineEventFilter::FileChanges, OutputTimeFilter::AllTime) => {
-                "No file-change events for this session yet."
-            }
-            (TimelineEventFilter::All, _) => "No timeline events in the selected time range.",
-            (TimelineEventFilter::Lifecycle, _) => {
+            (SearchScope::SelectedSession, TimelineEventFilter::Lifecycle, _) => {
                 "No lifecycle events in the selected time range."
             }
-            (TimelineEventFilter::Messages, _) => "No message events in the selected time range.",
-            (TimelineEventFilter::ToolCalls, _) => {
+            (SearchScope::SelectedSession, TimelineEventFilter::Messages, _) => {
+                "No message events in the selected time range."
+            }
+            (SearchScope::SelectedSession, TimelineEventFilter::ToolCalls, _) => {
                 "No tool-call events in the selected time range."
             }
-            (TimelineEventFilter::FileChanges, _) => {
+            (SearchScope::SelectedSession, TimelineEventFilter::FileChanges, _) => {
                 "No file-change events in the selected time range."
             }
         }
@@ -813,7 +871,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  search scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [Tab] switch pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.layout_label(),
             self.theme_label()
         );
@@ -905,7 +963,7 @@ impl Dashboard {
             "  c       Show conflict-resolution protocol for selected conflicted worktree",
             "  e       Cycle output content filter: all/errors/tool calls/file changes",
             "  f       Cycle output or timeline time range between all/15m/1h/24h",
-            "  A       Toggle search scope between selected session and all sessions",
+            "  A       Toggle search or timeline scope between selected session and all sessions",
             "  o       Toggle search agent filter between all agents and selected agent type",
             "  m       Merge selected ready worktree into base and clean it up",
             "  M       Merge all ready inactive worktrees and clean them up",
@@ -2046,9 +2104,19 @@ impl Dashboard {
     }
 
     pub fn toggle_search_scope(&mut self) {
+        if self.output_mode == OutputMode::Timeline {
+            self.timeline_scope = self.timeline_scope.next();
+            self.sync_output_scroll(self.last_output_height.max(1));
+            self.set_operator_note(format!(
+                "timeline scope set to {}",
+                self.timeline_scope.label()
+            ));
+            return;
+        }
+
         if self.output_mode != OutputMode::SessionOutput {
             self.set_operator_note(
-                "search scope is only available in session output view".to_string(),
+                "scope toggle is only available in session output or timeline view".to_string(),
             );
             return;
         }
@@ -2976,14 +3044,21 @@ impl Dashboard {
     }
 
     fn visible_timeline_lines(&self) -> Vec<Line<'static>> {
-        self.selected_timeline_events()
+        let show_session_label = self.timeline_scope == SearchScope::AllSessions;
+        self.timeline_events()
             .into_iter()
             .filter(|event| self.timeline_event_filter.matches(event.event_type))
             .filter(|event| self.output_time_filter.matches_timestamp(event.occurred_at))
             .map(|event| {
+                let prefix = if show_session_label {
+                    format!("{} ", format_session_id(&event.session_id))
+                } else {
+                    String::new()
+                };
                 Line::from(format!(
-                    "[{}] {:<11} {}",
+                    "[{}] {}{:<11} {}",
                     event.occurred_at.format("%H:%M:%S"),
+                    prefix,
                     event.event_type.label(),
                     event.summary
                 ))
@@ -2991,13 +3066,32 @@ impl Dashboard {
             .collect()
     }
 
-    fn selected_timeline_events(&self) -> Vec<TimelineEvent> {
-        let Some(session) = self.sessions.get(self.selected_session) else {
-            return Vec::new();
+    fn timeline_events(&self) -> Vec<TimelineEvent> {
+        let mut events = match self.timeline_scope {
+            SearchScope::SelectedSession => self
+                .sessions
+                .get(self.selected_session)
+                .map(|session| self.session_timeline_events(session))
+                .unwrap_or_default(),
+            SearchScope::AllSessions => self
+                .sessions
+                .iter()
+                .flat_map(|session| self.session_timeline_events(session))
+                .collect(),
         };
+        events.sort_by(|left, right| {
+            left.occurred_at
+                .cmp(&right.occurred_at)
+                .then_with(|| left.session_id.cmp(&right.session_id))
+                .then_with(|| left.summary.cmp(&right.summary))
+        });
+        events
+    }
 
+    fn session_timeline_events(&self, session: &Session) -> Vec<TimelineEvent> {
         let mut events = vec![TimelineEvent {
             occurred_at: session.created_at,
+            session_id: session.id.clone(),
             event_type: TimelineEventType::Lifecycle,
             summary: format!(
                 "created session as {} for {}",
@@ -3009,6 +3103,7 @@ impl Dashboard {
         if session.updated_at > session.created_at {
             events.push(TimelineEvent {
                 occurred_at: session.updated_at,
+                session_id: session.id.clone(),
                 event_type: TimelineEventType::Lifecycle,
                 summary: format!("state {} | updated session metadata", session.state),
             });
@@ -3017,6 +3112,7 @@ impl Dashboard {
         if let Some(worktree) = session.worktree.as_ref() {
             events.push(TimelineEvent {
                 occurred_at: session.updated_at,
+                session_id: session.id.clone(),
                 event_type: TimelineEventType::Lifecycle,
                 summary: format!(
                     "attached worktree {} from {}",
@@ -3028,6 +3124,7 @@ impl Dashboard {
         if session.metrics.files_changed > 0 {
             events.push(TimelineEvent {
                 occurred_at: session.updated_at,
+                session_id: session.id.clone(),
                 event_type: TimelineEventType::FileChange,
                 summary: format!("files changed {}", session.metrics.files_changed),
             });
@@ -3045,6 +3142,7 @@ impl Dashboard {
             };
             TimelineEvent {
                 occurred_at: message.timestamp,
+                session_id: session.id.clone(),
                 event_type: TimelineEventType::Message,
                 summary: format!(
                     "{direction} {} {} | {}",
@@ -3066,6 +3164,7 @@ impl Dashboard {
         events.extend(tool_logs.into_iter().filter_map(|entry| {
             parse_rfc3339_to_utc(&entry.timestamp).map(|occurred_at| TimelineEvent {
                 occurred_at,
+                session_id: session.id.clone(),
                 event_type: TimelineEventType::ToolCall,
                 summary: format!(
                     "tool {} | {}ms | {}",
@@ -3075,8 +3174,6 @@ impl Dashboard {
                 ),
             })
         }));
-
-        events.sort_by_key(|event| event.occurred_at);
         events
     }
 
@@ -5501,6 +5598,77 @@ mod tests {
         assert!(rendered.contains("tool bash"));
         assert!(!rendered.contains("created session as planner"));
         assert!(!rendered.contains("state running"));
+    }
+
+    #[test]
+    fn timeline_scope_all_sessions_renders_cross_session_events() {
+        let now = Utc::now();
+        let mut focus = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        focus.created_at = now - chrono::Duration::hours(2);
+        focus.updated_at = now - chrono::Duration::minutes(5);
+
+        let mut review = sample_session(
+            "review-87654321",
+            "reviewer",
+            SessionState::Idle,
+            Some("ecc/review"),
+            256,
+            12,
+        );
+        review.created_at = now - chrono::Duration::hours(1);
+        review.updated_at = now - chrono::Duration::minutes(3);
+        review.metrics.files_changed = 2;
+
+        let mut dashboard = test_dashboard(vec![focus.clone(), review.clone()], 0);
+        dashboard.db.insert_session(&focus).unwrap();
+        dashboard.db.insert_session(&review).unwrap();
+        dashboard
+            .db
+            .insert_tool_log(
+                "focus-12345678",
+                "bash",
+                "cargo test -q",
+                "ok",
+                240,
+                0.2,
+                &(now - chrono::Duration::minutes(4)).to_rfc3339(),
+            )
+            .unwrap();
+        dashboard
+            .db
+            .insert_tool_log(
+                "review-87654321",
+                "git",
+                "git status --short",
+                "ok",
+                120,
+                0.1,
+                &(now - chrono::Duration::minutes(2)).to_rfc3339(),
+            )
+            .unwrap();
+        dashboard.toggle_timeline_mode();
+
+        dashboard.toggle_search_scope();
+
+        assert_eq!(dashboard.timeline_scope, SearchScope::AllSessions);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("timeline scope set to all sessions")
+        );
+        assert_eq!(dashboard.output_title(), " Timeline all sessions ");
+
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("focus-12"));
+        assert!(rendered.contains("review-8"));
+        assert!(rendered.contains("tool bash"));
+        assert!(rendered.contains("tool git"));
     }
 
     #[test]
@@ -8337,6 +8505,7 @@ diff --git a/src/next.rs b/src/next.rs
             output_filter: OutputFilter::All,
             output_time_filter: OutputTimeFilter::AllTime,
             timeline_event_filter: TimelineEventFilter::All,
+            timeline_scope: SearchScope::SelectedSession,
             selected_pane: Pane::Sessions,
             selected_session,
             show_help: false,
