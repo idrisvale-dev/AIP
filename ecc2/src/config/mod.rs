@@ -33,6 +33,7 @@ pub struct BudgetAlertThresholds {
 pub struct Config {
     pub db_path: PathBuf,
     pub worktree_root: PathBuf,
+    pub worktree_branch_prefix: String,
     pub max_parallel_sessions: usize,
     pub max_parallel_worktrees: usize,
     pub session_timeout_secs: u64,
@@ -88,6 +89,7 @@ impl Default for Config {
         Self {
             db_path: home.join(".claude").join("ecc2.db"),
             worktree_root: PathBuf::from("/tmp/ecc-worktrees"),
+            worktree_branch_prefix: "ecc".to_string(),
             max_parallel_sessions: 8,
             max_parallel_worktrees: 6,
             session_timeout_secs: 3600,
@@ -350,6 +352,10 @@ theme = "Dark"
         let config: Config = toml::from_str(legacy_config).unwrap();
         let defaults = Config::default();
 
+        assert_eq!(
+            config.worktree_branch_prefix,
+            defaults.worktree_branch_prefix
+        );
         assert_eq!(config.cost_budget_usd, defaults.cost_budget_usd);
         assert_eq!(config.token_budget, defaults.token_budget);
         assert_eq!(
@@ -404,6 +410,13 @@ theme = "Dark"
         let config: Config = toml::from_str(r#"pane_layout = "grid""#).unwrap();
 
         assert_eq!(config.pane_layout, PaneLayout::Grid);
+    }
+
+    #[test]
+    fn worktree_branch_prefix_deserializes_from_toml() {
+        let config: Config = toml::from_str(r#"worktree_branch_prefix = "bots/ecc""#).unwrap();
+
+        assert_eq!(config.worktree_branch_prefix, "bots/ecc");
     }
 
     #[test]
@@ -535,6 +548,7 @@ critical = 1.10
         config.auto_dispatch_limit_per_session = 9;
         config.auto_create_worktrees = false;
         config.auto_merge_ready_worktrees = true;
+        config.worktree_branch_prefix = "bots/ecc".to_string();
         config.budget_alert_thresholds = BudgetAlertThresholds {
             advisory: 0.45,
             warning: 0.70,
@@ -553,6 +567,7 @@ critical = 1.10
         assert_eq!(loaded.auto_dispatch_limit_per_session, 9);
         assert!(!loaded.auto_create_worktrees);
         assert!(loaded.auto_merge_ready_worktrees);
+        assert_eq!(loaded.worktree_branch_prefix, "bots/ecc");
         assert_eq!(
             loaded.budget_alert_thresholds,
             BudgetAlertThresholds {

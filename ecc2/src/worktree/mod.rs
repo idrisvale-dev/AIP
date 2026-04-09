@@ -44,7 +44,7 @@ pub(crate) fn create_for_session_in_repo(
     cfg: &Config,
     repo_root: &Path,
 ) -> Result<WorktreeInfo> {
-    let branch = format!("ecc/{session_id}");
+    let branch = branch_name_for_session(session_id, cfg, repo_root)?;
     let path = cfg.worktree_root.join(session_id);
 
     // Get current branch as base
@@ -78,6 +78,27 @@ pub(crate) fn create_for_session_in_repo(
         branch,
         base_branch: base,
     })
+}
+
+pub(crate) fn branch_name_for_session(
+    session_id: &str,
+    cfg: &Config,
+    repo_root: &Path,
+) -> Result<String> {
+    let prefix = cfg.worktree_branch_prefix.trim().trim_matches('/');
+    if prefix.is_empty() {
+        anyhow::bail!("worktree_branch_prefix cannot be empty");
+    }
+
+    let branch = format!("{prefix}/{session_id}");
+    validate_branch_name(repo_root, &branch).with_context(|| {
+        format!(
+            "Invalid worktree branch '{branch}' derived from prefix '{}' and session id '{session_id}'",
+            cfg.worktree_branch_prefix
+        )
+    })?;
+
+    Ok(branch)
 }
 
 /// Remove a worktree and its branch.
@@ -461,6 +482,26 @@ fn git_status_short(worktree_path: &Path) -> Result<Vec<String>> {
     Ok(parse_nonempty_lines(&output.stdout))
 }
 
+fn validate_branch_name(repo_root: &Path, branch: &str) -> Result<()> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(["check-ref-format", "--branch", branch])
+        .output()
+        .context("Failed to validate worktree branch name")?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        if stderr.is_empty() {
+            anyhow::bail!("branch name is not a valid git ref");
+        } else {
+            anyhow::bail!("{stderr}");
+        }
+    }
+}
+
 fn parse_nonempty_lines(stdout: &[u8]) -> Vec<String> {
     String::from_utf8_lossy(stdout)
         .lines()
@@ -576,9 +617,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn diff_summary_reports_clean_and_dirty_worktrees() -> Result<()> {
-        let root = std::env::temp_dir().join(format!("ecc2-worktree-{}", Uuid::new_v4()));
+    fn init_repo(root: &Path) -> Result<PathBuf> {
         let repo = root.join("repo");
         fs::create_dir_all(&repo)?;
 
@@ -588,6 +627,60 @@ mod tests {
         fs::write(repo.join("README.md"), "hello\n")?;
         run_git(&repo, &["add", "README.md"])?;
         run_git(&repo, &["commit", "-m", "init"])?;
+
+        Ok(repo)
+    }
+
+    #[test]
+    fn create_for_session_uses_configured_branch_prefix() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-worktree-prefix-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        let mut cfg = Config::default();
+        cfg.worktree_root = root.join("worktrees");
+        cfg.worktree_branch_prefix = "bots/ecc".to_string();
+
+        let worktree = create_for_session_in_repo("worker-123", &cfg, &repo)?;
+        assert_eq!(worktree.branch, "bots/ecc/worker-123");
+
+        let branch = Command::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["rev-parse", "--abbrev-ref", "bots/ecc/worker-123"])
+            .output()?;
+        assert!(branch.status.success());
+        assert_eq!(
+            String::from_utf8_lossy(&branch.stdout).trim(),
+            "bots/ecc/worker-123"
+        );
+
+        remove(&worktree)?;
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn create_for_session_rejects_invalid_branch_prefix() -> Result<()> {
+        let root =
+            std::env::temp_dir().join(format!("ecc2-worktree-invalid-prefix-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        let mut cfg = Config::default();
+        cfg.worktree_root = root.join("worktrees");
+        cfg.worktree_branch_prefix = "bad prefix".to_string();
+
+        let error = create_for_session_in_repo("worker-123", &cfg, &repo).unwrap_err();
+        let message = error.to_string();
+        assert!(message.contains("Invalid worktree branch"));
+        assert!(message.contains("bad prefix"));
+        assert!(!cfg.worktree_root.join("worker-123").exists());
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn diff_summary_reports_clean_and_dirty_worktrees() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-worktree-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
 
         let worktree_dir = root.join("wt-1");
         run_git(
@@ -631,15 +724,7 @@ mod tests {
     #[test]
     fn diff_file_preview_reports_branch_and_working_tree_files() -> Result<()> {
         let root = std::env::temp_dir().join(format!("ecc2-worktree-preview-{}", Uuid::new_v4()));
-        let repo = root.join("repo");
-        fs::create_dir_all(&repo)?;
-
-        run_git(&repo, &["init", "-b", "main"])?;
-        run_git(&repo, &["config", "user.email", "ecc@example.com"])?;
-        run_git(&repo, &["config", "user.name", "ECC"])?;
-        fs::write(repo.join("README.md"), "hello\n")?;
-        run_git(&repo, &["add", "README.md"])?;
-        run_git(&repo, &["commit", "-m", "init"])?;
+        let repo = init_repo(&root)?;
 
         let worktree_dir = root.join("wt-1");
         run_git(
@@ -686,15 +771,7 @@ mod tests {
     #[test]
     fn diff_patch_preview_reports_branch_and_working_tree_sections() -> Result<()> {
         let root = std::env::temp_dir().join(format!("ecc2-worktree-patch-{}", Uuid::new_v4()));
-        let repo = root.join("repo");
-        fs::create_dir_all(&repo)?;
-
-        run_git(&repo, &["init", "-b", "main"])?;
-        run_git(&repo, &["config", "user.email", "ecc@example.com"])?;
-        run_git(&repo, &["config", "user.name", "ECC"])?;
-        fs::write(repo.join("README.md"), "hello\n")?;
-        run_git(&repo, &["add", "README.md"])?;
-        run_git(&repo, &["commit", "-m", "init"])?;
+        let repo = init_repo(&root)?;
 
         let worktree_dir = root.join("wt-1");
         run_git(
@@ -740,15 +817,7 @@ mod tests {
     fn merge_readiness_reports_ready_worktree() -> Result<()> {
         let root =
             std::env::temp_dir().join(format!("ecc2-worktree-merge-ready-{}", Uuid::new_v4()));
-        let repo = root.join("repo");
-        fs::create_dir_all(&repo)?;
-
-        run_git(&repo, &["init", "-b", "main"])?;
-        run_git(&repo, &["config", "user.email", "ecc@example.com"])?;
-        run_git(&repo, &["config", "user.name", "ECC"])?;
-        fs::write(repo.join("README.md"), "hello\n")?;
-        run_git(&repo, &["add", "README.md"])?;
-        run_git(&repo, &["commit", "-m", "init"])?;
+        let repo = init_repo(&root)?;
 
         let worktree_dir = root.join("wt-1");
         run_git(
@@ -792,15 +861,7 @@ mod tests {
     fn merge_readiness_reports_conflicted_worktree() -> Result<()> {
         let root =
             std::env::temp_dir().join(format!("ecc2-worktree-merge-conflict-{}", Uuid::new_v4()));
-        let repo = root.join("repo");
-        fs::create_dir_all(&repo)?;
-
-        run_git(&repo, &["init", "-b", "main"])?;
-        run_git(&repo, &["config", "user.email", "ecc@example.com"])?;
-        run_git(&repo, &["config", "user.name", "ECC"])?;
-        fs::write(repo.join("README.md"), "hello\n")?;
-        run_git(&repo, &["add", "README.md"])?;
-        run_git(&repo, &["commit", "-m", "init"])?;
+        let repo = init_repo(&root)?;
 
         let worktree_dir = root.join("wt-1");
         run_git(

@@ -9604,6 +9604,7 @@ diff --git a/src/next.rs b/src/next.rs
         Config {
             db_path: root.join("state.db"),
             worktree_root: root.join("worktrees"),
+            worktree_branch_prefix: "ecc".to_string(),
             max_parallel_sessions: 4,
             max_parallel_worktrees: 4,
             session_timeout_secs: 60,
