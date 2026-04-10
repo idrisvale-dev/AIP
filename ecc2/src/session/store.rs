@@ -44,6 +44,13 @@ pub struct FileActivityOverlap {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ConnectorCheckpointSummary {
+    pub connector_name: String,
+    pub synced_sources: usize,
+    pub last_synced_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ConflictIncident {
     pub id: i64,
     pub conflict_key: String,
@@ -2441,6 +2448,32 @@ impl StateStore {
         Ok(())
     }
 
+    pub fn connector_checkpoint_summary(
+        &self,
+        connector_name: &str,
+    ) -> Result<ConnectorCheckpointSummary> {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*), MAX(updated_at)
+             FROM context_graph_connector_checkpoints
+             WHERE connector_name = ?1",
+                rusqlite::params![connector_name],
+                |row| {
+                    let synced_sources = row.get::<_, i64>(0)? as usize;
+                    let last_synced_at = row
+                        .get::<_, Option<String>>(1)?
+                        .map(|raw| parse_store_timestamp(raw, 1))
+                        .transpose()?;
+                    Ok(ConnectorCheckpointSummary {
+                        connector_name: connector_name.to_string(),
+                        synced_sources,
+                        last_synced_at,
+                    })
+                },
+            )
+            .map_err(Into::into)
+    }
+
     fn compact_context_graph_observations(
         &self,
         session_id: Option<&str>,
@@ -4805,6 +4838,31 @@ mod tests {
             .set_context_observation_pinned(observation.id, false)?
             .expect("observation should still exist");
         assert!(!unpinned.pinned);
+
+        Ok(())
+    }
+
+    #[test]
+    fn connector_checkpoint_summary_reports_synced_sources_and_timestamp() -> Result<()> {
+        let tempdir = TestDir::new("store-connector-checkpoint-summary")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+
+        let empty = db.connector_checkpoint_summary("workspace_notes")?;
+        assert_eq!(empty.connector_name, "workspace_notes");
+        assert_eq!(empty.synced_sources, 0);
+        assert!(empty.last_synced_at.is_none());
+
+        db.upsert_connector_source_checkpoint(
+            "workspace_notes",
+            "/tmp/notes/incident.md",
+            "sig-a",
+        )?;
+        db.upsert_connector_source_checkpoint("workspace_notes", "/tmp/notes/docs.md", "sig-b")?;
+
+        let summary = db.connector_checkpoint_summary("workspace_notes")?;
+        assert_eq!(summary.connector_name, "workspace_notes");
+        assert_eq!(summary.synced_sources, 2);
+        assert!(summary.last_synced_at.is_some());
 
         Ok(())
     }
