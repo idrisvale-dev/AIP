@@ -36,6 +36,13 @@ pub struct MergeOutcome {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct RebaseOutcome {
+    pub branch: String,
+    pub base_branch: String,
+    pub already_up_to_date: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct BranchConflictPreview {
     pub left_branch: String,
     pub right_branch: String,
@@ -741,6 +748,65 @@ pub fn merge_into_base(worktree: &WorktreeInfo) -> Result<MergeOutcome> {
     })
 }
 
+pub fn rebase_onto_base(worktree: &WorktreeInfo) -> Result<RebaseOutcome> {
+    if has_uncommitted_changes(worktree)? {
+        anyhow::bail!(
+            "Worktree {} has uncommitted changes; commit or discard them before rebasing",
+            worktree.branch
+        );
+    }
+
+    let repo_root = base_checkout_path(worktree)?;
+    let before_head = branch_head_oid_in_repo(&repo_root, &worktree.branch)?;
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["rebase", &worktree.base_branch])
+        .output()
+        .context("Failed to rebase worktree branch onto base")?;
+
+    if !output.status.success() {
+        let abort_output = Command::new("git")
+            .arg("-C")
+            .arg(&worktree.path)
+            .args(["rebase", "--abort"])
+            .output()
+            .context("Failed to abort unsuccessful rebase")?;
+        let abort_warning = if abort_output.status.success() {
+            String::new()
+        } else {
+            format!(
+                " (rebase abort warning: {})",
+                String::from_utf8_lossy(&abort_output.stderr).trim()
+            )
+        };
+        let stderr = format!(
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        anyhow::bail!("git rebase failed: {}{}", stderr.trim(), abort_warning);
+    }
+
+    let after_head = branch_head_oid_in_repo(&repo_root, &worktree.branch)?;
+    let rebase_output = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    Ok(RebaseOutcome {
+        branch: worktree.branch.clone(),
+        base_branch: worktree.base_branch.clone(),
+        already_up_to_date: before_head == after_head || rebase_output.contains("up to date"),
+    })
+}
+
+pub fn branch_head_oid(worktree: &WorktreeInfo, branch: &str) -> Result<String> {
+    let repo_root = base_checkout_path(worktree)?;
+    branch_head_oid_in_repo(&repo_root, branch)
+}
+
 fn git_diff_shortstat(worktree_path: &Path, extra_args: &[&str]) -> Result<Option<String>> {
     let mut command = Command::new("git");
     command
@@ -1111,6 +1177,22 @@ fn git_status_short(worktree_path: &Path) -> Result<Vec<String>> {
     }
 
     Ok(parse_nonempty_lines(&output.stdout))
+}
+
+fn branch_head_oid_in_repo(repo_root: &Path, branch: &str) -> Result<String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(["rev-parse", branch])
+        .output()
+        .context("Failed to resolve branch head")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git rev-parse failed: {stderr}");
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn validate_branch_name(repo_root: &Path, branch: &str) -> Result<()> {
@@ -1556,6 +1638,130 @@ mod tests {
         assert_eq!(readiness.status, MergeReadinessStatus::Conflicted);
         assert!(readiness.summary.contains("Merge blocked by 1 conflict"));
         assert_eq!(readiness.conflicts, vec!["README.md".to_string()]);
+
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["worktree", "remove", "--force"])
+            .arg(&worktree_dir)
+            .output();
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn rebase_onto_base_replays_simple_branch_after_base_advances() -> Result<()> {
+        let root =
+            std::env::temp_dir().join(format!("ecc2-worktree-rebase-success-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+
+        let alpha_dir = root.join("wt-alpha");
+        run_git(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "-b",
+                "ecc/alpha",
+                alpha_dir.to_str().expect("utf8 path"),
+                "HEAD",
+            ],
+        )?;
+        fs::write(alpha_dir.join("README.md"), "hello\nalpha\n")?;
+        run_git(&alpha_dir, &["commit", "-am", "alpha change"])?;
+
+        let beta_dir = root.join("wt-beta");
+        run_git(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "-b",
+                "ecc/beta",
+                beta_dir.to_str().expect("utf8 path"),
+                "HEAD",
+            ],
+        )?;
+        fs::write(beta_dir.join("README.md"), "hello\nalpha\n")?;
+        run_git(&beta_dir, &["commit", "-am", "beta shared change"])?;
+        fs::write(beta_dir.join("README.md"), "hello\nalpha\nbeta\n")?;
+        run_git(&beta_dir, &["commit", "-am", "beta follow-up"])?;
+
+        run_git(&repo, &["merge", "--no-edit", "ecc/alpha"])?;
+
+        let beta = WorktreeInfo {
+            path: beta_dir.clone(),
+            branch: "ecc/beta".to_string(),
+            base_branch: "main".to_string(),
+        };
+        let readiness_before = merge_readiness(&beta)?;
+        assert_eq!(readiness_before.status, MergeReadinessStatus::Conflicted);
+
+        let outcome = rebase_onto_base(&beta)?;
+        assert_eq!(outcome.branch, "ecc/beta");
+        assert_eq!(outcome.base_branch, "main");
+        assert!(!outcome.already_up_to_date);
+
+        let readiness_after = merge_readiness(&beta)?;
+        assert_eq!(readiness_after.status, MergeReadinessStatus::Ready);
+        assert_eq!(
+            fs::read_to_string(beta_dir.join("README.md"))?,
+            "hello\nalpha\nbeta\n"
+        );
+
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["worktree", "remove", "--force"])
+            .arg(&alpha_dir)
+            .output();
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["worktree", "remove", "--force"])
+            .arg(&beta_dir)
+            .output();
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn rebase_onto_base_aborts_failed_rebase() -> Result<()> {
+        let root =
+            std::env::temp_dir().join(format!("ecc2-worktree-rebase-fail-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+
+        let worktree_dir = root.join("wt-conflict");
+        run_git(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "-b",
+                "ecc/conflict",
+                worktree_dir.to_str().expect("utf8 path"),
+                "HEAD",
+            ],
+        )?;
+
+        fs::write(worktree_dir.join("README.md"), "hello\nbranch\n")?;
+        run_git(&worktree_dir, &["commit", "-am", "branch change"])?;
+        fs::write(repo.join("README.md"), "hello\nmain\n")?;
+        run_git(&repo, &["commit", "-am", "main change"])?;
+
+        let info = WorktreeInfo {
+            path: worktree_dir.clone(),
+            branch: "ecc/conflict".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        let error = rebase_onto_base(&info).expect_err("rebase should fail");
+        assert!(error.to_string().contains("git rebase failed"));
+        assert!(git_status_short(&worktree_dir)?.is_empty());
+        assert_eq!(
+            merge_readiness(&info)?.status,
+            MergeReadinessStatus::Conflicted
+        );
 
         let _ = Command::new("git")
             .arg("-C")

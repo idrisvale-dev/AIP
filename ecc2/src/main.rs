@@ -250,6 +250,9 @@ enum Commands {
         /// Emit machine-readable JSON instead of the human summary
         #[arg(long)]
         json: bool,
+        /// Process the queue, auto-rebasing clean blocked worktrees and merging what becomes ready
+        #[arg(long)]
+        apply: bool,
     },
     /// Prune worktrees for inactive sessions and report any active sessions still holding one
     PruneWorktrees {
@@ -844,12 +847,21 @@ async fn main() -> Result<()> {
                 }
             }
         }
-        Some(Commands::MergeQueue { json }) => {
-            let report = session::manager::build_merge_queue(&db)?;
-            if json {
-                println!("{}", serde_json::to_string_pretty(&report)?);
+        Some(Commands::MergeQueue { json, apply }) => {
+            if apply {
+                let outcome = session::manager::process_merge_queue(&db).await?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&outcome)?);
+                } else {
+                    println!("{}", format_bulk_worktree_merge_human(&outcome));
+                }
             } else {
-                println!("{}", format_merge_queue_human(&report));
+                let report = session::manager::build_merge_queue(&db)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!("{}", format_merge_queue_human(&report));
+                }
             }
         }
         Some(Commands::PruneWorktrees { json }) => {
@@ -1506,6 +1518,26 @@ fn format_bulk_worktree_merge_human(
         ));
     }
 
+    if !outcome.rebased.is_empty() {
+        lines.push(format!(
+            "Rebased {} blocked worktree(s) onto their base branch",
+            outcome.rebased.len()
+        ));
+        for rebased in &outcome.rebased {
+            lines.push(format!(
+                "- rebased {} onto {} for {}{}",
+                rebased.branch,
+                rebased.base_branch,
+                short_session(&rebased.session_id),
+                if rebased.already_up_to_date {
+                    " (already up to date)"
+                } else {
+                    ""
+                }
+            ));
+        }
+    }
+
     if !outcome.active_with_worktree_ids.is_empty() {
         lines.push(format!(
             "Skipped {} active worktree session(s)",
@@ -1522,6 +1554,12 @@ fn format_bulk_worktree_merge_human(
         lines.push(format!(
             "Skipped {} dirty worktree(s)",
             outcome.dirty_worktree_ids.len()
+        ));
+    }
+    if !outcome.blocked_by_queue_session_ids.is_empty() {
+        lines.push(format!(
+            "Blocked {} worktree(s) on remaining queue conflicts",
+            outcome.blocked_by_queue_session_ids.len()
         ));
     }
     if !outcome.failures.is_empty() {
@@ -2613,7 +2651,24 @@ mod tests {
             .expect("merge-queue --json should parse");
 
         match cli.command {
-            Some(Commands::MergeQueue { json }) => assert!(json),
+            Some(Commands::MergeQueue { json, apply }) => {
+                assert!(json);
+                assert!(!apply);
+            }
+            _ => panic!("expected merge-queue subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_merge_queue_apply_flag() {
+        let cli = Cli::try_parse_from(["ecc", "merge-queue", "--apply", "--json"])
+            .expect("merge-queue --apply --json should parse");
+
+        match cli.command {
+            Some(Commands::MergeQueue { json, apply }) => {
+                assert!(json);
+                assert!(apply);
+            }
             _ => panic!("expected merge-queue subcommand"),
         }
     }
@@ -2813,9 +2868,16 @@ mod tests {
                 already_up_to_date: false,
                 cleaned_worktree: true,
             }],
+            rebased: vec![session::manager::WorktreeRebaseOutcome {
+                session_id: "rebased12345678".to_string(),
+                branch: "ecc/rebased12345678".to_string(),
+                base_branch: "main".to_string(),
+                already_up_to_date: false,
+            }],
             active_with_worktree_ids: vec!["running12345678".to_string()],
             conflicted_session_ids: vec!["conflict123456".to_string()],
             dirty_worktree_ids: vec!["dirty123456789".to_string()],
+            blocked_by_queue_session_ids: vec!["queue123456789".to_string()],
             failures: vec![session::manager::WorktreeMergeFailure {
                 session_id: "fail1234567890".to_string(),
                 reason: "base branch not checked out".to_string(),
@@ -2824,9 +2886,12 @@ mod tests {
 
         assert!(text.contains("Merged 1 ready worktree(s)"));
         assert!(text.contains("- merged ecc/deadbeefcafefeed -> main for deadbeef"));
+        assert!(text.contains("Rebased 1 blocked worktree(s) onto their base branch"));
+        assert!(text.contains("- rebased ecc/rebased12345678 onto main for rebased1"));
         assert!(text.contains("Skipped 1 active worktree session(s)"));
         assert!(text.contains("Skipped 1 conflicted worktree(s)"));
         assert!(text.contains("Skipped 1 dirty worktree(s)"));
+        assert!(text.contains("Blocked 1 worktree(s) on remaining queue conflicts"));
         assert!(text.contains("Encountered 1 merge failure(s)"));
         assert!(text.contains("- failed fail1234: base branch not checked out"));
     }

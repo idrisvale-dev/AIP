@@ -1202,9 +1202,11 @@ mod tests {
                 invoked_flag.store(true, std::sync::atomic::Ordering::SeqCst);
                 Ok(manager::WorktreeBulkMergeOutcome {
                     merged: Vec::new(),
+                    rebased: Vec::new(),
                     active_with_worktree_ids: Vec::new(),
                     conflicted_session_ids: Vec::new(),
                     dirty_worktree_ids: Vec::new(),
+                    blocked_by_queue_session_ids: Vec::new(),
                     failures: Vec::new(),
                 })
             }
@@ -1239,9 +1241,16 @@ mod tests {
                         cleaned_worktree: true,
                     },
                 ],
+                rebased: vec![manager::WorktreeRebaseOutcome {
+                    session_id: "worker-r".to_string(),
+                    branch: "ecc/worker-r".to_string(),
+                    base_branch: "main".to_string(),
+                    already_up_to_date: false,
+                }],
                 active_with_worktree_ids: vec!["worker-c".to_string()],
                 conflicted_session_ids: vec!["worker-d".to_string()],
                 dirty_worktree_ids: vec!["worker-e".to_string()],
+                blocked_by_queue_session_ids: vec!["worker-f".to_string()],
                 failures: Vec::new(),
             })
         })

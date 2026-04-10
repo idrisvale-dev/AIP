@@ -2734,9 +2734,11 @@ impl Dashboard {
             Ok(outcome) => {
                 self.refresh();
                 if outcome.merged.is_empty()
+                    && outcome.rebased.is_empty()
                     && outcome.active_with_worktree_ids.is_empty()
                     && outcome.conflicted_session_ids.is_empty()
                     && outcome.dirty_worktree_ids.is_empty()
+                    && outcome.blocked_by_queue_session_ids.is_empty()
                     && outcome.failures.is_empty()
                 {
                     self.set_operator_note("no ready worktrees to merge".to_string());
@@ -2744,6 +2746,9 @@ impl Dashboard {
                 }
 
                 let mut parts = vec![format!("merged {} ready worktree(s)", outcome.merged.len())];
+                if !outcome.rebased.is_empty() {
+                    parts.push(format!("rebased {}", outcome.rebased.len()));
+                }
                 if !outcome.active_with_worktree_ids.is_empty() {
                     parts.push(format!(
                         "skipped {} active",
@@ -2760,6 +2765,12 @@ impl Dashboard {
                     parts.push(format!(
                         "skipped {} dirty",
                         outcome.dirty_worktree_ids.len()
+                    ));
+                }
+                if !outcome.blocked_by_queue_session_ids.is_empty() {
+                    parts.push(format!(
+                        "blocked {} in queue",
+                        outcome.blocked_by_queue_session_ids.len()
                     ));
                 }
                 if !outcome.failures.is_empty() {
