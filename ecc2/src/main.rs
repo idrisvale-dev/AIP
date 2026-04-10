@@ -590,6 +590,7 @@ struct JsonlMemoryConnectorRecord {
 
 const MARKDOWN_CONNECTOR_SUMMARY_LIMIT: usize = 160;
 const MARKDOWN_CONNECTOR_BODY_LIMIT: usize = 4000;
+const DOTENV_CONNECTOR_VALUE_LIMIT: usize = 160;
 
 #[derive(Debug, Clone)]
 struct MarkdownMemorySection {
@@ -598,6 +599,14 @@ struct MarkdownMemorySection {
     summary: String,
     body: String,
     line_number: usize,
+}
+
+#[derive(Debug, Clone)]
+struct DotenvMemoryEntry {
+    key: String,
+    path: String,
+    summary: String,
+    details: BTreeMap<String, String>,
 }
 
 #[tokio::main]
@@ -1609,6 +1618,9 @@ fn sync_memory_connector(
         config::MemoryConnectorConfig::MarkdownFile(settings) => {
             sync_markdown_memory_connector(db, name, settings, limit)
         }
+        config::MemoryConnectorConfig::DotenvFile(settings) => {
+            sync_dotenv_memory_connector(db, name, settings, limit)
+        }
     }
 }
 
@@ -1805,6 +1817,54 @@ fn sync_markdown_memory_connector(
     Ok(stats)
 }
 
+fn sync_dotenv_memory_connector(
+    db: &session::store::StateStore,
+    name: &str,
+    settings: &config::MemoryConnectorDotenvFileConfig,
+    limit: usize,
+) -> Result<GraphConnectorSyncStats> {
+    if settings.path.as_os_str().is_empty() {
+        anyhow::bail!("memory connector {name} has no path configured");
+    }
+
+    let body = std::fs::read_to_string(&settings.path)
+        .with_context(|| format!("read memory connector file {}", settings.path.display()))?;
+    let default_session_id = settings
+        .session_id
+        .as_deref()
+        .map(|value| resolve_session_id(db, value))
+        .transpose()?;
+    let entries = parse_dotenv_memory_entries(&settings.path, &body, settings, limit);
+    let mut stats = GraphConnectorSyncStats {
+        connector_name: name.to_string(),
+        ..Default::default()
+    };
+
+    for entry in entries {
+        stats.records_read += 1;
+        import_memory_connector_record(
+            db,
+            &mut stats,
+            default_session_id.as_deref(),
+            settings.default_entity_type.as_deref(),
+            settings.default_observation_type.as_deref(),
+            JsonlMemoryConnectorRecord {
+                session_id: None,
+                entity_type: None,
+                entity_name: entry.key,
+                path: Some(entry.path),
+                entity_summary: Some(entry.summary.clone()),
+                metadata: BTreeMap::from([("connector".to_string(), "dotenv_file".to_string())]),
+                observation_type: None,
+                summary: entry.summary,
+                details: entry.details,
+            },
+        )?;
+    }
+
+    Ok(stats)
+}
+
 fn import_memory_connector_record(
     db: &session::store::StateStore,
     stats: &mut GraphConnectorSyncStats,
@@ -1905,6 +1965,72 @@ fn collect_jsonl_paths_inner(root: &Path, recurse: bool, paths: &mut Vec<PathBuf
         }
     }
     Ok(())
+}
+
+fn parse_dotenv_memory_entries(
+    path: &Path,
+    body: &str,
+    settings: &config::MemoryConnectorDotenvFileConfig,
+    limit: usize,
+) -> Vec<DotenvMemoryEntry> {
+    if limit == 0 {
+        return Vec::new();
+    }
+
+    let mut entries = Vec::new();
+    let source_path = path.display().to_string();
+
+    for (index, raw_line) in body.lines().enumerate() {
+        if entries.len() >= limit {
+            break;
+        }
+
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        let Some((key, value)) = parse_dotenv_assignment(line) else {
+            continue;
+        };
+        if !dotenv_key_included(key, settings) {
+            continue;
+        }
+
+        let value = parse_dotenv_value(value);
+        let secret_like = dotenv_key_is_secret(key);
+        let mut details = BTreeMap::new();
+        details.insert("source_path".to_string(), source_path.clone());
+        details.insert("line".to_string(), (index + 1).to_string());
+        details.insert("key".to_string(), key.to_string());
+        details.insert("secret_redacted".to_string(), secret_like.to_string());
+        if settings.include_safe_values && !secret_like && !value.is_empty() {
+            details.insert(
+                "value".to_string(),
+                truncate_connector_text(&value, DOTENV_CONNECTOR_VALUE_LIMIT),
+            );
+        }
+
+        let summary = if secret_like {
+            format!("{key} configured (secret redacted)")
+        } else if settings.include_safe_values && !value.is_empty() {
+            format!(
+                "{key}={}",
+                truncate_connector_text(&value, DOTENV_CONNECTOR_VALUE_LIMIT)
+            )
+        } else {
+            format!("{key} configured")
+        };
+
+        entries.push(DotenvMemoryEntry {
+            key: key.to_string(),
+            path: format!("{source_path}#{key}"),
+            summary,
+            details,
+        });
+    }
+
+    entries
 }
 
 fn parse_markdown_memory_sections(
@@ -2056,6 +2182,73 @@ fn truncate_connector_text(value: &str, max_chars: usize) -> String {
     }
     let truncated: String = trimmed.chars().take(max_chars.saturating_sub(1)).collect();
     format!("{truncated}…")
+}
+
+fn parse_dotenv_assignment(line: &str) -> Option<(&str, &str)> {
+    let trimmed = line.strip_prefix("export ").unwrap_or(line).trim();
+    let (key, value) = trimmed.split_once('=')?;
+    let key = key.trim();
+    if key.is_empty() {
+        return None;
+    }
+    Some((key, value.trim()))
+}
+
+fn parse_dotenv_value(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if let Some(unquoted) = trimmed
+        .strip_prefix('"')
+        .and_then(|value| value.strip_suffix('"'))
+    {
+        return unquoted.to_string();
+    }
+    if let Some(unquoted) = trimmed
+        .strip_prefix('\'')
+        .and_then(|value| value.strip_suffix('\''))
+    {
+        return unquoted.to_string();
+    }
+    trimmed.to_string()
+}
+
+fn dotenv_key_included(key: &str, settings: &config::MemoryConnectorDotenvFileConfig) -> bool {
+    if settings
+        .exclude_keys
+        .iter()
+        .any(|candidate| candidate == key)
+    {
+        return false;
+    }
+    if !settings.include_keys.is_empty()
+        && settings
+            .include_keys
+            .iter()
+            .any(|candidate| candidate == key)
+    {
+        return true;
+    }
+    if settings.key_prefixes.is_empty() {
+        return settings.include_keys.is_empty();
+    }
+    settings
+        .key_prefixes
+        .iter()
+        .any(|prefix| !prefix.is_empty() && key.starts_with(prefix))
+}
+
+fn dotenv_key_is_secret(key: &str) -> bool {
+    let upper = key.to_ascii_uppercase();
+    [
+        "SECRET",
+        "TOKEN",
+        "PASSWORD",
+        "PRIVATE_KEY",
+        "API_KEY",
+        "CLIENT_SECRET",
+        "ACCESS_KEY",
+    ]
+    .iter()
+    .any(|marker| upper.contains(marker))
 }
 
 fn build_message(
@@ -5473,6 +5666,110 @@ Guide users to repair before reinstall so wiped setups do not buy twice.
             .details
             .get("body")
             .is_some_and(|value: &String| value.contains("charged twice")));
+
+        Ok(())
+    }
+
+    #[test]
+    fn sync_memory_connector_imports_dotenv_entries_safely() -> Result<()> {
+        let tempdir = TestDir::new("graph-connector-sync-dotenv")?;
+        let db = session::store::StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = chrono::Utc::now();
+        db.insert_session(&session::Session {
+            id: "session-1".to_string(),
+            task: "service config import".to_string(),
+            project: "ecc-tools".to_string(),
+            task_group: "memory".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: session::SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: session::SessionMetrics::default(),
+        })?;
+
+        let connector_path = tempdir.path().join("hermes.env");
+        fs::write(
+            &connector_path,
+            r#"# Hermes service config
+STRIPE_SECRET_KEY=sk_test_secret
+STRIPE_PRO_PRICE_ID=price_pro_monthly
+PUBLIC_BASE_URL="https://ecc.tools"
+STRIPE_WEBHOOK_SECRET=whsec_secret
+GITHUB_TOKEN=ghp_should_not_import
+INVALID LINE
+"#,
+        )?;
+
+        let mut cfg = config::Config::default();
+        cfg.memory_connectors.insert(
+            "hermes_env".to_string(),
+            config::MemoryConnectorConfig::DotenvFile(config::MemoryConnectorDotenvFileConfig {
+                path: connector_path.clone(),
+                session_id: Some("latest".to_string()),
+                default_entity_type: Some("service_config".to_string()),
+                default_observation_type: Some("external_config".to_string()),
+                key_prefixes: vec!["STRIPE_".to_string(), "PUBLIC_".to_string()],
+                include_keys: Vec::new(),
+                exclude_keys: vec!["STRIPE_WEBHOOK_SECRET".to_string()],
+                include_safe_values: true,
+            }),
+        );
+
+        let stats = sync_memory_connector(&db, &cfg, "hermes_env", 10)?;
+        assert_eq!(stats.records_read, 3);
+        assert_eq!(stats.entities_upserted, 3);
+        assert_eq!(stats.observations_added, 3);
+        assert_eq!(stats.skipped_records, 0);
+
+        let recalled = db.recall_context_entities(None, "stripe ecc.tools", 10)?;
+        assert!(recalled
+            .iter()
+            .any(|entry| entry.entity.name == "STRIPE_SECRET_KEY"));
+        assert!(recalled
+            .iter()
+            .any(|entry| entry.entity.name == "STRIPE_PRO_PRICE_ID"));
+        assert!(recalled
+            .iter()
+            .any(|entry| entry.entity.name == "PUBLIC_BASE_URL"));
+        assert!(!recalled
+            .iter()
+            .any(|entry| entry.entity.name == "STRIPE_WEBHOOK_SECRET"));
+        assert!(!recalled
+            .iter()
+            .any(|entry| entry.entity.name == "GITHUB_TOKEN"));
+
+        let secret = recalled
+            .iter()
+            .find(|entry| entry.entity.name == "STRIPE_SECRET_KEY")
+            .expect("secret entry should exist");
+        let secret_observations = db.list_context_observations(Some(secret.entity.id), 5)?;
+        assert_eq!(secret_observations.len(), 1);
+        assert_eq!(
+            secret_observations[0]
+                .details
+                .get("secret_redacted")
+                .map(String::as_str),
+            Some("true")
+        );
+        assert!(!secret_observations[0].details.contains_key("value"));
+
+        let public_base = recalled
+            .iter()
+            .find(|entry| entry.entity.name == "PUBLIC_BASE_URL")
+            .expect("public base url should exist");
+        let public_observations = db.list_context_observations(Some(public_base.entity.id), 5)?;
+        assert_eq!(public_observations.len(), 1);
+        assert_eq!(
+            public_observations[0]
+                .details
+                .get("value")
+                .map(String::as_str),
+            Some("https://ecc.tools")
+        );
 
         Ok(())
     }

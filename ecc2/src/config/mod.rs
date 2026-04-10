@@ -109,6 +109,7 @@ pub enum MemoryConnectorConfig {
     JsonlFile(MemoryConnectorJsonlFileConfig),
     JsonlDirectory(MemoryConnectorJsonlDirectoryConfig),
     MarkdownFile(MemoryConnectorMarkdownFileConfig),
+    DotenvFile(MemoryConnectorDotenvFileConfig),
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -137,6 +138,19 @@ pub struct MemoryConnectorMarkdownFileConfig {
     pub session_id: Option<String>,
     pub default_entity_type: Option<String>,
     pub default_observation_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MemoryConnectorDotenvFileConfig {
+    pub path: PathBuf,
+    pub session_id: Option<String>,
+    pub default_entity_type: Option<String>,
+    pub default_observation_type: Option<String>,
+    pub key_prefixes: Vec<String>,
+    pub include_keys: Vec<String>,
+    pub exclude_keys: Vec<String>,
+    pub include_safe_values: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1365,6 +1379,49 @@ default_observation_type = "external_note"
                 );
             }
             _ => panic!("expected markdown_file connector"),
+        }
+    }
+
+    #[test]
+    fn memory_dotenv_file_connectors_deserialize_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[memory_connectors.hermes_env]
+kind = "dotenv_file"
+path = "/tmp/hermes.env"
+session_id = "latest"
+default_entity_type = "service_config"
+default_observation_type = "external_config"
+key_prefixes = ["STRIPE_", "PUBLIC_"]
+include_keys = ["PUBLIC_BASE_URL"]
+exclude_keys = ["STRIPE_WEBHOOK_SECRET"]
+include_safe_values = true
+"#,
+        )
+        .unwrap();
+
+        let connector = config
+            .memory_connectors
+            .get("hermes_env")
+            .expect("connector should deserialize");
+        match connector {
+            crate::config::MemoryConnectorConfig::DotenvFile(settings) => {
+                assert_eq!(settings.path, PathBuf::from("/tmp/hermes.env"));
+                assert_eq!(settings.session_id.as_deref(), Some("latest"));
+                assert_eq!(
+                    settings.default_entity_type.as_deref(),
+                    Some("service_config")
+                );
+                assert_eq!(
+                    settings.default_observation_type.as_deref(),
+                    Some("external_config")
+                );
+                assert_eq!(settings.key_prefixes, vec!["STRIPE_", "PUBLIC_"]);
+                assert_eq!(settings.include_keys, vec!["PUBLIC_BASE_URL"]);
+                assert_eq!(settings.exclude_keys, vec!["STRIPE_WEBHOOK_SECRET"]);
+                assert!(settings.include_safe_values);
+            }
+            _ => panic!("expected dotenv_file connector"),
         }
     }
 
