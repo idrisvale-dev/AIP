@@ -183,6 +183,12 @@ It is mostly:
 - clarifying public docs
 - continuing the ECC 2.0 operator/control-plane buildout
 
+ECC 2.0 now ships a bounded migration audit entrypoint:
+
+- `ecc migrate audit --source ~/.hermes`
+
+Use that first to inventory the legacy workspace and map detected surfaces onto the current ECC2 scheduler, remote dispatch, memory graph, templates, and manual-translation lanes.
+
 ## What Still Belongs In Backlog
 
 The remaining large migration themes are already tracked:

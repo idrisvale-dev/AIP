@@ -9,8 +9,8 @@ mod worktree;
 use anyhow::{Context, Result};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::fs::File;
+use std::collections::{BTreeMap, BTreeSet};
+use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
@@ -345,6 +345,11 @@ enum Commands {
         #[command(subcommand)]
         command: GraphCommands,
     },
+    /// Audit Hermes/OpenClaw-style workspaces and map them onto ECC2
+    Migrate {
+        #[command(subcommand)]
+        command: MigrationCommands,
+    },
     /// Manage persistent scheduled task dispatch
     Schedule {
         #[command(subcommand)]
@@ -565,6 +570,19 @@ enum RemoteCommands {
         /// Bearer token required for POST /dispatch
         #[arg(long)]
         token: String,
+    },
+}
+
+#[derive(clap::Subcommand, Debug)]
+enum MigrationCommands {
+    /// Audit a Hermes/OpenClaw-style workspace and map it onto ECC2 features
+    Audit {
+        /// Path to the legacy Hermes/OpenClaw workspace root
+        #[arg(long)]
+        source: PathBuf,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -859,6 +877,41 @@ struct GraphConnectorStatus {
 struct GraphConnectorStatusReport {
     configured_connectors: usize,
     connectors: Vec<GraphConnectorStatus>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LegacyMigrationReadiness {
+    ReadyNow,
+    ManualTranslation,
+    LocalAuthRequired,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacyMigrationArtifact {
+    category: String,
+    readiness: LegacyMigrationReadiness,
+    source_paths: Vec<String>,
+    detected_items: usize,
+    mapping: Vec<String>,
+    notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacyMigrationAuditSummary {
+    artifact_categories_detected: usize,
+    ready_now_categories: usize,
+    manual_translation_categories: usize,
+    local_auth_required_categories: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacyMigrationAuditReport {
+    source: String,
+    detected_systems: Vec<String>,
+    summary: LegacyMigrationAuditSummary,
+    recommended_next_steps: Vec<String>,
+    artifacts: Vec<LegacyMigrationArtifact>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -1588,6 +1641,16 @@ async fn main() -> Result<()> {
                 println!("{}", format_decisions_human(&entries, all));
             }
         }
+        Some(Commands::Migrate { command }) => match command {
+            MigrationCommands::Audit { source, json } => {
+                let report = build_legacy_migration_audit_report(&source)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!("{}", format_legacy_migration_audit_human(&report));
+                }
+            }
+        },
         Some(Commands::Graph { command }) => match command {
             GraphCommands::AddEntity {
                 session_id,
@@ -4397,6 +4460,401 @@ fn format_graph_observations_human(observations: &[session::ContextGraphObservat
     lines.join("\n")
 }
 
+fn build_legacy_migration_audit_report(source: &Path) -> Result<LegacyMigrationAuditReport> {
+    let source = source
+        .canonicalize()
+        .with_context(|| format!("Legacy workspace not found: {}", source.display()))?;
+    if !source.is_dir() {
+        anyhow::bail!(
+            "Legacy workspace source must be a directory: {}",
+            source.display()
+        );
+    }
+
+    let mut artifacts = Vec::new();
+
+    let scheduler_paths = collect_existing_relative_paths(
+        &source,
+        &["cron/scheduler.py", "jobs.py", "cron/jobs.json"],
+    );
+    if !scheduler_paths.is_empty() {
+        artifacts.push(LegacyMigrationArtifact {
+            category: "scheduler".to_string(),
+            readiness: LegacyMigrationReadiness::ReadyNow,
+            detected_items: scheduler_paths.len(),
+            source_paths: scheduler_paths,
+            mapping: vec![
+                "ecc schedule add".to_string(),
+                "ecc schedule list".to_string(),
+                "ecc schedule run-due".to_string(),
+                "ecc daemon".to_string(),
+            ],
+            notes: vec![
+                "Recurring jobs can be recreated directly in ECC2's persistent scheduler."
+                    .to_string(),
+                "Translate each legacy cron prompt into an explicit ECC task body before enabling it."
+                    .to_string(),
+            ],
+        });
+    }
+
+    let gateway_dir = source.join("gateway");
+    if gateway_dir.is_dir() {
+        artifacts.push(LegacyMigrationArtifact {
+            category: "gateway_dispatch".to_string(),
+            readiness: LegacyMigrationReadiness::ReadyNow,
+            detected_items: count_files_recursive(&gateway_dir)?,
+            source_paths: vec!["gateway".to_string()],
+            mapping: vec![
+                "ecc remote serve".to_string(),
+                "ecc remote add".to_string(),
+                "ecc remote computer-use".to_string(),
+                "ecc remote run".to_string(),
+            ],
+            notes: vec![
+                "ECC2 already ships a token-authenticated remote dispatch queue and HTTP intake."
+                    .to_string(),
+                "Remote handlers should be translated to ECC task bodies instead of copied verbatim."
+                    .to_string(),
+            ],
+        });
+    }
+
+    let memory_paths = collect_existing_relative_paths(&source, &["memory_tool.py"]);
+    if !memory_paths.is_empty() {
+        artifacts.push(LegacyMigrationArtifact {
+            category: "memory_tool".to_string(),
+            readiness: LegacyMigrationReadiness::ReadyNow,
+            detected_items: memory_paths.len(),
+            source_paths: memory_paths,
+            mapping: vec![
+                "ecc graph add-observation".to_string(),
+                "ecc graph connector-sync".to_string(),
+                "ecc graph recall".to_string(),
+                "ecc graph connectors".to_string(),
+            ],
+            notes: vec![
+                "ECC2 deep memory now supports persistent observations, recall, compaction, and external connectors."
+                    .to_string(),
+            ],
+        });
+    }
+
+    let workspace_dir = source.join("workspace");
+    if workspace_dir.is_dir() {
+        artifacts.push(LegacyMigrationArtifact {
+            category: "workspace_memory".to_string(),
+            readiness: LegacyMigrationReadiness::ReadyNow,
+            detected_items: count_files_recursive(&workspace_dir)?,
+            source_paths: vec!["workspace".to_string()],
+            mapping: vec![
+                "ecc graph connector-sync".to_string(),
+                "ecc graph recall".to_string(),
+                "WORKING-CONTEXT.md".to_string(),
+            ],
+            notes: vec![
+                "Import only sanitized operator memory into the shared context graph."
+                    .to_string(),
+                "Private business data, secrets, and personal archives should stay outside the public repo."
+                    .to_string(),
+            ],
+        });
+    }
+
+    let skills_paths = collect_existing_relative_paths(&source, &["skills", "skills/ecc-imports"]);
+    if !skills_paths.is_empty() {
+        artifacts.push(LegacyMigrationArtifact {
+            category: "skills".to_string(),
+            readiness: LegacyMigrationReadiness::ManualTranslation,
+            detected_items: count_files_recursive(&source.join("skills"))?,
+            source_paths: skills_paths,
+            mapping: vec![
+                "skills/".to_string(),
+                "ecc template".to_string(),
+                "configure-ecc".to_string(),
+            ],
+            notes: vec![
+                "Reusable skills should be ported one by one into ECC-native skills or orchestration templates."
+                    .to_string(),
+                "Do not bulk-copy legacy private skills without auditing for secrets and operator-only assumptions."
+                    .to_string(),
+            ],
+        });
+    }
+
+    let tools_dir = source.join("tools");
+    if tools_dir.is_dir() {
+        artifacts.push(LegacyMigrationArtifact {
+            category: "tools".to_string(),
+            readiness: LegacyMigrationReadiness::ManualTranslation,
+            detected_items: count_files_recursive(&tools_dir)?,
+            source_paths: vec!["tools".to_string()],
+            mapping: vec![
+                "agents/".to_string(),
+                "commands/".to_string(),
+                "hooks/".to_string(),
+                "harness_runners.<name>".to_string(),
+            ],
+            notes: vec![
+                "Legacy tool wrappers should be rebuilt as ECC agents, commands, hooks, or configured harness runners."
+                    .to_string(),
+                "Only the reusable workflow surface should move across; opaque runtime glue should be reimplemented minimally."
+                    .to_string(),
+            ],
+        });
+    }
+
+    let plugins_dir = source.join("plugins");
+    if plugins_dir.is_dir() {
+        artifacts.push(LegacyMigrationArtifact {
+            category: "plugins".to_string(),
+            readiness: LegacyMigrationReadiness::ManualTranslation,
+            detected_items: count_files_recursive(&plugins_dir)?,
+            source_paths: vec!["plugins".to_string()],
+            mapping: vec![
+                "hooks/".to_string(),
+                "commands/".to_string(),
+                "skills/".to_string(),
+            ],
+            notes: vec![
+                "Bridge plugins normally translate into ECC hooks, commands, or skills instead of one-for-one plugin copies."
+                    .to_string(),
+            ],
+        });
+    }
+
+    let env_service_paths = collect_env_service_paths(&source)?;
+    if !env_service_paths.is_empty() {
+        artifacts.push(LegacyMigrationArtifact {
+            category: "env_services".to_string(),
+            readiness: LegacyMigrationReadiness::LocalAuthRequired,
+            detected_items: env_service_paths.len(),
+            source_paths: env_service_paths,
+            mapping: vec![
+                "Claude connectors / OAuth".to_string(),
+                "MCP config".to_string(),
+                "local API key setup".to_string(),
+            ],
+            notes: vec![
+                "Secret material should not be imported into ECC2."
+                    .to_string(),
+                "Re-enter credentials locally through connectors, OAuth, MCP servers, or local env configuration."
+                    .to_string(),
+            ],
+        });
+    }
+
+    let summary = LegacyMigrationAuditSummary {
+        artifact_categories_detected: artifacts.len(),
+        ready_now_categories: artifacts
+            .iter()
+            .filter(|artifact| artifact.readiness == LegacyMigrationReadiness::ReadyNow)
+            .count(),
+        manual_translation_categories: artifacts
+            .iter()
+            .filter(|artifact| artifact.readiness == LegacyMigrationReadiness::ManualTranslation)
+            .count(),
+        local_auth_required_categories: artifacts
+            .iter()
+            .filter(|artifact| artifact.readiness == LegacyMigrationReadiness::LocalAuthRequired)
+            .count(),
+    };
+
+    Ok(LegacyMigrationAuditReport {
+        source: source.display().to_string(),
+        detected_systems: detect_legacy_workspace_systems(&source, &artifacts),
+        summary,
+        recommended_next_steps: build_legacy_migration_next_steps(&artifacts),
+        artifacts,
+    })
+}
+
+fn collect_existing_relative_paths(source: &Path, relative_paths: &[&str]) -> Vec<String> {
+    let mut matches = Vec::new();
+    for relative_path in relative_paths {
+        if source.join(relative_path).exists() {
+            matches.push((*relative_path).to_string());
+        }
+    }
+    matches
+}
+
+fn collect_env_service_paths(source: &Path) -> Result<Vec<String>> {
+    let mut matches = Vec::new();
+    for file_name in [
+        "config.yaml",
+        ".env",
+        ".env.local",
+        ".env.production",
+        ".envrc",
+    ] {
+        if source.join(file_name).is_file() {
+            matches.push(file_name.to_string());
+        }
+    }
+
+    let services_dir = source.join("services");
+    if services_dir.is_dir() {
+        let service_file_count = count_files_recursive(&services_dir)?;
+        if service_file_count > 0 {
+            matches.push("services".to_string());
+        }
+    }
+
+    Ok(matches)
+}
+
+fn count_files_recursive(path: &Path) -> Result<usize> {
+    if !path.exists() {
+        return Ok(0);
+    }
+    if path.is_file() {
+        return Ok(1);
+    }
+
+    let mut total = 0usize;
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+        total += count_files_recursive(&entry_path)?;
+    }
+    Ok(total)
+}
+
+fn detect_legacy_workspace_systems(
+    source: &Path,
+    artifacts: &[LegacyMigrationArtifact],
+) -> Vec<String> {
+    let mut detected = BTreeSet::new();
+    let display = source.display().to_string().to_lowercase();
+    if display.contains("hermes")
+        || source.join("config.yaml").is_file()
+        || source.join("cron").exists()
+        || source.join("workspace").exists()
+    {
+        detected.insert("hermes".to_string());
+    }
+    if display.contains("openclaw") || source.join(".openclaw").exists() {
+        detected.insert("openclaw".to_string());
+    }
+    if detected.is_empty() && !artifacts.is_empty() {
+        detected.insert("legacy_workspace".to_string());
+    }
+    detected.into_iter().collect()
+}
+
+fn build_legacy_migration_next_steps(artifacts: &[LegacyMigrationArtifact]) -> Vec<String> {
+    let mut steps = Vec::new();
+    let categories: BTreeSet<&str> = artifacts
+        .iter()
+        .map(|artifact| artifact.category.as_str())
+        .collect();
+
+    if categories.contains("scheduler") {
+        steps.push(
+            "Recreate recurring jobs with `ecc schedule add`, verify them with `ecc schedule list`, then enable processing through `ecc daemon`."
+                .to_string(),
+        );
+    }
+    if categories.contains("gateway_dispatch") {
+        steps.push(
+            "Replace gateway/dispatch entrypoints with `ecc remote serve`, `ecc remote add`, and `ecc remote computer-use`."
+                .to_string(),
+        );
+    }
+    if categories.contains("memory_tool") || categories.contains("workspace_memory") {
+        steps.push(
+            "Import sanitized operator memory through `ecc graph connector-sync`, then use `ecc graph recall` and pinned observations for durable context."
+                .to_string(),
+        );
+    }
+    if categories.contains("skills") {
+        steps.push(
+            "Translate reusable Hermes/OpenClaw skills into ECC skills or orchestration templates one lane at a time instead of bulk-copying them."
+                .to_string(),
+        );
+    }
+    if categories.contains("tools") || categories.contains("plugins") {
+        steps.push(
+            "Rebuild valuable tool/plugin wrappers as ECC agents, commands, hooks, or harness runners, keeping only reusable workflow behavior."
+                .to_string(),
+        );
+    }
+    if categories.contains("env_services") {
+        steps.push(
+            "Reconfigure credentials locally through Claude connectors, MCP config, OAuth, or local API key setup; do not import raw secret material."
+                .to_string(),
+        );
+    }
+
+    if steps.is_empty() {
+        steps.push(
+            "No recognizable Hermes/OpenClaw migration surfaces were detected; inspect the workspace manually before attempting migration."
+                .to_string(),
+        );
+    }
+
+    steps
+}
+
+fn format_legacy_migration_audit_human(report: &LegacyMigrationAuditReport) -> String {
+    let mut lines = vec![
+        format!("Legacy migration audit: {}", report.source),
+        format!(
+            "Detected systems: {}",
+            if report.detected_systems.is_empty() {
+                "none".to_string()
+            } else {
+                report.detected_systems.join(", ")
+            }
+        ),
+        format!(
+            "Artifact categories: {} | ready now {} | manual translation {} | local auth {}",
+            report.summary.artifact_categories_detected,
+            report.summary.ready_now_categories,
+            report.summary.manual_translation_categories,
+            report.summary.local_auth_required_categories
+        ),
+    ];
+
+    if report.artifacts.is_empty() {
+        lines.push("No recognizable Hermes/OpenClaw migration surfaces found.".to_string());
+        return lines.join("\n");
+    }
+
+    lines.push(String::new());
+    lines.push("Artifacts".to_string());
+    for artifact in &report.artifacts {
+        lines.push(format!(
+            "- {} [{}] | items {}",
+            artifact.category,
+            format_legacy_migration_readiness(artifact.readiness),
+            artifact.detected_items
+        ));
+        lines.push(format!("  sources {}", artifact.source_paths.join(", ")));
+        lines.push(format!("  map to {}", artifact.mapping.join(", ")));
+        for note in &artifact.notes {
+            lines.push(format!("  note {note}"));
+        }
+    }
+
+    lines.push(String::new());
+    lines.push("Recommended next steps".to_string());
+    for step in &report.recommended_next_steps {
+        lines.push(format!("- {step}"));
+    }
+
+    lines.join("\n")
+}
+
+fn format_legacy_migration_readiness(readiness: LegacyMigrationReadiness) -> &'static str {
+    match readiness {
+        LegacyMigrationReadiness::ReadyNow => "ready_now",
+        LegacyMigrationReadiness::ManualTranslation => "manual_translation",
+        LegacyMigrationReadiness::LocalAuthRequired => "local_auth_required",
+    }
+}
+
 fn format_graph_recall_human(
     entries: &[session::ContextGraphRecallEntry],
     session_id: Option<&str>,
@@ -6818,6 +7276,96 @@ mod tests {
             }
             _ => panic!("expected graph connectors subcommand"),
         }
+    }
+
+    #[test]
+    fn cli_parses_migrate_audit_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "migrate",
+            "audit",
+            "--source",
+            "/tmp/hermes",
+            "--json",
+        ])
+        .expect("migrate audit should parse");
+
+        match cli.command {
+            Some(Commands::Migrate {
+                command: MigrationCommands::Audit { source, json },
+            }) => {
+                assert_eq!(source, PathBuf::from("/tmp/hermes"));
+                assert!(json);
+            }
+            _ => panic!("expected migrate audit subcommand"),
+        }
+    }
+
+    #[test]
+    fn legacy_migration_audit_report_maps_detected_artifacts() -> Result<()> {
+        let tempdir = TestDir::new("legacy-migration-audit")?;
+        let root = tempdir.path();
+        fs::create_dir_all(root.join("cron"))?;
+        fs::create_dir_all(root.join("gateway"))?;
+        fs::create_dir_all(root.join("workspace/notes"))?;
+        fs::create_dir_all(root.join("skills/ecc-imports"))?;
+        fs::create_dir_all(root.join("tools"))?;
+        fs::create_dir_all(root.join("plugins"))?;
+        fs::write(root.join("config.yaml"), "model: claude\n")?;
+        fs::write(root.join("cron/scheduler.py"), "print('tick')\n")?;
+        fs::write(root.join("jobs.py"), "JOBS = []\n")?;
+        fs::write(root.join("gateway/router.py"), "route = True\n")?;
+        fs::write(root.join("memory_tool.py"), "class MemoryTool: pass\n")?;
+        fs::write(root.join("workspace/notes/recovery.md"), "# recovery\n")?;
+        fs::write(root.join("skills/ecc-imports/research.md"), "# skill\n")?;
+        fs::write(root.join("tools/browser.py"), "print('browser')\n")?;
+        fs::write(root.join("plugins/reminders.py"), "print('reminders')\n")?;
+        fs::write(
+            root.join(".env.local"),
+            "STRIPE_SECRET_KEY=sk_test_secret\n",
+        )?;
+
+        let report = build_legacy_migration_audit_report(root)?;
+
+        assert_eq!(report.detected_systems, vec!["hermes"]);
+        assert_eq!(report.summary.artifact_categories_detected, 8);
+        assert_eq!(report.summary.ready_now_categories, 4);
+        assert_eq!(report.summary.manual_translation_categories, 3);
+        assert_eq!(report.summary.local_auth_required_categories, 1);
+        assert!(report
+            .recommended_next_steps
+            .iter()
+            .any(|step| step.contains("ecc schedule add")));
+        assert!(report
+            .recommended_next_steps
+            .iter()
+            .any(|step| step.contains("ecc remote serve")));
+
+        let scheduler = report
+            .artifacts
+            .iter()
+            .find(|artifact| artifact.category == "scheduler")
+            .expect("scheduler artifact");
+        assert_eq!(scheduler.readiness, LegacyMigrationReadiness::ReadyNow);
+        assert_eq!(scheduler.detected_items, 2);
+
+        let env_services = report
+            .artifacts
+            .iter()
+            .find(|artifact| artifact.category == "env_services")
+            .expect("env services artifact");
+        assert_eq!(
+            env_services.readiness,
+            LegacyMigrationReadiness::LocalAuthRequired
+        );
+        assert!(env_services
+            .source_paths
+            .contains(&"config.yaml".to_string()));
+        assert!(env_services
+            .source_paths
+            .contains(&".env.local".to_string()));
+
+        Ok(())
     }
 
     #[test]

@@ -82,6 +82,7 @@ These stay local and should be configured per operator:
 
 ## Suggested Bring-Up Order
 
+0. Run `ecc migrate audit --source ~/.hermes` first to inventory the legacy workspace and see which parts already map onto ECC2.
 1. Install ECC and verify the baseline harness setup.
 2. Install Hermes and point it at ECC-imported skills.
 3. Register the MCP servers you actually use every day.
