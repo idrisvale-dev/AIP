@@ -14590,6 +14590,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             auto_terminate_stale_sessions: false,
             default_agent: "claude".to_string(),
             default_agent_profile: None,
+            harness_runners: Default::default(),
             agent_profiles: Default::default(),
             orchestration_templates: Default::default(),
             memory_connectors: Default::default(),

@@ -2002,8 +2002,17 @@ pub async fn delete_session(db: &StateStore, id: &str) -> Result<()> {
     Ok(())
 }
 
-fn agent_program(agent_type: &str) -> Result<PathBuf> {
-    match HarnessKind::from_agent_type(agent_type) {
+fn agent_program(cfg: &Config, agent_type: &str) -> Result<PathBuf> {
+    let harness = HarnessKind::from_agent_type(agent_type);
+    if let Some(runner) = cfg.harness_runner(harness.as_str()) {
+        let program = runner.program.trim();
+        if program.is_empty() {
+            anyhow::bail!("Configured harness runner for {harness} is missing a program");
+        }
+        return Ok(PathBuf::from(program));
+    }
+
+    match harness {
         HarnessKind::Claude => Ok(PathBuf::from("claude")),
         HarnessKind::Codex => Ok(PathBuf::from("codex")),
         HarnessKind::OpenCode => Ok(PathBuf::from("opencode")),
@@ -2067,9 +2076,10 @@ pub async fn run_session(
         return Ok(());
     }
 
-    let agent_program = agent_program(agent_type)?;
+    let agent_program = agent_program(cfg, agent_type)?;
     let profile = db.get_session_profile(session_id)?;
     let command = build_agent_command(
+        cfg,
         agent_type,
         &agent_program,
         task,
@@ -2666,6 +2676,7 @@ async fn spawn_session_runner_for_program(
 }
 
 fn build_agent_command(
+    cfg: &Config,
     agent_type: &str,
     agent_program: &Path,
     task: &str,
@@ -2674,6 +2685,17 @@ fn build_agent_command(
     profile: Option<&SessionAgentProfile>,
 ) -> Command {
     let harness = HarnessKind::from_agent_type(agent_type);
+    if let Some(runner) = cfg.harness_runner(harness.as_str()) {
+        return build_configured_harness_command(
+            runner,
+            agent_program,
+            task,
+            session_id,
+            working_dir,
+            profile,
+        );
+    }
+
     let task = normalize_task_for_harness(harness, task, profile);
     let mut command = Command::new(agent_program);
     command.env("ECC_SESSION_ID", session_id);
@@ -2771,8 +2793,114 @@ fn build_agent_command(
     command
 }
 
+fn build_configured_harness_command(
+    runner: &crate::config::HarnessRunnerConfig,
+    agent_program: &Path,
+    task: &str,
+    session_id: &str,
+    working_dir: &Path,
+    profile: Option<&SessionAgentProfile>,
+) -> Command {
+    let mut command = Command::new(agent_program);
+    command.env("ECC_SESSION_ID", session_id);
+    for (key, value) in &runner.env {
+        if !value.trim().is_empty() {
+            command.env(key, value);
+        }
+    }
+    for arg in &runner.base_args {
+        if !arg.trim().is_empty() {
+            command.arg(arg);
+        }
+    }
+    if let Some(flag) = runner.cwd_flag.as_deref() {
+        command.arg(flag).arg(working_dir);
+    }
+    if let Some(flag) = runner.session_name_flag.as_deref() {
+        command.arg(flag).arg(format!("ecc-{session_id}"));
+    }
+    if let Some(profile) = profile {
+        if let (Some(flag), Some(model)) = (runner.model_flag.as_deref(), profile.model.as_ref()) {
+            command.arg(flag).arg(model);
+        }
+        if let Some(flag) = runner.add_dir_flag.as_deref() {
+            for dir in &profile.add_dirs {
+                command.arg(flag).arg(dir);
+            }
+        }
+        if let Some(flag) = runner.include_directories_flag.as_deref() {
+            if !profile.add_dirs.is_empty() {
+                let include_dirs = profile
+                    .add_dirs
+                    .iter()
+                    .map(|dir| dir.to_string_lossy().to_string())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                command.arg(flag).arg(include_dirs);
+            }
+        }
+        if let Some(flag) = runner.allowed_tools_flag.as_deref() {
+            if !profile.allowed_tools.is_empty() {
+                command.arg(flag).arg(profile.allowed_tools.join(","));
+            }
+        }
+        if let Some(flag) = runner.disallowed_tools_flag.as_deref() {
+            if !profile.disallowed_tools.is_empty() {
+                command.arg(flag).arg(profile.disallowed_tools.join(","));
+            }
+        }
+        if let (Some(flag), Some(permission_mode)) = (
+            runner.permission_mode_flag.as_deref(),
+            profile.permission_mode.as_ref(),
+        ) {
+            command.arg(flag).arg(permission_mode);
+        }
+        if let (Some(flag), Some(max_budget_usd)) = (
+            runner.max_budget_usd_flag.as_deref(),
+            profile.max_budget_usd,
+        ) {
+            command.arg(flag).arg(max_budget_usd.to_string());
+        }
+        if let (Some(flag), Some(prompt)) = (
+            runner.append_system_prompt_flag.as_deref(),
+            profile.append_system_prompt.as_ref(),
+        ) {
+            command.arg(flag).arg(prompt);
+        }
+    }
+
+    let task = if runner.inline_system_prompt_for_task && runner.append_system_prompt_flag.is_none()
+    {
+        normalize_task_with_inline_system_prompt(task, profile)
+    } else {
+        task.to_string()
+    };
+
+    if let Some(flag) = runner.task_flag.as_deref() {
+        command.arg(flag);
+    }
+    command
+        .arg(task)
+        .current_dir(working_dir)
+        .stdin(Stdio::null());
+    command
+}
+
 fn normalize_task_for_harness(
     harness: HarnessKind,
+    task: &str,
+    profile: Option<&SessionAgentProfile>,
+) -> String {
+    let rendered = normalize_task_with_inline_system_prompt(task, profile);
+
+    match harness {
+        HarnessKind::Claude => task.to_string(),
+        HarnessKind::Codex | HarnessKind::OpenCode | HarnessKind::Gemini => rendered,
+        _ => task.to_string(),
+    }
+}
+
+fn normalize_task_with_inline_system_prompt(
     task: &str,
     profile: Option<&SessionAgentProfile>,
 ) -> String {
@@ -2780,14 +2908,7 @@ fn normalize_task_for_harness(
     else {
         return task.to_string();
     };
-
-    match harness {
-        HarnessKind::Claude => task.to_string(),
-        HarnessKind::Codex | HarnessKind::OpenCode | HarnessKind::Gemini => {
-            format!("System instructions:\n{system_prompt}\n\nTask:\n{task}")
-        }
-        _ => task.to_string(),
-    }
+    format!("System instructions:\n{system_prompt}\n\nTask:\n{task}")
 }
 
 async fn spawn_claude_code(
@@ -2796,8 +2917,15 @@ async fn spawn_claude_code(
     session_id: &str,
     working_dir: &Path,
 ) -> Result<u32> {
-    let mut command =
-        build_agent_command("claude", agent_program, task, session_id, working_dir, None);
+    let mut command = build_agent_command(
+        &Config::default(),
+        "claude",
+        agent_program,
+        task,
+        session_id,
+        working_dir,
+        None,
+    );
     let child = command
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -3490,6 +3618,7 @@ mod tests {
             auto_terminate_stale_sessions: false,
             default_agent: "claude".to_string(),
             default_agent_profile: None,
+            harness_runners: Default::default(),
             agent_profiles: Default::default(),
             orchestration_templates: Default::default(),
             memory_connectors: Default::default(),
@@ -3534,6 +3663,7 @@ mod tests {
 
     #[test]
     fn build_agent_command_applies_profile_runner_flags_for_claude() {
+        let cfg = Config::default();
         let profile = SessionAgentProfile {
             profile_name: "reviewer".to_string(),
             agent: None,
@@ -3548,6 +3678,7 @@ mod tests {
         };
 
         let command = build_agent_command(
+            &cfg,
             "claude",
             Path::new("claude"),
             "review this change",
@@ -3590,6 +3721,7 @@ mod tests {
 
     #[test]
     fn build_agent_command_normalizes_runner_flags_for_codex() {
+        let cfg = Config::default();
         let profile = SessionAgentProfile {
             profile_name: "reviewer".to_string(),
             agent: None,
@@ -3604,6 +3736,7 @@ mod tests {
         };
 
         let command = build_agent_command(
+            &cfg,
             "codex",
             Path::new("codex"),
             "review this change",
@@ -3641,6 +3774,7 @@ mod tests {
 
     #[test]
     fn build_agent_command_normalizes_runner_flags_for_opencode() {
+        let cfg = Config::default();
         let profile = SessionAgentProfile {
             profile_name: "builder".to_string(),
             agent: None,
@@ -3655,6 +3789,7 @@ mod tests {
         };
 
         let command = build_agent_command(
+            &cfg,
             "opencode",
             Path::new("opencode"),
             "stabilize callback flow",
@@ -3685,6 +3820,7 @@ mod tests {
 
     #[test]
     fn build_agent_command_normalizes_runner_flags_for_gemini() {
+        let cfg = Config::default();
         let profile = SessionAgentProfile {
             profile_name: "investigator".to_string(),
             agent: None,
@@ -3699,6 +3835,7 @@ mod tests {
         };
 
         let command = build_agent_command(
+            &cfg,
             "gemini",
             Path::new("gemini"),
             "investigate auth regression",
@@ -3721,6 +3858,111 @@ mod tests {
                 "--include-directories",
                 "docs,../shared",
                 "System instructions:\nUse repo context carefully.\n\nTask:\ninvestigate auth regression",
+            ]
+        );
+    }
+
+    #[test]
+    fn agent_program_uses_configured_runner_for_cursor() -> Result<()> {
+        let mut cfg = Config::default();
+        cfg.harness_runners.insert(
+            "cursor".to_string(),
+            crate::config::HarnessRunnerConfig {
+                program: "cursor-agent".to_string(),
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(
+            agent_program(&cfg, "cursor")?,
+            PathBuf::from("cursor-agent")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn build_agent_command_uses_configured_runner_for_cursor() {
+        let mut cfg = Config::default();
+        cfg.harness_runners.insert(
+            "cursor".to_string(),
+            crate::config::HarnessRunnerConfig {
+                program: "cursor-agent".to_string(),
+                base_args: vec!["run".to_string()],
+                cwd_flag: Some("--cwd".to_string()),
+                session_name_flag: Some("--name".to_string()),
+                task_flag: Some("--task".to_string()),
+                model_flag: Some("--model".to_string()),
+                permission_mode_flag: Some("--permission-mode".to_string()),
+                add_dir_flag: Some("--context-dir".to_string()),
+                inline_system_prompt_for_task: true,
+                env: BTreeMap::from([("ECC_HARNESS".to_string(), "cursor".to_string())]),
+                ..Default::default()
+            },
+        );
+        let profile = SessionAgentProfile {
+            profile_name: "worker".to_string(),
+            agent: None,
+            model: Some("gpt-5.4".to_string()),
+            allowed_tools: Vec::new(),
+            disallowed_tools: Vec::new(),
+            permission_mode: Some("plan".to_string()),
+            add_dirs: vec![PathBuf::from("docs"), PathBuf::from("specs")],
+            max_budget_usd: None,
+            token_budget: None,
+            append_system_prompt: Some("Use repo context carefully.".to_string()),
+        };
+
+        let command = build_agent_command(
+            &cfg,
+            "cursor",
+            Path::new("cursor-agent"),
+            "fix callback regression",
+            "sess-cur1",
+            Path::new("/tmp/repo"),
+            Some(&profile),
+        );
+        let args = command
+            .as_std()
+            .get_args()
+            .map(|value| value.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            args,
+            vec![
+                "run",
+                "--cwd",
+                "/tmp/repo",
+                "--name",
+                "ecc-sess-cur1",
+                "--model",
+                "gpt-5.4",
+                "--context-dir",
+                "docs",
+                "--context-dir",
+                "specs",
+                "--permission-mode",
+                "plan",
+                "--task",
+                "System instructions:\nUse repo context carefully.\n\nTask:\nfix callback regression",
+            ]
+        );
+        let mut envs = command
+            .as_std()
+            .get_envs()
+            .map(|(key, value)| {
+                (
+                    key.to_string_lossy().to_string(),
+                    value.map(|value| value.to_string_lossy().to_string()),
+                )
+            })
+            .collect::<Vec<_>>();
+        envs.sort();
+        assert_eq!(
+            envs,
+            vec![
+                ("ECC_HARNESS".to_string(), Some("cursor".to_string())),
+                ("ECC_SESSION_ID".to_string(), Some("sess-cur1".to_string())),
             ]
         );
     }

@@ -79,6 +79,26 @@ pub struct ResolvedAgentProfile {
     pub append_system_prompt: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HarnessRunnerConfig {
+    pub program: String,
+    pub base_args: Vec<String>,
+    pub cwd_flag: Option<String>,
+    pub session_name_flag: Option<String>,
+    pub task_flag: Option<String>,
+    pub model_flag: Option<String>,
+    pub add_dir_flag: Option<String>,
+    pub include_directories_flag: Option<String>,
+    pub allowed_tools_flag: Option<String>,
+    pub disallowed_tools_flag: Option<String>,
+    pub permission_mode_flag: Option<String>,
+    pub max_budget_usd_flag: Option<String>,
+    pub append_system_prompt_flag: Option<String>,
+    pub inline_system_prompt_for_task: bool,
+    pub env: BTreeMap<String, String>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct OrchestrationTemplateConfig {
@@ -198,6 +218,7 @@ pub struct Config {
     pub auto_terminate_stale_sessions: bool,
     pub default_agent: String,
     pub default_agent_profile: Option<String>,
+    pub harness_runners: BTreeMap<String, HarnessRunnerConfig>,
     pub agent_profiles: BTreeMap<String, AgentProfileConfig>,
     pub orchestration_templates: BTreeMap<String, OrchestrationTemplateConfig>,
     pub memory_connectors: BTreeMap<String, MemoryConnectorConfig>,
@@ -263,6 +284,7 @@ impl Default for Config {
             auto_terminate_stale_sessions: false,
             default_agent: "claude".to_string(),
             default_agent_profile: None,
+            harness_runners: BTreeMap::new(),
             agent_profiles: BTreeMap::new(),
             orchestration_templates: BTreeMap::new(),
             memory_connectors: BTreeMap::new(),
@@ -327,6 +349,11 @@ impl Config {
     pub fn resolve_agent_profile(&self, name: &str) -> Result<ResolvedAgentProfile> {
         let mut chain = Vec::new();
         self.resolve_agent_profile_inner(name, &mut chain)
+    }
+
+    pub fn harness_runner(&self, harness: &str) -> Option<&HarnessRunnerConfig> {
+        let key = harness.trim().to_ascii_lowercase();
+        self.harness_runners.get(&key)
     }
 
     pub fn resolve_orchestration_template(
@@ -717,6 +744,28 @@ impl ResolvedAgentProfile {
             (None, Some(child)) => Some(child.clone()),
             (None, None) => None,
         };
+    }
+}
+
+impl Default for HarnessRunnerConfig {
+    fn default() -> Self {
+        Self {
+            program: String::new(),
+            base_args: Vec::new(),
+            cwd_flag: None,
+            session_name_flag: None,
+            task_flag: None,
+            model_flag: None,
+            add_dir_flag: None,
+            include_directories_flag: None,
+            allowed_tools_flag: None,
+            disallowed_tools_flag: None,
+            permission_mode_flag: None,
+            max_budget_usd_flag: None,
+            append_system_prompt_flag: None,
+            inline_system_prompt_for_task: true,
+            env: BTreeMap::new(),
+        }
     }
 }
 
@@ -1208,6 +1257,44 @@ inherits = "a"
         assert!(error
             .to_string()
             .contains("agent profile inheritance cycle"));
+    }
+
+    #[test]
+    fn harness_runners_deserialize_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[harness_runners.cursor]
+program = "cursor-agent"
+base_args = ["run"]
+cwd_flag = "--cwd"
+session_name_flag = "--name"
+task_flag = "--task"
+model_flag = "--model"
+permission_mode_flag = "--permission-mode"
+inline_system_prompt_for_task = true
+
+[harness_runners.cursor.env]
+ECC_HARNESS = "cursor"
+"#,
+        )
+        .unwrap();
+
+        let runner = config.harness_runner("cursor").expect("cursor runner");
+        assert_eq!(runner.program, "cursor-agent");
+        assert_eq!(runner.base_args, vec!["run"]);
+        assert_eq!(runner.cwd_flag.as_deref(), Some("--cwd"));
+        assert_eq!(runner.session_name_flag.as_deref(), Some("--name"));
+        assert_eq!(runner.task_flag.as_deref(), Some("--task"));
+        assert_eq!(runner.model_flag.as_deref(), Some("--model"));
+        assert_eq!(
+            runner.permission_mode_flag.as_deref(),
+            Some("--permission-mode")
+        );
+        assert!(runner.inline_system_prompt_for_task);
+        assert_eq!(
+            runner.env.get("ECC_HARNESS").map(String::as_str),
+            Some("cursor")
+        );
     }
 
     #[test]
