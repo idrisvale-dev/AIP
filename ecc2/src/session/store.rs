@@ -13,8 +13,9 @@ use crate::observability::{ToolCallEvent, ToolLogEntry, ToolLogPage};
 
 use super::output::{OutputLine, OutputStream, OUTPUT_BUFFER_LIMIT};
 use super::{
-    default_project_label, default_task_group_label, normalize_group_label, FileActivityAction,
-    FileActivityEntry, Session, SessionMessage, SessionMetrics, SessionState, WorktreeInfo,
+    default_project_label, default_task_group_label, normalize_group_label, DecisionLogEntry,
+    FileActivityAction, FileActivityEntry, Session, SessionMessage, SessionMetrics, SessionState,
+    WorktreeInfo,
 };
 
 pub struct StateStore {
@@ -193,6 +194,15 @@ impl StateStore {
                 timestamp TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS decision_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                decision TEXT NOT NULL,
+                alternatives_json TEXT NOT NULL DEFAULT '[]',
+                reasoning TEXT NOT NULL,
+                timestamp TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS pending_worktree_queue (
                 session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
                 repo_root TEXT NOT NULL,
@@ -225,12 +235,11 @@ impl StateStore {
 
             CREATE INDEX IF NOT EXISTS idx_sessions_state ON sessions(state);
             CREATE INDEX IF NOT EXISTS idx_tool_log_session ON tool_log(session_id);
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_tool_log_hook_event
-                ON tool_log(hook_event_id)
-                WHERE hook_event_id IS NOT NULL;
             CREATE INDEX IF NOT EXISTS idx_messages_to ON messages(to_session, read);
             CREATE INDEX IF NOT EXISTS idx_session_output_session
                 ON session_output(session_id, id);
+            CREATE INDEX IF NOT EXISTS idx_decision_log_session
+                ON decision_log(session_id, timestamp, id);
             CREATE INDEX IF NOT EXISTS idx_pending_worktree_queue_requested_at
                 ON pending_worktree_queue(requested_at, session_id);
 
@@ -1423,6 +1432,84 @@ impl StateStore {
             .map_err(Into::into)
     }
 
+    pub fn insert_decision(
+        &self,
+        session_id: &str,
+        decision: &str,
+        alternatives: &[String],
+        reasoning: &str,
+    ) -> Result<DecisionLogEntry> {
+        let timestamp = chrono::Utc::now();
+        let alternatives_json = serde_json::to_string(alternatives)
+            .context("Failed to serialize decision alternatives")?;
+
+        self.conn.execute(
+            "INSERT INTO decision_log (session_id, decision, alternatives_json, reasoning, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![
+                session_id,
+                decision,
+                alternatives_json,
+                reasoning,
+                timestamp.to_rfc3339(),
+            ],
+        )?;
+
+        Ok(DecisionLogEntry {
+            id: self.conn.last_insert_rowid(),
+            session_id: session_id.to_string(),
+            decision: decision.to_string(),
+            alternatives: alternatives.to_vec(),
+            reasoning: reasoning.to_string(),
+            timestamp,
+        })
+    }
+
+    pub fn list_decisions_for_session(
+        &self,
+        session_id: &str,
+        limit: usize,
+    ) -> Result<Vec<DecisionLogEntry>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, session_id, decision, alternatives_json, reasoning, timestamp
+             FROM (
+                 SELECT id, session_id, decision, alternatives_json, reasoning, timestamp
+                 FROM decision_log
+                 WHERE session_id = ?1
+                 ORDER BY timestamp DESC, id DESC
+                 LIMIT ?2
+             )
+             ORDER BY timestamp ASC, id ASC",
+        )?;
+
+        let entries = stmt
+            .query_map(rusqlite::params![session_id, limit as i64], |row| {
+                map_decision_log_entry(row)
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(entries)
+    }
+
+    pub fn list_decisions(&self, limit: usize) -> Result<Vec<DecisionLogEntry>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, session_id, decision, alternatives_json, reasoning, timestamp
+             FROM (
+                 SELECT id, session_id, decision, alternatives_json, reasoning, timestamp
+                 FROM decision_log
+                 ORDER BY timestamp DESC, id DESC
+                 LIMIT ?1
+             )
+             ORDER BY timestamp ASC, id ASC",
+        )?;
+
+        let entries = stmt
+            .query_map(rusqlite::params![limit as i64], map_decision_log_entry)?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(entries)
+    }
+
     pub fn daemon_activity(&self) -> Result<DaemonActivity> {
         self.conn
             .query_row(
@@ -2037,6 +2124,34 @@ fn session_state_supports_overlap(state: &SessionState) -> bool {
     )
 }
 
+fn map_decision_log_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<DecisionLogEntry> {
+    let alternatives_json = row
+        .get::<_, Option<String>>(3)?
+        .unwrap_or_else(|| "[]".to_string());
+    let alternatives = serde_json::from_str(&alternatives_json).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(3, rusqlite::types::Type::Text, Box::new(error))
+    })?;
+    let timestamp = row.get::<_, String>(5)?;
+    let timestamp = chrono::DateTime::parse_from_rfc3339(&timestamp)
+        .map(|value| value.with_timezone(&chrono::Utc))
+        .map_err(|error| {
+            rusqlite::Error::FromSqlConversionFailure(
+                5,
+                rusqlite::types::Type::Text,
+                Box::new(error),
+            )
+        })?;
+
+    Ok(DecisionLogEntry {
+        id: row.get(0)?,
+        session_id: row.get(1)?,
+        decision: row.get(2)?,
+        alternatives,
+        reasoning: row.get(4)?,
+        timestamp,
+    })
+}
+
 fn file_overlap_is_relevant(current: &FileActivityEntry, other: &FileActivityEntry) -> bool {
     current.path == other.path
         && !(matches!(current.action, FileActivityAction::Read)
@@ -2463,6 +2578,151 @@ mod tests {
         assert_eq!(overlaps[0].other_action, FileActivityAction::Modify);
         assert_eq!(overlaps[0].other_session_id, "session-2");
         assert_eq!(overlaps[0].other_session_state, SessionState::Idle);
+
+        Ok(())
+    }
+
+    #[test]
+    fn open_migrates_legacy_tool_log_before_creating_hook_event_index() -> Result<()> {
+        let tempdir = TestDir::new("store-legacy-hook-event")?;
+        let db_path = tempdir.path().join("state.db");
+        let conn = Connection::open(&db_path)?;
+        conn.execute_batch(
+            "
+            CREATE TABLE sessions (
+                id TEXT PRIMARY KEY,
+                task TEXT NOT NULL,
+                agent_type TEXT NOT NULL,
+                state TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE tool_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                tool_name TEXT NOT NULL,
+                input_summary TEXT,
+                output_summary TEXT,
+                duration_ms INTEGER,
+                risk_score REAL DEFAULT 0.0,
+                timestamp TEXT NOT NULL
+            );
+            ",
+        )?;
+        drop(conn);
+
+        let db = StateStore::open(&db_path)?;
+        assert!(db.has_column("tool_log", "hook_event_id")?);
+
+        let conn = Connection::open(&db_path)?;
+        let index_count: i64 = conn.query_row(
+            "SELECT COUNT(*)
+             FROM sqlite_master
+             WHERE type = 'index' AND name = 'idx_tool_log_hook_event'",
+            [],
+            |row| row.get(0),
+        )?;
+        assert_eq!(index_count, 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn insert_and_list_decisions_for_session() -> Result<()> {
+        let tempdir = TestDir::new("store-decisions")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "architect".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        db.insert_decision(
+            "session-1",
+            "Use sqlite for the shared context graph",
+            &["json files".to_string(), "memory only".to_string()],
+            "SQLite keeps the audit trail queryable from both CLI and TUI.",
+        )?;
+        db.insert_decision(
+            "session-1",
+            "Keep decision logging append-only",
+            &["mutable edits".to_string()],
+            "Append-only history preserves operator trust and timeline integrity.",
+        )?;
+
+        let entries = db.list_decisions_for_session("session-1", 10)?;
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].session_id, "session-1");
+        assert_eq!(
+            entries[0].decision,
+            "Use sqlite for the shared context graph"
+        );
+        assert_eq!(
+            entries[0].alternatives,
+            vec!["json files".to_string(), "memory only".to_string()]
+        );
+        assert_eq!(entries[1].decision, "Keep decision logging append-only");
+        assert_eq!(
+            entries[1].reasoning,
+            "Append-only history preserves operator trust and timeline integrity."
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn list_recent_decisions_across_sessions_returns_latest_subset_in_order() -> Result<()> {
+        let tempdir = TestDir::new("store-decisions-all")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        for session_id in ["session-a", "session-b", "session-c"] {
+            db.insert_session(&Session {
+                id: session_id.to_string(),
+                task: "decision log".to_string(),
+                project: "workspace".to_string(),
+                task_group: "general".to_string(),
+                agent_type: "claude".to_string(),
+                working_dir: PathBuf::from("/tmp"),
+                state: SessionState::Running,
+                pid: None,
+                worktree: None,
+                created_at: now,
+                updated_at: now,
+                last_heartbeat_at: now,
+                metrics: SessionMetrics::default(),
+            })?;
+        }
+
+        db.insert_decision("session-a", "Oldest", &[], "first")?;
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        db.insert_decision("session-b", "Middle", &[], "second")?;
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        db.insert_decision("session-c", "Newest", &[], "third")?;
+
+        let entries = db.list_decisions(2)?;
+        assert_eq!(
+            entries
+                .iter()
+                .map(|entry| entry.decision.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Middle", "Newest"]
+        );
+        assert_eq!(entries[0].session_id, "session-b");
+        assert_eq!(entries[1].session_id, "session-c");
 
         Ok(())
     }

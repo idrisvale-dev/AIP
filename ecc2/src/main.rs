@@ -260,6 +260,37 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Log a significant agent decision for auditability
+    LogDecision {
+        /// Session ID or alias. Omit to log against the latest session.
+        session_id: Option<String>,
+        /// The chosen decision or direction
+        #[arg(long)]
+        decision: String,
+        /// Why the agent made this choice
+        #[arg(long)]
+        reasoning: String,
+        /// Alternative considered and rejected; repeat for multiple entries
+        #[arg(long = "alternative")]
+        alternatives: Vec<String>,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show recent decision-log entries
+    Decisions {
+        /// Session ID or alias. Omit to read the latest session.
+        session_id: Option<String>,
+        /// Show decision log entries across all sessions
+        #[arg(long)]
+        all: bool,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+        /// Maximum decision-log entries to return
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+    },
     /// Export sessions, tool spans, and metrics in OTLP-compatible JSON
     ExportOtel {
         /// Session ID or alias. Omit to export all sessions.
@@ -870,6 +901,45 @@ async fn main() -> Result<()> {
                 println!("{}", serde_json::to_string_pretty(&outcome)?);
             } else {
                 println!("{}", format_prune_worktrees_human(&outcome));
+            }
+        }
+        Some(Commands::LogDecision {
+            session_id,
+            decision,
+            reasoning,
+            alternatives,
+            json,
+        }) => {
+            let resolved_id = resolve_session_id(&db, session_id.as_deref().unwrap_or("latest"))?;
+            let entry = db.insert_decision(&resolved_id, &decision, &alternatives, &reasoning)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&entry)?);
+            } else {
+                println!("{}", format_logged_decision_human(&entry));
+            }
+        }
+        Some(Commands::Decisions {
+            session_id,
+            all,
+            json,
+            limit,
+        }) => {
+            if all && session_id.is_some() {
+                return Err(anyhow::anyhow!(
+                    "decisions does not accept a session ID when --all is set"
+                ));
+            }
+            let entries = if all {
+                db.list_decisions(limit)?
+            } else {
+                let resolved_id =
+                    resolve_session_id(&db, session_id.as_deref().unwrap_or("latest"))?;
+                db.list_decisions_for_session(&resolved_id, limit)?
+            };
+            if json {
+                println!("{}", serde_json::to_string_pretty(&entries)?);
+            } else {
+                println!("{}", format_decisions_human(&entries, all));
             }
         }
         Some(Commands::ExportOtel { session_id, output }) => {
@@ -1635,6 +1705,63 @@ fn format_prune_worktrees_human(outcome: &session::manager::WorktreePruneOutcome
         ));
         for session_id in &outcome.retained_session_ids {
             lines.push(format!("- retained {}", short_session(session_id)));
+        }
+    }
+
+    lines.join("\n")
+}
+
+fn format_logged_decision_human(entry: &session::DecisionLogEntry) -> String {
+    let mut lines = vec![
+        format!("Logged decision for {}", short_session(&entry.session_id)),
+        format!("Decision: {}", entry.decision),
+        format!("Why: {}", entry.reasoning),
+    ];
+
+    if entry.alternatives.is_empty() {
+        lines.push("Alternatives: none recorded".to_string());
+    } else {
+        lines.push("Alternatives:".to_string());
+        for alternative in &entry.alternatives {
+            lines.push(format!("- {alternative}"));
+        }
+    }
+
+    lines.push(format!(
+        "Recorded at: {}",
+        entry.timestamp.format("%Y-%m-%d %H:%M:%S UTC")
+    ));
+    lines.join("\n")
+}
+
+fn format_decisions_human(entries: &[session::DecisionLogEntry], include_session: bool) -> String {
+    if entries.is_empty() {
+        return if include_session {
+            "No decision-log entries across all sessions yet.".to_string()
+        } else {
+            "No decision-log entries for this session yet.".to_string()
+        };
+    }
+
+    let mut lines = vec![format!("Decision log: {} entries", entries.len())];
+    for entry in entries {
+        let prefix = if include_session {
+            format!("{} | ", short_session(&entry.session_id))
+        } else {
+            String::new()
+        };
+        lines.push(format!(
+            "- [{}] {prefix}{}",
+            entry.timestamp.format("%H:%M:%S"),
+            entry.decision
+        ));
+        lines.push(format!("  why {}", entry.reasoning));
+        if entry.alternatives.is_empty() {
+            lines.push("  alternatives none recorded".to_string());
+        } else {
+            for alternative in &entry.alternatives {
+                lines.push(format!("  alternative {alternative}"));
+            }
         }
     }
 
@@ -3257,6 +3384,87 @@ mod tests {
             }
             _ => panic!("expected coordination-status subcommand"),
         }
+    }
+
+    #[test]
+    fn cli_parses_log_decision_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "log-decision",
+            "latest",
+            "--decision",
+            "Use sqlite",
+            "--reasoning",
+            "It is already embedded",
+            "--alternative",
+            "json files",
+            "--alternative",
+            "memory only",
+            "--json",
+        ])
+        .expect("log-decision should parse");
+
+        match cli.command {
+            Some(Commands::LogDecision {
+                session_id,
+                decision,
+                reasoning,
+                alternatives,
+                json,
+            }) => {
+                assert_eq!(session_id.as_deref(), Some("latest"));
+                assert_eq!(decision, "Use sqlite");
+                assert_eq!(reasoning, "It is already embedded");
+                assert_eq!(alternatives, vec!["json files", "memory only"]);
+                assert!(json);
+            }
+            _ => panic!("expected log-decision subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_decisions_command() {
+        let cli = Cli::try_parse_from(["ecc", "decisions", "--all", "--limit", "5", "--json"])
+            .expect("decisions should parse");
+
+        match cli.command {
+            Some(Commands::Decisions {
+                session_id,
+                all,
+                json,
+                limit,
+            }) => {
+                assert!(session_id.is_none());
+                assert!(all);
+                assert!(json);
+                assert_eq!(limit, 5);
+            }
+            _ => panic!("expected decisions subcommand"),
+        }
+    }
+
+    #[test]
+    fn format_decisions_human_renders_details() {
+        let text = format_decisions_human(
+            &[session::DecisionLogEntry {
+                id: 1,
+                session_id: "sess-12345678".to_string(),
+                decision: "Use sqlite for the shared context graph".to_string(),
+                alternatives: vec!["json files".to_string(), "memory only".to_string()],
+                reasoning: "SQLite keeps the audit trail queryable.".to_string(),
+                timestamp: chrono::DateTime::parse_from_rfc3339("2026-04-09T01:02:03Z")
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+            }],
+            true,
+        );
+
+        assert!(text.contains("Decision log: 1 entries"));
+        assert!(text.contains("sess-123"));
+        assert!(text.contains("Use sqlite for the shared context graph"));
+        assert!(text.contains("why SQLite keeps the audit trail queryable."));
+        assert!(text.contains("alternative json files"));
+        assert!(text.contains("alternative memory only"));
     }
 
     #[test]

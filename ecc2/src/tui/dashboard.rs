@@ -22,7 +22,9 @@ use crate::session::output::{
     OutputEvent, OutputLine, OutputStream, SessionOutputStore, OUTPUT_BUFFER_LIMIT,
 };
 use crate::session::store::{DaemonActivity, FileActivityOverlap, StateStore};
-use crate::session::{FileActivityEntry, Session, SessionGrouping, SessionMessage, SessionState};
+use crate::session::{
+    DecisionLogEntry, FileActivityEntry, Session, SessionGrouping, SessionMessage, SessionState,
+};
 use crate::worktree;
 
 #[cfg(test)]
@@ -215,6 +217,7 @@ enum TimelineEventFilter {
     Messages,
     ToolCalls,
     FileChanges,
+    Decisions,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -257,6 +260,7 @@ enum TimelineEventType {
     Message,
     ToolCall,
     FileChange,
+    Decision,
 }
 
 #[derive(Debug, Clone)]
@@ -1025,6 +1029,11 @@ impl Dashboard {
                 TimelineEventFilter::FileChanges,
                 OutputTimeFilter::AllTime,
             ) => "No file-change events across all sessions yet.",
+            (
+                SearchScope::AllSessions,
+                TimelineEventFilter::Decisions,
+                OutputTimeFilter::AllTime,
+            ) => "No decision-log events across all sessions yet.",
             (SearchScope::AllSessions, TimelineEventFilter::All, _) => {
                 "No timeline events across all sessions in the selected time range."
             }
@@ -1039,6 +1048,9 @@ impl Dashboard {
             }
             (SearchScope::AllSessions, TimelineEventFilter::FileChanges, _) => {
                 "No file-change events across all sessions in the selected time range."
+            }
+            (SearchScope::AllSessions, TimelineEventFilter::Decisions, _) => {
+                "No decision-log events across all sessions in the selected time range."
             }
             (SearchScope::SelectedSession, TimelineEventFilter::All, OutputTimeFilter::AllTime) => {
                 "No timeline events for this session yet."
@@ -1063,6 +1075,11 @@ impl Dashboard {
                 TimelineEventFilter::FileChanges,
                 OutputTimeFilter::AllTime,
             ) => "No file-change events for this session yet.",
+            (
+                SearchScope::SelectedSession,
+                TimelineEventFilter::Decisions,
+                OutputTimeFilter::AllTime,
+            ) => "No decision-log events for this session yet.",
             (SearchScope::SelectedSession, TimelineEventFilter::All, _) => {
                 "No timeline events in the selected time range."
             }
@@ -1077,6 +1094,9 @@ impl Dashboard {
             }
             (SearchScope::SelectedSession, TimelineEventFilter::FileChanges, _) => {
                 "No file-change events in the selected time range."
+            }
+            (SearchScope::SelectedSession, TimelineEventFilter::Decisions, _) => {
+                "No decision-log events in the selected time range."
             }
         }
     }
@@ -4926,6 +4946,18 @@ impl Dashboard {
             }
         }));
 
+        let decisions = self
+            .db
+            .list_decisions_for_session(&session.id, 32)
+            .unwrap_or_default();
+        events.extend(decisions.into_iter().map(|entry| TimelineEvent {
+            occurred_at: entry.timestamp,
+            session_id: session.id.clone(),
+            event_type: TimelineEventType::Decision,
+            summary: decision_log_summary(&entry),
+            detail_lines: decision_log_detail_lines(&entry),
+        }));
+
         let tool_logs = self
             .db
             .query_tool_logs(&session.id, 1, 128)
@@ -5609,6 +5641,23 @@ impl Dashboard {
                         file_activity_summary(&entry)
                     ));
                     for detail in file_activity_patch_lines(&entry, 2) {
+                        lines.push(format!("  {}", detail));
+                    }
+                }
+            }
+            let recent_decisions = self
+                .db
+                .list_decisions_for_session(&session.id, 5)
+                .unwrap_or_default();
+            if !recent_decisions.is_empty() {
+                lines.push("Recent decisions".to_string());
+                for entry in recent_decisions {
+                    lines.push(format!(
+                        "- {} {}",
+                        self.short_timestamp(&entry.timestamp.to_rfc3339()),
+                        decision_log_summary(&entry)
+                    ));
+                    for detail in decision_log_detail_lines(&entry).into_iter().take(3) {
                         lines.push(format!("  {}", detail));
                     }
                 }
@@ -6361,7 +6410,8 @@ impl TimelineEventFilter {
             Self::Lifecycle => Self::Messages,
             Self::Messages => Self::ToolCalls,
             Self::ToolCalls => Self::FileChanges,
-            Self::FileChanges => Self::All,
+            Self::FileChanges => Self::Decisions,
+            Self::Decisions => Self::All,
         }
     }
 
@@ -6372,6 +6422,7 @@ impl TimelineEventFilter {
             Self::Messages => event_type == TimelineEventType::Message,
             Self::ToolCalls => event_type == TimelineEventType::ToolCall,
             Self::FileChanges => event_type == TimelineEventType::FileChange,
+            Self::Decisions => event_type == TimelineEventType::Decision,
         }
     }
 
@@ -6382,6 +6433,7 @@ impl TimelineEventFilter {
             Self::Messages => "messages",
             Self::ToolCalls => "tool calls",
             Self::FileChanges => "file changes",
+            Self::Decisions => "decisions",
         }
     }
 
@@ -6392,6 +6444,7 @@ impl TimelineEventFilter {
             Self::Messages => " messages",
             Self::ToolCalls => " tool calls",
             Self::FileChanges => " file changes",
+            Self::Decisions => " decisions",
         }
     }
 }
@@ -6403,6 +6456,7 @@ impl TimelineEventType {
             Self::Message => "message",
             Self::ToolCall => "tool",
             Self::FileChange => "file-change",
+            Self::Decision => "decision",
         }
     }
 }
@@ -7330,6 +7384,28 @@ fn file_overlap_summary(entry: &FileActivityOverlap, timestamp: &str) -> String 
         file_activity_verb(entry.other_action.clone()),
         timestamp
     )
+}
+
+fn decision_log_summary(entry: &DecisionLogEntry) -> String {
+    format!("decided {}", truncate_for_dashboard(&entry.decision, 72))
+}
+
+fn decision_log_detail_lines(entry: &DecisionLogEntry) -> Vec<String> {
+    let mut lines = vec![format!(
+        "why {}",
+        truncate_for_dashboard(&entry.reasoning, 72)
+    )];
+    if entry.alternatives.is_empty() {
+        lines.push("alternatives none recorded".to_string());
+    } else {
+        for alternative in entry.alternatives.iter().take(3) {
+            lines.push(format!(
+                "alternative {}",
+                truncate_for_dashboard(alternative, 72)
+            ));
+        }
+    }
+    lines
 }
 
 fn tool_log_detail_lines(entry: &ToolLogEntry) -> Vec<String> {
@@ -8991,6 +9067,61 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
         assert!(metrics_text.contains("as modify"));
 
         let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn timeline_and_metrics_render_decision_log_entries() -> Result<()> {
+        let now = Utc::now();
+        let mut session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            256,
+            7,
+        );
+        session.created_at = now - chrono::Duration::hours(1);
+        session.updated_at = now - chrono::Duration::minutes(2);
+
+        let mut dashboard = test_dashboard(vec![session.clone()], 0);
+        dashboard.db.insert_session(&session)?;
+        dashboard.db.insert_decision(
+            &session.id,
+            "Use sqlite for the shared context graph",
+            &["json files".to_string(), "memory only".to_string()],
+            "SQLite keeps the audit trail queryable from CLI and TUI.",
+        )?;
+
+        dashboard.toggle_timeline_mode();
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("decision"));
+        assert!(rendered.contains("decided Use sqlite for the shared context graph"));
+        assert!(rendered.contains("why SQLite keeps the audit trail queryable"));
+        assert!(rendered.contains("alternative json files"));
+        assert!(rendered.contains("alternative memory only"));
+
+        let metrics_text = dashboard.selected_session_metrics_text();
+        assert!(metrics_text.contains("Recent decisions"));
+        assert!(metrics_text.contains("decided Use sqlite for the shared context graph"));
+        assert!(metrics_text.contains("alternative json files"));
+
+        dashboard.cycle_timeline_event_filter();
+        dashboard.cycle_timeline_event_filter();
+        dashboard.cycle_timeline_event_filter();
+        dashboard.cycle_timeline_event_filter();
+        dashboard.cycle_timeline_event_filter();
+
+        assert_eq!(
+            dashboard.timeline_event_filter,
+            TimelineEventFilter::Decisions
+        );
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("timeline filter set to decisions")
+        );
+        assert_eq!(dashboard.output_title(), " Timeline decisions ");
+
         Ok(())
     }
 

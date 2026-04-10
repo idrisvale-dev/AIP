@@ -143,6 +143,16 @@ pub struct FileActivityEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DecisionLogEntry {
+    pub id: i64,
+    pub session_id: String,
+    pub decision: String,
+    pub alternatives: Vec<String>,
+    pub reasoning: String,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum FileActivityAction {
     Read,
