@@ -32,6 +32,22 @@ pub struct DesktopNotificationConfig {
     pub quiet_hours: QuietHoursConfig,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CompletionSummaryDelivery {
+    #[default]
+    Desktop,
+    TuiPopup,
+    DesktopAndTuiPopup,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CompletionSummaryConfig {
+    pub enabled: bool,
+    pub delivery: CompletionSummaryDelivery,
+}
+
 #[derive(Debug, Clone)]
 pub struct DesktopNotifier {
     config: DesktopNotificationConfig,
@@ -109,6 +125,33 @@ impl DesktopNotificationConfig {
             NotificationEvent::BudgetAlert => config.budget_alerts,
             NotificationEvent::ApprovalRequest => config.approval_requests,
         }
+    }
+}
+
+impl Default for CompletionSummaryConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            delivery: CompletionSummaryDelivery::Desktop,
+        }
+    }
+}
+
+impl CompletionSummaryConfig {
+    pub fn desktop_enabled(&self) -> bool {
+        self.enabled
+            && matches!(
+                self.delivery,
+                CompletionSummaryDelivery::Desktop | CompletionSummaryDelivery::DesktopAndTuiPopup
+            )
+    }
+
+    pub fn popup_enabled(&self) -> bool {
+        self.enabled
+            && matches!(
+                self.delivery,
+                CompletionSummaryDelivery::TuiPopup | CompletionSummaryDelivery::DesktopAndTuiPopup
+            )
     }
 }
 

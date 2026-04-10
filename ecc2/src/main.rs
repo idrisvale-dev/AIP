@@ -1634,7 +1634,11 @@ fn format_merge_queue_human(report: &session::manager::MergeQueueReport) -> Stri
         for entry in &report.blocked_entries {
             lines.push(format!(
                 "- {} [{}] | {} / {} | {}",
-                entry.session_id, entry.branch, entry.project, entry.task_group, entry.suggested_action
+                entry.session_id,
+                entry.branch,
+                entry.project,
+                entry.task_group,
+                entry.suggested_action
             ));
             for blocker in entry.blocked_by.iter().take(2) {
                 lines.push(format!(
@@ -2781,7 +2785,9 @@ mod tests {
                     state: session::SessionState::Stopped,
                     conflicts: vec!["README.md".to_string()],
                     summary: "merge after alpha1234 to avoid branch conflicts".to_string(),
-                    conflicting_patch_preview: Some("--- Branch diff vs main ---\nREADME.md".to_string()),
+                    conflicting_patch_preview: Some(
+                        "--- Branch diff vs main ---\nREADME.md".to_string(),
+                    ),
                     blocker_patch_preview: None,
                 }],
                 suggested_action: "merge after alpha1234".to_string(),

@@ -3,11 +3,12 @@ use crossterm::event::KeyEvent;
 use ratatui::{
     prelude::*,
     widgets::{
-        Block, Borders, Cell, HighlightSpacing, Paragraph, Row, Table, TableState, Tabs, Wrap,
+        Block, Borders, Cell, Clear, HighlightSpacing, Paragraph, Row, Table, TableState, Tabs,
+        Wrap,
     },
 };
 use regex::Regex;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::UNIX_EPOCH;
 use tokio::sync::broadcast;
 
@@ -50,6 +51,28 @@ struct ThemePalette {
     row_highlight_bg: Color,
     muted: Color,
     help_border: Color,
+}
+
+#[derive(Debug, Clone)]
+struct SessionCompletionSummary {
+    session_id: String,
+    task: String,
+    state: SessionState,
+    files_changed: u32,
+    tokens_used: u64,
+    duration_secs: u64,
+    cost_usd: f64,
+    tests_run: usize,
+    tests_passed: usize,
+    recent_files: Vec<String>,
+    key_decisions: Vec<String>,
+    warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct TestRunSummary {
+    total: usize,
+    passed: usize,
 }
 
 pub struct Dashboard {
@@ -112,6 +135,8 @@ pub struct Dashboard {
     search_agent_filter: SearchAgentFilter,
     search_matches: Vec<SearchMatch>,
     selected_search_match: usize,
+    active_completion_popup: Option<SessionCompletionSummary>,
+    queued_completion_popups: VecDeque<SessionCompletionSummary>,
     session_table_state: TableState,
     last_cost_metrics_signature: Option<(u64, u128)>,
     last_tool_activity_signature: Option<(u64, u128)>,
@@ -296,6 +321,108 @@ struct TeamSummary {
     stopped: usize,
 }
 
+impl SessionCompletionSummary {
+    fn title(&self) -> String {
+        match self.state {
+            SessionState::Completed => "ECC 2.0: Session completed".to_string(),
+            SessionState::Failed => "ECC 2.0: Session failed".to_string(),
+            _ => "ECC 2.0: Session summary".to_string(),
+        }
+    }
+
+    fn subtitle(&self) -> String {
+        format!(
+            "{} | {}",
+            format_session_id(&self.session_id),
+            truncate_for_dashboard(&self.task, 88)
+        )
+    }
+
+    fn notification_body(&self) -> String {
+        let tests_line = if self.tests_run > 0 {
+            format!(
+                "Tests {} run / {} passed",
+                self.tests_run, self.tests_passed
+            )
+        } else {
+            "Tests not detected".to_string()
+        };
+
+        let warnings_line = if self.warnings.is_empty() {
+            "Warnings none".to_string()
+        } else {
+            format!(
+                "Warnings {}",
+                truncate_for_dashboard(&self.warnings.join("; "), 88)
+            )
+        };
+
+        [
+            self.subtitle(),
+            format!(
+                "Files {} | Tokens {} | Duration {}",
+                self.files_changed,
+                format_token_count(self.tokens_used),
+                format_duration(self.duration_secs)
+            ),
+            tests_line,
+            warnings_line,
+        ]
+        .join("\n")
+    }
+
+    fn popup_text(&self) -> String {
+        let mut lines = vec![
+            self.subtitle(),
+            String::new(),
+            format!(
+                "Files {} | Tokens {} | Cost {} | Duration {}",
+                self.files_changed,
+                format_token_count(self.tokens_used),
+                format_currency(self.cost_usd),
+                format_duration(self.duration_secs)
+            ),
+        ];
+
+        if self.tests_run > 0 {
+            lines.push(format!(
+                "Tests {} run / {} passed",
+                self.tests_run, self.tests_passed
+            ));
+        } else {
+            lines.push("Tests not detected".to_string());
+        }
+
+        if !self.recent_files.is_empty() {
+            lines.push(String::new());
+            lines.push("Recent files".to_string());
+            for item in &self.recent_files {
+                lines.push(format!("- {item}"));
+            }
+        }
+
+        if !self.key_decisions.is_empty() {
+            lines.push(String::new());
+            lines.push("Key decisions".to_string());
+            for item in &self.key_decisions {
+                lines.push(format!("- {item}"));
+            }
+        }
+
+        if !self.warnings.is_empty() {
+            lines.push(String::new());
+            lines.push("Warnings".to_string());
+            for item in &self.warnings {
+                lines.push(format!("- {item}"));
+            }
+        }
+
+        lines.push(String::new());
+        lines.push("[Enter]/[Space]/[Esc] dismiss".to_string());
+        lines.join("\n")
+    }
+}
+
 impl Dashboard {
     pub fn new(db: StateStore, cfg: Config) -> Self {
         Self::with_output_store(db, cfg, SessionOutputStore::default())
@@ -394,6 +521,8 @@ impl Dashboard {
             search_agent_filter: SearchAgentFilter::AllAgents,
             search_matches: Vec::new(),
             selected_search_match: 0,
+            active_completion_popup: None,
+            queued_completion_popups: VecDeque::new(),
             session_table_state,
             last_cost_metrics_signature: initial_cost_metrics_signature,
             last_tool_activity_signature: initial_tool_activity_signature,
@@ -403,6 +532,7 @@ impl Dashboard {
         };
         sort_sessions_for_display(&mut dashboard.sessions);
         dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap_or_default();
+        dashboard.sync_approval_queue();
         dashboard.sync_handoff_backlog_counts();
         dashboard.sync_global_handoff_backlog();
         dashboard.sync_selected_output();
@@ -444,6 +574,10 @@ impl Dashboard {
         }
 
         self.render_status_bar(frame, chunks[2]);
+
+        if let Some(summary) = self.active_completion_popup.as_ref() {
+            self.render_completion_popup(frame, summary);
+        }
     }
 
     fn render_header(&self, frame: &mut Frame, area: Rect) {
@@ -1045,7 +1179,9 @@ impl Dashboard {
             self.theme_label()
         );
 
-        let search_prefix = if let Some(input) = self.spawn_input.as_ref() {
+        let search_prefix = if self.active_completion_popup.is_some() {
+            " completion summary | [Enter]/[Space]/[Esc] dismiss |".to_string()
+        } else if let Some(input) = self.spawn_input.as_ref() {
             format!(" spawn>{input}_ | [Enter] queue [Esc] cancel |")
         } else if let Some(input) = self.commit_input.as_ref() {
             format!(" commit>{input}_ | [Enter] commit [Esc] cancel |")
@@ -1076,7 +1212,8 @@ impl Dashboard {
             String::new()
         };
 
-        let text = if self.spawn_input.is_some()
+        let text = if self.active_completion_popup.is_some()
+            || self.spawn_input.is_some()
             || self.commit_input.is_some()
             || self.pr_input.is_some()
             || self.search_input.is_some()
@@ -1118,6 +1255,31 @@ impl Dashboard {
                 .style(summary_style)
                 .alignment(Alignment::Right),
             chunks[1],
+        );
+    }
+
+    fn render_completion_popup(&self, frame: &mut Frame, summary: &SessionCompletionSummary) {
+        let popup_area = centered_rect(72, 65, frame.area());
+        if popup_area.is_empty() {
+            return;
+        }
+
+        frame.render_widget(Clear, popup_area);
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title(format!(" {} ", summary.title()))
+            .border_style(self.pane_border_style(Pane::Output));
+        let inner = block.inner(popup_area);
+        frame.render_widget(block, popup_area);
+        if inner.is_empty() {
+            return;
+        }
+
+        frame.render_widget(
+            Paragraph::new(summary.popup_text())
+                .wrap(Wrap { trim: true })
+                .scroll((0, 0)),
+            inner,
         );
     }
 
@@ -2697,6 +2859,16 @@ impl Dashboard {
         self.search_query.is_some()
     }
 
+    pub fn has_active_completion_popup(&self) -> bool {
+        self.active_completion_popup.is_some()
+    }
+
+    pub fn dismiss_completion_popup(&mut self) {
+        if self.active_completion_popup.take().is_some() {
+            self.active_completion_popup = self.queued_completion_popups.pop_front();
+        }
+    }
+
     pub fn begin_spawn_prompt(&mut self) {
         if self.search_input.is_some() {
             self.set_operator_note(
@@ -3401,10 +3573,11 @@ impl Dashboard {
                 HashMap::new()
             }
         };
-        self.sync_session_state_notifications();
-        self.sync_approval_notifications();
+        self.sync_approval_queue();
         self.sync_handoff_backlog_counts();
         self.sync_worktree_health_by_session();
+        self.sync_session_state_notifications();
+        self.sync_approval_notifications();
         self.sync_global_handoff_backlog();
         self.sync_daemon_activity();
         self.sync_output_cache();
@@ -3480,6 +3653,8 @@ impl Dashboard {
 
     fn sync_session_state_notifications(&mut self) {
         let mut next_states = HashMap::new();
+        let mut completion_summaries = Vec::new();
+        let mut failed_notifications = Vec::new();
 
         for session in &self.sessions {
             let previous_state = self.last_session_states.get(&session.id);
@@ -3487,26 +3662,29 @@ impl Dashboard {
                 if previous_state != &session.state {
                     match session.state {
                         SessionState::Completed => {
-                            self.notify_desktop(
-                                NotificationEvent::SessionCompleted,
-                                "ECC 2.0: Session completed",
-                                &format!(
-                                    "{} | {}",
-                                    format_session_id(&session.id),
-                                    truncate_for_dashboard(&session.task, 96)
-                                ),
-                            );
+                            if self.cfg.completion_summary_notifications.enabled {
+                                completion_summaries.push(self.build_completion_summary(session));
+                            } else if self.cfg.desktop_notifications.session_completed {
+                                self.notify_desktop(
+                                    NotificationEvent::SessionCompleted,
+                                    "ECC 2.0: Session completed",
+                                    &format!(
+                                        "{} | {}",
+                                        format_session_id(&session.id),
+                                        truncate_for_dashboard(&session.task, 96)
+                                    ),
+                                );
+                            }
                         }
                         SessionState::Failed => {
-                            self.notify_desktop(
-                                NotificationEvent::SessionFailed,
-                                "ECC 2.0: Session failed",
-                                &format!(
+                            failed_notifications.push((
+                                "ECC 2.0: Session failed".to_string(),
+                                format!(
                                     "{} | {}",
                                     format_session_id(&session.id),
                                     truncate_for_dashboard(&session.task, 96)
                                 ),
-                            );
+                            ));
                         }
                         _ => {}
                     }
@@ -3514,6 +3692,16 @@ impl Dashboard {
             }
 
             next_states.insert(session.id.clone(), session.state.clone());
+        }
+
+        for summary in completion_summaries {
+            self.deliver_completion_summary(summary);
+        }
+
+        if self.cfg.desktop_notifications.session_failed {
+            for (title, body) in failed_notifications {
+                self.notify_desktop(NotificationEvent::SessionFailed, &title, &body);
+            }
         }
 
         self.last_session_states = next_states;
@@ -3552,6 +3740,90 @@ impl Dashboard {
                 preview
             ),
         );
+    }
+
+    fn deliver_completion_summary(&mut self, summary: SessionCompletionSummary) {
+        if self.cfg.completion_summary_notifications.desktop_enabled()
+            && self.cfg.desktop_notifications.session_completed
+        {
+            self.notify_desktop(
+                NotificationEvent::SessionCompleted,
+                &summary.title(),
+                &summary.notification_body(),
+            );
+        }
+
+        if self.cfg.completion_summary_notifications.popup_enabled() {
+            if self.active_completion_popup.is_none() {
+                self.active_completion_popup = Some(summary);
+            } else {
+                self.queued_completion_popups.push_back(summary);
+            }
+        }
+    }
+
+    fn build_completion_summary(&self, session: &Session) -> SessionCompletionSummary {
+        let file_activity = match self.db.list_file_activity(&session.id, 5) {
+            Ok(entries) => entries,
+            Err(error) => {
+                tracing::warn!(
+                    "Failed to load file activity for completion summary {}: {error}",
+                    session.id
+                );
+                Vec::new()
+            }
+        };
+        let tool_logs = match self.db.list_tool_logs_for_session(&session.id) {
+            Ok(entries) => entries,
+            Err(error) => {
+                tracing::warn!(
+                    "Failed to load tool logs for completion summary {}: {error}",
+                    session.id
+                );
+                Vec::new()
+            }
+        };
+        let overlaps = match self.db.list_file_overlaps(&session.id, 3) {
+            Ok(entries) => entries,
+            Err(error) => {
+                tracing::warn!(
+                    "Failed to load file overlaps for completion summary {}: {error}",
+                    session.id
+                );
+                Vec::new()
+            }
+        };
+
+        let tests = summarize_test_runs(&tool_logs, session.state == SessionState::Completed);
+        let recent_files = recent_completion_files(&file_activity, session.metrics.files_changed);
+        let key_decisions =
+            summarize_completion_decisions(&tool_logs, &file_activity, &session.task);
+        let warnings = summarize_completion_warnings(
+            session,
+            &tool_logs,
+            &tests,
+            self.worktree_health_by_session.get(&session.id),
+            self.approval_queue_counts
+                .get(&session.id)
+                .copied()
+                .unwrap_or(0),
+            overlaps.len(),
+        );
+
+        SessionCompletionSummary {
+            session_id: session.id.clone(),
+            task: session.task.clone(),
+            state: session.state.clone(),
+            files_changed: session.metrics.files_changed,
+            tokens_used: session.metrics.tokens_used,
+            duration_secs: session.metrics.duration_secs,
+            cost_usd: session.metrics.cost_usd,
+            tests_run: tests.total,
+            tests_passed: tests.passed,
+            recent_files,
+            key_decisions,
+            warnings,
+        }
     }
 
     fn notify_desktop(&self, event: NotificationEvent, title: &str, body: &str) {
@@ -6743,6 +7015,254 @@ fn tool_log_detail_lines(entry: &ToolLogEntry) -> Vec<String> {
     lines
 }
 
+fn centered_rect(width_percent: u16, height_percent: u16, area: Rect) -> Rect {
+    let vertical = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - height_percent) / 2),
+            Constraint::Percentage(height_percent),
+            Constraint::Percentage((100 - height_percent) / 2),
+        ])
+        .split(area);
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - width_percent) / 2),
+            Constraint::Percentage(width_percent),
+            Constraint::Percentage((100 - width_percent) / 2),
+        ])
+        .split(vertical[1])[1]
+}
+
+fn summarize_test_runs(
+    tool_logs: &[ToolLogEntry],
+    assume_success_on_completion: bool,
+) -> TestRunSummary {
+    let mut summary = TestRunSummary::default();
+
+    for entry in tool_logs {
+        if !tool_log_looks_like_test(entry) {
+            continue;
+        }
+
+        summary.total += 1;
+        let failed = tool_log_looks_failed(entry);
+        let passed = tool_log_looks_passed(entry);
+        if !failed && (passed || assume_success_on_completion) {
+            summary.passed += 1;
+        }
+    }
+
+    summary
+}
+
+fn tool_log_looks_like_test(entry: &ToolLogEntry) -> bool {
+    let haystack = format!(
+        "{} {} {} {}",
+        entry.tool_name,
+        entry.input_summary,
+        extract_tool_command(entry),
+        entry.output_summary
+    )
+    .to_ascii_lowercase();
+    const TEST_MARKERS: &[&str] = &[
+        "cargo test",
+        "npm test",
+        "pnpm test",
+        "pnpm exec vitest",
+        "pnpm exec playwright",
+        "yarn test",
+        "bun test",
+        "vitest",
+        "jest",
+        "pytest",
+        "go test",
+        "playwright test",
+        "cypress",
+        "rspec",
+        "phpunit",
+        "e2e",
+    ];
+
+    TEST_MARKERS.iter().any(|marker| haystack.contains(marker))
+}
+
+fn tool_log_looks_failed(entry: &ToolLogEntry) -> bool {
+    let haystack = format!(
+        "{} {} {} {}",
+        entry.tool_name,
+        entry.input_summary,
+        extract_tool_command(entry),
+        entry.output_summary
+    )
+    .to_ascii_lowercase();
+    const FAILURE_MARKERS: &[&str] = &[
+        " fail",
+        "failed",
+        " error",
+        "panic",
+        "timed out",
+        "non-zero",
+        "exit code 1",
+        "exited with",
+    ];
+
+    FAILURE_MARKERS
+        .iter()
+        .any(|marker| haystack.contains(marker))
+}
+
+fn tool_log_looks_passed(entry: &ToolLogEntry) -> bool {
+    let haystack = format!(
+        "{} {} {} {}",
+        entry.tool_name,
+        entry.input_summary,
+        extract_tool_command(entry),
+        entry.output_summary
+    )
+    .to_ascii_lowercase();
+    const SUCCESS_MARKERS: &[&str] = &[" pass", "passed", " ok", "success", "green", "completed"];
+
+    SUCCESS_MARKERS
+        .iter()
+        .any(|marker| haystack.contains(marker))
+}
+
+fn extract_tool_command(entry: &ToolLogEntry) -> String {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&entry.input_params_json) else {
+        return String::new();
+    };
+
+    value
+        .get("command")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
+        .unwrap_or_default()
+}
+
+fn recent_completion_files(file_activity: &[FileActivityEntry], files_changed: u32) -> Vec<String> {
+    if !file_activity.is_empty() {
+        return file_activity
+            .iter()
+            .take(3)
+            .map(file_activity_summary)
+            .collect();
+    }
+
+    if files_changed > 0 {
+        return vec![format!("files touched {}", files_changed)];
+    }
+
+    Vec::new()
+}
+
+fn summarize_completion_decisions(
+    tool_logs: &[ToolLogEntry],
+    file_activity: &[FileActivityEntry],
+    session_task: &str,
+) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut decisions = Vec::new();
+
+    for entry in tool_logs.iter().rev() {
+        let mut candidates = Vec::new();
+        if !entry.trigger_summary.trim().is_empty()
+            && entry.trigger_summary.trim() != session_task.trim()
+        {
+            candidates.push(format!(
+                "why {}",
+                truncate_for_dashboard(&entry.trigger_summary, 72)
+            ));
+        }
+
+        let action = if entry.tool_name.eq_ignore_ascii_case("Bash") {
+            truncate_for_dashboard(&extract_tool_command(entry), 72)
+        } else if !entry.output_summary.trim().is_empty() && entry.output_summary.trim() != "ok" {
+            truncate_for_dashboard(&entry.output_summary, 72)
+        } else {
+            truncate_for_dashboard(&entry.input_summary, 72)
+        };
+
+        if !action.trim().is_empty() {
+            candidates.push(action);
+        }
+
+        for candidate in candidates {
+            let normalized = candidate.to_ascii_lowercase();
+            if seen.insert(normalized) {
+                decisions.push(candidate);
+            }
+            if decisions.len() >= 3 {
+                return decisions;
+            }
+        }
+    }
+
+    for entry in file_activity.iter().take(3) {
+        let candidate = file_activity_summary(entry);
+        let normalized = candidate.to_ascii_lowercase();
+        if seen.insert(normalized) {
+            decisions.push(candidate);
+        }
+        if decisions.len() >= 3 {
+            break;
+        }
+    }
+
+    decisions
+}
+
+fn summarize_completion_warnings(
+    session: &Session,
+    tool_logs: &[ToolLogEntry],
+    tests: &TestRunSummary,
+    worktree_health: Option<&worktree::WorktreeHealth>,
+    approval_backlog: usize,
+    overlap_count: usize,
+) -> Vec<String> {
+    let mut warnings = Vec::new();
+    let high_risk_tool_calls = tool_logs
+        .iter()
+        .filter(|entry| entry.risk_score >= Config::RISK_THRESHOLDS.review)
+        .count();
+
+    if session.metrics.files_changed > 0 && tests.total == 0 {
+        warnings.push("no test runs detected".to_string());
+    }
+    if tests.total > tests.passed {
+        warnings.push(format!(
+            "{} detected test run(s) were not confirmed passed",
+            tests.total - tests.passed
+        ));
+    }
+    if high_risk_tool_calls > 0 {
+        warnings.push(format!(
+            "{high_risk_tool_calls} high-risk tool call(s) recorded"
+        ));
+    }
+    if approval_backlog > 0 {
+        warnings.push(format!(
+            "{approval_backlog} approval/conflict request(s) remained unread"
+        ));
+    }
+    if overlap_count > 0 {
+        warnings.push(format!(
+            "{overlap_count} potential file overlap(s) remained"
+        ));
+    }
+    match worktree_health {
+        Some(worktree::WorktreeHealth::Conflicted) => {
+            warnings.push("worktree still has unresolved conflicts".to_string());
+        }
+        Some(worktree::WorktreeHealth::InProgress) => {
+            warnings.push("worktree still has unmerged changes".to_string());
+        }
+        Some(worktree::WorktreeHealth::Clear) | None => {}
+    }
+
+    warnings
+}
+
 fn file_activity_verb(action: crate::session::FileActivityAction) -> &'static str {
     match action {
         crate::session::FileActivityAction::Read => "read",
@@ -9152,6 +9672,111 @@ diff --git a/src/lib.rs b/src/lib.rs
     }
 
     #[test]
+    fn refresh_builds_completion_summary_popup_from_metrics_activity_and_logs() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-completion-popup-{}", Uuid::new_v4()));
+        fs::create_dir_all(root.join(".claude").join("metrics"))?;
+
+        let mut cfg = build_config(&root.join(".claude"));
+        cfg.completion_summary_notifications.delivery =
+            crate::notifications::CompletionSummaryDelivery::TuiPopup;
+        cfg.desktop_notifications.session_completed = false;
+
+        let db = StateStore::open(&cfg.db_path)?;
+        let mut session = sample_session(
+            "done-12345678",
+            "claude",
+            SessionState::Running,
+            Some("ecc/done"),
+            384,
+            95,
+        );
+        session.task = "Finish session summary notifications".to_string();
+        db.insert_session(&session)?;
+
+        let metrics_path = cfg.tool_activity_metrics_path();
+        fs::create_dir_all(metrics_path.parent().unwrap())?;
+        fs::write(
+            &metrics_path,
+            concat!(
+                "{\"id\":\"evt-1\",\"session_id\":\"done-12345678\",\"tool_name\":\"Bash\",\"input_summary\":\"cargo test -q\",\"input_params_json\":\"{\\\"command\\\":\\\"cargo test -q\\\"}\",\"output_summary\":\"ok\",\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
+                "{\"id\":\"evt-2\",\"session_id\":\"done-12345678\",\"tool_name\":\"Write\",\"input_summary\":\"Write README.md\",\"output_summary\":\"updated readme\",\"file_events\":[{\"path\":\"README.md\",\"action\":\"create\",\"diff_preview\":\"+ session summary notifications\",\"patch_preview\":\"+ session summary notifications\"}],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n",
+                "{\"id\":\"evt-3\",\"session_id\":\"done-12345678\",\"tool_name\":\"Bash\",\"input_summary\":\"rm -rf build\",\"input_params_json\":\"{\\\"command\\\":\\\"rm -rf build\\\"}\",\"output_summary\":\"ok\",\"timestamp\":\"2026-04-09T00:02:00Z\"}\n"
+            ),
+        )?;
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard
+            .db
+            .update_state("done-12345678", &SessionState::Completed)?;
+
+        dashboard.refresh();
+
+        let popup = dashboard
+            .active_completion_popup
+            .as_ref()
+            .expect("completion summary popup");
+        let popup_text = popup.popup_text();
+        assert!(popup_text.contains("done-123"));
+        assert!(popup_text.contains("Tests 1 run / 1 passed"));
+        assert!(popup_text.contains("Recent files"));
+        assert!(popup_text.contains("create README.md"));
+        assert!(popup_text.contains("Warnings"));
+        assert!(popup_text.contains("high-risk tool call"));
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn dismiss_completion_popup_promotes_the_next_summary() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.active_completion_popup = Some(SessionCompletionSummary {
+            session_id: "sess-a".to_string(),
+            task: "First".to_string(),
+            state: SessionState::Completed,
+            files_changed: 1,
+            tokens_used: 10,
+            duration_secs: 5,
+            cost_usd: 0.01,
+            tests_run: 1,
+            tests_passed: 1,
+            recent_files: vec!["create README.md".to_string()],
+            key_decisions: vec!["cargo test -q".to_string()],
+            warnings: Vec::new(),
+        });
+        dashboard
+            .queued_completion_popups
+            .push_back(SessionCompletionSummary {
+                session_id: "sess-b".to_string(),
+                task: "Second".to_string(),
+                state: SessionState::Completed,
+                files_changed: 2,
+                tokens_used: 20,
+                duration_secs: 8,
+                cost_usd: 0.02,
+                tests_run: 0,
+                tests_passed: 0,
+                recent_files: vec!["modify src/lib.rs".to_string()],
+                key_decisions: vec!["updated lib".to_string()],
+                warnings: vec!["no test runs detected".to_string()],
+            });
+
+        dashboard.dismiss_completion_popup();
+
+        assert_eq!(
+            dashboard
+                .active_completion_popup
+                .as_ref()
+                .map(|summary| summary.session_id.as_str()),
+            Some("sess-b")
+        );
+        assert!(dashboard.queued_completion_popups.is_empty());
+
+        dashboard.dismiss_completion_popup();
+        assert!(dashboard.active_completion_popup.is_none());
+    }
+
+    #[test]
     fn refresh_syncs_tool_activity_metrics_from_hook_file() {
         let tempdir = std::env::temp_dir().join(format!("ecc2-activity-sync-{}", Uuid::new_v4()));
         fs::create_dir_all(tempdir.join("metrics")).unwrap();
@@ -11284,6 +11909,8 @@ diff --git a/src/lib.rs b/src/lib.rs
             search_agent_filter: SearchAgentFilter::AllAgents,
             search_matches: Vec::new(),
             selected_search_match: 0,
+            active_completion_popup: None,
+            queued_completion_popups: VecDeque::new(),
             session_table_state,
             last_cost_metrics_signature: None,
             last_tool_activity_signature: None,
@@ -11310,6 +11937,8 @@ diff --git a/src/lib.rs b/src/lib.rs
             auto_create_worktrees: true,
             auto_merge_ready_worktrees: false,
             desktop_notifications: crate::notifications::DesktopNotificationConfig::default(),
+            completion_summary_notifications:
+                crate::notifications::CompletionSummaryConfig::default(),
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             budget_alert_thresholds: crate::config::Config::BUDGET_ALERT_THRESHOLDS,

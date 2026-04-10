@@ -27,6 +27,18 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
 
         if event::poll(Duration::from_millis(250))? {
             if let Event::Key(key) = event::read()? {
+                if dashboard.has_active_completion_popup() {
+                    match (key.modifiers, key.code) {
+                        (KeyModifiers::CONTROL, KeyCode::Char('c')) => break,
+                        (_, KeyCode::Esc) | (_, KeyCode::Enter) | (_, KeyCode::Char(' ')) => {
+                            dashboard.dismiss_completion_popup();
+                        }
+                        _ => {}
+                    }
+
+                    continue;
+                }
+
                 if dashboard.is_input_mode() {
                     match (key.modifiers, key.code) {
                         (KeyModifiers::CONTROL, KeyCode::Char('c')) => break,

@@ -3,7 +3,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::notifications::DesktopNotificationConfig;
+use crate::notifications::{CompletionSummaryConfig, DesktopNotificationConfig};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -48,6 +48,7 @@ pub struct Config {
     pub auto_create_worktrees: bool,
     pub auto_merge_ready_worktrees: bool,
     pub desktop_notifications: DesktopNotificationConfig,
+    pub completion_summary_notifications: CompletionSummaryConfig,
     pub cost_budget_usd: f64,
     pub token_budget: u64,
     pub budget_alert_thresholds: BudgetAlertThresholds,
@@ -111,6 +112,7 @@ impl Default for Config {
             auto_create_worktrees: true,
             auto_merge_ready_worktrees: false,
             desktop_notifications: DesktopNotificationConfig::default(),
+            completion_summary_notifications: CompletionSummaryConfig::default(),
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             budget_alert_thresholds: Self::BUDGET_ALERT_THRESHOLDS,
@@ -617,6 +619,24 @@ end_hour = 7
     }
 
     #[test]
+    fn completion_summary_notifications_deserialize_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[completion_summary_notifications]
+enabled = true
+delivery = "desktop_and_tui_popup"
+"#,
+        )
+        .unwrap();
+
+        assert!(config.completion_summary_notifications.enabled);
+        assert_eq!(
+            config.completion_summary_notifications.delivery,
+            crate::notifications::CompletionSummaryDelivery::DesktopAndTuiPopup
+        );
+    }
+
+    #[test]
     fn invalid_budget_alert_thresholds_fall_back_to_defaults() {
         let config: Config = toml::from_str(
             r#"
@@ -643,6 +663,8 @@ critical = 1.10
         config.auto_create_worktrees = false;
         config.auto_merge_ready_worktrees = true;
         config.desktop_notifications.session_completed = false;
+        config.completion_summary_notifications.delivery =
+            crate::notifications::CompletionSummaryDelivery::TuiPopup;
         config.desktop_notifications.quiet_hours.enabled = true;
         config.desktop_notifications.quiet_hours.start_hour = 21;
         config.desktop_notifications.quiet_hours.end_hour = 7;
@@ -666,6 +688,10 @@ critical = 1.10
         assert!(!loaded.auto_create_worktrees);
         assert!(loaded.auto_merge_ready_worktrees);
         assert!(!loaded.desktop_notifications.session_completed);
+        assert_eq!(
+            loaded.completion_summary_notifications.delivery,
+            crate::notifications::CompletionSummaryDelivery::TuiPopup
+        );
         assert!(loaded.desktop_notifications.quiet_hours.enabled);
         assert_eq!(loaded.desktop_notifications.quiet_hours.start_hour, 21);
         assert_eq!(loaded.desktop_notifications.quiet_hours.end_hour, 7);

@@ -46,7 +46,16 @@ pub async fn create_session_with_grouping(
 ) -> Result<String> {
     let repo_root =
         std::env::current_dir().context("Failed to resolve current working directory")?;
-    queue_session_in_dir(db, cfg, task, agent_type, use_worktree, &repo_root, grouping).await
+    queue_session_in_dir(
+        db,
+        cfg,
+        task,
+        agent_type,
+        use_worktree,
+        &repo_root,
+        grouping,
+    )
+    .await
 }
 
 pub fn list_sessions(db: &StateStore) -> Result<Vec<Session>> {
@@ -219,7 +228,7 @@ pub async fn drain_inbox(
             use_worktree,
             &repo_root,
             &runner_program,
-        SessionGrouping::default(),
+            SessionGrouping::default(),
         )
         .await?;
 
@@ -1037,7 +1046,10 @@ pub fn build_merge_queue(db: &StateStore) -> Result<MergeQueueReport> {
 
         if matches!(
             session.state,
-            SessionState::Pending | SessionState::Running | SessionState::Idle | SessionState::Stale
+            SessionState::Pending
+                | SessionState::Running
+                | SessionState::Idle
+                | SessionState::Stale
         ) {
             blocked_by.push(MergeQueueBlocker {
                 session_id: session.id.clone(),
@@ -1085,10 +1097,7 @@ pub fn build_merge_queue(db: &StateStore) -> Result<MergeQueueReport> {
                     branch: blocker_worktree.branch.clone(),
                     state: blocker.state.clone(),
                     conflicts: conflict.conflicts,
-                    summary: format!(
-                        "merge after {} to avoid branch conflicts",
-                        blocker.id
-                    ),
+                    summary: format!("merge after {} to avoid branch conflicts", blocker.id),
                     conflicting_patch_preview: conflict.right_patch_preview,
                     blocker_patch_preview: conflict.left_patch_preview,
                 });
@@ -1107,7 +1116,10 @@ pub fn build_merge_queue(db: &StateStore) -> Result<MergeQueueReport> {
 
         let suggested_action = if let Some(position) = queue_position {
             format!("merge in queue order #{position}")
-        } else if blocked_by.iter().any(|blocker| blocker.session_id == session.id) {
+        } else if blocked_by
+            .iter()
+            .any(|blocker| blocker.session_id == session.id)
+        {
             blocked_by
                 .first()
                 .map(|blocker| blocker.summary.clone())
@@ -1369,15 +1381,8 @@ async fn queue_session_in_dir_with_runner_program(
     runner_program: &Path,
     grouping: SessionGrouping,
 ) -> Result<String> {
-    let session = build_session_record(
-        db,
-        task,
-        agent_type,
-        use_worktree,
-        cfg,
-        repo_root,
-        grouping,
-    )?;
+    let session =
+        build_session_record(db, task, agent_type, use_worktree, cfg, repo_root, grouping)?;
     db.insert_session(&session)?;
 
     if use_worktree && session.worktree.is_none() {
@@ -1523,7 +1528,10 @@ fn attached_worktree_count(db: &StateStore) -> Result<usize> {
 fn merge_queue_priority(session: &Session) -> (u8, chrono::DateTime<chrono::Utc>) {
     let active_rank = match session.state {
         SessionState::Completed | SessionState::Failed | SessionState::Stopped => 0,
-        SessionState::Pending | SessionState::Running | SessionState::Idle | SessionState::Stale => 1,
+        SessionState::Pending
+        | SessionState::Running
+        | SessionState::Idle
+        | SessionState::Stale => 1,
     };
     (active_rank, session.updated_at)
 }
@@ -2238,6 +2246,8 @@ mod tests {
             auto_create_worktrees: true,
             auto_merge_ready_worktrees: false,
             desktop_notifications: crate::notifications::DesktopNotificationConfig::default(),
+            completion_summary_notifications:
+                crate::notifications::CompletionSummaryConfig::default(),
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             budget_alert_thresholds: Config::BUDGET_ALERT_THRESHOLDS,
@@ -3534,7 +3544,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
-        SessionGrouping::default(),
+            SessionGrouping::default(),
         )
         .await?;
 
@@ -3607,7 +3617,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
-        SessionGrouping::default(),
+            SessionGrouping::default(),
         )
         .await?;
 
@@ -3820,7 +3830,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
-        SessionGrouping::default(),
+            SessionGrouping::default(),
         )
         .await?;
 
@@ -3893,7 +3903,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
-        SessionGrouping::default(),
+            SessionGrouping::default(),
         )
         .await?;
 

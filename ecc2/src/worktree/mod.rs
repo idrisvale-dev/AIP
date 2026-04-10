@@ -349,7 +349,9 @@ pub fn commit_staged(worktree: &WorktreeInfo, message: &str) -> Result<String> {
         anyhow::bail!("git rev-parse failed: {stderr}");
     }
 
-    Ok(String::from_utf8_lossy(&rev_parse.stdout).trim().to_string())
+    Ok(String::from_utf8_lossy(&rev_parse.stdout)
+        .trim()
+        .to_string())
 }
 
 pub fn latest_commit_subject(worktree: &WorktreeInfo) -> Result<String> {
@@ -604,7 +606,9 @@ pub fn has_uncommitted_changes(worktree: &WorktreeInfo) -> Result<bool> {
 }
 
 pub fn has_staged_changes(worktree: &WorktreeInfo) -> Result<bool> {
-    Ok(git_status_entries(worktree)?.iter().any(|entry| entry.staged))
+    Ok(git_status_entries(worktree)?
+        .iter()
+        .any(|entry| entry.staged))
 }
 
 pub fn merge_into_base(worktree: &WorktreeInfo) -> Result<MergeOutcome> {
@@ -925,8 +929,12 @@ fn dependency_fingerprint(root: &Path, files: &[&str]) -> Result<String> {
     let mut hasher = Sha256::new();
     for rel in files {
         let path = root.join(rel);
-        let content = fs::read(&path)
-            .with_context(|| format!("Failed to read dependency fingerprint input {}", path.display()))?;
+        let content = fs::read(&path).with_context(|| {
+            format!(
+                "Failed to read dependency fingerprint input {}",
+                path.display()
+            )
+        })?;
         hasher.update(rel.as_bytes());
         hasher.update([0]);
         hasher.update(&content);
@@ -957,10 +965,8 @@ fn is_symlink_to(path: &Path, target: &Path) -> Result<bool> {
 fn remove_symlink(path: &Path) -> Result<()> {
     match fs::remove_file(path) {
         Ok(()) => Ok(()),
-        Err(error) if error.kind() == std::io::ErrorKind::IsADirectory => {
-            fs::remove_dir(path)
-                .with_context(|| format!("Failed to remove dependency cache link {}", path.display()))
-        }
+        Err(error) if error.kind() == std::io::ErrorKind::IsADirectory => fs::remove_dir(path)
+            .with_context(|| format!("Failed to remove dependency cache link {}", path.display())),
         Err(error) => Err(error)
             .with_context(|| format!("Failed to remove dependency cache link {}", path.display())),
     }
@@ -1072,10 +1078,7 @@ fn parse_git_status_entry(line: &str) -> Option<GitStatusEntry> {
         .to_string();
     let conflicted = matches!(
         (index_status, worktree_status),
-        ('U', _)
-            | (_, 'U')
-            | ('A', 'A')
-            | ('D', 'D')
+        ('U', _) | (_, 'U') | ('A', 'A') | ('D', 'D')
     );
     Some(GitStatusEntry {
         path: normalized_path,
@@ -1491,8 +1494,10 @@ mod tests {
 
     #[test]
     fn branch_conflict_preview_reports_conflicting_branches() -> Result<()> {
-        let root = std::env::temp_dir()
-            .join(format!("ecc2-worktree-branch-conflict-preview-{}", Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!(
+            "ecc2-worktree-branch-conflict-preview-{}",
+            Uuid::new_v4()
+        ));
         let repo = init_repo(&root)?;
 
         let left_dir = root.join("wt-left");
@@ -1538,8 +1543,8 @@ mod tests {
             base_branch: "main".to_string(),
         };
 
-        let preview = branch_conflict_preview(&left, &right, 12)?
-            .expect("expected branch conflict preview");
+        let preview =
+            branch_conflict_preview(&left, &right, 12)?.expect("expected branch conflict preview");
         assert_eq!(preview.conflicts, vec!["README.md".to_string()]);
         assert!(preview
             .left_patch_preview
@@ -1622,7 +1627,10 @@ mod tests {
             .arg(&repo)
             .args(["log", "-1", "--pretty=%s"])
             .output()?;
-        assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "update readme");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stdout).trim(),
+            "update readme"
+        );
 
         let _ = fs::remove_dir_all(root);
         Ok(())
@@ -1652,8 +1660,19 @@ mod tests {
         let root = std::env::temp_dir().join(format!("ecc2-pr-create-{}", Uuid::new_v4()));
         let repo = init_repo(&root)?;
         let remote = root.join("remote.git");
-        run_git(&root, &["init", "--bare", remote.to_str().expect("utf8 path")])?;
-        run_git(&repo, &["remote", "add", "origin", remote.to_str().expect("utf8 path")])?;
+        run_git(
+            &root,
+            &["init", "--bare", remote.to_str().expect("utf8 path")],
+        )?;
+        run_git(
+            &repo,
+            &[
+                "remote",
+                "add",
+                "origin",
+                remote.to_str().expect("utf8 path"),
+            ],
+        )?;
         run_git(&repo, &["push", "-u", "origin", "main"])?;
         run_git(&repo, &["checkout", "-b", "feat/pr-test"])?;
         fs::write(repo.join("README.md"), "pr test\n")?;
@@ -1713,10 +1732,14 @@ mod tests {
 
     #[test]
     fn create_for_session_links_shared_node_modules_cache() -> Result<()> {
-        let root = std::env::temp_dir().join(format!("ecc2-worktree-node-cache-{}", Uuid::new_v4()));
+        let root =
+            std::env::temp_dir().join(format!("ecc2-worktree-node-cache-{}", Uuid::new_v4()));
         let repo = init_repo(&root)?;
         fs::write(repo.join("package.json"), "{\n  \"name\": \"repo\"\n}\n")?;
-        fs::write(repo.join("package-lock.json"), "{\n  \"lockfileVersion\": 3\n}\n")?;
+        fs::write(
+            repo.join("package-lock.json"),
+            "{\n  \"lockfileVersion\": 3\n}\n",
+        )?;
         fs::create_dir_all(repo.join("node_modules"))?;
         fs::write(repo.join("node_modules/.cache-marker"), "shared\n")?;
         run_git(&repo, &["add", "package.json", "package-lock.json"])?;
@@ -1727,7 +1750,9 @@ mod tests {
         let worktree = create_for_session_in_repo("worker-123", &cfg, &repo)?;
 
         let node_modules = worktree.path.join("node_modules");
-        assert!(fs::symlink_metadata(&node_modules)?.file_type().is_symlink());
+        assert!(fs::symlink_metadata(&node_modules)?
+            .file_type()
+            .is_symlink());
         assert_eq!(fs::read_link(&node_modules)?, repo.join("node_modules"));
 
         remove(&worktree)?;
@@ -1741,7 +1766,10 @@ mod tests {
             std::env::temp_dir().join(format!("ecc2-worktree-node-fallback-{}", Uuid::new_v4()));
         let repo = init_repo(&root)?;
         fs::write(repo.join("package.json"), "{\n  \"name\": \"repo\"\n}\n")?;
-        fs::write(repo.join("package-lock.json"), "{\n  \"lockfileVersion\": 3\n}\n")?;
+        fs::write(
+            repo.join("package-lock.json"),
+            "{\n  \"lockfileVersion\": 3\n}\n",
+        )?;
         fs::create_dir_all(repo.join("node_modules"))?;
         fs::write(repo.join("node_modules/.cache-marker"), "shared\n")?;
         run_git(&repo, &["add", "package.json", "package-lock.json"])?;
@@ -1752,7 +1780,9 @@ mod tests {
         let worktree = create_for_session_in_repo("worker-123", &cfg, &repo)?;
 
         let node_modules = worktree.path.join("node_modules");
-        assert!(fs::symlink_metadata(&node_modules)?.file_type().is_symlink());
+        assert!(fs::symlink_metadata(&node_modules)?
+            .file_type()
+            .is_symlink());
 
         fs::write(
             worktree.path.join("package-lock.json"),
@@ -1761,7 +1791,9 @@ mod tests {
         let applied = sync_shared_dependency_dirs(&worktree)?;
         assert!(applied.is_empty());
         assert!(node_modules.is_dir());
-        assert!(!fs::symlink_metadata(&node_modules)?.file_type().is_symlink());
+        assert!(!fs::symlink_metadata(&node_modules)?
+            .file_type()
+            .is_symlink());
         assert!(repo.join("node_modules/.cache-marker").exists());
 
         remove(&worktree)?;
