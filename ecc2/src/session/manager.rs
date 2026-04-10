@@ -2246,6 +2246,7 @@ mod tests {
             auto_create_worktrees: true,
             auto_merge_ready_worktrees: false,
             desktop_notifications: crate::notifications::DesktopNotificationConfig::default(),
+            webhook_notifications: crate::notifications::WebhookNotificationConfig::default(),
             completion_summary_notifications:
                 crate::notifications::CompletionSummaryConfig::default(),
             cost_budget_usd: 10.0,

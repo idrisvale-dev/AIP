@@ -15,7 +15,7 @@ use tokio::sync::broadcast;
 use super::widgets::{budget_state, format_currency, format_token_count, BudgetState, TokenMeter};
 use crate::comms;
 use crate::config::{Config, PaneLayout, PaneNavigationAction, Theme};
-use crate::notifications::{DesktopNotifier, NotificationEvent};
+use crate::notifications::{DesktopNotifier, NotificationEvent, WebhookNotifier};
 use crate::observability::ToolLogEntry;
 use crate::session::manager;
 use crate::session::output::{
@@ -81,6 +81,7 @@ pub struct Dashboard {
     output_store: SessionOutputStore,
     output_rx: broadcast::Receiver<OutputEvent>,
     notifier: DesktopNotifier,
+    webhook_notifier: WebhookNotifier,
     sessions: Vec<Session>,
     session_output_cache: HashMap<String, Vec<OutputLine>>,
     unread_message_counts: HashMap<String, usize>,
@@ -456,6 +457,7 @@ impl Dashboard {
             .map(|message| message.id);
         let output_rx = output_store.subscribe();
         let notifier = DesktopNotifier::new(cfg.desktop_notifications.clone());
+        let webhook_notifier = WebhookNotifier::new(cfg.webhook_notifications.clone());
         let mut session_table_state = TableState::default();
         if !sessions.is_empty() {
             session_table_state.select(Some(0));
@@ -467,6 +469,7 @@ impl Dashboard {
             output_store,
             output_rx,
             notifier,
+            webhook_notifier,
             sessions,
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
@@ -3649,21 +3652,40 @@ impl Dashboard {
             "ECC 2.0: Budget alert",
             &format!("{summary_suffix} | tokens {token_budget} | cost {cost_budget}"),
         );
+        self.notify_webhook(
+            NotificationEvent::BudgetAlert,
+            &budget_alert_webhook_body(
+                &summary_suffix,
+                &token_budget,
+                &cost_budget,
+                self.active_session_count(),
+            ),
+        );
     }
 
     fn sync_session_state_notifications(&mut self) {
         let mut next_states = HashMap::new();
         let mut completion_summaries = Vec::new();
         let mut failed_notifications = Vec::new();
+        let mut started_webhooks = Vec::new();
+        let mut completion_webhooks = Vec::new();
+        let mut failed_webhooks = Vec::new();
 
         for session in &self.sessions {
             let previous_state = self.last_session_states.get(&session.id);
             if let Some(previous_state) = previous_state {
                 if previous_state != &session.state {
                     match session.state {
+                        SessionState::Running => {
+                            started_webhooks.push(session_started_webhook_body(
+                                session,
+                                session_compare_url(session).as_deref(),
+                            ));
+                        }
                         SessionState::Completed => {
+                            let summary = self.build_completion_summary(session);
                             if self.cfg.completion_summary_notifications.enabled {
-                                completion_summaries.push(self.build_completion_summary(session));
+                                completion_summaries.push(summary.clone());
                             } else if self.cfg.desktop_notifications.session_completed {
                                 self.notify_desktop(
                                     NotificationEvent::SessionCompleted,
@@ -3675,8 +3697,14 @@ impl Dashboard {
                                     ),
                                 );
                             }
+                            completion_webhooks.push(completion_summary_webhook_body(
+                                &summary,
+                                session,
+                                session_compare_url(session).as_deref(),
+                            ));
                         }
                         SessionState::Failed => {
+                            let summary = self.build_completion_summary(session);
                             failed_notifications.push((
                                 "ECC 2.0: Session failed".to_string(),
                                 format!(
@@ -3685,10 +3713,20 @@ impl Dashboard {
                                     truncate_for_dashboard(&session.task, 96)
                                 ),
                             ));
+                            failed_webhooks.push(completion_summary_webhook_body(
+                                &summary,
+                                session,
+                                session_compare_url(session).as_deref(),
+                            ));
                         }
                         _ => {}
                     }
                 }
+            } else if session.state == SessionState::Running {
+                started_webhooks.push(session_started_webhook_body(
+                    session,
+                    session_compare_url(session).as_deref(),
+                ));
             }
 
             next_states.insert(session.id.clone(), session.state.clone());
@@ -3698,10 +3736,22 @@ impl Dashboard {
             self.deliver_completion_summary(summary);
         }
 
+        for body in started_webhooks {
+            self.notify_webhook(NotificationEvent::SessionStarted, &body);
+        }
+
         if self.cfg.desktop_notifications.session_failed {
             for (title, body) in failed_notifications {
                 self.notify_desktop(NotificationEvent::SessionFailed, &title, &body);
             }
+        }
+
+        for body in completion_webhooks {
+            self.notify_webhook(NotificationEvent::SessionCompleted, &body);
+        }
+
+        for body in failed_webhooks {
+            self.notify_webhook(NotificationEvent::SessionFailed, &body);
         }
 
         self.last_session_states = next_states;
@@ -3739,6 +3789,10 @@ impl Dashboard {
                 format_session_id(&message.from_session),
                 preview
             ),
+        );
+        self.notify_webhook(
+            NotificationEvent::ApprovalRequest,
+            &approval_request_webhook_body(&message, &preview),
         );
     }
 
@@ -3828,6 +3882,10 @@ impl Dashboard {
 
     fn notify_desktop(&self, event: NotificationEvent, title: &str, body: &str) {
         let _ = self.notifier.notify(event, title, body);
+    }
+
+    fn notify_webhook(&self, event: NotificationEvent, body: &str) {
+        let _ = self.webhook_notifier.notify(event, body);
     }
 
     fn sync_selection(&mut self) {
@@ -7261,6 +7319,129 @@ fn summarize_completion_warnings(
     }
 
     warnings
+}
+
+fn session_started_webhook_body(session: &Session, compare_url: Option<&str>) -> String {
+    let mut lines = vec![
+        "*ECC 2.0: Session started*".to_string(),
+        format!(
+            "`{}` {}",
+            format_session_id(&session.id),
+            truncate_for_dashboard(&session.task, 96)
+        ),
+        format!(
+            "Project `{}` | Group `{}` | Agent `{}`",
+            session.project, session.task_group, session.agent_type
+        ),
+    ];
+
+    if let Some(worktree) = session.worktree.as_ref() {
+        lines.push(format!(
+            "```text\nbranch: {}\nbase: {}\nworktree: {}\n```",
+            worktree.branch,
+            worktree.base_branch,
+            worktree.path.display()
+        ));
+    }
+
+    if let Some(compare_url) = compare_url {
+        lines.push(format!("PR / compare: {compare_url}"));
+    }
+
+    lines.join("\n")
+}
+
+fn completion_summary_webhook_body(
+    summary: &SessionCompletionSummary,
+    session: &Session,
+    compare_url: Option<&str>,
+) -> String {
+    let mut lines = vec![
+        format!("*{}*", summary.title()),
+        format!(
+            "`{}` {}",
+            format_session_id(&summary.session_id),
+            truncate_for_dashboard(&summary.task, 96)
+        ),
+        format!(
+            "Project `{}` | Group `{}` | State `{}`",
+            session.project, session.task_group, session.state
+        ),
+        format!(
+            "Duration `{}` | Files `{}` | Tokens `{}` | Cost `{}`",
+            format_duration(summary.duration_secs),
+            summary.files_changed,
+            format_token_count(summary.tokens_used),
+            format_currency(summary.cost_usd)
+        ),
+        if summary.tests_run > 0 {
+            format!(
+                "Tests `{}` run / `{}` passed",
+                summary.tests_run, summary.tests_passed
+            )
+        } else {
+            "Tests `not detected`".to_string()
+        },
+    ];
+
+    if !summary.recent_files.is_empty() {
+        lines.push(markdown_code_block("Recent files", &summary.recent_files));
+    }
+
+    if !summary.key_decisions.is_empty() {
+        lines.push(markdown_code_block("Key decisions", &summary.key_decisions));
+    }
+
+    if !summary.warnings.is_empty() {
+        lines.push(markdown_code_block("Warnings", &summary.warnings));
+    }
+
+    if let Some(compare_url) = compare_url {
+        lines.push(format!("PR / compare: {compare_url}"));
+    }
+
+    lines.join("\n")
+}
+
+fn budget_alert_webhook_body(
+    summary_suffix: &str,
+    token_budget: &str,
+    cost_budget: &str,
+    active_sessions: usize,
+) -> String {
+    [
+        "*ECC 2.0: Budget alert*".to_string(),
+        summary_suffix.to_string(),
+        format!("Tokens `{token_budget}`"),
+        format!("Cost `{cost_budget}`"),
+        format!("Active sessions `{active_sessions}`"),
+    ]
+    .join("\n")
+}
+
+fn approval_request_webhook_body(message: &SessionMessage, preview: &str) -> String {
+    [
+        "*ECC 2.0: Approval needed*".to_string(),
+        format!(
+            "To `{}` from `{}`",
+            format_session_id(&message.to_session),
+            format_session_id(&message.from_session)
+        ),
+        format!("Type `{}`", message.msg_type),
+        markdown_code_block("Request", &[preview.to_string()]),
+    ]
+    .join("\n")
+}
+
+fn markdown_code_block(label: &str, lines: &[String]) -> String {
+    format!("{label}\n```text\n{}\n```", lines.join("\n"))
+}
+
+fn session_compare_url(session: &Session) -> Option<String> {
+    session
+        .worktree
+        .as_ref()
+        .and_then(|worktree| worktree::github_compare_url(worktree).ok().flatten())
 }
 
 fn file_activity_verb(action: crate::session::FileActivityAction) -> &'static str {
@@ -11838,6 +12019,7 @@ diff --git a/src/lib.rs b/src/lib.rs
         let selected_session = selected_session.min(sessions.len().saturating_sub(1));
         let cfg = Config::default();
         let notifier = DesktopNotifier::new(cfg.desktop_notifications.clone());
+        let webhook_notifier = WebhookNotifier::new(cfg.webhook_notifications.clone());
         let last_session_states = sessions
             .iter()
             .map(|session| (session.id.clone(), session.state.clone()))
@@ -11856,6 +12038,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             output_store,
             output_rx,
             notifier,
+            webhook_notifier,
             sessions,
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
@@ -11937,6 +12120,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             auto_create_worktrees: true,
             auto_merge_ready_worktrees: false,
             desktop_notifications: crate::notifications::DesktopNotificationConfig::default(),
+            webhook_notifications: crate::notifications::WebhookNotificationConfig::default(),
             completion_summary_notifications:
                 crate::notifications::CompletionSummaryConfig::default(),
             cost_budget_usd: 10.0,

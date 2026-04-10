@@ -373,6 +373,20 @@ pub fn create_draft_pr(worktree: &WorktreeInfo, title: &str, body: &str) -> Resu
     create_draft_pr_with_gh(worktree, title, body, Path::new("gh"))
 }
 
+pub fn github_compare_url(worktree: &WorktreeInfo) -> Result<Option<String>> {
+    let repo_root = base_checkout_path(worktree)?;
+    let origin = git_remote_origin_url(&repo_root)?;
+    let Some(repo_url) = github_repo_web_url(&origin) else {
+        return Ok(None);
+    };
+
+    Ok(Some(format!(
+        "{repo_url}/compare/{}...{}?expand=1",
+        percent_encode_git_ref(&worktree.base_branch),
+        percent_encode_git_ref(&worktree.branch)
+    )))
+}
+
 fn create_draft_pr_with_gh(
     worktree: &WorktreeInfo,
     title: &str,
@@ -416,6 +430,67 @@ fn create_draft_pr_with_gh(
     }
 
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn git_remote_origin_url(repo_root: &Path) -> Result<String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(["remote", "get-url", "origin"])
+        .output()
+        .context("Failed to resolve git origin remote")?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git remote get-url origin failed: {stderr}");
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn github_repo_web_url(origin: &str) -> Option<String> {
+    let trimmed = origin.trim().trim_end_matches(".git");
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if let Some(rest) = trimmed.strip_prefix("git@") {
+        let (host, path) = rest.split_once(':')?;
+        return Some(format!("https://{host}/{}", path.trim_start_matches('/')));
+    }
+
+    if let Some(rest) = trimmed.strip_prefix("ssh://") {
+        return parse_httpish_remote(rest);
+    }
+
+    if let Some(rest) = trimmed.strip_prefix("https://") {
+        return parse_httpish_remote(rest);
+    }
+
+    if let Some(rest) = trimmed.strip_prefix("http://") {
+        return parse_httpish_remote(rest);
+    }
+
+    None
+}
+
+fn parse_httpish_remote(rest: &str) -> Option<String> {
+    let without_user = rest.strip_prefix("git@").unwrap_or(rest);
+    let (host, path) = without_user.split_once('/')?;
+    Some(format!("https://{host}/{}", path.trim_start_matches('/')))
+}
+
+fn percent_encode_git_ref(value: &str) -> String {
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        let ch = byte as char;
+        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | '~') {
+            encoded.push(ch);
+        } else {
+            encoded.push('%');
+            encoded.push_str(&format!("{byte:02X}"));
+        }
+    }
+    encoded
 }
 
 pub fn diff_file_preview(worktree: &WorktreeInfo, limit: usize) -> Result<Vec<String>> {
@@ -1728,6 +1803,47 @@ mod tests {
 
         let _ = fs::remove_dir_all(root);
         Ok(())
+    }
+
+    #[test]
+    fn github_compare_url_uses_origin_remote_and_encodes_refs() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-compare-url-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        run_git(
+            &repo,
+            &["remote", "add", "origin", "git@github.com:example/ecc.git"],
+        )?;
+
+        let worktree = WorktreeInfo {
+            path: repo.clone(),
+            branch: "ecc/worker-123".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        let url = github_compare_url(&worktree)?.expect("compare url");
+        assert_eq!(
+            url,
+            "https://github.com/example/ecc/compare/main...ecc%2Fworker-123?expand=1"
+        );
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn github_repo_web_url_supports_multiple_remote_formats() {
+        assert_eq!(
+            github_repo_web_url("git@github.com:example/ecc.git").as_deref(),
+            Some("https://github.com/example/ecc")
+        );
+        assert_eq!(
+            github_repo_web_url("https://github.example.com/org/repo.git").as_deref(),
+            Some("https://github.example.com/org/repo")
+        );
+        assert_eq!(
+            github_repo_web_url("ssh://git@github.example.com/org/repo.git").as_deref(),
+            Some("https://github.example.com/org/repo")
+        );
     }
 
     #[test]

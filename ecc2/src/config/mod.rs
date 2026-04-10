@@ -3,7 +3,9 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::notifications::{CompletionSummaryConfig, DesktopNotificationConfig};
+use crate::notifications::{
+    CompletionSummaryConfig, DesktopNotificationConfig, WebhookNotificationConfig,
+};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -48,6 +50,7 @@ pub struct Config {
     pub auto_create_worktrees: bool,
     pub auto_merge_ready_worktrees: bool,
     pub desktop_notifications: DesktopNotificationConfig,
+    pub webhook_notifications: WebhookNotificationConfig,
     pub completion_summary_notifications: CompletionSummaryConfig,
     pub cost_budget_usd: f64,
     pub token_budget: u64,
@@ -112,6 +115,7 @@ impl Default for Config {
             auto_create_worktrees: true,
             auto_merge_ready_worktrees: false,
             desktop_notifications: DesktopNotificationConfig::default(),
+            webhook_notifications: WebhookNotificationConfig::default(),
             completion_summary_notifications: CompletionSummaryConfig::default(),
             cost_budget_usd: 10.0,
             token_budget: 500_000,
@@ -438,6 +442,7 @@ theme = "Dark"
             defaults.auto_merge_ready_worktrees
         );
         assert_eq!(config.desktop_notifications, defaults.desktop_notifications);
+        assert_eq!(config.webhook_notifications, defaults.webhook_notifications);
         assert_eq!(
             config.auto_terminate_stale_sessions,
             defaults.auto_terminate_stale_sessions
@@ -637,6 +642,42 @@ delivery = "desktop_and_tui_popup"
     }
 
     #[test]
+    fn webhook_notifications_deserialize_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[webhook_notifications]
+enabled = true
+session_started = true
+session_completed = true
+session_failed = true
+budget_alerts = true
+approval_requests = false
+
+[[webhook_notifications.targets]]
+provider = "slack"
+url = "https://hooks.slack.test/services/abc"
+
+[[webhook_notifications.targets]]
+provider = "discord"
+url = "https://discord.test/api/webhooks/123"
+"#,
+        )
+        .unwrap();
+
+        assert!(config.webhook_notifications.enabled);
+        assert!(config.webhook_notifications.session_started);
+        assert_eq!(config.webhook_notifications.targets.len(), 2);
+        assert_eq!(
+            config.webhook_notifications.targets[0].provider,
+            crate::notifications::WebhookProvider::Slack
+        );
+        assert_eq!(
+            config.webhook_notifications.targets[1].provider,
+            crate::notifications::WebhookProvider::Discord
+        );
+    }
+
+    #[test]
     fn invalid_budget_alert_thresholds_fall_back_to_defaults() {
         let config: Config = toml::from_str(
             r#"
@@ -663,6 +704,11 @@ critical = 1.10
         config.auto_create_worktrees = false;
         config.auto_merge_ready_worktrees = true;
         config.desktop_notifications.session_completed = false;
+        config.webhook_notifications.enabled = true;
+        config.webhook_notifications.targets = vec![crate::notifications::WebhookTarget {
+            provider: crate::notifications::WebhookProvider::Slack,
+            url: "https://hooks.slack.test/services/abc".to_string(),
+        }];
         config.completion_summary_notifications.delivery =
             crate::notifications::CompletionSummaryDelivery::TuiPopup;
         config.desktop_notifications.quiet_hours.enabled = true;
@@ -688,6 +734,12 @@ critical = 1.10
         assert!(!loaded.auto_create_worktrees);
         assert!(loaded.auto_merge_ready_worktrees);
         assert!(!loaded.desktop_notifications.session_completed);
+        assert!(loaded.webhook_notifications.enabled);
+        assert_eq!(loaded.webhook_notifications.targets.len(), 1);
+        assert_eq!(
+            loaded.webhook_notifications.targets[0].provider,
+            crate::notifications::WebhookProvider::Slack
+        );
         assert_eq!(
             loaded.completion_summary_notifications.delivery,
             crate::notifications::CompletionSummaryDelivery::TuiPopup
