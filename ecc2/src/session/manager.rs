@@ -1,17 +1,21 @@
 use anyhow::{Context, Result};
+use chrono::Utc;
+use cron::Schedule as CronSchedule;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::str::FromStr;
 use tokio::process::Command;
 
 use super::output::SessionOutputStore;
 use super::runtime::capture_command_output;
 use super::store::StateStore;
 use super::{
-    default_project_label, default_task_group_label, normalize_group_label, HarnessKind, Session,
-    SessionAgentProfile, SessionGrouping, SessionHarnessInfo, SessionMetrics, SessionState,
+    default_project_label, default_task_group_label, normalize_group_label, HarnessKind,
+    ScheduledTask, Session, SessionAgentProfile, SessionGrouping, SessionHarnessInfo,
+    SessionMetrics, SessionState,
 };
 use crate::comms::{self, MessageType};
 use crate::config::Config;
@@ -108,6 +112,48 @@ pub async fn create_session_from_source_with_profile_and_grouping(
     .await
 }
 
+async fn run_due_schedules_with_runner_program(
+    db: &StateStore,
+    cfg: &Config,
+    limit: usize,
+    runner_program: &Path,
+) -> Result<Vec<ScheduledRunOutcome>> {
+    let now = Utc::now();
+    let schedules = db.list_due_scheduled_tasks(now, limit)?;
+    let mut outcomes = Vec::new();
+
+    for schedule in schedules {
+        let grouping = SessionGrouping {
+            project: normalize_group_label(&schedule.project),
+            task_group: normalize_group_label(&schedule.task_group),
+        };
+        let session_id = queue_session_in_dir_with_runner_program(
+            db,
+            cfg,
+            &schedule.task,
+            &schedule.agent_type,
+            schedule.use_worktree,
+            &schedule.working_dir,
+            runner_program,
+            schedule.profile_name.as_deref(),
+            None,
+            grouping,
+        )
+        .await?;
+        let next_run_at = next_schedule_run_at(&schedule.cron_expr, now)?;
+        db.record_scheduled_task_run(schedule.id, now, next_run_at)?;
+        outcomes.push(ScheduledRunOutcome {
+            schedule_id: schedule.id,
+            session_id,
+            task: schedule.task,
+            cron_expr: schedule.cron_expr,
+            next_run_at,
+        });
+    }
+
+    Ok(outcomes)
+}
+
 pub fn list_sessions(db: &StateStore) -> Result<Vec<Session>> {
     db.list_sessions()
 }
@@ -153,6 +199,66 @@ pub fn get_team_status(db: &StateStore, id: &str, depth: usize) -> Result<TeamSt
         handoff_backlog,
         descendants,
     })
+}
+
+pub fn create_scheduled_task(
+    db: &StateStore,
+    cfg: &Config,
+    cron_expr: &str,
+    task: &str,
+    agent_type: &str,
+    profile_name: Option<&str>,
+    use_worktree: bool,
+    grouping: SessionGrouping,
+) -> Result<ScheduledTask> {
+    let working_dir =
+        std::env::current_dir().context("Failed to resolve current working directory")?;
+    let project = grouping
+        .project
+        .as_deref()
+        .and_then(normalize_group_label)
+        .unwrap_or_else(|| default_project_label(&working_dir));
+    let task_group = grouping
+        .task_group
+        .as_deref()
+        .and_then(normalize_group_label)
+        .unwrap_or_else(|| default_task_group_label(task));
+    let agent_type = HarnessKind::canonical_agent_type(agent_type);
+
+    if let Some(profile_name) = profile_name {
+        cfg.resolve_agent_profile(profile_name)?;
+    }
+
+    let next_run_at = next_schedule_run_at(cron_expr, Utc::now())?;
+    db.insert_scheduled_task(
+        cron_expr,
+        task,
+        &agent_type,
+        profile_name,
+        &working_dir,
+        &project,
+        &task_group,
+        use_worktree,
+        next_run_at,
+    )
+}
+
+pub fn list_scheduled_tasks(db: &StateStore) -> Result<Vec<ScheduledTask>> {
+    db.list_scheduled_tasks()
+}
+
+pub fn delete_scheduled_task(db: &StateStore, schedule_id: i64) -> Result<bool> {
+    Ok(db.delete_scheduled_task(schedule_id)? > 0)
+}
+
+pub async fn run_due_schedules(
+    db: &StateStore,
+    cfg: &Config,
+    limit: usize,
+) -> Result<Vec<ScheduledRunOutcome>> {
+    let runner_program =
+        std::env::current_exe().context("Failed to resolve ECC executable path")?;
+    run_due_schedules_with_runner_program(db, cfg, limit, &runner_program).await
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -1916,6 +2022,32 @@ fn resolve_session(db: &StateStore, id: &str) -> Result<Session> {
     session.ok_or_else(|| anyhow::anyhow!("Session not found: {id}"))
 }
 
+fn parse_cron_schedule(expr: &str) -> Result<CronSchedule> {
+    let trimmed = expr.trim();
+    let normalized = match trimmed.split_whitespace().count() {
+        5 => format!("0 {trimmed}"),
+        6 | 7 => trimmed.to_string(),
+        fields => {
+            anyhow::bail!(
+                "invalid cron expression `{trimmed}`: expected 5, 6, or 7 fields but found {fields}"
+            )
+        }
+    };
+    CronSchedule::from_str(&normalized)
+        .with_context(|| format!("invalid cron expression `{trimmed}`"))
+}
+
+fn next_schedule_run_at(
+    expr: &str,
+    after: chrono::DateTime<chrono::Utc>,
+) -> Result<chrono::DateTime<chrono::Utc>> {
+    parse_cron_schedule(expr)?
+        .after(&after)
+        .next()
+        .map(|value| value.with_timezone(&chrono::Utc))
+        .ok_or_else(|| anyhow::anyhow!("cron expression `{expr}` did not yield a future run time"))
+}
+
 pub async fn run_session(
     cfg: &Config,
     session_id: &str,
@@ -2803,6 +2935,15 @@ pub struct LeadDispatchOutcome {
     pub lead_session_id: String,
     pub unread_count: usize,
     pub routed: Vec<InboxDrainOutcome>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct ScheduledRunOutcome {
+    pub schedule_id: i64,
+    pub session_id: String,
+    pub task: String,
+    pub cron_expr: String,
+    pub next_run_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub struct RebalanceOutcome {
@@ -3888,6 +4029,53 @@ mod tests {
         assert_eq!(session.task_group, "stabilize auth callback");
 
         stop_session_with_options(&db, &session_id, false).await?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn run_due_schedules_dispatches_due_tasks_and_advances_next_run() -> Result<()> {
+        let tempdir = TestDir::new("manager-run-due-schedules")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_runner, log_path) = write_fake_claude(tempdir.path())?;
+        let due_at = Utc::now() - Duration::minutes(1);
+
+        let schedule = db.insert_scheduled_task(
+            "*/15 * * * *",
+            "Check backlog health",
+            "claude",
+            None,
+            &repo_root,
+            "ecc-core",
+            "scheduled maintenance",
+            true,
+            due_at,
+        )?;
+
+        let outcomes = run_due_schedules_with_runner_program(&db, &cfg, 10, &fake_runner).await?;
+        assert_eq!(outcomes.len(), 1);
+        assert_eq!(outcomes[0].schedule_id, schedule.id);
+        assert_eq!(outcomes[0].task, "Check backlog health");
+
+        let session = db
+            .get_session(&outcomes[0].session_id)?
+            .context("scheduled session should exist")?;
+        assert_eq!(session.project, "ecc-core");
+        assert_eq!(session.task_group, "scheduled maintenance");
+
+        let refreshed = db
+            .get_scheduled_task(schedule.id)?
+            .context("scheduled task should still exist")?;
+        assert!(refreshed.last_run_at.is_some());
+        assert!(refreshed.next_run_at > due_at);
+
+        let log = wait_for_file(&log_path)?;
+        assert!(log.contains("Check backlog health"));
+
+        stop_session_with_options(&db, &outcomes[0].session_id, true).await?;
         Ok(())
     }
 

@@ -27,6 +27,10 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
             tracing::error!("Session check failed: {e}");
         }
 
+        if let Err(e) = maybe_run_due_schedules(&db, &cfg).await {
+            tracing::error!("Scheduled task dispatch pass failed: {e}");
+        }
+
         if let Err(e) = coordinate_backlog_cycle(&db, &cfg).await {
             tracing::error!("Backlog coordination pass failed: {e}");
         }
@@ -87,6 +91,14 @@ where
 fn check_sessions(db: &StateStore, cfg: &Config) -> Result<()> {
     let _ = manager::enforce_session_heartbeats(db, cfg)?;
     Ok(())
+}
+
+async fn maybe_run_due_schedules(db: &StateStore, cfg: &Config) -> Result<usize> {
+    let outcomes = manager::run_due_schedules(db, cfg, cfg.max_parallel_sessions).await?;
+    if !outcomes.is_empty() {
+        tracing::info!("Dispatched {} scheduled task(s)", outcomes.len());
+    }
+    Ok(outcomes.len())
 }
 
 async fn maybe_auto_dispatch(db: &StateStore, cfg: &Config) -> Result<usize> {

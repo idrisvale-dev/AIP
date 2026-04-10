@@ -18,8 +18,8 @@ use super::{
     ContextGraphCompactionStats, ContextGraphEntity, ContextGraphEntityDetail,
     ContextGraphObservation, ContextGraphRecallEntry, ContextGraphRelation, ContextGraphSyncStats,
     ContextObservationPriority, DecisionLogEntry, FileActivityAction, FileActivityEntry,
-    HarnessKind, Session, SessionAgentProfile, SessionHarnessInfo, SessionMessage, SessionMetrics,
-    SessionState, WorktreeInfo,
+    HarnessKind, ScheduledTask, Session, SessionAgentProfile, SessionHarnessInfo, SessionMessage,
+    SessionMetrics, SessionState, WorktreeInfo,
 };
 
 pub struct StateStore {
@@ -297,6 +297,22 @@ impl StateStore {
                 session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
                 repo_root TEXT NOT NULL,
                 requested_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS scheduled_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cron_expr TEXT NOT NULL,
+                task TEXT NOT NULL,
+                agent_type TEXT NOT NULL,
+                profile_name TEXT,
+                working_dir TEXT NOT NULL,
+                project TEXT NOT NULL DEFAULT '',
+                task_group TEXT NOT NULL DEFAULT '',
+                use_worktree INTEGER NOT NULL DEFAULT 1,
+                last_run_at TEXT,
+                next_run_at TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS conflict_incidents (
@@ -1027,6 +1043,125 @@ impl StateStore {
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(rows)
+    }
+
+    pub fn insert_scheduled_task(
+        &self,
+        cron_expr: &str,
+        task: &str,
+        agent_type: &str,
+        profile_name: Option<&str>,
+        working_dir: &Path,
+        project: &str,
+        task_group: &str,
+        use_worktree: bool,
+        next_run_at: chrono::DateTime<chrono::Utc>,
+    ) -> Result<ScheduledTask> {
+        let now = chrono::Utc::now();
+        self.conn.execute(
+            "INSERT INTO scheduled_tasks (
+                cron_expr,
+                task,
+                agent_type,
+                profile_name,
+                working_dir,
+                project,
+                task_group,
+                use_worktree,
+                next_run_at,
+                created_at,
+                updated_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            rusqlite::params![
+                cron_expr,
+                task,
+                agent_type,
+                profile_name,
+                working_dir.display().to_string(),
+                project,
+                task_group,
+                if use_worktree { 1_i64 } else { 0_i64 },
+                next_run_at.to_rfc3339(),
+                now.to_rfc3339(),
+                now.to_rfc3339(),
+            ],
+        )?;
+        let id = self.conn.last_insert_rowid();
+        self.get_scheduled_task(id)?
+            .ok_or_else(|| anyhow::anyhow!("Scheduled task {id} was not found after insert"))
+    }
+
+    pub fn list_scheduled_tasks(&self) -> Result<Vec<ScheduledTask>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, cron_expr, task, agent_type, profile_name, working_dir, project, task_group,
+                    use_worktree, last_run_at, next_run_at, created_at, updated_at
+             FROM scheduled_tasks
+             ORDER BY next_run_at ASC, id ASC",
+        )?;
+
+        let rows = stmt.query_map([], map_scheduled_task)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    pub fn list_due_scheduled_tasks(
+        &self,
+        now: chrono::DateTime<chrono::Utc>,
+        limit: usize,
+    ) -> Result<Vec<ScheduledTask>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, cron_expr, task, agent_type, profile_name, working_dir, project, task_group,
+                    use_worktree, last_run_at, next_run_at, created_at, updated_at
+             FROM scheduled_tasks
+             WHERE next_run_at <= ?1
+             ORDER BY next_run_at ASC, id ASC
+             LIMIT ?2",
+        )?;
+
+        let rows = stmt.query_map(
+            rusqlite::params![now.to_rfc3339(), limit as i64],
+            map_scheduled_task,
+        )?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    pub fn get_scheduled_task(&self, schedule_id: i64) -> Result<Option<ScheduledTask>> {
+        self.conn
+            .query_row(
+                "SELECT id, cron_expr, task, agent_type, profile_name, working_dir, project, task_group,
+                        use_worktree, last_run_at, next_run_at, created_at, updated_at
+                 FROM scheduled_tasks
+                 WHERE id = ?1",
+                [schedule_id],
+                map_scheduled_task,
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    pub fn delete_scheduled_task(&self, schedule_id: i64) -> Result<usize> {
+        self.conn
+            .execute("DELETE FROM scheduled_tasks WHERE id = ?1", [schedule_id])
+            .map_err(Into::into)
+    }
+
+    pub fn record_scheduled_task_run(
+        &self,
+        schedule_id: i64,
+        last_run_at: chrono::DateTime<chrono::Utc>,
+        next_run_at: chrono::DateTime<chrono::Utc>,
+    ) -> Result<()> {
+        self.conn.execute(
+            "UPDATE scheduled_tasks
+             SET last_run_at = ?2, next_run_at = ?3, updated_at = ?4
+             WHERE id = ?1",
+            rusqlite::params![
+                schedule_id,
+                last_run_at.to_rfc3339(),
+                next_run_at.to_rfc3339(),
+                chrono::Utc::now().to_rfc3339(),
+            ],
+        )?;
+        Ok(())
     }
 
     pub fn update_metrics(&self, session_id: &str, metrics: &SessionMetrics) -> Result<()> {
@@ -3565,6 +3700,31 @@ fn map_conflict_incident(row: &rusqlite::Row<'_>) -> rusqlite::Result<ConflictIn
     })
 }
 
+fn map_scheduled_task(row: &rusqlite::Row<'_>) -> rusqlite::Result<ScheduledTask> {
+    let last_run_at = row
+        .get::<_, Option<String>>(9)?
+        .map(|value| parse_store_timestamp(value, 9))
+        .transpose()?;
+    let next_run_at = parse_store_timestamp(row.get::<_, String>(10)?, 10)?;
+    let created_at = parse_store_timestamp(row.get::<_, String>(11)?, 11)?;
+    let updated_at = parse_store_timestamp(row.get::<_, String>(12)?, 12)?;
+    Ok(ScheduledTask {
+        id: row.get(0)?,
+        cron_expr: row.get(1)?,
+        task: row.get(2)?,
+        agent_type: row.get(3)?,
+        profile_name: normalize_optional_string(row.get(4)?),
+        working_dir: PathBuf::from(row.get::<_, String>(5)?),
+        project: row.get(6)?,
+        task_group: row.get(7)?,
+        use_worktree: row.get::<_, i64>(8)? != 0,
+        last_run_at,
+        next_run_at,
+        created_at,
+        updated_at,
+    })
+}
+
 fn parse_timestamp_column(
     value: String,
     index: usize,
@@ -5092,6 +5252,49 @@ mod tests {
         assert_eq!(summary.connector_name, "workspace_notes");
         assert_eq!(summary.synced_sources, 2);
         assert!(summary.last_synced_at.is_some());
+
+        Ok(())
+    }
+
+    #[test]
+    fn scheduled_tasks_round_trip_and_advance_runs() -> Result<()> {
+        let tempdir = TestDir::new("store-scheduled-tasks")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+        let due_next_run = now - ChronoDuration::minutes(1);
+
+        let inserted = db.insert_scheduled_task(
+            "*/15 * * * *",
+            "Check backlog health",
+            "claude",
+            Some("planner"),
+            tempdir.path(),
+            "ecc-core",
+            "scheduled maintenance",
+            true,
+            due_next_run,
+        )?;
+
+        let listed = db.list_scheduled_tasks()?;
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].id, inserted.id);
+        assert_eq!(listed[0].profile_name.as_deref(), Some("planner"));
+
+        let due = db.list_due_scheduled_tasks(now, 10)?;
+        assert_eq!(due.len(), 1);
+        assert_eq!(due[0].id, inserted.id);
+
+        let advanced_next_run = now + ChronoDuration::minutes(15);
+        db.record_scheduled_task_run(inserted.id, now, advanced_next_run)?;
+
+        let refreshed = db
+            .get_scheduled_task(inserted.id)?
+            .context("scheduled task should still exist")?;
+        assert_eq!(refreshed.last_run_at, Some(now));
+        assert_eq!(refreshed.next_run_at, advanced_next_run);
+
+        assert_eq!(db.delete_scheduled_task(inserted.id)?, 1);
+        assert!(db.get_scheduled_task(inserted.id)?.is_none());
 
         Ok(())
     }

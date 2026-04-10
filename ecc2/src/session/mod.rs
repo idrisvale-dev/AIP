@@ -275,6 +275,23 @@ pub struct SessionMessage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ScheduledTask {
+    pub id: i64,
+    pub cron_expr: String,
+    pub task: String,
+    pub agent_type: String,
+    pub profile_name: Option<String>,
+    pub working_dir: PathBuf,
+    pub project: String,
+    pub task_group: String,
+    pub use_worktree: bool,
+    pub last_run_at: Option<DateTime<Utc>>,
+    pub next_run_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FileActivityEntry {
     pub session_id: String,
     pub action: FileActivityAction,

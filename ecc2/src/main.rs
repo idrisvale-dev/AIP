@@ -322,6 +322,11 @@ enum Commands {
         #[command(subcommand)]
         command: GraphCommands,
     },
+    /// Manage persistent scheduled task dispatch
+    Schedule {
+        #[command(subcommand)]
+        command: ScheduleCommands,
+    },
     /// Export sessions, tool spans, and metrics in OTLP-compatible JSON
     ExportOtel {
         /// Session ID or alias. Omit to export all sessions.
@@ -384,6 +389,56 @@ enum MessageCommands {
         session_id: String,
         #[arg(long, default_value_t = 10)]
         limit: usize,
+    },
+}
+
+#[derive(clap::Subcommand, Debug)]
+enum ScheduleCommands {
+    /// Add a persistent scheduled task
+    Add {
+        /// Cron expression in 5, 6, or 7-field form
+        #[arg(long)]
+        cron: String,
+        /// Task description to run on each schedule
+        #[arg(short, long)]
+        task: String,
+        /// Agent type (claude, codex, gemini, opencode)
+        #[arg(short, long)]
+        agent: Option<String>,
+        /// Agent profile defined in ecc2.toml
+        #[arg(long)]
+        profile: Option<String>,
+        #[command(flatten)]
+        worktree: WorktreePolicyArgs,
+        /// Optional project grouping override
+        #[arg(long)]
+        project: Option<String>,
+        /// Optional task-group grouping override
+        #[arg(long)]
+        task_group: Option<String>,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
+    /// List scheduled tasks
+    List {
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
+    /// Remove a scheduled task
+    Remove {
+        /// Schedule ID
+        schedule_id: i64,
+    },
+    /// Dispatch currently due scheduled tasks
+    RunDue {
+        /// Maximum due schedules to dispatch in one pass
+        #[arg(long, default_value_t = 10)]
+        limit: usize,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -1722,6 +1777,90 @@ async fn main() -> Result<()> {
                             short_session(&message.from_session),
                             short_session(&message.to_session),
                             comms::preview(&message.msg_type, &message.content)
+                        );
+                    }
+                }
+            }
+        },
+        Some(Commands::Schedule { command }) => match command {
+            ScheduleCommands::Add {
+                cron,
+                task,
+                agent,
+                profile,
+                worktree,
+                project,
+                task_group,
+                json,
+            } => {
+                let schedule = session::manager::create_scheduled_task(
+                    &db,
+                    &cfg,
+                    &cron,
+                    &task,
+                    agent.as_deref().unwrap_or(&cfg.default_agent),
+                    profile.as_deref(),
+                    worktree.resolve(&cfg),
+                    session::SessionGrouping {
+                        project,
+                        task_group,
+                    },
+                )?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&schedule)?);
+                } else {
+                    println!(
+                        "Scheduled task {} next runs at {}",
+                        schedule.id,
+                        schedule.next_run_at.to_rfc3339()
+                    );
+                    println!(
+                        "- {} [{}] | {}",
+                        schedule.task, schedule.agent_type, schedule.cron_expr
+                    );
+                }
+            }
+            ScheduleCommands::List { json } => {
+                let schedules = session::manager::list_scheduled_tasks(&db)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&schedules)?);
+                } else if schedules.is_empty() {
+                    println!("No scheduled tasks");
+                } else {
+                    println!("Scheduled tasks");
+                    for schedule in schedules {
+                        println!(
+                            "#{} {} [{}] | {} | next {}",
+                            schedule.id,
+                            schedule.task,
+                            schedule.agent_type,
+                            schedule.cron_expr,
+                            schedule.next_run_at.to_rfc3339()
+                        );
+                    }
+                }
+            }
+            ScheduleCommands::Remove { schedule_id } => {
+                if !session::manager::delete_scheduled_task(&db, schedule_id)? {
+                    anyhow::bail!("Scheduled task not found: {schedule_id}");
+                }
+                println!("Removed scheduled task {schedule_id}");
+            }
+            ScheduleCommands::RunDue { limit, json } => {
+                let outcomes = session::manager::run_due_schedules(&db, &cfg, limit).await?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&outcomes)?);
+                } else if outcomes.is_empty() {
+                    println!("No due scheduled tasks");
+                } else {
+                    println!("Dispatched {} scheduled task(s)", outcomes.len());
+                    for outcome in outcomes {
+                        println!(
+                            "#{} -> {} | {} | next {}",
+                            outcome.schedule_id,
+                            short_session(&outcome.session_id),
+                            outcome.task,
+                            outcome.next_run_at.to_rfc3339()
                         );
                     }
                 }
@@ -4381,6 +4520,51 @@ mod tests {
                 assert_eq!(priority, TaskPriorityArg::Normal);
             }
             _ => panic!("expected messages send subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_schedule_add_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "schedule",
+            "add",
+            "--cron",
+            "*/15 * * * *",
+            "--task",
+            "Check backlog health",
+            "--agent",
+            "codex",
+            "--profile",
+            "planner",
+            "--project",
+            "ecc-core",
+            "--task-group",
+            "scheduled maintenance",
+        ])
+        .expect("schedule add should parse");
+
+        match cli.command {
+            Some(Commands::Schedule {
+                command:
+                    ScheduleCommands::Add {
+                        cron,
+                        task,
+                        agent,
+                        profile,
+                        project,
+                        task_group,
+                        ..
+                    },
+            }) => {
+                assert_eq!(cron, "*/15 * * * *");
+                assert_eq!(task, "Check backlog health");
+                assert_eq!(agent.as_deref(), Some("codex"));
+                assert_eq!(profile.as_deref(), Some("planner"));
+                assert_eq!(project.as_deref(), Some("ecc-core"));
+                assert_eq!(task_group.as_deref(), Some("scheduled maintenance"));
+            }
+            _ => panic!("expected schedule add subcommand"),
         }
     }
 
