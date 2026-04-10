@@ -32,6 +32,22 @@ pub struct BudgetAlertThresholds {
     pub critical: f64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConflictResolutionStrategy {
+    Escalate,
+    LastWriteWins,
+    Merge,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ConflictResolutionConfig {
+    pub enabled: bool,
+    pub strategy: ConflictResolutionStrategy,
+    pub notify_lead: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -55,6 +71,7 @@ pub struct Config {
     pub cost_budget_usd: f64,
     pub token_budget: u64,
     pub budget_alert_thresholds: BudgetAlertThresholds,
+    pub conflict_resolution: ConflictResolutionConfig,
     pub theme: Theme,
     pub pane_layout: PaneLayout,
     pub pane_navigation: PaneNavigationConfig,
@@ -115,6 +132,7 @@ impl Default for Config {
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             budget_alert_thresholds: Self::BUDGET_ALERT_THRESHOLDS,
+            conflict_resolution: ConflictResolutionConfig::default(),
             theme: Theme::Dark,
             pane_layout: PaneLayout::Horizontal,
             pane_navigation: PaneNavigationConfig::default(),
@@ -403,6 +421,22 @@ impl Default for BudgetAlertThresholds {
     }
 }
 
+impl Default for ConflictResolutionStrategy {
+    fn default() -> Self {
+        Self::Escalate
+    }
+}
+
+impl Default for ConflictResolutionConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            strategy: ConflictResolutionStrategy::Escalate,
+            notify_lead: true,
+        }
+    }
+}
+
 impl BudgetAlertThresholds {
     pub fn sanitized(self) -> Self {
         let values = [self.advisory, self.warning, self.critical];
@@ -422,7 +456,10 @@ impl BudgetAlertThresholds {
 
 #[cfg(test)]
 mod tests {
-    use super::{BudgetAlertThresholds, Config, PaneLayout};
+    use super::{
+        BudgetAlertThresholds, Config, ConflictResolutionConfig, ConflictResolutionStrategy,
+        PaneLayout,
+    };
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use uuid::Uuid;
 
@@ -466,6 +503,7 @@ theme = "Dark"
             config.budget_alert_thresholds,
             defaults.budget_alert_thresholds
         );
+        assert_eq!(config.conflict_resolution, defaults.conflict_resolution);
         assert_eq!(config.pane_layout, defaults.pane_layout);
         assert_eq!(config.pane_navigation, defaults.pane_navigation);
         assert_eq!(
@@ -747,6 +785,28 @@ end_hour = 7
     }
 
     #[test]
+    fn conflict_resolution_deserializes_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[conflict_resolution]
+enabled = true
+strategy = "last_write_wins"
+notify_lead = false
+"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            config.conflict_resolution,
+            ConflictResolutionConfig {
+                enabled: true,
+                strategy: ConflictResolutionStrategy::LastWriteWins,
+                notify_lead: false,
+            }
+        );
+    }
+
+    #[test]
     fn completion_summary_notifications_deserialize_from_toml() {
         let config: Config = toml::from_str(
             r#"
@@ -843,6 +903,8 @@ critical = 1.10
             warning: 0.70,
             critical: 0.88,
         };
+        config.conflict_resolution.strategy = ConflictResolutionStrategy::Merge;
+        config.conflict_resolution.notify_lead = false;
         config.pane_navigation.focus_metrics = "e".to_string();
         config.pane_navigation.move_right = "d".to_string();
         config.linear_pane_size_percent = 42;
@@ -879,6 +941,11 @@ critical = 1.10
                 critical: 0.88,
             }
         );
+        assert_eq!(
+            loaded.conflict_resolution.strategy,
+            ConflictResolutionStrategy::Merge
+        );
+        assert!(!loaded.conflict_resolution.notify_lead);
         assert_eq!(loaded.pane_navigation.focus_metrics, "e");
         assert_eq!(loaded.pane_navigation.move_right, "d");
         assert_eq!(loaded.linear_pane_size_percent, 42);

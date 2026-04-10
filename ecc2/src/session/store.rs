@@ -39,6 +39,24 @@ pub struct FileActivityOverlap {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ConflictIncident {
+    pub id: i64,
+    pub conflict_key: String,
+    pub path: String,
+    pub first_session_id: String,
+    pub second_session_id: String,
+    pub active_session_id: String,
+    pub paused_session_id: String,
+    pub first_action: FileActivityAction,
+    pub second_action: FileActivityAction,
+    pub strategy: String,
+    pub summary: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub resolved_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct DaemonActivity {
     pub last_dispatch_at: Option<chrono::DateTime<chrono::Utc>>,
@@ -209,6 +227,23 @@ impl StateStore {
                 requested_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS conflict_incidents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conflict_key TEXT NOT NULL UNIQUE,
+                path TEXT NOT NULL,
+                first_session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                second_session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                active_session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                paused_session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                first_action TEXT NOT NULL,
+                second_action TEXT NOT NULL,
+                strategy TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                resolved_at TEXT
+            );
+
             CREATE TABLE IF NOT EXISTS daemon_activity (
                 id INTEGER PRIMARY KEY CHECK(id = 1),
                 last_dispatch_at TEXT,
@@ -240,6 +275,8 @@ impl StateStore {
                 ON session_output(session_id, id);
             CREATE INDEX IF NOT EXISTS idx_decision_log_session
                 ON decision_log(session_id, timestamp, id);
+            CREATE INDEX IF NOT EXISTS idx_conflict_incidents_sessions
+                ON conflict_incidents(first_session_id, second_session_id, resolved_at, updated_at);
             CREATE INDEX IF NOT EXISTS idx_pending_worktree_queue_requested_at
                 ON pending_worktree_queue(requested_at, session_id);
 
@@ -2038,6 +2075,157 @@ impl StateStore {
         overlaps.truncate(limit);
         Ok(overlaps)
     }
+
+    pub fn has_open_conflict_incident(&self, conflict_key: &str) -> Result<bool> {
+        let exists = self
+            .conn
+            .query_row(
+                "SELECT 1
+                 FROM conflict_incidents
+                 WHERE conflict_key = ?1 AND resolved_at IS NULL
+                 LIMIT 1",
+                rusqlite::params![conflict_key],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some();
+        Ok(exists)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn upsert_conflict_incident(
+        &self,
+        conflict_key: &str,
+        path: &str,
+        first_session_id: &str,
+        second_session_id: &str,
+        active_session_id: &str,
+        paused_session_id: &str,
+        first_action: &FileActivityAction,
+        second_action: &FileActivityAction,
+        strategy: &str,
+        summary: &str,
+    ) -> Result<ConflictIncident> {
+        let now = chrono::Utc::now().to_rfc3339();
+        self.conn.execute(
+            "INSERT INTO conflict_incidents (
+                 conflict_key, path, first_session_id, second_session_id,
+                 active_session_id, paused_session_id, first_action, second_action,
+                 strategy, summary, created_at, updated_at, resolved_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11, NULL)
+             ON CONFLICT(conflict_key) DO UPDATE SET
+                 path = excluded.path,
+                 first_session_id = excluded.first_session_id,
+                 second_session_id = excluded.second_session_id,
+                 active_session_id = excluded.active_session_id,
+                 paused_session_id = excluded.paused_session_id,
+                 first_action = excluded.first_action,
+                 second_action = excluded.second_action,
+                 strategy = excluded.strategy,
+                 summary = excluded.summary,
+                 updated_at = excluded.updated_at,
+                 resolved_at = NULL",
+            rusqlite::params![
+                conflict_key,
+                path,
+                first_session_id,
+                second_session_id,
+                active_session_id,
+                paused_session_id,
+                file_activity_action_value(first_action),
+                file_activity_action_value(second_action),
+                strategy,
+                summary,
+                now,
+            ],
+        )?;
+
+        self.conn
+            .query_row(
+                "SELECT id, conflict_key, path, first_session_id, second_session_id,
+                        active_session_id, paused_session_id, first_action, second_action,
+                        strategy, summary, created_at, updated_at, resolved_at
+                 FROM conflict_incidents
+                 WHERE conflict_key = ?1",
+                rusqlite::params![conflict_key],
+                map_conflict_incident,
+            )
+            .map_err(Into::into)
+    }
+
+    pub fn resolve_conflict_incidents_not_in(
+        &self,
+        active_keys: &HashSet<String>,
+    ) -> Result<usize> {
+        let open = self.list_open_conflict_incidents(512)?;
+        let now = chrono::Utc::now().to_rfc3339();
+        let mut resolved = 0;
+
+        for incident in open {
+            if active_keys.contains(&incident.conflict_key) {
+                continue;
+            }
+
+            resolved += self.conn.execute(
+                "UPDATE conflict_incidents
+                 SET resolved_at = ?2, updated_at = ?2
+                 WHERE conflict_key = ?1 AND resolved_at IS NULL",
+                rusqlite::params![incident.conflict_key, now],
+            )?;
+        }
+
+        Ok(resolved)
+    }
+
+    pub fn list_open_conflict_incidents_for_session(
+        &self,
+        session_id: &str,
+        limit: usize,
+    ) -> Result<Vec<ConflictIncident>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, conflict_key, path, first_session_id, second_session_id,
+                    active_session_id, paused_session_id, first_action, second_action,
+                    strategy, summary, created_at, updated_at, resolved_at
+             FROM conflict_incidents
+             WHERE resolved_at IS NULL
+               AND (
+                   first_session_id = ?1
+                   OR second_session_id = ?1
+                   OR active_session_id = ?1
+                   OR paused_session_id = ?1
+               )
+             ORDER BY updated_at DESC, id DESC
+             LIMIT ?2",
+        )?;
+
+        let incidents = stmt
+            .query_map(
+                rusqlite::params![session_id, limit as i64],
+                map_conflict_incident,
+            )?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(anyhow::Error::from)?;
+        Ok(incidents)
+    }
+
+    fn list_open_conflict_incidents(&self, limit: usize) -> Result<Vec<ConflictIncident>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, conflict_key, path, first_session_id, second_session_id,
+                    active_session_id, paused_session_id, first_action, second_action,
+                    strategy, summary, created_at, updated_at, resolved_at
+             FROM conflict_incidents
+             WHERE resolved_at IS NULL
+             ORDER BY updated_at DESC, id DESC
+             LIMIT ?1",
+        )?;
+
+        let incidents = stmt
+            .query_map(rusqlite::params![limit as i64], map_conflict_incident)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(anyhow::Error::from)?;
+        Ok(incidents)
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -2071,6 +2259,70 @@ fn parse_persisted_file_events(value: &str) -> Option<Vec<PersistedFileEvent>> {
         return None;
     }
     Some(events)
+}
+
+fn file_activity_action_value(action: &FileActivityAction) -> &'static str {
+    match action {
+        FileActivityAction::Read => "read",
+        FileActivityAction::Create => "create",
+        FileActivityAction::Modify => "modify",
+        FileActivityAction::Move => "move",
+        FileActivityAction::Delete => "delete",
+        FileActivityAction::Touch => "touch",
+    }
+}
+
+fn map_conflict_incident(row: &rusqlite::Row<'_>) -> rusqlite::Result<ConflictIncident> {
+    let created_at = parse_timestamp_column(row.get::<_, String>(11)?, 11)?;
+    let updated_at = parse_timestamp_column(row.get::<_, String>(12)?, 12)?;
+    let resolved_at = row
+        .get::<_, Option<String>>(13)?
+        .map(|value| parse_timestamp_column(value, 13))
+        .transpose()?;
+
+    Ok(ConflictIncident {
+        id: row.get(0)?,
+        conflict_key: row.get(1)?,
+        path: row.get(2)?,
+        first_session_id: row.get(3)?,
+        second_session_id: row.get(4)?,
+        active_session_id: row.get(5)?,
+        paused_session_id: row.get(6)?,
+        first_action: parse_file_activity_action(&row.get::<_, String>(7)?).ok_or_else(|| {
+            rusqlite::Error::InvalidColumnType(
+                7,
+                "first_action".into(),
+                rusqlite::types::Type::Text,
+            )
+        })?,
+        second_action: parse_file_activity_action(&row.get::<_, String>(8)?).ok_or_else(|| {
+            rusqlite::Error::InvalidColumnType(
+                8,
+                "second_action".into(),
+                rusqlite::types::Type::Text,
+            )
+        })?,
+        strategy: row.get(9)?,
+        summary: row.get(10)?,
+        created_at,
+        updated_at,
+        resolved_at,
+    })
+}
+
+fn parse_timestamp_column(
+    value: String,
+    index: usize,
+) -> rusqlite::Result<chrono::DateTime<chrono::Utc>> {
+    chrono::DateTime::parse_from_rfc3339(&value)
+        .map(|value| value.with_timezone(&chrono::Utc))
+        .map_err(|error| {
+            rusqlite::Error::FromSqlConversionFailure(
+                index,
+                rusqlite::types::Type::Text,
+                Box::new(error),
+            )
+        })
 }
 
 fn parse_file_activity_action(value: &str) -> Option<FileActivityAction> {
@@ -2578,6 +2830,56 @@ mod tests {
         assert_eq!(overlaps[0].other_action, FileActivityAction::Modify);
         assert_eq!(overlaps[0].other_session_id, "session-2");
         assert_eq!(overlaps[0].other_session_state, SessionState::Idle);
+
+        Ok(())
+    }
+
+    #[test]
+    fn conflict_incidents_upsert_and_resolve() -> Result<()> {
+        let tempdir = TestDir::new("store-conflict-incidents")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        for id in ["session-a", "session-b"] {
+            db.insert_session(&Session {
+                id: id.to_string(),
+                task: id.to_string(),
+                project: "workspace".to_string(),
+                task_group: "general".to_string(),
+                agent_type: "claude".to_string(),
+                working_dir: PathBuf::from("/tmp"),
+                state: SessionState::Running,
+                pid: None,
+                worktree: None,
+                created_at: now,
+                updated_at: now,
+                last_heartbeat_at: now,
+                metrics: SessionMetrics::default(),
+            })?;
+        }
+
+        let incident = db.upsert_conflict_incident(
+            "src/lib.rs::session-a::session-b",
+            "src/lib.rs",
+            "session-a",
+            "session-b",
+            "session-a",
+            "session-b",
+            &FileActivityAction::Modify,
+            &FileActivityAction::Modify,
+            "escalate",
+            "Paused session-b after overlapping modify on src/lib.rs",
+        )?;
+        assert_eq!(incident.paused_session_id, "session-b");
+        assert!(db.has_open_conflict_incident("src/lib.rs::session-a::session-b")?);
+
+        let listed = db.list_open_conflict_incidents_for_session("session-b", 10)?;
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].path, "src/lib.rs");
+
+        let resolved = db.resolve_conflict_incidents_not_in(&HashSet::new())?;
+        assert_eq!(resolved, 1);
+        assert!(!db.has_open_conflict_incident("src/lib.rs::session-a::session-b")?);
 
         Ok(())
     }

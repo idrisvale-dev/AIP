@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use serde::Serialize;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -508,6 +508,224 @@ pub fn enforce_budget_hard_limits(
     }
 
     Ok(outcome)
+}
+
+#[derive(Debug, Clone, Default, Serialize, PartialEq)]
+pub struct ConflictEnforcementOutcome {
+    pub strategy: crate::config::ConflictResolutionStrategy,
+    pub created_incidents: usize,
+    pub resolved_incidents: usize,
+    pub paused_sessions: Vec<String>,
+}
+
+pub fn enforce_conflict_resolution(
+    db: &StateStore,
+    cfg: &Config,
+) -> Result<ConflictEnforcementOutcome> {
+    let mut outcome = ConflictEnforcementOutcome {
+        strategy: cfg.conflict_resolution.strategy,
+        created_incidents: 0,
+        resolved_incidents: 0,
+        paused_sessions: Vec::new(),
+    };
+
+    if !cfg.conflict_resolution.enabled {
+        return Ok(outcome);
+    }
+
+    let sessions = db.list_sessions()?;
+    let sessions_by_id: HashMap<_, _> = sessions
+        .iter()
+        .cloned()
+        .map(|session| (session.id.clone(), session))
+        .collect();
+
+    let active_sessions: Vec<_> = sessions
+        .into_iter()
+        .filter(|session| {
+            matches!(
+                session.state,
+                SessionState::Pending
+                    | SessionState::Running
+                    | SessionState::Idle
+                    | SessionState::Stale
+            )
+        })
+        .collect();
+
+    let mut latest_activity_by_path: BTreeMap<String, Vec<super::FileActivityEntry>> =
+        BTreeMap::new();
+    for session in &active_sessions {
+        let mut seen_paths = HashSet::new();
+        for entry in db.list_file_activity(&session.id, 64)? {
+            if seen_paths.insert(entry.path.clone()) {
+                latest_activity_by_path
+                    .entry(entry.path.clone())
+                    .or_default()
+                    .push(entry);
+            }
+        }
+    }
+
+    let mut paused_once = HashSet::new();
+
+    for (path, mut entries) in latest_activity_by_path {
+        entries.retain(|entry| !matches!(entry.action, super::FileActivityAction::Read));
+        if entries.len() < 2 {
+            continue;
+        }
+
+        entries.sort_by_key(|entry| (entry.timestamp, entry.session_id.clone()));
+        let latest = entries.last().cloned().expect("entries is not empty");
+        for other in entries[..entries.len() - 1].iter() {
+            let conflict_key = conflict_incident_key(&path, &latest.session_id, &other.session_id);
+            if db.has_open_conflict_incident(&conflict_key)? {
+                continue;
+            }
+
+            let (active_session_id, paused_session_id, summary) =
+                choose_conflict_resolution(&path, &latest, other, cfg.conflict_resolution.strategy);
+            let (first_session_id, second_session_id, first_action, second_action) =
+                if latest.session_id <= other.session_id {
+                    (
+                        latest.session_id.clone(),
+                        other.session_id.clone(),
+                        latest.action.clone(),
+                        other.action.clone(),
+                    )
+                } else {
+                    (
+                        other.session_id.clone(),
+                        latest.session_id.clone(),
+                        other.action.clone(),
+                        latest.action.clone(),
+                    )
+                };
+
+            db.upsert_conflict_incident(
+                &conflict_key,
+                &path,
+                &first_session_id,
+                &second_session_id,
+                &active_session_id,
+                &paused_session_id,
+                &first_action,
+                &second_action,
+                conflict_strategy_label(cfg.conflict_resolution.strategy),
+                &summary,
+            )?;
+
+            if paused_once.insert(paused_session_id.clone()) {
+                if let Some(session) = sessions_by_id.get(&paused_session_id) {
+                    if matches!(
+                        session.state,
+                        SessionState::Pending
+                            | SessionState::Running
+                            | SessionState::Idle
+                            | SessionState::Stale
+                    ) {
+                        stop_session_recorded(db, session, false)?;
+                        outcome.paused_sessions.push(paused_session_id.clone());
+                    }
+                }
+            }
+
+            comms::send(
+                db,
+                &active_session_id,
+                &paused_session_id,
+                &MessageType::Conflict {
+                    file: path.clone(),
+                    description: summary.clone(),
+                },
+            )?;
+
+            db.insert_decision(
+                &paused_session_id,
+                &format!("Pause work due to conflict on {path}"),
+                &[
+                    format!("Keep {active_session_id} active"),
+                    "Continue concurrently".to_string(),
+                ],
+                &summary,
+            )?;
+
+            if cfg.conflict_resolution.notify_lead {
+                if let Some(lead_session_id) = db.latest_task_handoff_source(&paused_session_id)? {
+                    if lead_session_id != paused_session_id && lead_session_id != active_session_id
+                    {
+                        comms::send(
+                            db,
+                            &paused_session_id,
+                            &lead_session_id,
+                            &MessageType::Conflict {
+                                file: path.clone(),
+                                description: format!(
+                                    "{} | delegate {} paused",
+                                    summary, paused_session_id
+                                ),
+                            },
+                        )?;
+                    }
+                }
+            }
+
+            outcome.created_incidents += 1;
+        }
+    }
+
+    Ok(outcome)
+}
+
+fn conflict_incident_key(path: &str, session_a: &str, session_b: &str) -> String {
+    let (first, second) = if session_a <= session_b {
+        (session_a, session_b)
+    } else {
+        (session_b, session_a)
+    };
+    format!("{path}::{first}::{second}")
+}
+
+fn conflict_strategy_label(strategy: crate::config::ConflictResolutionStrategy) -> &'static str {
+    match strategy {
+        crate::config::ConflictResolutionStrategy::Escalate => "escalate",
+        crate::config::ConflictResolutionStrategy::LastWriteWins => "last_write_wins",
+        crate::config::ConflictResolutionStrategy::Merge => "merge",
+    }
+}
+
+fn choose_conflict_resolution(
+    path: &str,
+    latest: &super::FileActivityEntry,
+    other: &super::FileActivityEntry,
+    strategy: crate::config::ConflictResolutionStrategy,
+) -> (String, String, String) {
+    match strategy {
+        crate::config::ConflictResolutionStrategy::Escalate => (
+            other.session_id.clone(),
+            latest.session_id.clone(),
+            format!(
+                "Escalated overlap on {path}; paused later session {} while {} stays active",
+                latest.session_id, other.session_id
+            ),
+        ),
+        crate::config::ConflictResolutionStrategy::LastWriteWins => (
+            latest.session_id.clone(),
+            other.session_id.clone(),
+            format!(
+                "Applied last-write-wins on {path}; kept later session {} active and paused {}",
+                latest.session_id, other.session_id
+            ),
+        ),
+        crate::config::ConflictResolutionStrategy::Merge => (
+            other.session_id.clone(),
+            latest.session_id.clone(),
+            format!(
+                "Queued manual merge on {path}; paused later session {} until merge review against {}",
+                latest.session_id, other.session_id
+            ),
+        ),
+    }
 }
 
 pub fn record_tool_call(
@@ -2428,6 +2646,7 @@ mod tests {
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             budget_alert_thresholds: Config::BUDGET_ALERT_THRESHOLDS,
+            conflict_resolution: crate::config::ConflictResolutionConfig::default(),
             theme: Theme::Dark,
             pane_layout: PaneLayout::Horizontal,
             pane_navigation: Default::default(),
@@ -4818,6 +5037,150 @@ mod tests {
         assert!(!status.operator_escalation_required);
         assert_eq!(status.daemon_activity.last_dispatch_routed, 1);
         assert_eq!(status.daemon_activity.last_dispatch_deferred, 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn enforce_conflict_resolution_pauses_later_session_and_notifies_lead() -> Result<()> {
+        let tempdir = TestDir::new("manager-conflict-escalate")?;
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&build_session("lead", SessionState::Running, now))?;
+        db.insert_session(&build_session(
+            "session-a",
+            SessionState::Running,
+            now - Duration::minutes(2),
+        ))?;
+        db.insert_session(&build_session(
+            "session-b",
+            SessionState::Running,
+            now - Duration::minutes(1),
+        ))?;
+
+        crate::comms::send(
+            &db,
+            "lead",
+            "session-b",
+            &crate::comms::MessageType::TaskHandoff {
+                task: "Review src/lib.rs".to_string(),
+                context: "Lead delegated follow-up".to_string(),
+            },
+        )?;
+
+        let metrics_dir = tempdir.path().join("metrics");
+        std::fs::create_dir_all(&metrics_dir)?;
+        let metrics_path = metrics_dir.join("tool-usage.jsonl");
+        std::fs::write(
+            &metrics_path,
+            concat!(
+                "{\"id\":\"evt-1\",\"session_id\":\"session-a\",\"tool_name\":\"Edit\",\"input_summary\":\"Edit src/lib.rs\",\"output_summary\":\"updated logic\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:02:00Z\"}\n",
+                "{\"id\":\"evt-2\",\"session_id\":\"session-b\",\"tool_name\":\"Write\",\"input_summary\":\"Write src/lib.rs\",\"output_summary\":\"newer change\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:03:00Z\"}\n"
+            ),
+        )?;
+        db.sync_tool_activity_metrics(&metrics_path)?;
+
+        let outcome = enforce_conflict_resolution(&db, &cfg)?;
+        assert_eq!(outcome.created_incidents, 1);
+        assert_eq!(outcome.resolved_incidents, 0);
+        assert_eq!(outcome.paused_sessions, vec!["session-b".to_string()]);
+
+        let session_a = db
+            .get_session("session-a")?
+            .expect("session-a should still exist");
+        let session_b = db
+            .get_session("session-b")?
+            .expect("session-b should still exist");
+        assert_eq!(session_a.state, SessionState::Running);
+        assert_eq!(session_b.state, SessionState::Stopped);
+
+        assert!(db.has_open_conflict_incident("src/lib.rs::session-a::session-b")?);
+
+        let decisions = db.list_decisions_for_session("session-b", 10)?;
+        assert!(decisions
+            .iter()
+            .any(|entry| entry.decision == "Pause work due to conflict on src/lib.rs"));
+
+        let approval_counts = db.unread_approval_counts()?;
+        assert_eq!(approval_counts.get("session-b"), Some(&1usize));
+        assert_eq!(approval_counts.get("lead"), Some(&1usize));
+
+        let unread_queue = db.unread_approval_queue(10)?;
+        assert!(unread_queue.iter().any(|msg| {
+            msg.to_session == "session-b"
+                && msg.msg_type == "conflict"
+                && msg.content.contains("src/lib.rs")
+        }));
+        assert!(unread_queue.iter().any(|msg| {
+            msg.to_session == "lead"
+                && msg.msg_type == "conflict"
+                && msg.content.contains("delegate session-b paused")
+        }));
+
+        let second_pass = enforce_conflict_resolution(&db, &cfg)?;
+        assert_eq!(second_pass.created_incidents, 0);
+        assert_eq!(second_pass.paused_sessions, Vec::<String>::new());
+        assert_eq!(
+            db.list_open_conflict_incidents_for_session("session-b", 10)?
+                .len(),
+            1
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn enforce_conflict_resolution_supports_last_write_wins() -> Result<()> {
+        let tempdir = TestDir::new("manager-conflict-last-write-wins")?;
+        let mut cfg = build_config(tempdir.path());
+        cfg.conflict_resolution.strategy = crate::config::ConflictResolutionStrategy::LastWriteWins;
+        cfg.conflict_resolution.notify_lead = false;
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&build_session(
+            "session-a",
+            SessionState::Running,
+            now - Duration::minutes(2),
+        ))?;
+        db.insert_session(&build_session(
+            "session-b",
+            SessionState::Running,
+            now - Duration::minutes(1),
+        ))?;
+
+        let metrics_dir = tempdir.path().join("metrics");
+        std::fs::create_dir_all(&metrics_dir)?;
+        let metrics_path = metrics_dir.join("tool-usage.jsonl");
+        std::fs::write(
+            &metrics_path,
+            concat!(
+                "{\"id\":\"evt-1\",\"session_id\":\"session-a\",\"tool_name\":\"Edit\",\"input_summary\":\"Edit src/lib.rs\",\"output_summary\":\"older change\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:02:00Z\"}\n",
+                "{\"id\":\"evt-2\",\"session_id\":\"session-b\",\"tool_name\":\"Edit\",\"input_summary\":\"Edit src/lib.rs\",\"output_summary\":\"later change\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:03:00Z\"}\n"
+            ),
+        )?;
+        db.sync_tool_activity_metrics(&metrics_path)?;
+
+        let outcome = enforce_conflict_resolution(&db, &cfg)?;
+        assert_eq!(outcome.created_incidents, 1);
+        assert_eq!(outcome.paused_sessions, vec!["session-a".to_string()]);
+
+        let session_a = db
+            .get_session("session-a")?
+            .expect("session-a should still exist");
+        let session_b = db
+            .get_session("session-b")?
+            .expect("session-b should still exist");
+        assert_eq!(session_a.state, SessionState::Stopped);
+        assert_eq!(session_b.state, SessionState::Running);
+
+        let incidents = db.list_open_conflict_incidents_for_session("session-a", 10)?;
+        assert_eq!(incidents.len(), 1);
+        assert_eq!(incidents[0].active_session_id, "session-b");
+        assert_eq!(incidents[0].paused_session_id, "session-a");
+        assert_eq!(incidents[0].strategy, "last_write_wins");
 
         Ok(())
     }

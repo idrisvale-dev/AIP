@@ -3707,6 +3707,7 @@ impl Dashboard {
     ) -> (
         Option<manager::HeartbeatEnforcementOutcome>,
         Option<manager::BudgetEnforcementOutcome>,
+        Option<manager::ConflictEnforcementOutcome>,
     ) {
         if let Err(error) = self.db.refresh_session_durations() {
             tracing::warn!("Failed to refresh session durations: {error}");
@@ -3750,11 +3751,24 @@ impl Dashboard {
             }
         };
 
-        (heartbeat_enforcement, budget_enforcement)
+        let conflict_enforcement = match manager::enforce_conflict_resolution(&self.db, &self.cfg) {
+            Ok(outcome) => Some(outcome),
+            Err(error) => {
+                tracing::warn!("Failed to enforce conflict resolution: {error}");
+                None
+            }
+        };
+
+        (
+            heartbeat_enforcement,
+            budget_enforcement,
+            conflict_enforcement,
+        )
     }
 
     fn sync_from_store(&mut self) {
-        let (heartbeat_enforcement, budget_enforcement) = self.sync_runtime_metrics();
+        let (heartbeat_enforcement, budget_enforcement, conflict_enforcement) =
+            self.sync_runtime_metrics();
         let selected_id = self.selected_session_id().map(ToOwned::to_owned);
         self.sessions = match self.db.list_sessions() {
             Ok(mut sessions) => {
@@ -3795,6 +3809,10 @@ impl Dashboard {
             budget_enforcement.filter(|outcome| !outcome.paused_sessions.is_empty())
         {
             self.set_operator_note(budget_auto_pause_note(&outcome));
+        }
+        if let Some(outcome) = conflict_enforcement.filter(|outcome| outcome.created_incidents > 0)
+        {
+            self.set_operator_note(conflict_enforcement_note(&outcome));
         }
         if let Some(outcome) = heartbeat_enforcement.filter(|outcome| {
             !outcome.stale_sessions.is_empty() || !outcome.auto_terminated_sessions.is_empty()
@@ -4307,12 +4325,20 @@ impl Dashboard {
         }
         self.selected_merge_readiness =
             worktree.and_then(|worktree| worktree::merge_readiness(worktree).ok());
-        self.selected_conflict_protocol = session
-            .zip(worktree)
-            .zip(self.selected_merge_readiness.as_ref())
-            .and_then(|((session, worktree), merge_readiness)| {
-                build_conflict_protocol(&session.id, worktree, merge_readiness)
-            });
+        self.selected_conflict_protocol = session.and_then(|selected_session| {
+            worktree
+                .zip(self.selected_merge_readiness.as_ref())
+                .and_then(|(worktree, merge_readiness)| {
+                    build_conflict_protocol(&selected_session.id, worktree, merge_readiness)
+                })
+                .or_else(|| {
+                    let incidents = self
+                        .db
+                        .list_open_conflict_incidents_for_session(&selected_session.id, 5)
+                        .unwrap_or_default();
+                    build_session_conflict_protocol(&selected_session.id, &incidents)
+                })
+        });
         if self.output_mode == OutputMode::WorktreeDiff && self.selected_diff_patch.is_none() {
             self.output_mode = OutputMode::SessionOutput;
         }
@@ -5674,6 +5700,22 @@ impl Dashboard {
                         file_overlap_summary(
                             &overlap,
                             &self.short_timestamp(&overlap.timestamp.to_rfc3339())
+                        )
+                    ));
+                }
+            }
+            let conflict_incidents = self
+                .db
+                .list_open_conflict_incidents_for_session(&session.id, 3)
+                .unwrap_or_default();
+            if !conflict_incidents.is_empty() {
+                lines.push("Active conflicts".to_string());
+                for incident in conflict_incidents {
+                    lines.push(format!(
+                        "- {}",
+                        conflict_incident_summary(
+                            &incident,
+                            &self.short_timestamp(&incident.updated_at.to_rfc3339())
                         )
                     ));
                 }
@@ -7386,6 +7428,20 @@ fn file_overlap_summary(entry: &FileActivityOverlap, timestamp: &str) -> String 
     )
 }
 
+fn conflict_incident_summary(
+    incident: &crate::session::store::ConflictIncident,
+    timestamp: &str,
+) -> String {
+    format!(
+        "{} {} | active {} | paused {} | {}",
+        timestamp,
+        truncate_for_dashboard(&incident.path, 48),
+        format_session_id(&incident.active_session_id),
+        format_session_id(&incident.paused_session_id),
+        incident.strategy.replace('_', "-")
+    )
+}
+
 fn decision_log_summary(entry: &DecisionLogEntry) -> String {
     format!("decided {}", truncate_for_dashboard(&entry.decision, 72))
 }
@@ -7835,6 +7891,21 @@ fn budget_auto_pause_note(outcome: &manager::BudgetEnforcementOutcome) -> String
     )
 }
 
+fn conflict_enforcement_note(outcome: &manager::ConflictEnforcementOutcome) -> String {
+    let strategy = match outcome.strategy {
+        crate::config::ConflictResolutionStrategy::Escalate => "escalation",
+        crate::config::ConflictResolutionStrategy::LastWriteWins => "last-write-wins",
+        crate::config::ConflictResolutionStrategy::Merge => "merge review",
+    };
+
+    format!(
+        "file conflict detected | opened {} incident(s), auto-paused {} session(s) via {}",
+        outcome.created_incidents,
+        outcome.paused_sessions.len(),
+        strategy
+    )
+}
+
 fn format_session_id(id: &str) -> String {
     id.chars().take(8).collect()
 }
@@ -7877,6 +7948,44 @@ fn build_conflict_protocol(
     ));
     lines.push(format!(
         "6. Merge when clear: ecc merge-worktree {session_id}"
+    ));
+
+    Some(lines.join("\n"))
+}
+
+fn build_session_conflict_protocol(
+    session_id: &str,
+    incidents: &[crate::session::store::ConflictIncident],
+) -> Option<String> {
+    if incidents.is_empty() {
+        return None;
+    }
+
+    let mut lines = vec![
+        format!("Conflict protocol for {}", format_session_id(session_id)),
+        "Session overlap incidents".to_string(),
+    ];
+
+    for incident in incidents {
+        lines.push(format!(
+            "- {}",
+            conflict_incident_summary(
+                incident,
+                &incident.updated_at.format("%H:%M:%S").to_string()
+            )
+        ));
+        lines.push(format!("  {}", incident.summary));
+    }
+
+    lines.push("Resolution steps".to_string());
+    lines.push("1. Inspect the affected session output and recent file activity".to_string());
+    lines.push(
+        "2. Decide whether to keep the active session, reassign, or merge changes manually"
+            .to_string(),
+    );
+    lines.push(format!(
+        "3. Resume the paused session only after reviewing the overlap: ecc resume {}",
+        session_id
     ));
 
     Some(lines.join("\n"))
@@ -9019,7 +9128,7 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
     }
 
     #[test]
-    fn metrics_text_surfaces_file_activity_overlaps() -> Result<()> {
+    fn metrics_text_surfaces_file_activity_conflicts() -> Result<()> {
         let root = std::env::temp_dir().join(format!("ecc2-file-overlaps-{}", Uuid::new_v4()));
         fs::create_dir_all(&root)?;
         let now = Utc::now();
@@ -9061,10 +9170,17 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
         dashboard.sync_from_store();
 
         let metrics_text = dashboard.selected_session_metrics_text();
-        assert!(metrics_text.contains("Potential overlaps"));
-        assert!(metrics_text.contains("modify src/lib.rs"));
-        assert!(metrics_text.contains("idle delegate"));
-        assert!(metrics_text.contains("as modify"));
+        assert!(metrics_text.contains("Active conflicts"));
+        assert!(metrics_text.contains("src/lib.rs"));
+        assert!(metrics_text.contains("escalate"));
+        assert_eq!(
+            dashboard
+                .db
+                .get_session("delegate-87654321")?
+                .expect("delegate should exist")
+                .state,
+            SessionState::Stopped
+        );
 
         let _ = fs::remove_dir_all(root);
         Ok(())
@@ -10713,6 +10829,103 @@ diff --git a/src/lib.rs b/src/lib.rs
             dashboard.operator_note.as_deref(),
             Some("stale heartbeat detected | flagged 1 session(s) for attention")
         );
+    }
+
+    #[test]
+    fn refresh_enforces_conflicts_and_surfaces_active_incidents() -> Result<()> {
+        let tempdir =
+            std::env::temp_dir().join(format!("dashboard-conflict-refresh-{}", Uuid::new_v4()));
+        fs::create_dir_all(&tempdir)?;
+        let mut cfg = build_config(&tempdir);
+        cfg.session_timeout_secs = 3600;
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-a".to_string(),
+            task: "keep active".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: Some(1111),
+            worktree: None,
+            created_at: now - Duration::minutes(2),
+            updated_at: now - Duration::minutes(2),
+            last_heartbeat_at: now - Duration::minutes(2),
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "session-b".to_string(),
+            task: "later overlap".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: Some(2222),
+            worktree: None,
+            created_at: now - Duration::minutes(1),
+            updated_at: now - Duration::minutes(1),
+            last_heartbeat_at: now - Duration::minutes(1),
+            metrics: SessionMetrics::default(),
+        })?;
+
+        fs::create_dir_all(
+            cfg.tool_activity_metrics_path()
+                .parent()
+                .expect("metrics dir"),
+        )?;
+        fs::write(
+            cfg.tool_activity_metrics_path(),
+            concat!(
+                "{\"id\":\"evt-1\",\"session_id\":\"session-a\",\"tool_name\":\"Edit\",\"input_summary\":\"Edit src/lib.rs\",\"output_summary\":\"older change\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:02:00Z\"}\n",
+                "{\"id\":\"evt-2\",\"session_id\":\"session-b\",\"tool_name\":\"Write\",\"input_summary\":\"Write src/lib.rs\",\"output_summary\":\"later change\",\"file_events\":[{\"path\":\"src/lib.rs\",\"action\":\"modify\"}],\"timestamp\":\"2026-04-09T00:03:00Z\"}\n"
+            ),
+        )?;
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.refresh();
+        dashboard.sync_selection_by_id(Some("session-b"));
+        dashboard.sync_selected_diff();
+
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("file conflict detected | opened 1 incident(s), auto-paused 1 session(s) via escalation")
+        );
+        assert_eq!(
+            dashboard
+                .db
+                .get_session("session-b")?
+                .expect("session-b should exist")
+                .state,
+            SessionState::Stopped
+        );
+
+        let metrics_text = dashboard.selected_session_metrics_text();
+        assert!(metrics_text.contains("Active conflicts"));
+        assert!(metrics_text.contains("src/lib.rs"));
+        assert!(metrics_text.contains("escalate"));
+
+        let conflict_protocol = dashboard
+            .selected_conflict_protocol
+            .clone()
+            .expect("conflict protocol should be present");
+        assert!(conflict_protocol.contains("Session overlap incidents"));
+        assert!(conflict_protocol.contains("ecc resume session-b"));
+
+        dashboard.refresh();
+        assert_eq!(
+            dashboard
+                .db
+                .list_open_conflict_incidents_for_session("session-b", 10)?
+                .len(),
+            1
+        );
+
+        let _ = fs::remove_dir_all(tempdir);
+        Ok(())
     }
 
     #[test]
@@ -12809,6 +13022,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             budget_alert_thresholds: crate::config::Config::BUDGET_ALERT_THRESHOLDS,
+            conflict_resolution: crate::config::ConflictResolutionConfig::default(),
             theme: Theme::Dark,
             pane_layout: PaneLayout::Horizontal,
             pane_navigation: Default::default(),
