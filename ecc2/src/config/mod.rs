@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -76,11 +76,6 @@ pub struct PaneNavigationConfig {
     pub move_right: String,
 }
 
-#[derive(Debug, Default, Deserialize)]
-struct ProjectWorktreeConfigOverride {
-    max_parallel_worktrees: Option<usize>,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PaneNavigationAction {
     FocusSlot(usize),
@@ -144,10 +139,7 @@ impl Config {
     };
 
     pub fn config_path() -> PathBuf {
-        dirs::home_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join(".claude")
-            .join("ecc2.toml")
+        Self::config_root().join("ecc2").join("config.toml")
     }
 
     pub fn cost_metrics_path(&self) -> PathBuf {
@@ -171,48 +163,105 @@ impl Config {
     }
 
     pub fn load() -> Result<Self> {
-        let config_path = Self::config_path();
-        let project_path = std::env::current_dir()
+        let global_paths = Self::global_config_paths();
+        let project_paths = std::env::current_dir()
             .ok()
-            .and_then(|cwd| Self::project_config_path_from(&cwd));
-        Self::load_from_paths(&config_path, project_path.as_deref())
+            .map(|cwd| Self::project_config_paths_from(&cwd))
+            .unwrap_or_default();
+        Self::load_from_paths(&global_paths, &project_paths)
     }
 
     fn load_from_paths(
-        config_path: &std::path::Path,
-        project_override_path: Option<&std::path::Path>,
+        global_paths: &[PathBuf],
+        project_override_paths: &[PathBuf],
     ) -> Result<Self> {
-        let mut config = if config_path.exists() {
-            let content = std::fs::read_to_string(config_path)?;
-            toml::from_str(&content)?
-        } else {
-            Config::default()
-        };
+        let mut merged = toml::Value::try_from(Self::default())
+            .context("serialize default ECC 2.0 config for layered merge")?;
 
-        if let Some(project_path) = project_override_path.filter(|path| path.exists()) {
-            let content = std::fs::read_to_string(project_path)?;
-            let overrides: ProjectWorktreeConfigOverride = toml::from_str(&content)?;
-            if let Some(limit) = overrides.max_parallel_worktrees {
-                config.max_parallel_worktrees = limit;
+        for path in global_paths.iter().chain(project_override_paths.iter()) {
+            if path.exists() {
+                Self::merge_config_file(&mut merged, path)?;
             }
         }
 
-        Ok(config)
+        merged
+            .try_into()
+            .context("deserialize merged ECC 2.0 config")
     }
 
-    fn project_config_path_from(start: &std::path::Path) -> Option<PathBuf> {
-        let global = Self::config_path();
+    fn config_root() -> PathBuf {
+        dirs::config_dir().unwrap_or_else(|| {
+            dirs::home_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".config")
+        })
+    }
+
+    fn legacy_global_config_path() -> PathBuf {
+        dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".claude")
+            .join("ecc2.toml")
+    }
+
+    fn global_config_paths() -> Vec<PathBuf> {
+        let legacy = Self::legacy_global_config_path();
+        let primary = Self::config_path();
+
+        if legacy == primary {
+            vec![primary]
+        } else {
+            vec![legacy, primary]
+        }
+    }
+
+    fn project_config_paths_from(start: &std::path::Path) -> Vec<PathBuf> {
+        let global_paths = Self::global_config_paths();
         let mut current = Some(start);
 
         while let Some(path) = current {
-            let candidate = path.join(".claude").join("ecc2.toml");
-            if candidate.exists() && candidate != global {
-                return Some(candidate);
+            let legacy = path.join(".claude").join("ecc2.toml");
+            let primary = path.join("ecc2.toml");
+            let mut matches = Vec::new();
+
+            if legacy.exists() && !global_paths.iter().any(|global| global == &legacy) {
+                matches.push(legacy);
+            }
+            if primary.exists() && !global_paths.iter().any(|global| global == &primary) {
+                matches.push(primary);
+            }
+
+            if !matches.is_empty() {
+                return matches;
             }
             current = path.parent();
         }
 
-        None
+        Vec::new()
+    }
+
+    fn merge_config_file(base: &mut toml::Value, path: &std::path::Path) -> Result<()> {
+        let content = std::fs::read_to_string(path)
+            .with_context(|| format!("read ECC 2.0 config from {}", path.display()))?;
+        let overlay: toml::Value = toml::from_str(&content)
+            .with_context(|| format!("parse ECC 2.0 config from {}", path.display()))?;
+        Self::merge_toml_values(base, overlay);
+        Ok(())
+    }
+
+    fn merge_toml_values(base: &mut toml::Value, overlay: toml::Value) {
+        match (base, overlay) {
+            (toml::Value::Table(base_table), toml::Value::Table(overlay_table)) => {
+                for (key, overlay_value) in overlay_table {
+                    if let Some(base_value) = base_table.get_mut(&key) {
+                        Self::merge_toml_values(base_value, overlay_value);
+                    } else {
+                        base_table.insert(key, overlay_value);
+                    }
+                }
+            }
+            (base_value, overlay_value) => *base_value = overlay_value,
+        }
     }
 
     pub fn save(&self) -> Result<()> {
@@ -477,18 +526,92 @@ theme = "Dark"
     }
 
     #[test]
-    fn project_worktree_limit_override_replaces_global_limit() {
+    fn layered_config_merges_global_and_project_overrides() {
         let tempdir = std::env::temp_dir().join(format!("ecc2-config-{}", Uuid::new_v4()));
-        let global_path = tempdir.join("global.toml");
-        let project_path = tempdir.join("project.toml");
+        let legacy_global_path = tempdir.join("legacy-global.toml");
+        let global_path = tempdir.join("config.toml");
+        let project_path = tempdir.join("ecc2.toml");
         std::fs::create_dir_all(&tempdir).unwrap();
-        std::fs::write(&global_path, "max_parallel_worktrees = 6\n").unwrap();
-        std::fs::write(&project_path, "max_parallel_worktrees = 2\n").unwrap();
+        std::fs::write(
+            &legacy_global_path,
+            r#"
+max_parallel_worktrees = 6
+auto_create_worktrees = false
 
-        let config = Config::load_from_paths(&global_path, Some(&project_path)).unwrap();
+[desktop_notifications]
+enabled = true
+session_completed = false
+"#,
+        )
+        .unwrap();
+        std::fs::write(
+            &global_path,
+            r#"
+auto_merge_ready_worktrees = true
+
+[pane_navigation]
+focus_sessions = "q"
+move_right = "d"
+"#,
+        )
+        .unwrap();
+        std::fs::write(
+            &project_path,
+            r#"
+max_parallel_worktrees = 2
+auto_dispatch_limit_per_session = 9
+
+[desktop_notifications]
+approval_requests = false
+
+[pane_navigation]
+focus_metrics = "e"
+"#,
+        )
+        .unwrap();
+
+        let config =
+            Config::load_from_paths(&[legacy_global_path, global_path], &[project_path]).unwrap();
         assert_eq!(config.max_parallel_worktrees, 2);
+        assert!(!config.auto_create_worktrees);
+        assert!(config.auto_merge_ready_worktrees);
+        assert_eq!(config.auto_dispatch_limit_per_session, 9);
+        assert!(config.desktop_notifications.enabled);
+        assert!(!config.desktop_notifications.session_completed);
+        assert!(!config.desktop_notifications.approval_requests);
+        assert_eq!(config.pane_navigation.focus_sessions, "q");
+        assert_eq!(config.pane_navigation.focus_metrics, "e");
+        assert_eq!(config.pane_navigation.move_right, "d");
 
         let _ = std::fs::remove_dir_all(tempdir);
+    }
+
+    #[test]
+    fn project_config_discovery_prefers_nearest_directory_and_new_path() {
+        let tempdir = std::env::temp_dir().join(format!("ecc2-config-{}", Uuid::new_v4()));
+        let project_root = tempdir.join("project");
+        let nested_dir = project_root.join("src").join("module");
+        std::fs::create_dir_all(project_root.join(".claude")).unwrap();
+        std::fs::create_dir_all(&nested_dir).unwrap();
+        std::fs::write(project_root.join(".claude").join("ecc2.toml"), "").unwrap();
+        std::fs::write(project_root.join("ecc2.toml"), "").unwrap();
+
+        let paths = Config::project_config_paths_from(&nested_dir);
+        assert_eq!(
+            paths,
+            vec![
+                project_root.join(".claude").join("ecc2.toml"),
+                project_root.join("ecc2.toml")
+            ]
+        );
+
+        let _ = std::fs::remove_dir_all(tempdir);
+    }
+
+    #[test]
+    fn primary_config_path_uses_xdg_style_location() {
+        let path = Config::config_path();
+        assert!(path.ends_with("ecc2/config.toml"));
     }
 
     #[test]
