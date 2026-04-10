@@ -1,5 +1,6 @@
 mod comms;
 mod config;
+mod notifications;
 mod observability;
 mod session;
 mod tui;

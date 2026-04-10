@@ -14,6 +14,7 @@ use tokio::sync::broadcast;
 use super::widgets::{budget_state, format_currency, format_token_count, BudgetState, TokenMeter};
 use crate::comms;
 use crate::config::{Config, PaneLayout, PaneNavigationAction, Theme};
+use crate::notifications::{DesktopNotifier, NotificationEvent};
 use crate::observability::ToolLogEntry;
 use crate::session::manager;
 use crate::session::output::{
@@ -56,6 +57,7 @@ pub struct Dashboard {
     cfg: Config,
     output_store: SessionOutputStore,
     output_rx: broadcast::Receiver<OutputEvent>,
+    notifier: DesktopNotifier,
     sessions: Vec<Session>,
     session_output_cache: HashMap<String, Vec<OutputLine>>,
     unread_message_counts: HashMap<String, usize>,
@@ -114,6 +116,8 @@ pub struct Dashboard {
     last_cost_metrics_signature: Option<(u64, u128)>,
     last_tool_activity_signature: Option<(u64, u128)>,
     last_budget_alert_state: BudgetState,
+    last_session_states: HashMap<String, SessionState>,
+    last_seen_approval_message_id: Option<i64>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -314,7 +318,17 @@ impl Dashboard {
             let _ = db.sync_tool_activity_metrics(&cfg.tool_activity_metrics_path());
         }
         let sessions = db.list_sessions().unwrap_or_default();
+        let initial_session_states = sessions
+            .iter()
+            .map(|session| (session.id.clone(), session.state.clone()))
+            .collect();
+        let initial_approval_message_id = db
+            .latest_unread_approval_message()
+            .ok()
+            .flatten()
+            .map(|message| message.id);
         let output_rx = output_store.subscribe();
+        let notifier = DesktopNotifier::new(cfg.desktop_notifications.clone());
         let mut session_table_state = TableState::default();
         if !sessions.is_empty() {
             session_table_state.select(Some(0));
@@ -325,6 +339,7 @@ impl Dashboard {
             cfg,
             output_store,
             output_rx,
+            notifier,
             sessions,
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
@@ -383,6 +398,8 @@ impl Dashboard {
             last_cost_metrics_signature: initial_cost_metrics_signature,
             last_tool_activity_signature: initial_tool_activity_signature,
             last_budget_alert_state: BudgetState::Normal,
+            last_session_states: initial_session_states,
+            last_seen_approval_message_id: initial_approval_message_id,
         };
         sort_sessions_for_display(&mut dashboard.sessions);
         dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap_or_default();
@@ -746,9 +763,7 @@ impl Dashboard {
             } else {
                 self.selected_git_status.min(total.saturating_sub(1)) + 1
             };
-            return format!(
-                " Git status staged:{staged} unstaged:{unstaged} {current}/{total} "
-            );
+            return format!(" Git status staged:{staged} unstaged:{unstaged} {current}/{total} ");
         }
 
         let filter = format!(
@@ -1930,7 +1945,10 @@ impl Dashboard {
 
         if let Err(error) = worktree::unstage_path(&worktree, &entry.path) {
             tracing::warn!("Failed to unstage {}: {error}", entry.path);
-            self.set_operator_note(format!("unstage failed for {}: {error}", entry.display_path));
+            self.set_operator_note(format!(
+                "unstage failed for {}: {error}",
+                entry.display_path
+            ));
             return;
         }
 
@@ -1963,7 +1981,9 @@ impl Dashboard {
 
     pub fn begin_commit_prompt(&mut self) {
         if self.output_mode != OutputMode::GitStatus {
-            self.set_operator_note("commit prompt is only available in git status view".to_string());
+            self.set_operator_note(
+                "commit prompt is only available in git status view".to_string(),
+            );
             return;
         }
 
@@ -1977,7 +1997,11 @@ impl Dashboard {
             return;
         }
 
-        if !self.selected_git_status_entries.iter().any(|entry| entry.staged) {
+        if !self
+            .selected_git_status_entries
+            .iter()
+            .any(|entry| entry.staged)
+        {
             self.set_operator_note("no staged changes to commit".to_string());
             return;
         }
@@ -2960,10 +2984,15 @@ impl Dashboard {
         lines.push("## Session Metrics".to_string());
         lines.push(format!(
             "- Tokens: {} total (in {} / out {})",
-            session.metrics.tokens_used, session.metrics.input_tokens, session.metrics.output_tokens
+            session.metrics.tokens_used,
+            session.metrics.input_tokens,
+            session.metrics.output_tokens
         ));
         lines.push(format!("- Tool calls: {}", session.metrics.tool_calls));
-        lines.push(format!("- Files changed: {}", session.metrics.files_changed));
+        lines.push(format!(
+            "- Files changed: {}",
+            session.metrics.files_changed
+        ));
         lines.push(format!(
             "- Duration: {}",
             format_duration(session.metrics.duration_secs)
@@ -3372,6 +3401,8 @@ impl Dashboard {
                 HashMap::new()
             }
         };
+        self.sync_session_state_notifications();
+        self.sync_approval_notifications();
         self.sync_handoff_backlog_counts();
         self.sync_worktree_health_by_session();
         self.sync_global_handoff_backlog();
@@ -3440,6 +3471,91 @@ impl Dashboard {
         self.set_operator_note(format!(
             "{summary_suffix} | tokens {token_budget} | cost {cost_budget}"
         ));
+        self.notify_desktop(
+            NotificationEvent::BudgetAlert,
+            "ECC 2.0: Budget alert",
+            &format!("{summary_suffix} | tokens {token_budget} | cost {cost_budget}"),
+        );
+    }
+
+    fn sync_session_state_notifications(&mut self) {
+        let mut next_states = HashMap::new();
+
+        for session in &self.sessions {
+            let previous_state = self.last_session_states.get(&session.id);
+            if let Some(previous_state) = previous_state {
+                if previous_state != &session.state {
+                    match session.state {
+                        SessionState::Completed => {
+                            self.notify_desktop(
+                                NotificationEvent::SessionCompleted,
+                                "ECC 2.0: Session completed",
+                                &format!(
+                                    "{} | {}",
+                                    format_session_id(&session.id),
+                                    truncate_for_dashboard(&session.task, 96)
+                                ),
+                            );
+                        }
+                        SessionState::Failed => {
+                            self.notify_desktop(
+                                NotificationEvent::SessionFailed,
+                                "ECC 2.0: Session failed",
+                                &format!(
+                                    "{} | {}",
+                                    format_session_id(&session.id),
+                                    truncate_for_dashboard(&session.task, 96)
+                                ),
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            next_states.insert(session.id.clone(), session.state.clone());
+        }
+
+        self.last_session_states = next_states;
+    }
+
+    fn sync_approval_notifications(&mut self) {
+        let latest_message = match self.db.latest_unread_approval_message() {
+            Ok(message) => message,
+            Err(error) => {
+                tracing::warn!("Failed to refresh latest approval request: {error}");
+                return;
+            }
+        };
+
+        let Some(message) = latest_message else {
+            return;
+        };
+
+        if self
+            .last_seen_approval_message_id
+            .is_some_and(|last_seen| message.id <= last_seen)
+        {
+            return;
+        }
+
+        self.last_seen_approval_message_id = Some(message.id);
+        let preview =
+            truncate_for_dashboard(&comms::preview(&message.msg_type, &message.content), 96);
+        self.notify_desktop(
+            NotificationEvent::ApprovalRequest,
+            "ECC 2.0: Approval needed",
+            &format!(
+                "{} from {} | {}",
+                format_session_id(&message.to_session),
+                format_session_id(&message.from_session),
+                preview
+            ),
+        );
+    }
+
+    fn notify_desktop(&self, event: NotificationEvent, title: &str, body: &str) {
+        let _ = self.notifier.notify(event, title, body);
     }
 
     fn sync_selection(&mut self) {
@@ -3688,10 +3804,7 @@ impl Dashboard {
             .and_then(|worktree| worktree::git_status_entries(worktree).ok())
             .unwrap_or_default();
         if self.selected_git_status >= self.selected_git_status_entries.len() {
-            self.selected_git_status = self
-                .selected_git_status_entries
-                .len()
-                .saturating_sub(1);
+            self.selected_git_status = self.selected_git_status_entries.len().saturating_sub(1);
         }
         if self.output_mode == OutputMode::GitStatus && worktree.is_none() {
             self.output_mode = OutputMode::SessionOutput;
@@ -4042,7 +4155,11 @@ impl Dashboard {
             .iter()
             .enumerate()
             .map(|(index, entry)| {
-                let marker = if index == self.selected_git_status { ">>" } else { "-" };
+                let marker = if index == self.selected_git_status {
+                    ">>"
+                } else {
+                    "-"
+                };
                 let mut flags = Vec::new();
                 if entry.conflicted {
                     flags.push("conflict");
@@ -6933,6 +7050,42 @@ mod tests {
     }
 
     #[test]
+    fn refresh_tracks_latest_unread_approval_before_selected_messages_mark_read() {
+        let sessions = vec![sample_session(
+            "worker-123456",
+            "reviewer",
+            SessionState::Idle,
+            Some("ecc/worker"),
+            64,
+            5,
+        )];
+        let mut dashboard = test_dashboard(sessions, 0);
+        for session in &dashboard.sessions {
+            dashboard.db.insert_session(session).unwrap();
+        }
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "worker-123456",
+                "{\"question\":\"Need operator input\"}",
+                "query",
+            )
+            .unwrap();
+        let message_id = dashboard
+            .db
+            .latest_unread_approval_message()
+            .unwrap()
+            .expect("approval message should exist")
+            .id;
+
+        dashboard.refresh();
+
+        assert_eq!(dashboard.last_seen_approval_message_id, Some(message_id));
+        assert!(dashboard.approval_queue_preview.is_empty());
+    }
+
+    #[test]
     fn focus_next_approval_target_selects_oldest_unread_target() {
         let sessions = vec![
             sample_session(
@@ -7199,7 +7352,10 @@ mod tests {
             dashboard.operator_note.as_deref(),
             Some("showing selected worktree git status")
         );
-        assert_eq!(dashboard.output_title(), " Git status staged:0 unstaged:1 1/1 ");
+        assert_eq!(
+            dashboard.output_title(),
+            " Git status staged:0 unstaged:1 1/1 "
+        );
         let rendered = dashboard.rendered_output_text(180, 20);
         assert!(rendered.contains("Git status"));
         assert!(rendered.contains("README.md"));
@@ -8956,6 +9112,42 @@ diff --git a/src/lib.rs b/src/lib.rs
         assert_eq!(
             dashboard.operator_note.as_deref(),
             Some("token budget exceeded | auto-paused 1 active session(s)")
+        );
+    }
+
+    #[test]
+    fn refresh_updates_session_state_snapshot_after_completion() {
+        let db = StateStore::open(Path::new(":memory:")).unwrap();
+        let now = Utc::now();
+        let session = Session {
+            id: "done-1".to_string(),
+            task: "complete session".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        };
+        db.insert_session(&session).unwrap();
+
+        let mut dashboard = Dashboard::new(db, Config::default());
+        dashboard
+            .db
+            .update_state("done-1", &SessionState::Completed)
+            .unwrap();
+
+        dashboard.refresh();
+
+        assert_eq!(dashboard.sessions[0].state, SessionState::Completed);
+        assert_eq!(
+            dashboard.last_session_states.get("done-1"),
+            Some(&SessionState::Completed)
         );
     }
 
@@ -11020,6 +11212,11 @@ diff --git a/src/lib.rs b/src/lib.rs
     fn test_dashboard(sessions: Vec<Session>, selected_session: usize) -> Dashboard {
         let selected_session = selected_session.min(sessions.len().saturating_sub(1));
         let cfg = Config::default();
+        let notifier = DesktopNotifier::new(cfg.desktop_notifications.clone());
+        let last_session_states = sessions
+            .iter()
+            .map(|session| (session.id.clone(), session.state.clone()))
+            .collect();
         let output_store = SessionOutputStore::default();
         let output_rx = output_store.subscribe();
         let mut session_table_state = TableState::default();
@@ -11033,6 +11230,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             cfg,
             output_store,
             output_rx,
+            notifier,
             sessions,
             session_output_cache: HashMap::new(),
             unread_message_counts: HashMap::new(),
@@ -11090,6 +11288,8 @@ diff --git a/src/lib.rs b/src/lib.rs
             last_cost_metrics_signature: None,
             last_tool_activity_signature: None,
             last_budget_alert_state: BudgetState::Normal,
+            last_session_states,
+            last_seen_approval_message_id: None,
         }
     }
 
@@ -11109,6 +11309,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
             auto_merge_ready_worktrees: false,
+            desktop_notifications: crate::notifications::DesktopNotificationConfig::default(),
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             budget_alert_thresholds: crate::config::Config::BUDGET_ALERT_THRESHOLDS,

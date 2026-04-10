@@ -1299,6 +1299,35 @@ impl StateStore {
         messages.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
+    pub fn latest_unread_approval_message(&self) -> Result<Option<SessionMessage>> {
+        self.conn
+            .query_row(
+                "SELECT id, from_session, to_session, content, msg_type, read, timestamp
+                 FROM messages
+                 WHERE read = 0 AND msg_type IN ('query', 'conflict')
+                 ORDER BY id DESC
+                 LIMIT 1",
+                [],
+                |row| {
+                    let timestamp: String = row.get(6)?;
+
+                    Ok(SessionMessage {
+                        id: row.get(0)?,
+                        from_session: row.get(1)?,
+                        to_session: row.get(2)?,
+                        content: row.get(3)?,
+                        msg_type: row.get(4)?,
+                        read: row.get::<_, i64>(5)? != 0,
+                        timestamp: chrono::DateTime::parse_from_rfc3339(&timestamp)
+                            .unwrap_or_default()
+                            .with_timezone(&chrono::Utc),
+                    })
+                },
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
     pub fn unread_task_handoffs_for_session(
         &self,
         session_id: &str,

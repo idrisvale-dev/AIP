@@ -219,7 +219,7 @@ pub async fn drain_inbox(
             use_worktree,
             &repo_root,
             &runner_program,
-            SessionGrouping::default(),
+        SessionGrouping::default(),
         )
         .await?;
 
@@ -2237,6 +2237,7 @@ mod tests {
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
             auto_merge_ready_worktrees: false,
+            desktop_notifications: crate::notifications::DesktopNotificationConfig::default(),
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             budget_alert_thresholds: Config::BUDGET_ALERT_THRESHOLDS,
@@ -3691,7 +3692,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
-        SessionGrouping::default(),
+            SessionGrouping::default(),
         )
         .await?;
 
@@ -3763,7 +3764,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
-        SessionGrouping::default(),
+            SessionGrouping::default(),
         )
         .await?;
 
@@ -3819,7 +3820,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
-            SessionGrouping::default(),
+        SessionGrouping::default(),
         )
         .await?;
 

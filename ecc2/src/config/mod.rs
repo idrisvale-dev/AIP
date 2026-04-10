@@ -3,6 +3,8 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+use crate::notifications::DesktopNotificationConfig;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PaneLayout {
@@ -45,6 +47,7 @@ pub struct Config {
     pub auto_dispatch_limit_per_session: usize,
     pub auto_create_worktrees: bool,
     pub auto_merge_ready_worktrees: bool,
+    pub desktop_notifications: DesktopNotificationConfig,
     pub cost_budget_usd: f64,
     pub token_budget: u64,
     pub budget_alert_thresholds: BudgetAlertThresholds,
@@ -107,6 +110,7 @@ impl Default for Config {
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
             auto_merge_ready_worktrees: false,
+            desktop_notifications: DesktopNotificationConfig::default(),
             cost_budget_usd: 10.0,
             token_budget: 500_000,
             budget_alert_thresholds: Self::BUDGET_ALERT_THRESHOLDS,
@@ -431,6 +435,7 @@ theme = "Dark"
             config.auto_merge_ready_worktrees,
             defaults.auto_merge_ready_worktrees
         );
+        assert_eq!(config.desktop_notifications, defaults.desktop_notifications);
         assert_eq!(
             config.auto_terminate_stale_sessions,
             defaults.auto_terminate_stale_sessions
@@ -583,6 +588,35 @@ critical = 0.85
     }
 
     #[test]
+    fn desktop_notifications_deserialize_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[desktop_notifications]
+enabled = true
+session_completed = false
+session_failed = true
+budget_alerts = true
+approval_requests = false
+
+[desktop_notifications.quiet_hours]
+enabled = true
+start_hour = 21
+end_hour = 7
+"#,
+        )
+        .unwrap();
+
+        assert!(config.desktop_notifications.enabled);
+        assert!(!config.desktop_notifications.session_completed);
+        assert!(config.desktop_notifications.session_failed);
+        assert!(config.desktop_notifications.budget_alerts);
+        assert!(!config.desktop_notifications.approval_requests);
+        assert!(config.desktop_notifications.quiet_hours.enabled);
+        assert_eq!(config.desktop_notifications.quiet_hours.start_hour, 21);
+        assert_eq!(config.desktop_notifications.quiet_hours.end_hour, 7);
+    }
+
+    #[test]
     fn invalid_budget_alert_thresholds_fall_back_to_defaults() {
         let config: Config = toml::from_str(
             r#"
@@ -608,6 +642,10 @@ critical = 1.10
         config.auto_dispatch_limit_per_session = 9;
         config.auto_create_worktrees = false;
         config.auto_merge_ready_worktrees = true;
+        config.desktop_notifications.session_completed = false;
+        config.desktop_notifications.quiet_hours.enabled = true;
+        config.desktop_notifications.quiet_hours.start_hour = 21;
+        config.desktop_notifications.quiet_hours.end_hour = 7;
         config.worktree_branch_prefix = "bots/ecc".to_string();
         config.budget_alert_thresholds = BudgetAlertThresholds {
             advisory: 0.45,
@@ -627,6 +665,10 @@ critical = 1.10
         assert_eq!(loaded.auto_dispatch_limit_per_session, 9);
         assert!(!loaded.auto_create_worktrees);
         assert!(loaded.auto_merge_ready_worktrees);
+        assert!(!loaded.desktop_notifications.session_completed);
+        assert!(loaded.desktop_notifications.quiet_hours.enabled);
+        assert_eq!(loaded.desktop_notifications.quiet_hours.start_hour, 21);
+        assert_eq!(loaded.desktop_notifications.quiet_hours.end_hour, 7);
         assert_eq!(loaded.worktree_branch_prefix, "bots/ecc");
         assert_eq!(
             loaded.budget_alert_thresholds,
