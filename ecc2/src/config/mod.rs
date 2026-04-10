@@ -107,12 +107,23 @@ pub struct OrchestrationTemplateStepConfig {
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum MemoryConnectorConfig {
     JsonlFile(MemoryConnectorJsonlFileConfig),
+    JsonlDirectory(MemoryConnectorJsonlDirectoryConfig),
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct MemoryConnectorJsonlFileConfig {
     pub path: PathBuf,
+    pub session_id: Option<String>,
+    pub default_entity_type: Option<String>,
+    pub default_observation_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MemoryConnectorJsonlDirectoryConfig {
+    pub path: PathBuf,
+    pub recurse: bool,
     pub session_id: Option<String>,
     pub default_entity_type: Option<String>,
     pub default_observation_type: Option<String>,
@@ -1276,6 +1287,39 @@ default_observation_type = "external_note"
                     Some("external_note")
                 );
             }
+            _ => panic!("expected jsonl_file connector"),
+        }
+    }
+
+    #[test]
+    fn memory_jsonl_directory_connectors_deserialize_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[memory_connectors.hermes_dir]
+kind = "jsonl_directory"
+path = "/tmp/hermes-memory"
+recurse = true
+default_entity_type = "incident"
+default_observation_type = "external_note"
+"#,
+        )
+        .unwrap();
+
+        let connector = config
+            .memory_connectors
+            .get("hermes_dir")
+            .expect("connector should deserialize");
+        match connector {
+            crate::config::MemoryConnectorConfig::JsonlDirectory(settings) => {
+                assert_eq!(settings.path, PathBuf::from("/tmp/hermes-memory"));
+                assert!(settings.recurse);
+                assert_eq!(settings.default_entity_type.as_deref(), Some("incident"));
+                assert_eq!(
+                    settings.default_observation_type.as_deref(),
+                    Some("external_note")
+                );
+            }
+            _ => panic!("expected jsonl_directory connector"),
         }
     }
 
