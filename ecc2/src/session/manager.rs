@@ -3195,12 +3195,7 @@ fn build_configured_harness_command(
         }
     }
 
-    let task = if runner.inline_system_prompt_for_task && runner.append_system_prompt_flag.is_none()
-    {
-        normalize_task_with_inline_system_prompt(task, profile)
-    } else {
-        task.to_string()
-    };
+    let task = normalize_task_for_configured_runner(runner, task, profile);
 
     if let Some(flag) = runner.task_flag.as_deref() {
         command.arg(flag);
@@ -3217,24 +3212,143 @@ fn normalize_task_for_harness(
     task: &str,
     profile: Option<&SessionAgentProfile>,
 ) -> String {
-    let rendered = normalize_task_with_inline_system_prompt(task, profile);
-
     match harness {
         HarnessKind::Claude => task.to_string(),
-        HarnessKind::Codex | HarnessKind::OpenCode | HarnessKind::Gemini => rendered,
+        HarnessKind::Codex => render_task_with_profile_projection(
+            task,
+            profile,
+            TaskProjectionSupport {
+                supports_model: true,
+                supports_add_dirs: true,
+                ..TaskProjectionSupport::default()
+            },
+        ),
+        HarnessKind::OpenCode => render_task_with_profile_projection(
+            task,
+            profile,
+            TaskProjectionSupport {
+                supports_model: true,
+                ..TaskProjectionSupport::default()
+            },
+        ),
+        HarnessKind::Gemini => render_task_with_profile_projection(
+            task,
+            profile,
+            TaskProjectionSupport {
+                supports_model: true,
+                supports_add_dirs: true,
+                ..TaskProjectionSupport::default()
+            },
+        ),
         _ => task.to_string(),
     }
 }
 
-fn normalize_task_with_inline_system_prompt(
+#[derive(Debug, Default, Clone, Copy)]
+struct TaskProjectionSupport {
+    supports_model: bool,
+    supports_add_dirs: bool,
+    supports_allowed_tools: bool,
+    supports_disallowed_tools: bool,
+    supports_permission_mode: bool,
+    supports_max_budget_usd: bool,
+    supports_append_system_prompt: bool,
+}
+
+fn normalize_task_for_configured_runner(
+    runner: &crate::config::HarnessRunnerConfig,
     task: &str,
     profile: Option<&SessionAgentProfile>,
 ) -> String {
-    let Some(system_prompt) = profile.and_then(|profile| profile.append_system_prompt.as_ref())
-    else {
+    render_task_with_profile_projection(
+        task,
+        profile,
+        TaskProjectionSupport {
+            supports_model: runner.model_flag.is_some(),
+            supports_add_dirs: runner.add_dir_flag.is_some()
+                || runner.include_directories_flag.is_some(),
+            supports_allowed_tools: runner.allowed_tools_flag.is_some(),
+            supports_disallowed_tools: runner.disallowed_tools_flag.is_some(),
+            supports_permission_mode: runner.permission_mode_flag.is_some(),
+            supports_max_budget_usd: runner.max_budget_usd_flag.is_some(),
+            supports_append_system_prompt: runner.append_system_prompt_flag.is_some()
+                && !runner.inline_system_prompt_for_task,
+        },
+    )
+}
+
+fn render_task_with_profile_projection(
+    task: &str,
+    profile: Option<&SessionAgentProfile>,
+    support: TaskProjectionSupport,
+) -> String {
+    let Some(profile) = profile else {
         return task.to_string();
     };
-    format!("System instructions:\n{system_prompt}\n\nTask:\n{task}")
+
+    let mut sections = Vec::new();
+    if !support.supports_append_system_prompt {
+        if let Some(system_prompt) = profile.append_system_prompt.as_ref() {
+            sections.push(format!("System instructions:\n{system_prompt}"));
+        }
+    }
+
+    let mut directives = Vec::new();
+    if !support.supports_model {
+        if let Some(model) = profile.model.as_ref() {
+            directives.push(format!("Preferred model: {model}"));
+        }
+    }
+    if !support.supports_add_dirs && !profile.add_dirs.is_empty() {
+        directives.push(format!(
+            "Additional context dirs: {}",
+            profile
+                .add_dirs
+                .iter()
+                .map(|dir| dir.to_string_lossy().to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    if !support.supports_allowed_tools && !profile.allowed_tools.is_empty() {
+        directives.push(format!(
+            "Allowed tools: {}",
+            profile.allowed_tools.join(", ")
+        ));
+    }
+    if !support.supports_disallowed_tools && !profile.disallowed_tools.is_empty() {
+        directives.push(format!(
+            "Disallowed tools: {}",
+            profile.disallowed_tools.join(", ")
+        ));
+    }
+    if !support.supports_permission_mode {
+        if let Some(permission_mode) = profile.permission_mode.as_ref() {
+            directives.push(format!("Permission mode: {permission_mode}"));
+        }
+    }
+    if !support.supports_max_budget_usd {
+        if let Some(max_budget_usd) = profile.max_budget_usd {
+            directives.push(format!("Max budget USD: {max_budget_usd}"));
+        }
+    }
+    if let Some(token_budget) = profile.token_budget {
+        directives.push(format!("Token budget: {token_budget}"));
+    }
+
+    if !directives.is_empty() {
+        sections.push(format!(
+            "ECC execution profile:\n- {}",
+            directives.join("\n- ")
+        ));
+    }
+
+    if sections.is_empty() {
+        return task.to_string();
+    }
+
+    sections.push(format!("Task:\n{task}"));
+    sections.join("\n\n")
 }
 
 async fn spawn_claude_code(
@@ -4125,7 +4239,7 @@ mod tests {
                 "docs",
                 "--add-dir",
                 "specs",
-                "System instructions:\nReview thoroughly.\n\nTask:\nreview this change",
+                "System instructions:\nReview thoroughly.\n\nECC execution profile:\n- Allowed tools: Read\n- Disallowed tools: Bash\n- Permission mode: plan\n- Max budget USD: 1.25\n- Token budget: 750\n\nTask:\nreview this change",
             ]
         );
     }
@@ -4171,7 +4285,7 @@ mod tests {
                 "ecc-sess-9999",
                 "--model",
                 "anthropic/claude-sonnet-4",
-                "System instructions:\nBuild carefully.\n\nTask:\nstabilize callback flow",
+                "System instructions:\nBuild carefully.\n\nECC execution profile:\n- Additional context dirs: docs\n\nTask:\nstabilize callback flow",
             ]
         );
     }
@@ -4215,7 +4329,7 @@ mod tests {
                 "gemini-2.5-pro",
                 "--include-directories",
                 "docs,../shared",
-                "System instructions:\nUse repo context carefully.\n\nTask:\ninvestigate auth regression",
+                "System instructions:\nUse repo context carefully.\n\nECC execution profile:\n- Allowed tools: Read\n- Disallowed tools: Bash\n- Permission mode: plan\n- Max budget USD: 1\n- Token budget: 500\n\nTask:\ninvestigate auth regression",
             ]
         );
     }
@@ -4339,6 +4453,59 @@ mod tests {
             vec![
                 ("ECC_HARNESS".to_string(), Some("cursor".to_string())),
                 ("ECC_SESSION_ID".to_string(), Some("sess-cur1".to_string())),
+            ]
+        );
+    }
+
+    #[test]
+    fn build_agent_command_projects_unsupported_profile_fields_for_configured_runner() {
+        let mut cfg = Config::default();
+        cfg.harness_runners.insert(
+            "cursor".to_string(),
+            crate::config::HarnessRunnerConfig {
+                program: "cursor-agent".to_string(),
+                base_args: vec!["run".to_string()],
+                task_flag: Some("--task".to_string()),
+                model_flag: Some("--model".to_string()),
+                ..Default::default()
+            },
+        );
+        let profile = SessionAgentProfile {
+            profile_name: "worker".to_string(),
+            agent: None,
+            model: Some("gpt-5.4".to_string()),
+            allowed_tools: vec!["Read".to_string()],
+            disallowed_tools: vec!["Bash".to_string()],
+            permission_mode: Some("plan".to_string()),
+            add_dirs: vec![PathBuf::from("docs"), PathBuf::from("specs")],
+            max_budget_usd: Some(2.5),
+            token_budget: Some(900),
+            append_system_prompt: Some("Use repo context carefully.".to_string()),
+        };
+
+        let command = build_agent_command(
+            &cfg,
+            "cursor",
+            Path::new("cursor-agent"),
+            "fix callback regression",
+            "sess-cur2",
+            Path::new("/tmp/repo"),
+            Some(&profile),
+        );
+        let args = command
+            .as_std()
+            .get_args()
+            .map(|value| value.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            args,
+            vec![
+                "run",
+                "--model",
+                "gpt-5.4",
+                "--task",
+                "System instructions:\nUse repo context carefully.\n\nECC execution profile:\n- Additional context dirs: docs, specs\n- Allowed tools: Read\n- Disallowed tools: Bash\n- Permission mode: plan\n- Max budget USD: 2.5\n- Token budget: 900\n\nTask:\nfix callback regression",
             ]
         );
     }
