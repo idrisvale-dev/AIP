@@ -79,6 +79,13 @@ impl HarnessKind {
         }
     }
 
+    pub fn canonical_agent_type(agent_type: &str) -> String {
+        match Self::from_agent_type(agent_type) {
+            Self::Unknown => agent_type.trim().to_ascii_lowercase(),
+            harness => harness.as_str().to_string(),
+        }
+    }
+
     fn project_markers(self) -> &'static [&'static str] {
         match self {
             Self::Claude => &[".claude"],
@@ -504,5 +511,19 @@ mod tests {
         assert_eq!(harness.primary, HarnessKind::Gemini);
         assert_eq!(harness.detected, vec![HarnessKind::Gemini]);
         Ok(())
+    }
+
+    #[test]
+    fn canonical_agent_type_normalizes_known_aliases() {
+        assert_eq!(HarnessKind::canonical_agent_type("claude-code"), "claude");
+        assert_eq!(HarnessKind::canonical_agent_type("gemini-cli"), "gemini");
+        assert_eq!(
+            HarnessKind::canonical_agent_type("factory-droid"),
+            "factory_droid"
+        );
+        assert_eq!(
+            HarnessKind::canonical_agent_type(" custom-runner "),
+            "custom-runner"
+        );
     }
 }

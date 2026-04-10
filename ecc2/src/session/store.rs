@@ -675,15 +675,23 @@ impl StateStore {
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         for (session_id, agent_type, working_dir) in updates {
-            let harness = SessionHarnessInfo::detect(&agent_type, Path::new(&working_dir));
+            let canonical_agent_type = HarnessKind::canonical_agent_type(&agent_type);
+            let harness =
+                SessionHarnessInfo::detect(&canonical_agent_type, Path::new(&working_dir));
             let detected_json =
                 serde_json::to_string(&harness.detected).context("serialize detected harnesses")?;
             self.conn.execute(
                 "UPDATE sessions
-                 SET harness = ?2,
-                     detected_harnesses_json = ?3
+                 SET agent_type = ?2,
+                     harness = ?3,
+                     detected_harnesses_json = ?4
                  WHERE id = ?1",
-                rusqlite::params![session_id, harness.primary.to_string(), detected_json],
+                rusqlite::params![
+                    session_id,
+                    canonical_agent_type,
+                    harness.primary.to_string(),
+                    detected_json
+                ],
             )?;
         }
 
@@ -3968,7 +3976,7 @@ mod tests {
                 "Backfill harness metadata",
                 "ecc",
                 "legacy",
-                "claude",
+                "gemini-cli",
                 repo_root.display().to_string(),
                 now,
             ],
@@ -3976,10 +3984,14 @@ mod tests {
         drop(conn);
 
         let db = StateStore::open(&db_path)?;
+        let session = db
+            .get_session("sess-legacy")?
+            .expect("legacy row should still exist");
+        assert_eq!(session.agent_type, "gemini");
         let harness = db
             .get_session_harness_info("sess-legacy")?
             .expect("legacy row should be backfilled");
-        assert_eq!(harness.primary, HarnessKind::Claude);
+        assert_eq!(harness.primary, HarnessKind::Gemini);
         assert_eq!(harness.detected, vec![HarnessKind::Codex]);
         Ok(())
     }

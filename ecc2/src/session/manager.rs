@@ -2103,11 +2103,12 @@ async fn queue_session_in_dir_with_runner_program(
     grouping: SessionGrouping,
 ) -> Result<String> {
     let profile = resolve_launch_profile(db, cfg, profile_name, inherited_profile_session_id)?;
+    let canonical_agent_type = HarnessKind::canonical_agent_type(agent_type);
     queue_session_with_resolved_profile_and_runner_program(
         db,
         cfg,
         task,
-        agent_type,
+        &canonical_agent_type,
         use_worktree,
         repo_root,
         runner_program,
@@ -2132,10 +2133,11 @@ async fn queue_session_with_resolved_profile_and_runner_program(
         .as_ref()
         .and_then(|profile| profile.agent.as_deref())
         .unwrap_or(agent_type);
+    let effective_agent_type = HarnessKind::canonical_agent_type(effective_agent_type);
     let session = build_session_record(
         db,
         task,
-        effective_agent_type,
+        &effective_agent_type,
         use_worktree,
         cfg,
         repo_root,
@@ -2188,6 +2190,7 @@ fn build_session_record(
     repo_root: &Path,
     grouping: SessionGrouping,
 ) -> Result<Session> {
+    let canonical_agent_type = HarnessKind::canonical_agent_type(agent_type);
     let id = uuid::Uuid::new_v4().to_string()[..8].to_string();
     let now = chrono::Utc::now();
 
@@ -2216,7 +2219,7 @@ fn build_session_record(
         task: task.to_string(),
         project,
         task_group,
-        agent_type: agent_type.to_string(),
+        agent_type: canonical_agent_type,
         working_dir,
         state: SessionState::Pending,
         pid: None,
@@ -2341,13 +2344,18 @@ fn direct_delegate_sessions(
     lead_id: &str,
     agent_type: &str,
 ) -> Result<Vec<Session>> {
+    let target_harness = HarnessKind::from_agent_type(agent_type);
     let mut sessions = Vec::new();
     for child_id in db.delegated_children(lead_id, 50)? {
         let Some(session) = db.get_session(&child_id)? else {
             continue;
         };
 
-        if session.agent_type != agent_type {
+        if target_harness != HarnessKind::Unknown {
+            if HarnessKind::from_agent_type(&session.agent_type) != target_harness {
+                continue;
+            }
+        } else if session.agent_type != HarnessKind::canonical_agent_type(agent_type) {
             continue;
         }
 
@@ -3573,6 +3581,81 @@ mod tests {
                 "System instructions:\nUse repo context carefully.\n\nTask:\ninvestigate auth regression",
             ]
         );
+    }
+
+    #[test]
+    fn build_session_record_canonicalizes_known_agent_aliases() -> Result<()> {
+        let tempdir = TestDir::new("manager-canonical-agent-type")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let session = build_session_record(
+            &db,
+            "Investigate auth callback",
+            "gemini-cli",
+            false,
+            &cfg,
+            &repo_root,
+            SessionGrouping::default(),
+        )?;
+
+        assert_eq!(session.agent_type, "gemini");
+        Ok(())
+    }
+
+    #[test]
+    fn direct_delegate_sessions_matches_harness_aliases_for_existing_rows() -> Result<()> {
+        let tempdir = TestDir::new("manager-delegate-alias-match")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "Lead task".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(42),
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "child".to_string(),
+            task: "Delegate task".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "claude-code".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Idle,
+            pid: Some(7),
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+        db.send_message(
+            "lead",
+            "child",
+            "{\"task\":\"Delegate task\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+
+        let delegates = direct_delegate_sessions(&db, "lead", "claude")?;
+        assert_eq!(delegates.len(), 1);
+        assert_eq!(delegates[0].id, "child");
+        Ok(())
     }
 
     #[test]
