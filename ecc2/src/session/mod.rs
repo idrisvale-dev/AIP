@@ -6,6 +6,7 @@ pub mod store;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
@@ -152,6 +153,41 @@ pub struct DecisionLogEntry {
     pub alternatives: Vec<String>,
     pub reasoning: String,
     pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ContextGraphEntity {
+    pub id: i64,
+    pub session_id: Option<String>,
+    pub entity_type: String,
+    pub name: String,
+    pub path: Option<String>,
+    pub summary: String,
+    pub metadata: BTreeMap<String, String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ContextGraphRelation {
+    pub id: i64,
+    pub session_id: Option<String>,
+    pub from_entity_id: i64,
+    pub from_entity_type: String,
+    pub from_entity_name: String,
+    pub to_entity_id: i64,
+    pub to_entity_type: String,
+    pub to_entity_name: String,
+    pub relation_type: String,
+    pub summary: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ContextGraphEntityDetail {
+    pub entity: ContextGraphEntity,
+    pub outgoing: Vec<ContextGraphRelation>,
+    pub incoming: Vec<ContextGraphRelation>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

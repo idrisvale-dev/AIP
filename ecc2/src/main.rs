@@ -315,6 +315,11 @@ enum Commands {
         #[arg(long, default_value_t = 20)]
         limit: usize,
     },
+    /// Read and write the shared context graph
+    Graph {
+        #[command(subcommand)]
+        command: GraphCommands,
+    },
     /// Export sessions, tool spans, and metrics in OTLP-compatible JSON
     ExportOtel {
         /// Session ID or alias. Omit to export all sessions.
@@ -375,6 +380,93 @@ enum MessageCommands {
         session_id: String,
         #[arg(long, default_value_t = 10)]
         limit: usize,
+    },
+}
+
+#[derive(clap::Subcommand, Debug)]
+enum GraphCommands {
+    /// Create or update a graph entity
+    AddEntity {
+        /// Optional source session ID or alias for provenance
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Entity type such as file, function, type, or decision
+        #[arg(long = "type")]
+        entity_type: String,
+        /// Stable entity name
+        #[arg(long)]
+        name: String,
+        /// Optional path associated with the entity
+        #[arg(long)]
+        path: Option<String>,
+        /// Short human summary
+        #[arg(long, default_value = "")]
+        summary: String,
+        /// Metadata in key=value form
+        #[arg(long = "meta")]
+        metadata: Vec<String>,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
+    /// Create or update a relation between two entities
+    Link {
+        /// Optional source session ID or alias for provenance
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Source entity ID
+        #[arg(long)]
+        from: i64,
+        /// Target entity ID
+        #[arg(long)]
+        to: i64,
+        /// Relation type such as references, defines, or depends_on
+        #[arg(long)]
+        relation: String,
+        /// Short human summary
+        #[arg(long, default_value = "")]
+        summary: String,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
+    /// List entities in the shared context graph
+    Entities {
+        /// Filter by source session ID or alias
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Filter by entity type
+        #[arg(long = "type")]
+        entity_type: Option<String>,
+        /// Maximum entities to return
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
+    /// List relations in the shared context graph
+    Relations {
+        /// Filter to relations touching a specific entity ID
+        #[arg(long)]
+        entity_id: Option<i64>,
+        /// Maximum relations to return
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show one entity plus its incoming and outgoing relations
+    Show {
+        /// Entity ID
+        entity_id: i64,
+        /// Maximum incoming/outgoing relations to return
+        #[arg(long, default_value_t = 10)]
+        limit: usize,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -1033,6 +1125,113 @@ async fn main() -> Result<()> {
                 println!("{}", format_decisions_human(&entries, all));
             }
         }
+        Some(Commands::Graph { command }) => match command {
+            GraphCommands::AddEntity {
+                session_id,
+                entity_type,
+                name,
+                path,
+                summary,
+                metadata,
+                json,
+            } => {
+                let resolved_session_id = session_id
+                    .as_deref()
+                    .map(|value| resolve_session_id(&db, value))
+                    .transpose()?;
+                let metadata = parse_key_value_pairs(&metadata, "graph metadata")?;
+                let entity = db.upsert_context_entity(
+                    resolved_session_id.as_deref(),
+                    &entity_type,
+                    &name,
+                    path.as_deref(),
+                    &summary,
+                    &metadata,
+                )?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&entity)?);
+                } else {
+                    println!("{}", format_graph_entity_human(&entity));
+                }
+            }
+            GraphCommands::Link {
+                session_id,
+                from,
+                to,
+                relation,
+                summary,
+                json,
+            } => {
+                let resolved_session_id = session_id
+                    .as_deref()
+                    .map(|value| resolve_session_id(&db, value))
+                    .transpose()?;
+                let relation = db.upsert_context_relation(
+                    resolved_session_id.as_deref(),
+                    from,
+                    to,
+                    &relation,
+                    &summary,
+                )?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&relation)?);
+                } else {
+                    println!("{}", format_graph_relation_human(&relation));
+                }
+            }
+            GraphCommands::Entities {
+                session_id,
+                entity_type,
+                limit,
+                json,
+            } => {
+                let resolved_session_id = session_id
+                    .as_deref()
+                    .map(|value| resolve_session_id(&db, value))
+                    .transpose()?;
+                let entities = db.list_context_entities(
+                    resolved_session_id.as_deref(),
+                    entity_type.as_deref(),
+                    limit,
+                )?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&entities)?);
+                } else {
+                    println!(
+                        "{}",
+                        format_graph_entities_human(&entities, resolved_session_id.is_some())
+                    );
+                }
+            }
+            GraphCommands::Relations {
+                entity_id,
+                limit,
+                json,
+            } => {
+                let relations = db.list_context_relations(entity_id, limit)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&relations)?);
+                } else {
+                    println!("{}", format_graph_relations_human(&relations));
+                }
+            }
+            GraphCommands::Show {
+                entity_id,
+                limit,
+                json,
+            } => {
+                let detail = db
+                    .get_context_entity_detail(entity_id, limit)?
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Context graph entity not found: {entity_id}")
+                    })?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&detail)?);
+                } else {
+                    println!("{}", format_graph_entity_detail_human(&detail));
+                }
+            }
+        },
         Some(Commands::ExportOtel { session_id, output }) => {
             sync_runtime_session_metrics(&db, &cfg)?;
             let resolved_session_id = session_id
@@ -1859,6 +2058,158 @@ fn format_decisions_human(entries: &[session::DecisionLogEntry], include_session
     lines.join("\n")
 }
 
+fn format_graph_entity_human(entity: &session::ContextGraphEntity) -> String {
+    let mut lines = vec![
+        format!("Context graph entity #{}", entity.id),
+        format!("Type: {}", entity.entity_type),
+        format!("Name: {}", entity.name),
+    ];
+    if let Some(path) = &entity.path {
+        lines.push(format!("Path: {path}"));
+    }
+    if let Some(session_id) = &entity.session_id {
+        lines.push(format!("Session: {}", short_session(session_id)));
+    }
+    if entity.summary.is_empty() {
+        lines.push("Summary: none recorded".to_string());
+    } else {
+        lines.push(format!("Summary: {}", entity.summary));
+    }
+    if entity.metadata.is_empty() {
+        lines.push("Metadata: none recorded".to_string());
+    } else {
+        lines.push("Metadata:".to_string());
+        for (key, value) in &entity.metadata {
+            lines.push(format!("- {key}={value}"));
+        }
+    }
+    lines.push(format!(
+        "Updated: {}",
+        entity.updated_at.format("%Y-%m-%d %H:%M:%S UTC")
+    ));
+    lines.join("\n")
+}
+
+fn format_graph_entities_human(
+    entities: &[session::ContextGraphEntity],
+    include_session: bool,
+) -> String {
+    if entities.is_empty() {
+        return "No context graph entities found.".to_string();
+    }
+
+    let mut lines = vec![format!("Context graph entities: {}", entities.len())];
+    for entity in entities {
+        let mut line = format!("- #{} [{}] {}", entity.id, entity.entity_type, entity.name);
+        if include_session {
+            line.push_str(&format!(
+                " | {}",
+                entity
+                    .session_id
+                    .as_deref()
+                    .map(short_session)
+                    .unwrap_or_else(|| "global".to_string())
+            ));
+        }
+        if let Some(path) = &entity.path {
+            line.push_str(&format!(" | {path}"));
+        }
+        lines.push(line);
+        if !entity.summary.is_empty() {
+            lines.push(format!("  summary {}", entity.summary));
+        }
+    }
+
+    lines.join("\n")
+}
+
+fn format_graph_relation_human(relation: &session::ContextGraphRelation) -> String {
+    let mut lines = vec![
+        format!("Context graph relation #{}", relation.id),
+        format!(
+            "Edge: #{} [{}] {} -> #{} [{}] {}",
+            relation.from_entity_id,
+            relation.from_entity_type,
+            relation.from_entity_name,
+            relation.to_entity_id,
+            relation.to_entity_type,
+            relation.to_entity_name
+        ),
+        format!("Relation: {}", relation.relation_type),
+    ];
+    if let Some(session_id) = &relation.session_id {
+        lines.push(format!("Session: {}", short_session(session_id)));
+    }
+    if relation.summary.is_empty() {
+        lines.push("Summary: none recorded".to_string());
+    } else {
+        lines.push(format!("Summary: {}", relation.summary));
+    }
+    lines.push(format!(
+        "Created: {}",
+        relation.created_at.format("%Y-%m-%d %H:%M:%S UTC")
+    ));
+    lines.join("\n")
+}
+
+fn format_graph_relations_human(relations: &[session::ContextGraphRelation]) -> String {
+    if relations.is_empty() {
+        return "No context graph relations found.".to_string();
+    }
+
+    let mut lines = vec![format!("Context graph relations: {}", relations.len())];
+    for relation in relations {
+        lines.push(format!(
+            "- #{} {} -> {} [{}]",
+            relation.id, relation.from_entity_name, relation.to_entity_name, relation.relation_type
+        ));
+        if !relation.summary.is_empty() {
+            lines.push(format!("  summary {}", relation.summary));
+        }
+    }
+    lines.join("\n")
+}
+
+fn format_graph_entity_detail_human(detail: &session::ContextGraphEntityDetail) -> String {
+    let mut lines = vec![format_graph_entity_human(&detail.entity)];
+    lines.push(String::new());
+    lines.push(format!("Outgoing relations: {}", detail.outgoing.len()));
+    if detail.outgoing.is_empty() {
+        lines.push("- none".to_string());
+    } else {
+        for relation in &detail.outgoing {
+            lines.push(format!(
+                "- [{}] {} -> #{} {}",
+                relation.relation_type,
+                detail.entity.name,
+                relation.to_entity_id,
+                relation.to_entity_name
+            ));
+            if !relation.summary.is_empty() {
+                lines.push(format!("  summary {}", relation.summary));
+            }
+        }
+    }
+    lines.push(format!("Incoming relations: {}", detail.incoming.len()));
+    if detail.incoming.is_empty() {
+        lines.push("- none".to_string());
+    } else {
+        for relation in &detail.incoming {
+            lines.push(format!(
+                "- [{}] #{} {} -> {}",
+                relation.relation_type,
+                relation.from_entity_id,
+                relation.from_entity_name,
+                detail.entity.name
+            ));
+            if !relation.summary.is_empty() {
+                lines.push(format!("  summary {}", relation.summary));
+            }
+        }
+    }
+    lines.join("\n")
+}
+
 fn format_merge_queue_human(report: &session::manager::MergeQueueReport) -> String {
     let mut lines = Vec::new();
     lines.push(format!(
@@ -2228,15 +2579,19 @@ fn send_handoff_message(db: &session::store::StateStore, from_id: &str, to_id: &
 }
 
 fn parse_template_vars(values: &[String]) -> Result<BTreeMap<String, String>> {
+    parse_key_value_pairs(values, "template vars")
+}
+
+fn parse_key_value_pairs(values: &[String], label: &str) -> Result<BTreeMap<String, String>> {
     let mut vars = BTreeMap::new();
     for value in values {
         let (key, raw_value) = value
             .split_once('=')
-            .ok_or_else(|| anyhow::anyhow!("template vars must use key=value form: {value}"))?;
+            .ok_or_else(|| anyhow::anyhow!("{label} must use key=value form: {value}"))?;
         let key = key.trim();
         let raw_value = raw_value.trim();
         if key.is_empty() || raw_value.is_empty() {
-            anyhow::bail!("template vars must use non-empty key=value form: {value}");
+            anyhow::bail!("{label} must use non-empty key=value form: {value}");
         }
         vars.insert(key.to_string(), raw_value.to_string());
     }
@@ -2553,6 +2908,19 @@ mod tests {
             error
                 .to_string()
                 .contains("template vars must use key=value form"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn parse_key_value_pairs_rejects_empty_values() {
+        let error = parse_key_value_pairs(&["language=".to_string()], "graph metadata")
+            .expect_err("invalid metadata should fail");
+
+        assert!(
+            error
+                .to_string()
+                .contains("graph metadata must use non-empty key=value form"),
             "unexpected error: {error}"
         );
     }
@@ -3615,6 +3983,53 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_graph_add_entity_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "graph",
+            "add-entity",
+            "--session-id",
+            "latest",
+            "--type",
+            "file",
+            "--name",
+            "dashboard.rs",
+            "--path",
+            "ecc2/src/tui/dashboard.rs",
+            "--summary",
+            "Primary TUI surface",
+            "--meta",
+            "language=rust",
+            "--json",
+        ])
+        .expect("graph add-entity should parse");
+
+        match cli.command {
+            Some(Commands::Graph {
+                command:
+                    GraphCommands::AddEntity {
+                        session_id,
+                        entity_type,
+                        name,
+                        path,
+                        summary,
+                        metadata,
+                        json,
+                    },
+            }) => {
+                assert_eq!(session_id.as_deref(), Some("latest"));
+                assert_eq!(entity_type, "file");
+                assert_eq!(name, "dashboard.rs");
+                assert_eq!(path.as_deref(), Some("ecc2/src/tui/dashboard.rs"));
+                assert_eq!(summary, "Primary TUI surface");
+                assert_eq!(metadata, vec!["language=rust"]);
+                assert!(json);
+            }
+            _ => panic!("expected graph add-entity subcommand"),
+        }
+    }
+
+    #[test]
     fn format_decisions_human_renders_details() {
         let text = format_decisions_human(
             &[session::DecisionLogEntry {
@@ -3636,6 +4051,64 @@ mod tests {
         assert!(text.contains("why SQLite keeps the audit trail queryable."));
         assert!(text.contains("alternative json files"));
         assert!(text.contains("alternative memory only"));
+    }
+
+    #[test]
+    fn format_graph_entity_detail_human_renders_relations() {
+        let detail = session::ContextGraphEntityDetail {
+            entity: session::ContextGraphEntity {
+                id: 7,
+                session_id: Some("sess-12345678".to_string()),
+                entity_type: "function".to_string(),
+                name: "render_metrics".to_string(),
+                path: Some("ecc2/src/tui/dashboard.rs".to_string()),
+                summary: "Renders the metrics pane".to_string(),
+                metadata: BTreeMap::from([("language".to_string(), "rust".to_string())]),
+                created_at: chrono::DateTime::parse_from_rfc3339("2026-04-10T01:02:03Z")
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+                updated_at: chrono::DateTime::parse_from_rfc3339("2026-04-10T01:02:03Z")
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+            },
+            outgoing: vec![session::ContextGraphRelation {
+                id: 9,
+                session_id: Some("sess-12345678".to_string()),
+                from_entity_id: 7,
+                from_entity_type: "function".to_string(),
+                from_entity_name: "render_metrics".to_string(),
+                to_entity_id: 10,
+                to_entity_type: "type".to_string(),
+                to_entity_name: "MetricsSnapshot".to_string(),
+                relation_type: "returns".to_string(),
+                summary: "Produces the rendered metrics model".to_string(),
+                created_at: chrono::DateTime::parse_from_rfc3339("2026-04-10T01:02:03Z")
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+            }],
+            incoming: vec![session::ContextGraphRelation {
+                id: 8,
+                session_id: Some("sess-12345678".to_string()),
+                from_entity_id: 6,
+                from_entity_type: "file".to_string(),
+                from_entity_name: "dashboard.rs".to_string(),
+                to_entity_id: 7,
+                to_entity_type: "function".to_string(),
+                to_entity_name: "render_metrics".to_string(),
+                relation_type: "contains".to_string(),
+                summary: "Dashboard owns the render path".to_string(),
+                created_at: chrono::DateTime::parse_from_rfc3339("2026-04-10T01:02:03Z")
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+            }],
+        };
+
+        let text = format_graph_entity_detail_human(&detail);
+        assert!(text.contains("Context graph entity #7"));
+        assert!(text.contains("Outgoing relations: 1"));
+        assert!(text.contains("[returns] render_metrics -> #10 MetricsSnapshot"));
+        assert!(text.contains("Incoming relations: 1"));
+        assert!(text.contains("[contains] #6 dashboard.rs -> render_metrics"));
     }
 
     #[test]

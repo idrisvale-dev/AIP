@@ -11384,8 +11384,9 @@ diff --git a/src/lib.rs b/src/lib.rs
             .clone()
             .expect("template launch should set an operator note");
         assert!(
-            operator_note
-                .contains("launched template feature_development (2/2 step(s)) for stabilize auth callback"),
+            operator_note.contains(
+                "launched template feature_development (2/2 step(s)) for stabilize auth callback"
+            ),
             "unexpected operator note: {operator_note}"
         );
         assert_eq!(dashboard.sessions.len(), 2);
