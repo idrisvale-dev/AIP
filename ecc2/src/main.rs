@@ -2266,6 +2266,7 @@ fn format_graph_sync_stats_human(
         format!("- sessions scanned {}", stats.sessions_scanned),
         format!("- decisions processed {}", stats.decisions_processed),
         format!("- file events processed {}", stats.file_events_processed),
+        format!("- messages processed {}", stats.messages_processed),
     ]
     .join("\n")
 }
@@ -4202,6 +4203,7 @@ mod tests {
                 sessions_scanned: 2,
                 decisions_processed: 3,
                 file_events_processed: 5,
+                messages_processed: 4,
             },
             Some("sess-12345678"),
         );
@@ -4210,6 +4212,7 @@ mod tests {
         assert!(text.contains("- sessions scanned 2"));
         assert!(text.contains("- decisions processed 3"));
         assert!(text.contains("- file events processed 5"));
+        assert!(text.contains("- messages processed 4"));
     }
 
     #[test]

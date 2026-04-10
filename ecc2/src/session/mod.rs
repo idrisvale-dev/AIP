@@ -195,6 +195,7 @@ pub struct ContextGraphSyncStats {
     pub sessions_scanned: usize,
     pub decisions_processed: usize,
     pub file_events_processed: usize,
+    pub messages_processed: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
