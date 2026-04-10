@@ -188,6 +188,7 @@ ECC 2.0 now ships a bounded migration audit entrypoint:
 - `ecc migrate audit --source ~/.hermes`
 - `ecc migrate plan --source ~/.hermes --output migration-plan.md`
 - `ecc migrate scaffold --source ~/.hermes --output-dir migration-artifacts`
+- `ecc migrate import-skills --source ~/.hermes --output-dir migration-artifacts/skills`
 - `ecc migrate import-schedules --source ~/.hermes --dry-run`
 - `ecc migrate import-remote --source ~/.hermes --dry-run`
 - `ecc migrate import-env --source ~/.hermes --dry-run`

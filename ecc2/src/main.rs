@@ -647,6 +647,18 @@ enum MigrationCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Scaffold ECC-native orchestration templates from legacy skill markdown
+    ImportSkills {
+        /// Path to the legacy Hermes/OpenClaw workspace root
+        #[arg(long)]
+        source: PathBuf,
+        /// Directory where imported ECC2 skill artifacts should be written
+        #[arg(long)]
+        output_dir: PathBuf,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
     /// Import legacy gateway/dispatch tasks into the ECC2 remote queue
     ImportRemote {
         /// Path to the legacy Hermes/OpenClaw workspace root
@@ -1091,6 +1103,29 @@ struct LegacyEnvImportReport {
     connectors_detected: usize,
     report: GraphConnectorSyncReport,
     sources: Vec<LegacyEnvImportSourceReport>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacySkillImportEntry {
+    source_path: String,
+    template_name: String,
+    title: String,
+    summary: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacySkillImportReport {
+    source: String,
+    output_dir: String,
+    skills_detected: usize,
+    templates_generated: usize,
+    files_written: Vec<String>,
+    skills: Vec<LegacySkillImportEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+struct LegacySkillTemplateFile {
+    orchestration_templates: BTreeMap<String, config::OrchestrationTemplateConfig>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -1942,6 +1977,18 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&report)?);
                 } else {
                     println!("{}", format_legacy_env_import_human(&report));
+                }
+            }
+            MigrationCommands::ImportSkills {
+                source,
+                output_dir,
+                json,
+            } => {
+                let report = import_legacy_skills(&source, &output_dir)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!("{}", format_legacy_skill_import_human(&report));
                 }
             }
             MigrationCommands::ImportRemote {
@@ -5106,7 +5153,7 @@ fn build_legacy_migration_next_steps(artifacts: &[LegacyMigrationArtifact]) -> V
     }
     if categories.contains("skills") {
         steps.push(
-            "Translate reusable Hermes/OpenClaw skills into ECC skills or orchestration templates one lane at a time instead of bulk-copying them."
+            "Scaffold translated legacy skills with `ecc migrate import-skills --source <legacy-workspace> --output-dir <dir>`, then promote the reusable ones into ECC skills or orchestration templates one lane at a time instead of bulk-copying them."
                 .to_string(),
         );
     }
@@ -5966,6 +6013,239 @@ fn build_legacy_env_connector(
     ))
 }
 
+fn import_legacy_skills(source: &Path, output_dir: &Path) -> Result<LegacySkillImportReport> {
+    let source = source
+        .canonicalize()
+        .with_context(|| format!("Legacy workspace not found: {}", source.display()))?;
+    if !source.is_dir() {
+        anyhow::bail!(
+            "Legacy workspace source must be a directory: {}",
+            source.display()
+        );
+    }
+
+    let skills_dir = source.join("skills");
+    let mut report = LegacySkillImportReport {
+        source: source.display().to_string(),
+        output_dir: output_dir.display().to_string(),
+        skills_detected: 0,
+        templates_generated: 0,
+        files_written: Vec::new(),
+        skills: Vec::new(),
+    };
+    if !skills_dir.is_dir() {
+        return Ok(report);
+    }
+
+    let skill_paths = collect_markdown_paths(&skills_dir, true)?;
+    if skill_paths.is_empty() {
+        return Ok(report);
+    }
+
+    fs::create_dir_all(output_dir)
+        .with_context(|| format!("create legacy skill output dir {}", output_dir.display()))?;
+
+    let mut templates = BTreeMap::new();
+    for path in skill_paths {
+        let draft = build_legacy_skill_draft(&source, &skills_dir, &path)?;
+        report.skills_detected += 1;
+        report.templates_generated += 1;
+        report.skills.push(LegacySkillImportEntry {
+            source_path: draft.source_path.clone(),
+            template_name: draft.template_name.clone(),
+            title: draft.title.clone(),
+            summary: draft.summary.clone(),
+        });
+        templates.insert(
+            draft.template_name.clone(),
+            config::OrchestrationTemplateConfig {
+                description: Some(format!(
+                    "Migrated legacy skill scaffold from {}",
+                    draft.source_path
+                )),
+                project: Some("legacy-migration".to_string()),
+                task_group: Some("legacy skill".to_string()),
+                agent: Some("claude".to_string()),
+                profile: None,
+                worktree: Some(false),
+                steps: vec![config::OrchestrationTemplateStepConfig {
+                    name: Some("operator".to_string()),
+                    task: format!(
+                        "Use the migrated legacy skill context from {}.\nLegacy skill title: {}\nLegacy summary: {}\nLegacy excerpt:\n{}\nTranslate and run that workflow for {{{{task}}}}.",
+                        draft.source_path, draft.title, draft.summary, draft.excerpt
+                    ),
+                    agent: None,
+                    profile: None,
+                    worktree: Some(false),
+                    project: Some("legacy-migration".to_string()),
+                    task_group: Some("legacy skill".to_string()),
+                }],
+            },
+        );
+    }
+
+    let templates_path = output_dir.join("ecc2.imported-skills.toml");
+    fs::write(
+        &templates_path,
+        toml::to_string_pretty(&LegacySkillTemplateFile {
+            orchestration_templates: templates,
+        })?,
+    )
+    .with_context(|| {
+        format!(
+            "write imported skill templates {}",
+            templates_path.display()
+        )
+    })?;
+    report
+        .files_written
+        .push(templates_path.display().to_string());
+
+    let summary_path = output_dir.join("imported-skills.md");
+    fs::write(
+        &summary_path,
+        format_legacy_skill_import_summary_markdown(&report),
+    )
+    .with_context(|| format!("write imported skill summary {}", summary_path.display()))?;
+    report
+        .files_written
+        .push(summary_path.display().to_string());
+
+    Ok(report)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LegacySkillDraft {
+    source_path: String,
+    template_name: String,
+    title: String,
+    summary: String,
+    excerpt: String,
+}
+
+fn build_legacy_skill_draft(
+    source: &Path,
+    skills_dir: &Path,
+    path: &Path,
+) -> Result<LegacySkillDraft> {
+    let body = fs::read_to_string(path)
+        .with_context(|| format!("read legacy skill file {}", path.display()))?;
+    let source_path = path
+        .strip_prefix(source)
+        .unwrap_or(path)
+        .display()
+        .to_string();
+    let relative_to_skills = path.strip_prefix(skills_dir).unwrap_or(path);
+    let title = extract_legacy_skill_title(relative_to_skills, &body);
+    let summary = extract_legacy_skill_summary(&body).unwrap_or_else(|| title.clone());
+    let excerpt = extract_legacy_skill_excerpt(&body, 8, 600).unwrap_or_else(|| summary.clone());
+    let template_name = slugify_legacy_skill_template_name(relative_to_skills);
+
+    Ok(LegacySkillDraft {
+        source_path,
+        template_name,
+        title,
+        summary,
+        excerpt,
+    })
+}
+
+fn extract_legacy_skill_title(relative_path: &Path, body: &str) -> String {
+    for line in body.lines() {
+        let trimmed = line.trim();
+        if let Some(title) = trimmed.strip_prefix("#") {
+            let title = title.trim();
+            if !title.is_empty() {
+                return title.to_string();
+            }
+        }
+    }
+    relative_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .map(|value| value.replace(['-', '_'], " "))
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "legacy skill".to_string())
+}
+
+fn extract_legacy_skill_summary(body: &str) -> Option<String> {
+    body.lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(ToString::to_string)
+}
+
+fn extract_legacy_skill_excerpt(body: &str, max_lines: usize, max_chars: usize) -> Option<String> {
+    let mut lines = Vec::new();
+    let mut chars = 0usize;
+    for line in body.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        if chars >= max_chars || lines.len() >= max_lines {
+            break;
+        }
+        let remaining = max_chars.saturating_sub(chars);
+        if remaining == 0 {
+            break;
+        }
+        let truncated = truncate_connector_text(line, remaining);
+        chars += truncated.len();
+        lines.push(truncated);
+    }
+    if lines.is_empty() {
+        None
+    } else {
+        Some(lines.join("\n"))
+    }
+}
+
+fn slugify_legacy_skill_template_name(relative_path: &Path) -> String {
+    relative_path
+        .to_string_lossy()
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() {
+                ch.to_ascii_lowercase()
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>()
+        .trim_matches('_')
+        .split('_')
+        .filter(|segment| !segment.is_empty())
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+fn format_legacy_skill_import_summary_markdown(report: &LegacySkillImportReport) -> String {
+    let mut lines = vec![
+        "# Imported legacy skills".to_string(),
+        String::new(),
+        format!("- Source: `{}`", report.source),
+        format!("- Output dir: `{}`", report.output_dir),
+        format!("- Skills detected: {}", report.skills_detected),
+        format!("- Templates generated: {}", report.templates_generated),
+        String::new(),
+    ];
+
+    if report.skills.is_empty() {
+        lines.push("No legacy skill markdown files were detected.".to_string());
+        return lines.join("\n");
+    }
+
+    lines.push("## Skills".to_string());
+    lines.push(String::new());
+    for skill in &report.skills {
+        lines.push(format!(
+            "- `{}` -> `{}`",
+            skill.source_path, skill.template_name
+        ));
+        lines.push(format!("  - Title: {}", skill.title));
+        lines.push(format!("  - Summary: {}", skill.summary));
+    }
+
+    lines.join("\n")
+}
+
 fn build_legacy_remote_add_command(draft: &LegacyRemoteDispatchDraft) -> Option<String> {
     match draft.request_kind {
         session::RemoteDispatchKind::Standard => {
@@ -6373,6 +6653,10 @@ fn build_legacy_migration_plan_report(
                 target_surface: "ECC skills / orchestration templates".to_string(),
                 source_paths: artifact.source_paths.clone(),
                 command_snippets: vec![
+                    format!(
+                        "ecc migrate import-skills --source {} --output-dir migration-artifacts/skills",
+                        shell_quote_double(&audit.source)
+                    ),
                     "ecc template <template-name> --task \"<translated workflow goal>\"".to_string(),
                 ],
                 config_snippets: vec![
@@ -6761,6 +7045,36 @@ fn format_legacy_env_import_human(report: &LegacyEnvImportReport) -> String {
         }
         if let Some(reason) = source.reason.as_deref() {
             lines.push(format!("  note {}", reason));
+        }
+    }
+
+    lines.join("\n")
+}
+
+fn format_legacy_skill_import_human(report: &LegacySkillImportReport) -> String {
+    let mut lines = vec![
+        format!("Legacy skill import complete for {}", report.source),
+        format!("- output dir {}", report.output_dir),
+        format!("- skills detected {}", report.skills_detected),
+        format!("- templates generated {}", report.templates_generated),
+    ];
+
+    if !report.files_written.is_empty() {
+        lines.push("Files".to_string());
+        for path in &report.files_written {
+            lines.push(format!("- {}", path));
+        }
+    }
+
+    if !report.skills.is_empty() {
+        lines.push("Skills".to_string());
+        for skill in &report.skills {
+            lines.push(format!(
+                "- {} -> {}",
+                skill.source_path, skill.template_name
+            ));
+            lines.push(format!("  title {}", skill.title));
+            lines.push(format!("  summary {}", skill.summary));
         }
     }
 
@@ -9434,6 +9748,37 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_migrate_import_skills_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "migrate",
+            "import-skills",
+            "--source",
+            "/tmp/hermes",
+            "--output-dir",
+            "/tmp/out",
+            "--json",
+        ])
+        .expect("migrate import-skills should parse");
+
+        match cli.command {
+            Some(Commands::Migrate {
+                command:
+                    MigrationCommands::ImportSkills {
+                        source,
+                        output_dir,
+                        json,
+                    },
+            }) => {
+                assert_eq!(source, PathBuf::from("/tmp/hermes"));
+                assert_eq!(output_dir, PathBuf::from("/tmp/out"));
+                assert!(json);
+            }
+            _ => panic!("expected migrate import-skills subcommand"),
+        }
+    }
+
+    #[test]
     fn legacy_migration_audit_report_maps_detected_artifacts() -> Result<()> {
         let tempdir = TestDir::new("legacy-migration-audit")?;
         let root = tempdir.path();
@@ -9507,6 +9852,7 @@ mod tests {
         fs::create_dir_all(root.join("cron"))?;
         fs::create_dir_all(root.join("gateway"))?;
         fs::create_dir_all(root.join("workspace/notes"))?;
+        fs::create_dir_all(root.join("skills/ecc-imports"))?;
         fs::write(root.join("config.yaml"), "model: claude\n")?;
         fs::write(
             root.join("cron/jobs.json"),
@@ -9563,6 +9909,7 @@ mod tests {
             .join("\n"),
         )?;
         fs::write(root.join("workspace/notes/recovery.md"), "# recovery\n")?;
+        fs::write(root.join("skills/ecc-imports/research.md"), "# research\n")?;
 
         let audit = build_legacy_migration_audit_report(root)?;
         let plan = build_legacy_migration_plan_report(&audit);
@@ -9636,6 +9983,15 @@ mod tests {
             .command_snippets
             .iter()
             .any(|command| command.contains("ecc migrate import-env --source")));
+        let skills_step = plan
+            .steps
+            .iter()
+            .find(|step| step.category == "skills")
+            .expect("skills step");
+        assert!(skills_step
+            .command_snippets
+            .iter()
+            .any(|command| command.contains("ecc migrate import-skills --source")));
 
         Ok(())
     }
@@ -10087,6 +10443,48 @@ Route existing installs to portal first before checkout.
             Some("true")
         );
         assert!(!observations[0].details.contains_key("value"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn import_legacy_skills_writes_template_artifacts() -> Result<()> {
+        let tempdir = TestDir::new("legacy-skill-import")?;
+        let root = tempdir.path();
+        fs::create_dir_all(root.join("skills/ecc-imports"))?;
+        fs::create_dir_all(root.join("skills/ops"))?;
+        fs::write(
+            root.join("skills/ecc-imports/research.md"),
+            "# Recovery research\nGather billing/account context before touching checkout logic.\n",
+        )?;
+        fs::write(
+            root.join("skills/ops/recovery.markdown"),
+            "# Portal repair\nRoute wiped installs toward repair before presenting new checkout.\n",
+        )?;
+
+        let output_dir = root.join("out");
+        let report = import_legacy_skills(root, &output_dir)?;
+
+        assert_eq!(report.skills_detected, 2);
+        assert_eq!(report.templates_generated, 2);
+        assert_eq!(report.files_written.len(), 2);
+        assert!(report
+            .skills
+            .iter()
+            .any(|skill| skill.template_name == "ecc_imports_research_md"));
+        assert!(report
+            .skills
+            .iter()
+            .any(|skill| skill.template_name == "ops_recovery_markdown"));
+
+        let config_text = fs::read_to_string(output_dir.join("ecc2.imported-skills.toml"))?;
+        assert!(config_text.contains("[orchestration_templates.ecc_imports_research_md]"));
+        assert!(config_text.contains("[orchestration_templates.ops_recovery_markdown]"));
+        assert!(config_text.contains("Translate and run that workflow for {{task}}."));
+
+        let summary_text = fs::read_to_string(output_dir.join("imported-skills.md"))?;
+        assert!(summary_text.contains("skills/ecc-imports/research.md"));
+        assert!(summary_text.contains("skills/ops/recovery.markdown"));
 
         Ok(())
     }
