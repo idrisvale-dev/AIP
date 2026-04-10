@@ -396,6 +396,57 @@ pub struct ScheduledTask {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RemoteDispatchRequest {
+    pub id: i64,
+    pub target_session_id: Option<String>,
+    pub task: String,
+    pub priority: crate::comms::TaskPriority,
+    pub agent_type: String,
+    pub profile_name: Option<String>,
+    pub working_dir: PathBuf,
+    pub project: String,
+    pub task_group: String,
+    pub use_worktree: bool,
+    pub source: String,
+    pub requester: Option<String>,
+    pub status: RemoteDispatchStatus,
+    pub result_session_id: Option<String>,
+    pub result_action: Option<String>,
+    pub error: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub dispatched_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum RemoteDispatchStatus {
+    Pending,
+    Dispatched,
+    Failed,
+}
+
+impl fmt::Display for RemoteDispatchStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Pending => write!(f, "pending"),
+            Self::Dispatched => write!(f, "dispatched"),
+            Self::Failed => write!(f, "failed"),
+        }
+    }
+}
+
+impl RemoteDispatchStatus {
+    pub fn from_db_value(value: &str) -> Self {
+        match value {
+            "dispatched" => Self::Dispatched,
+            "failed" => Self::Failed,
+            _ => Self::Pending,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FileActivityEntry {
     pub session_id: String,
     pub action: FileActivityAction,

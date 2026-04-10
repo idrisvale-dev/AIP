@@ -31,6 +31,10 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
             tracing::error!("Scheduled task dispatch pass failed: {e}");
         }
 
+        if let Err(e) = maybe_run_remote_dispatch(&db, &cfg).await {
+            tracing::error!("Remote dispatch pass failed: {e}");
+        }
+
         if let Err(e) = coordinate_backlog_cycle(&db, &cfg).await {
             tracing::error!("Backlog coordination pass failed: {e}");
         }
@@ -99,6 +103,25 @@ async fn maybe_run_due_schedules(db: &StateStore, cfg: &Config) -> Result<usize>
         tracing::info!("Dispatched {} scheduled task(s)", outcomes.len());
     }
     Ok(outcomes.len())
+}
+
+async fn maybe_run_remote_dispatch(db: &StateStore, cfg: &Config) -> Result<usize> {
+    let outcomes =
+        manager::run_remote_dispatch_requests(db, cfg, cfg.max_parallel_sessions).await?;
+    let routed = outcomes
+        .iter()
+        .filter(|outcome| {
+            matches!(
+                outcome.action,
+                manager::RemoteDispatchAction::SpawnedTopLevel
+                    | manager::RemoteDispatchAction::Assigned(_)
+            )
+        })
+        .count();
+    if routed > 0 {
+        tracing::info!("Dispatched {} remote request(s)", routed);
+    }
+    Ok(routed)
 }
 
 async fn maybe_auto_dispatch(db: &StateStore, cfg: &Config) -> Result<usize> {

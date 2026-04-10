@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 use crate::session::store::StateStore;
 
@@ -11,6 +12,18 @@ pub enum TaskPriority {
     Normal,
     High,
     Critical,
+}
+
+impl fmt::Display for TaskPriority {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Low => "low",
+            Self::Normal => "normal",
+            Self::High => "high",
+            Self::Critical => "critical",
+        };
+        write!(f, "{label}")
+    }
 }
 
 /// Message types for inter-agent communication.

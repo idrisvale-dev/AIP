@@ -17,7 +17,7 @@ use super::{
     ScheduledTask, Session, SessionAgentProfile, SessionGrouping, SessionHarnessInfo,
     SessionMetrics, SessionState,
 };
-use crate::comms::{self, MessageType};
+use crate::comms::{self, MessageType, TaskPriority};
 use crate::config::Config;
 use crate::observability::{log_tool_call, ToolCallEvent, ToolLogEntry, ToolLogPage, ToolLogger};
 use crate::worktree;
@@ -252,6 +252,64 @@ pub fn delete_scheduled_task(db: &StateStore, schedule_id: i64) -> Result<bool> 
     Ok(db.delete_scheduled_task(schedule_id)? > 0)
 }
 
+#[allow(clippy::too_many_arguments)]
+pub fn create_remote_dispatch_request(
+    db: &StateStore,
+    cfg: &Config,
+    task: &str,
+    target_session_id: Option<&str>,
+    priority: TaskPriority,
+    agent_type: &str,
+    profile_name: Option<&str>,
+    use_worktree: bool,
+    grouping: SessionGrouping,
+    source: &str,
+    requester: Option<&str>,
+) -> Result<super::RemoteDispatchRequest> {
+    let working_dir =
+        std::env::current_dir().context("Failed to resolve current working directory")?;
+    let project = grouping
+        .project
+        .as_deref()
+        .and_then(normalize_group_label)
+        .unwrap_or_else(|| default_project_label(&working_dir));
+    let task_group = grouping
+        .task_group
+        .as_deref()
+        .and_then(normalize_group_label)
+        .unwrap_or_else(|| default_task_group_label(task));
+    let agent_type = HarnessKind::canonical_agent_type(agent_type);
+
+    if let Some(profile_name) = profile_name {
+        cfg.resolve_agent_profile(profile_name)?;
+    }
+    if let Some(target_session_id) = target_session_id {
+        let _ = resolve_session(db, target_session_id)?;
+    }
+
+    db.insert_remote_dispatch_request(
+        target_session_id,
+        task,
+        priority,
+        &agent_type,
+        profile_name,
+        &working_dir,
+        &project,
+        &task_group,
+        use_worktree,
+        source,
+        requester,
+    )
+}
+
+pub fn list_remote_dispatch_requests(
+    db: &StateStore,
+    include_processed: bool,
+    limit: usize,
+) -> Result<Vec<super::RemoteDispatchRequest>> {
+    db.list_remote_dispatch_requests(include_processed, limit)
+}
+
 pub async fn run_due_schedules(
     db: &StateStore,
     cfg: &Config,
@@ -260,6 +318,133 @@ pub async fn run_due_schedules(
     let runner_program =
         std::env::current_exe().context("Failed to resolve ECC executable path")?;
     run_due_schedules_with_runner_program(db, cfg, limit, &runner_program).await
+}
+
+pub async fn run_remote_dispatch_requests(
+    db: &StateStore,
+    cfg: &Config,
+    limit: usize,
+) -> Result<Vec<RemoteDispatchOutcome>> {
+    let requests = db.list_pending_remote_dispatch_requests(limit)?;
+    let runner_program =
+        std::env::current_exe().context("Failed to resolve ECC executable path")?;
+    run_remote_dispatch_requests_with_runner_program(db, cfg, requests, &runner_program).await
+}
+
+async fn run_remote_dispatch_requests_with_runner_program(
+    db: &StateStore,
+    cfg: &Config,
+    requests: Vec<super::RemoteDispatchRequest>,
+    runner_program: &Path,
+) -> Result<Vec<RemoteDispatchOutcome>> {
+    let mut outcomes = Vec::new();
+
+    for request in requests {
+        let grouping = SessionGrouping {
+            project: normalize_group_label(&request.project),
+            task_group: normalize_group_label(&request.task_group),
+        };
+
+        let outcome = if let Some(target_session_id) = request.target_session_id.as_deref() {
+            match assign_session_in_dir_with_runner_program(
+                db,
+                cfg,
+                target_session_id,
+                &request.task,
+                &request.agent_type,
+                request.use_worktree,
+                &request.working_dir,
+                &runner_program,
+                request.profile_name.as_deref(),
+                grouping,
+            )
+            .await
+            {
+                Ok(assignment) if assignment.action == AssignmentAction::DeferredSaturated => {
+                    RemoteDispatchOutcome {
+                        request_id: request.id,
+                        task: request.task.clone(),
+                        priority: request.priority,
+                        target_session_id: request.target_session_id.clone(),
+                        session_id: None,
+                        action: RemoteDispatchAction::DeferredSaturated,
+                    }
+                }
+                Ok(assignment) => {
+                    db.record_remote_dispatch_success(
+                        request.id,
+                        Some(&assignment.session_id),
+                        Some(assignment.action.label()),
+                    )?;
+                    RemoteDispatchOutcome {
+                        request_id: request.id,
+                        task: request.task.clone(),
+                        priority: request.priority,
+                        target_session_id: request.target_session_id.clone(),
+                        session_id: Some(assignment.session_id),
+                        action: RemoteDispatchAction::Assigned(assignment.action),
+                    }
+                }
+                Err(error) => {
+                    db.record_remote_dispatch_failure(request.id, &error.to_string())?;
+                    RemoteDispatchOutcome {
+                        request_id: request.id,
+                        task: request.task.clone(),
+                        priority: request.priority,
+                        target_session_id: request.target_session_id.clone(),
+                        session_id: None,
+                        action: RemoteDispatchAction::Failed(error.to_string()),
+                    }
+                }
+            }
+        } else {
+            match queue_session_in_dir_with_runner_program(
+                db,
+                cfg,
+                &request.task,
+                &request.agent_type,
+                request.use_worktree,
+                &request.working_dir,
+                &runner_program,
+                request.profile_name.as_deref(),
+                None,
+                grouping,
+            )
+            .await
+            {
+                Ok(session_id) => {
+                    db.record_remote_dispatch_success(
+                        request.id,
+                        Some(&session_id),
+                        Some("spawned_top_level"),
+                    )?;
+                    RemoteDispatchOutcome {
+                        request_id: request.id,
+                        task: request.task.clone(),
+                        priority: request.priority,
+                        target_session_id: None,
+                        session_id: Some(session_id),
+                        action: RemoteDispatchAction::SpawnedTopLevel,
+                    }
+                }
+                Err(error) => {
+                    db.record_remote_dispatch_failure(request.id, &error.to_string())?;
+                    RemoteDispatchOutcome {
+                        request_id: request.id,
+                        task: request.task.clone(),
+                        priority: request.priority,
+                        target_session_id: None,
+                        session_id: None,
+                        action: RemoteDispatchAction::Failed(error.to_string()),
+                    }
+                }
+            }
+        };
+
+        outcomes.push(outcome);
+    }
+
+    Ok(outcomes)
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -3076,6 +3261,25 @@ pub struct ScheduledRunOutcome {
     pub next_run_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct RemoteDispatchOutcome {
+    pub request_id: i64,
+    pub task: String,
+    pub priority: TaskPriority,
+    pub target_session_id: Option<String>,
+    pub session_id: Option<String>,
+    pub action: RemoteDispatchAction,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "snake_case", tag = "type", content = "details")]
+pub enum RemoteDispatchAction {
+    SpawnedTopLevel,
+    Assigned(AssignmentAction),
+    DeferredSaturated,
+    Failed(String),
+}
+
 pub struct RebalanceOutcome {
     pub from_session_id: String,
     pub message_id: i64,
@@ -3130,12 +3334,24 @@ pub enum CoordinationHealth {
     EscalationRequired,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum AssignmentAction {
     Spawned,
     ReusedIdle,
     ReusedActive,
     DeferredSaturated,
+}
+
+impl AssignmentAction {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Spawned => "spawned",
+            Self::ReusedIdle => "reused_idle",
+            Self::ReusedActive => "reused_active",
+            Self::DeferredSaturated => "deferred_saturated",
+        }
+    }
 }
 
 pub fn preview_assignment_for_task(
@@ -4338,6 +4554,152 @@ mod tests {
         assert!(log.contains("Check backlog health"));
 
         stop_session_with_options(&db, &outcomes[0].session_id, true).await?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn run_remote_dispatch_requests_prioritizes_critical_targeted_work() -> Result<()> {
+        let tempdir = TestDir::new("manager-run-remote-dispatch-priority")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_runner, _log_path) = write_fake_claude(tempdir.path())?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "Lead orchestration".to_string(),
+            project: "repo".to_string(),
+            task_group: "Lead orchestration".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let low = create_remote_dispatch_request(
+            &db,
+            &cfg,
+            "Low priority cleanup",
+            Some("lead"),
+            TaskPriority::Low,
+            "claude",
+            None,
+            true,
+            SessionGrouping::default(),
+            "cli",
+            None,
+        )?;
+        let critical = create_remote_dispatch_request(
+            &db,
+            &cfg,
+            "Critical production incident",
+            Some("lead"),
+            TaskPriority::Critical,
+            "claude",
+            None,
+            true,
+            SessionGrouping::default(),
+            "cli",
+            None,
+        )?;
+
+        let outcomes = run_remote_dispatch_requests_with_runner_program(
+            &db,
+            &cfg,
+            db.list_pending_remote_dispatch_requests(1)?,
+            &fake_runner,
+        )
+        .await?;
+        assert_eq!(outcomes.len(), 1);
+        assert_eq!(outcomes[0].request_id, critical.id);
+        assert!(matches!(
+            outcomes[0].action,
+            RemoteDispatchAction::Assigned(AssignmentAction::Spawned)
+        ));
+
+        let low_request = db
+            .get_remote_dispatch_request(low.id)?
+            .context("low priority request should still exist")?;
+        assert_eq!(
+            low_request.status,
+            crate::session::RemoteDispatchStatus::Pending
+        );
+
+        let critical_request = db
+            .get_remote_dispatch_request(critical.id)?
+            .context("critical request should still exist")?;
+        assert_eq!(
+            critical_request.status,
+            crate::session::RemoteDispatchStatus::Dispatched
+        );
+        assert!(critical_request.result_session_id.is_some());
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn run_remote_dispatch_requests_spawns_top_level_session_when_untargeted() -> Result<()> {
+        let tempdir = TestDir::new("manager-run-remote-dispatch-top-level")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_runner, _log_path) = write_fake_claude(tempdir.path())?;
+
+        let request = db.insert_remote_dispatch_request(
+            None,
+            "Remote phone triage",
+            TaskPriority::High,
+            "claude",
+            None,
+            &repo_root,
+            "ecc-core",
+            "phone dispatch",
+            true,
+            "http",
+            Some("127.0.0.1"),
+        )?;
+
+        let outcomes = run_remote_dispatch_requests_with_runner_program(
+            &db,
+            &cfg,
+            db.list_pending_remote_dispatch_requests(10)?,
+            &fake_runner,
+        )
+        .await?;
+        assert_eq!(outcomes.len(), 1);
+        assert_eq!(outcomes[0].request_id, request.id);
+        assert!(matches!(
+            outcomes[0].action,
+            RemoteDispatchAction::SpawnedTopLevel
+        ));
+
+        let request = db
+            .get_remote_dispatch_request(request.id)?
+            .context("remote request should still exist")?;
+        assert_eq!(
+            request.status,
+            crate::session::RemoteDispatchStatus::Dispatched
+        );
+        let session_id = request
+            .result_session_id
+            .clone()
+            .context("spawned top-level request should record a session id")?;
+        let session = db
+            .get_session(&session_id)?
+            .context("spawned session should exist")?;
+        assert_eq!(session.project, "ecc-core");
+        assert_eq!(session.task_group, "phone dispatch");
+
         Ok(())
     }
 

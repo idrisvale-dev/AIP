@@ -18,8 +18,9 @@ use super::{
     ContextGraphCompactionStats, ContextGraphEntity, ContextGraphEntityDetail,
     ContextGraphObservation, ContextGraphRecallEntry, ContextGraphRelation, ContextGraphSyncStats,
     ContextObservationPriority, DecisionLogEntry, FileActivityAction, FileActivityEntry,
-    HarnessKind, ScheduledTask, Session, SessionAgentProfile, SessionHarnessInfo, SessionMessage,
-    SessionMetrics, SessionState, WorktreeInfo,
+    HarnessKind, RemoteDispatchRequest, RemoteDispatchStatus, ScheduledTask, Session,
+    SessionAgentProfile, SessionHarnessInfo, SessionMessage, SessionMetrics, SessionState,
+    WorktreeInfo,
 };
 
 pub struct StateStore {
@@ -315,6 +316,28 @@ impl StateStore {
                 updated_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS remote_dispatch_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target_session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+                task TEXT NOT NULL,
+                priority INTEGER NOT NULL DEFAULT 1,
+                agent_type TEXT NOT NULL,
+                profile_name TEXT,
+                working_dir TEXT NOT NULL,
+                project TEXT NOT NULL DEFAULT '',
+                task_group TEXT NOT NULL DEFAULT '',
+                use_worktree INTEGER NOT NULL DEFAULT 1,
+                source TEXT NOT NULL DEFAULT '',
+                requester TEXT,
+                status TEXT NOT NULL DEFAULT 'pending',
+                result_session_id TEXT,
+                result_action TEXT,
+                error TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                dispatched_at TEXT
+            );
+
             CREATE TABLE IF NOT EXISTS conflict_incidents (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 conflict_key TEXT NOT NULL UNIQUE,
@@ -377,6 +400,8 @@ impl StateStore {
                 ON conflict_incidents(first_session_id, second_session_id, resolved_at, updated_at);
             CREATE INDEX IF NOT EXISTS idx_pending_worktree_queue_requested_at
                 ON pending_worktree_queue(requested_at, session_id);
+            CREATE INDEX IF NOT EXISTS idx_remote_dispatch_requests_status_priority
+                ON remote_dispatch_requests(status, priority DESC, created_at, id);
 
             INSERT OR IGNORE INTO daemon_activity (id) VALUES (1);
             ",
@@ -1160,6 +1185,153 @@ impl StateStore {
                 next_run_at.to_rfc3339(),
                 chrono::Utc::now().to_rfc3339(),
             ],
+        )?;
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn insert_remote_dispatch_request(
+        &self,
+        target_session_id: Option<&str>,
+        task: &str,
+        priority: crate::comms::TaskPriority,
+        agent_type: &str,
+        profile_name: Option<&str>,
+        working_dir: &Path,
+        project: &str,
+        task_group: &str,
+        use_worktree: bool,
+        source: &str,
+        requester: Option<&str>,
+    ) -> Result<RemoteDispatchRequest> {
+        let now = chrono::Utc::now();
+        self.conn.execute(
+            "INSERT INTO remote_dispatch_requests (
+                target_session_id,
+                task,
+                priority,
+                agent_type,
+                profile_name,
+                working_dir,
+                project,
+                task_group,
+                use_worktree,
+                source,
+                requester,
+                status,
+                created_at,
+                updated_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 'pending', ?12, ?13)",
+            rusqlite::params![
+                target_session_id,
+                task,
+                task_priority_db_value(priority),
+                agent_type,
+                profile_name,
+                working_dir.display().to_string(),
+                project,
+                task_group,
+                if use_worktree { 1_i64 } else { 0_i64 },
+                source,
+                requester,
+                now.to_rfc3339(),
+                now.to_rfc3339(),
+            ],
+        )?;
+        let id = self.conn.last_insert_rowid();
+        self.get_remote_dispatch_request(id)?.ok_or_else(|| {
+            anyhow::anyhow!("Remote dispatch request {id} was not found after insert")
+        })
+    }
+
+    pub fn list_remote_dispatch_requests(
+        &self,
+        include_processed: bool,
+        limit: usize,
+    ) -> Result<Vec<RemoteDispatchRequest>> {
+        let sql = if include_processed {
+            "SELECT id, target_session_id, task, priority, agent_type, profile_name, working_dir,
+                    project, task_group, use_worktree, source, requester, status,
+                    result_session_id, result_action, error, created_at, updated_at, dispatched_at
+             FROM remote_dispatch_requests
+             ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'failed' THEN 1 ELSE 2 END ASC,
+                      priority DESC, created_at ASC, id ASC
+             LIMIT ?1"
+        } else {
+            "SELECT id, target_session_id, task, priority, agent_type, profile_name, working_dir,
+                    project, task_group, use_worktree, source, requester, status,
+                    result_session_id, result_action, error, created_at, updated_at, dispatched_at
+             FROM remote_dispatch_requests
+             WHERE status = 'pending'
+             ORDER BY priority DESC, created_at ASC, id ASC
+             LIMIT ?1"
+        };
+
+        let mut stmt = self.conn.prepare(sql)?;
+        let rows = stmt.query_map([limit as i64], map_remote_dispatch_request)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    pub fn list_pending_remote_dispatch_requests(
+        &self,
+        limit: usize,
+    ) -> Result<Vec<RemoteDispatchRequest>> {
+        self.list_remote_dispatch_requests(false, limit)
+    }
+
+    pub fn get_remote_dispatch_request(
+        &self,
+        request_id: i64,
+    ) -> Result<Option<RemoteDispatchRequest>> {
+        self.conn
+            .query_row(
+                "SELECT id, target_session_id, task, priority, agent_type, profile_name, working_dir,
+                        project, task_group, use_worktree, source, requester, status,
+                        result_session_id, result_action, error, created_at, updated_at, dispatched_at
+                 FROM remote_dispatch_requests
+                 WHERE id = ?1",
+                [request_id],
+                map_remote_dispatch_request,
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    pub fn record_remote_dispatch_success(
+        &self,
+        request_id: i64,
+        result_session_id: Option<&str>,
+        result_action: Option<&str>,
+    ) -> Result<()> {
+        let now = chrono::Utc::now();
+        self.conn.execute(
+            "UPDATE remote_dispatch_requests
+             SET status = 'dispatched',
+                 result_session_id = ?2,
+                 result_action = ?3,
+                 error = NULL,
+                 dispatched_at = ?4,
+                 updated_at = ?4
+             WHERE id = ?1",
+            rusqlite::params![
+                request_id,
+                result_session_id,
+                result_action,
+                now.to_rfc3339()
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn record_remote_dispatch_failure(&self, request_id: i64, error: &str) -> Result<()> {
+        let now = chrono::Utc::now();
+        self.conn.execute(
+            "UPDATE remote_dispatch_requests
+             SET status = 'failed',
+                 error = ?2,
+                 updated_at = ?3
+             WHERE id = ?1",
+            rusqlite::params![request_id, error, now.to_rfc3339()],
         )?;
         Ok(())
     }
@@ -3727,6 +3899,36 @@ fn map_scheduled_task(row: &rusqlite::Row<'_>) -> rusqlite::Result<ScheduledTask
     })
 }
 
+fn map_remote_dispatch_request(row: &rusqlite::Row<'_>) -> rusqlite::Result<RemoteDispatchRequest> {
+    let created_at = parse_store_timestamp(row.get::<_, String>(16)?, 16)?;
+    let updated_at = parse_store_timestamp(row.get::<_, String>(17)?, 17)?;
+    let dispatched_at = row
+        .get::<_, Option<String>>(18)?
+        .map(|value| parse_store_timestamp(value, 18))
+        .transpose()?;
+    Ok(RemoteDispatchRequest {
+        id: row.get(0)?,
+        target_session_id: normalize_optional_string(row.get(1)?),
+        task: row.get(2)?,
+        priority: task_priority_from_db_value(row.get::<_, i64>(3)?),
+        agent_type: row.get(4)?,
+        profile_name: normalize_optional_string(row.get(5)?),
+        working_dir: PathBuf::from(row.get::<_, String>(6)?),
+        project: row.get(7)?,
+        task_group: row.get(8)?,
+        use_worktree: row.get::<_, i64>(9)? != 0,
+        source: row.get(10)?,
+        requester: normalize_optional_string(row.get(11)?),
+        status: RemoteDispatchStatus::from_db_value(&row.get::<_, String>(12)?),
+        result_session_id: normalize_optional_string(row.get(13)?),
+        result_action: normalize_optional_string(row.get(14)?),
+        error: normalize_optional_string(row.get(15)?),
+        created_at,
+        updated_at,
+        dispatched_at,
+    })
+}
+
 fn parse_timestamp_column(
     value: String,
     index: usize,
@@ -3767,6 +3969,24 @@ fn normalize_optional_string(value: Option<String>) -> Option<String> {
 
 fn default_input_params_json() -> String {
     "{}".to_string()
+}
+
+fn task_priority_db_value(priority: crate::comms::TaskPriority) -> i64 {
+    match priority {
+        crate::comms::TaskPriority::Low => 0,
+        crate::comms::TaskPriority::Normal => 1,
+        crate::comms::TaskPriority::High => 2,
+        crate::comms::TaskPriority::Critical => 3,
+    }
+}
+
+fn task_priority_from_db_value(value: i64) -> crate::comms::TaskPriority {
+    match value {
+        0 => crate::comms::TaskPriority::Low,
+        2 => crate::comms::TaskPriority::High,
+        3 => crate::comms::TaskPriority::Critical,
+        _ => crate::comms::TaskPriority::Normal,
+    }
 }
 
 fn infer_file_activity_action(tool_name: &str) -> FileActivityAction {
