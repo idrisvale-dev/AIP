@@ -38,6 +38,7 @@ const PANE_RESIZE_STEP_PERCENT: u16 = 5;
 const MAX_LOG_ENTRIES: u64 = 12;
 const MAX_DIFF_PREVIEW_LINES: usize = 6;
 const MAX_DIFF_PATCH_LINES: usize = 80;
+const MAX_METRICS_GRAPH_RELATIONS: usize = 6;
 const MAX_FILE_ACTIVITY_PATCH_LINES: usize = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -5135,6 +5136,60 @@ impl Dashboard {
         lines
     }
 
+    fn session_graph_metrics_lines(&self, session_id: &str) -> Vec<String> {
+        let entity = self
+            .db
+            .list_context_entities(Some(session_id), Some("session"), 4)
+            .unwrap_or_default()
+            .into_iter()
+            .find(|entity| {
+                entity.session_id.as_deref() == Some(session_id) || entity.name == session_id
+            });
+        let Some(entity) = entity else {
+            return Vec::new();
+        };
+
+        let Ok(Some(detail)) = self
+            .db
+            .get_context_entity_detail(entity.id, MAX_METRICS_GRAPH_RELATIONS)
+        else {
+            return Vec::new();
+        };
+
+        if detail.outgoing.is_empty() && detail.incoming.is_empty() {
+            return Vec::new();
+        }
+
+        let mut lines = vec![
+            "Context graph".to_string(),
+            format!(
+                "- outgoing {} | incoming {}",
+                detail.outgoing.len(),
+                detail.incoming.len()
+            ),
+        ];
+
+        for relation in detail.outgoing.iter().take(4) {
+            lines.push(format!(
+                "- -> {} {}:{}",
+                relation.relation_type,
+                relation.to_entity_type,
+                truncate_for_dashboard(&relation.to_entity_name, 72)
+            ));
+        }
+
+        for relation in detail.incoming.iter().take(2) {
+            lines.push(format!(
+                "- <- {} {}:{}",
+                relation.relation_type,
+                relation.from_entity_type,
+                truncate_for_dashboard(&relation.from_entity_name, 72)
+            ));
+        }
+
+        lines
+    }
+
     fn visible_git_status_lines(&self) -> Vec<Line<'static>> {
         self.selected_git_status_entries
             .iter()
@@ -6100,6 +6155,7 @@ impl Dashboard {
                     }
                 }
             }
+            lines.extend(self.session_graph_metrics_lines(&session.id));
             let file_overlaps = self
                 .db
                 .list_file_overlaps(&session.id, 3)
@@ -10154,6 +10210,48 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
         assert!(rendered.contains("focus-12345678"));
         assert!(rendered.contains("summary running | planner |"));
         assert!(rendered.contains("-> decided decision:Use graph relations"));
+        Ok(())
+    }
+
+    #[test]
+    fn selected_session_metrics_text_includes_context_graph_relations() -> Result<()> {
+        let focus = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            None,
+            1,
+            1,
+        );
+        let delegate = sample_session(
+            "delegate-87654321",
+            "coder",
+            SessionState::Idle,
+            None,
+            1,
+            1,
+        );
+        let dashboard = test_dashboard(vec![focus.clone(), delegate.clone()], 0);
+        dashboard.db.insert_session(&focus)?;
+        dashboard.db.insert_session(&delegate)?;
+        dashboard.db.insert_decision(
+            &focus.id,
+            "Use sqlite graph sync",
+            &[],
+            "Keeps shared memory queryable",
+        )?;
+        dashboard.db.send_message(
+            &focus.id,
+            &delegate.id,
+            "{\"task\":\"Review graph edge\",\"context\":\"coordination smoke\"}",
+            "task_handoff",
+        )?;
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Context graph"));
+        assert!(text.contains("outgoing 2 | incoming 0"));
+        assert!(text.contains("-> decided decision:Use sqlite graph sync"));
+        assert!(text.contains("-> delegates_to session:delegate-87654321"));
         Ok(())
     }
 
