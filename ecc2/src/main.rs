@@ -632,6 +632,18 @@ enum MigrationCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Import legacy gateway/dispatch tasks into the ECC2 remote queue
+    ImportRemote {
+        /// Path to the legacy Hermes/OpenClaw workspace root
+        #[arg(long)]
+        source: PathBuf,
+        /// Preview detected requests without creating ECC2 remote queue entries
+        #[arg(long)]
+        dry_run: bool,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -1036,6 +1048,51 @@ struct LegacyMemoryImportReport {
     source: String,
     connectors_detected: usize,
     report: GraphConnectorSyncReport,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum LegacyRemoteImportRequestStatus {
+    Ready,
+    Imported,
+    Disabled,
+    Invalid,
+    Skipped,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacyRemoteImportRequestReport {
+    source_path: String,
+    request_name: String,
+    request_kind: session::RemoteDispatchKind,
+    task: Option<String>,
+    goal: Option<String>,
+    target_url: Option<String>,
+    context: Option<String>,
+    target_session: Option<String>,
+    priority: Option<TaskPriorityArg>,
+    agent: Option<String>,
+    profile: Option<String>,
+    project: Option<String>,
+    task_group: Option<String>,
+    use_worktree: Option<bool>,
+    status: LegacyRemoteImportRequestStatus,
+    reason: Option<String>,
+    command_snippet: Option<String>,
+    imported_request_id: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacyRemoteImportReport {
+    source: String,
+    dry_run: bool,
+    requests_detected: usize,
+    ready_requests: usize,
+    imported_requests: usize,
+    disabled_requests: usize,
+    invalid_requests: usize,
+    skipped_requests: usize,
+    requests: Vec<LegacyRemoteImportRequestReport>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -1829,6 +1886,18 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&report)?);
                 } else {
                     println!("{}", format_legacy_memory_import_human(&report));
+                }
+            }
+            MigrationCommands::ImportRemote {
+                source,
+                dry_run,
+                json,
+            } => {
+                let report = import_legacy_remote_dispatch(&db, &cfg, &source, dry_run)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!("{}", format_legacy_remote_import_human(&report));
                 }
             }
         },
@@ -3072,6 +3141,13 @@ fn collect_jsonl_paths(root: &Path, recurse: bool) -> Result<Vec<PathBuf>> {
     Ok(paths)
 }
 
+fn collect_json_paths(root: &Path, recurse: bool) -> Result<Vec<PathBuf>> {
+    let mut paths = Vec::new();
+    collect_json_paths_inner(root, recurse, &mut paths)?;
+    paths.sort();
+    Ok(paths)
+}
+
 fn collect_markdown_paths(root: &Path, recurse: bool) -> Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
     collect_markdown_paths_inner(root, recurse, &mut paths)?;
@@ -3107,6 +3183,29 @@ fn collect_jsonl_paths_inner(root: &Path, recurse: bool, paths: &mut Vec<PathBuf
             .extension()
             .and_then(|value| value.to_str())
             .is_some_and(|value| value.eq_ignore_ascii_case("jsonl"))
+        {
+            paths.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn collect_json_paths_inner(root: &Path, recurse: bool, paths: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in std::fs::read_dir(root)
+        .with_context(|| format!("read memory connector directory {}", root.display()))?
+    {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            if recurse {
+                collect_json_paths_inner(&path, recurse, paths)?;
+            }
+            continue;
+        }
+        if path
+            .extension()
+            .and_then(|value| value.to_str())
+            .is_some_and(|value| value.eq_ignore_ascii_case("json"))
         {
             paths.push(path);
         }
@@ -4939,7 +5038,7 @@ fn build_legacy_migration_next_steps(artifacts: &[LegacyMigrationArtifact]) -> V
     }
     if categories.contains("gateway_dispatch") {
         steps.push(
-            "Replace gateway/dispatch entrypoints with `ecc remote serve`, `ecc remote add`, and `ecc remote computer-use`."
+            "Replace gateway/dispatch entrypoints with `ecc remote serve`, preview/import legacy requests with `ecc migrate import-remote`, then verify them with `ecc remote list` / `ecc remote run`."
                 .to_string(),
         );
     }
@@ -4992,6 +5091,25 @@ struct LegacyScheduleDraft {
     enabled: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LegacyRemoteDispatchDraft {
+    source_path: String,
+    request_name: String,
+    request_kind: session::RemoteDispatchKind,
+    task: Option<String>,
+    goal: Option<String>,
+    target_url: Option<String>,
+    context: Option<String>,
+    target_session: Option<String>,
+    priority: Option<TaskPriorityArg>,
+    agent: Option<String>,
+    profile: Option<String>,
+    project: Option<String>,
+    task_group: Option<String>,
+    use_worktree: Option<bool>,
+    enabled: bool,
+}
+
 fn load_legacy_schedule_drafts(source: &Path) -> Result<Vec<LegacyScheduleDraft>> {
     let jobs_path = source.join("cron/jobs.json");
     if !jobs_path.is_file() {
@@ -5031,6 +5149,284 @@ fn load_legacy_schedule_drafts(source: &Path) -> Result<Vec<LegacyScheduleDraft>
         .enumerate()
         .map(|(index, value)| build_legacy_schedule_draft(value, index, &source_path))
         .collect())
+}
+
+fn load_legacy_remote_dispatch_drafts(source: &Path) -> Result<Vec<LegacyRemoteDispatchDraft>> {
+    let gateway_dir = source.join("gateway");
+    if !gateway_dir.is_dir() {
+        return Ok(Vec::new());
+    }
+
+    let mut drafts = Vec::new();
+    for path in collect_json_paths(&gateway_dir, true)? {
+        drafts.extend(load_legacy_remote_dispatch_json_file(source, &path)?);
+    }
+    for path in collect_jsonl_paths(&gateway_dir, true)? {
+        drafts.extend(load_legacy_remote_dispatch_jsonl_file(source, &path)?);
+    }
+    Ok(drafts)
+}
+
+fn load_legacy_remote_dispatch_json_file(
+    source: &Path,
+    path: &Path,
+) -> Result<Vec<LegacyRemoteDispatchDraft>> {
+    let text = fs::read_to_string(path)
+        .with_context(|| format!("read legacy remote dispatch JSON: {}", path.display()))?;
+    let value: serde_json::Value = serde_json::from_str(&text)
+        .with_context(|| format!("parse legacy remote dispatch JSON: {}", path.display()))?;
+    let source_path = path
+        .strip_prefix(source)
+        .unwrap_or(path)
+        .display()
+        .to_string();
+
+    let entries = extract_legacy_remote_dispatch_entries(&value);
+    Ok(entries
+        .into_iter()
+        .enumerate()
+        .map(|(index, entry)| build_legacy_remote_dispatch_draft(entry, index, &source_path))
+        .collect())
+}
+
+fn load_legacy_remote_dispatch_jsonl_file(
+    source: &Path,
+    path: &Path,
+) -> Result<Vec<LegacyRemoteDispatchDraft>> {
+    let file = File::open(path)
+        .with_context(|| format!("open legacy remote dispatch JSONL: {}", path.display()))?;
+    let reader = BufReader::new(file);
+    let source_path = path
+        .strip_prefix(source)
+        .unwrap_or(path)
+        .display()
+        .to_string();
+
+    let mut drafts = Vec::new();
+    for (index, line) in reader.lines().enumerate() {
+        let line = line?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let value: serde_json::Value = serde_json::from_str(&line).with_context(|| {
+            format!(
+                "parse legacy remote dispatch JSONL: {} line {}",
+                path.display(),
+                index + 1
+            )
+        })?;
+        if !legacy_remote_dispatch_entry_is_relevant(&value) {
+            continue;
+        }
+        drafts.push(build_legacy_remote_dispatch_draft(
+            &value,
+            drafts.len(),
+            &source_path,
+        ));
+    }
+    Ok(drafts)
+}
+
+fn extract_legacy_remote_dispatch_entries<'a>(
+    value: &'a serde_json::Value,
+) -> Vec<&'a serde_json::Value> {
+    match value {
+        serde_json::Value::Array(items) => items
+            .iter()
+            .filter(|item| legacy_remote_dispatch_entry_is_relevant(item))
+            .collect(),
+        serde_json::Value::Object(map) => {
+            if let Some(items) = [
+                "dispatches",
+                "requests",
+                "remote_requests",
+                "tasks",
+                "queue",
+                "items",
+            ]
+            .iter()
+            .find_map(|key| map.get(*key).and_then(serde_json::Value::as_array))
+            {
+                return items
+                    .iter()
+                    .filter(|item| legacy_remote_dispatch_entry_is_relevant(item))
+                    .collect();
+            }
+            if legacy_remote_dispatch_entry_is_relevant(value) {
+                vec![value]
+            } else {
+                Vec::new()
+            }
+        }
+        _ => Vec::new(),
+    }
+}
+
+fn legacy_remote_dispatch_entry_is_relevant(value: &serde_json::Value) -> bool {
+    if json_string_candidates(
+        value,
+        &[
+            &["task"],
+            &["prompt"],
+            &["description"],
+            &["goal"],
+            &["message"],
+            &["target_url"],
+            &["url"],
+            &["to_session"],
+            &["target_session"],
+            &["lead"],
+        ],
+    )
+    .is_some()
+    {
+        return true;
+    }
+    if json_bool_candidates(value, &[&["computer_use"], &["browser"], &["use_browser"]])
+        .unwrap_or(false)
+    {
+        return true;
+    }
+    json_string_candidates(
+        value,
+        &[&["kind"], &["type"], &["mode"], &["dispatch_type"]],
+    )
+    .map(|kind| {
+        matches!(
+            kind.trim().to_ascii_lowercase().as_str(),
+            "dispatch"
+                | "remote_dispatch"
+                | "remote-dispatch"
+                | "task"
+                | "computer_use"
+                | "computer-use"
+                | "computer use"
+                | "browser"
+                | "browser_task"
+                | "operator_browser"
+        )
+    })
+    .unwrap_or(false)
+}
+
+fn build_legacy_remote_dispatch_draft(
+    value: &serde_json::Value,
+    index: usize,
+    source_path: &str,
+) -> LegacyRemoteDispatchDraft {
+    let request_name = json_string_candidates(
+        value,
+        &[
+            &["name"],
+            &["id"],
+            &["title"],
+            &["label"],
+            &["request_name"],
+        ],
+    )
+    .unwrap_or_else(|| format!("legacy-remote-request-{}", index + 1));
+    let request_kind = detect_legacy_remote_dispatch_kind(value);
+    let body_text = json_string_candidates(
+        value,
+        &[
+            &["task"],
+            &["prompt"],
+            &["description"],
+            &["goal"],
+            &["message"],
+            &["instructions"],
+        ],
+    );
+    let enabled = !json_bool_candidates(value, &[&["disabled"]]).unwrap_or(false)
+        && json_bool_candidates(value, &[&["enabled"], &["active"]]).unwrap_or(true);
+
+    LegacyRemoteDispatchDraft {
+        source_path: source_path.to_string(),
+        request_name,
+        request_kind,
+        task: (request_kind == session::RemoteDispatchKind::Standard)
+            .then(|| body_text.clone())
+            .flatten(),
+        goal: (request_kind == session::RemoteDispatchKind::ComputerUse)
+            .then_some(body_text)
+            .flatten(),
+        target_url: json_string_candidates(
+            value,
+            &[
+                &["target_url"],
+                &["url"],
+                &["start_url"],
+                &["browser", "url"],
+            ],
+        ),
+        context: json_string_candidates(
+            value,
+            &[
+                &["context"],
+                &["notes"],
+                &["details"],
+                &["browser_context"],
+                &["extra_context"],
+            ],
+        ),
+        target_session: json_string_candidates(
+            value,
+            &[
+                &["to_session"],
+                &["target_session"],
+                &["target_session_id"],
+                &["session"],
+                &["lead"],
+                &["to"],
+            ],
+        ),
+        priority: json_task_priority_candidates(value, &[&["priority"], &["task", "priority"]]),
+        agent: json_string_candidates(value, &[&["agent"], &["runner"]]),
+        profile: json_string_candidates(value, &[&["profile"], &["agent_profile"]]),
+        project: json_string_candidates(value, &[&["project"]]),
+        task_group: json_string_candidates(value, &[&["task_group"], &["group"]]),
+        use_worktree: json_bool_candidates(value, &[&["use_worktree"], &["worktree"]]),
+        enabled,
+    }
+}
+
+fn detect_legacy_remote_dispatch_kind(value: &serde_json::Value) -> session::RemoteDispatchKind {
+    if json_bool_candidates(value, &[&["computer_use"], &["browser"], &["use_browser"]])
+        .unwrap_or(false)
+    {
+        return session::RemoteDispatchKind::ComputerUse;
+    }
+    if json_string_candidates(
+        value,
+        &[
+            &["target_url"],
+            &["url"],
+            &["start_url"],
+            &["browser", "url"],
+        ],
+    )
+    .is_some()
+    {
+        return session::RemoteDispatchKind::ComputerUse;
+    }
+    if let Some(kind) = json_string_candidates(
+        value,
+        &[&["kind"], &["type"], &["mode"], &["dispatch_type"]],
+    ) {
+        let normalized = kind.trim().to_ascii_lowercase();
+        if matches!(
+            normalized.as_str(),
+            "computer_use"
+                | "computer-use"
+                | "computer use"
+                | "browser"
+                | "browser_task"
+                | "operator_browser"
+        ) {
+            return session::RemoteDispatchKind::ComputerUse;
+        }
+    }
+    session::RemoteDispatchKind::Standard
 }
 
 fn build_legacy_schedule_draft(
@@ -5107,6 +5503,40 @@ fn json_bool_candidates(value: &serde_json::Value, paths: &[&[&str]]) -> Option<
             _ => None,
         })
     })
+}
+
+fn json_task_priority_candidates(
+    value: &serde_json::Value,
+    paths: &[&[&str]],
+) -> Option<TaskPriorityArg> {
+    paths.iter().find_map(|path| {
+        json_lookup(value, path).and_then(|value| match value {
+            serde_json::Value::String(text) => match text.trim().to_ascii_lowercase().as_str() {
+                "low" | "p3" => Some(TaskPriorityArg::Low),
+                "normal" | "medium" | "default" => Some(TaskPriorityArg::Normal),
+                "high" | "urgent" | "p2" | "p1" => Some(TaskPriorityArg::High),
+                "critical" | "crit" | "p0" => Some(TaskPriorityArg::Critical),
+                _ => None,
+            },
+            serde_json::Value::Number(number) => number.as_i64().and_then(|value| match value {
+                0 => Some(TaskPriorityArg::Low),
+                1 => Some(TaskPriorityArg::Normal),
+                2 => Some(TaskPriorityArg::High),
+                3 => Some(TaskPriorityArg::Critical),
+                _ => None,
+            }),
+            _ => None,
+        })
+    })
+}
+
+fn format_task_priority_arg(priority: TaskPriorityArg) -> &'static str {
+    match priority {
+        TaskPriorityArg::Low => "low",
+        TaskPriorityArg::Normal => "normal",
+        TaskPriorityArg::High => "high",
+        TaskPriorityArg::Critical => "critical",
+    }
 }
 
 fn json_lookup<'a>(value: &'a serde_json::Value, path: &[&str]) -> Option<&'a serde_json::Value> {
@@ -5374,6 +5804,250 @@ fn import_legacy_memory(
     })
 }
 
+fn build_legacy_remote_add_command(draft: &LegacyRemoteDispatchDraft) -> Option<String> {
+    match draft.request_kind {
+        session::RemoteDispatchKind::Standard => {
+            let task = draft.task.as_deref()?;
+            let mut parts = vec![
+                "ecc remote add".to_string(),
+                format!("--task {}", shell_quote_double(task)),
+            ];
+            if let Some(target_session) = draft.target_session.as_deref() {
+                parts.push(format!(
+                    "--to-session {}",
+                    shell_quote_double(target_session)
+                ));
+            }
+            if let Some(priority) = draft
+                .priority
+                .filter(|value| *value != TaskPriorityArg::Normal)
+            {
+                parts.push(format!("--priority {}", format_task_priority_arg(priority)));
+            }
+            if let Some(agent) = draft.agent.as_deref() {
+                parts.push(format!("--agent {}", shell_quote_double(agent)));
+            }
+            if let Some(profile) = draft.profile.as_deref() {
+                parts.push(format!("--profile {}", shell_quote_double(profile)));
+            }
+            match draft.use_worktree {
+                Some(true) => parts.push("--worktree".to_string()),
+                Some(false) => parts.push("--no-worktree".to_string()),
+                None => {}
+            }
+            if let Some(project) = draft.project.as_deref() {
+                parts.push(format!("--project {}", shell_quote_double(project)));
+            }
+            if let Some(task_group) = draft.task_group.as_deref() {
+                parts.push(format!("--task-group {}", shell_quote_double(task_group)));
+            }
+            Some(parts.join(" "))
+        }
+        session::RemoteDispatchKind::ComputerUse => {
+            let goal = draft.goal.as_deref()?;
+            let mut parts = vec![
+                "ecc remote computer-use".to_string(),
+                format!("--goal {}", shell_quote_double(goal)),
+            ];
+            if let Some(target_url) = draft.target_url.as_deref() {
+                parts.push(format!("--target-url {}", shell_quote_double(target_url)));
+            }
+            if let Some(context) = draft.context.as_deref() {
+                parts.push(format!("--context {}", shell_quote_double(context)));
+            }
+            if let Some(target_session) = draft.target_session.as_deref() {
+                parts.push(format!(
+                    "--to-session {}",
+                    shell_quote_double(target_session)
+                ));
+            }
+            if let Some(priority) = draft
+                .priority
+                .filter(|value| *value != TaskPriorityArg::Normal)
+            {
+                parts.push(format!("--priority {}", format_task_priority_arg(priority)));
+            }
+            if let Some(agent) = draft.agent.as_deref() {
+                parts.push(format!("--agent {}", shell_quote_double(agent)));
+            }
+            if let Some(profile) = draft.profile.as_deref() {
+                parts.push(format!("--profile {}", shell_quote_double(profile)));
+            }
+            match draft.use_worktree {
+                Some(true) => parts.push("--worktree".to_string()),
+                Some(false) => parts.push("--no-worktree".to_string()),
+                None => {}
+            }
+            if let Some(project) = draft.project.as_deref() {
+                parts.push(format!("--project {}", shell_quote_double(project)));
+            }
+            if let Some(task_group) = draft.task_group.as_deref() {
+                parts.push(format!("--task-group {}", shell_quote_double(task_group)));
+            }
+            Some(parts.join(" "))
+        }
+    }
+}
+
+fn import_legacy_remote_dispatch(
+    db: &session::store::StateStore,
+    cfg: &config::Config,
+    source: &Path,
+    dry_run: bool,
+) -> Result<LegacyRemoteImportReport> {
+    let source = source
+        .canonicalize()
+        .with_context(|| format!("Legacy workspace not found: {}", source.display()))?;
+    if !source.is_dir() {
+        anyhow::bail!(
+            "Legacy workspace source must be a directory: {}",
+            source.display()
+        );
+    }
+
+    let drafts = load_legacy_remote_dispatch_drafts(&source)?;
+    let mut report = LegacyRemoteImportReport {
+        source: source.display().to_string(),
+        dry_run,
+        requests_detected: drafts.len(),
+        ready_requests: 0,
+        imported_requests: 0,
+        disabled_requests: 0,
+        invalid_requests: 0,
+        skipped_requests: 0,
+        requests: Vec::new(),
+    };
+
+    for draft in drafts {
+        let mut item = LegacyRemoteImportRequestReport {
+            source_path: draft.source_path.clone(),
+            request_name: draft.request_name.clone(),
+            request_kind: draft.request_kind,
+            task: draft.task.clone(),
+            goal: draft.goal.clone(),
+            target_url: draft.target_url.clone(),
+            context: draft.context.clone(),
+            target_session: draft.target_session.clone(),
+            priority: draft.priority,
+            agent: draft.agent.clone(),
+            profile: draft.profile.clone(),
+            project: draft.project.clone(),
+            task_group: draft.task_group.clone(),
+            use_worktree: draft.use_worktree,
+            status: LegacyRemoteImportRequestStatus::Ready,
+            reason: None,
+            command_snippet: build_legacy_remote_add_command(&draft),
+            imported_request_id: None,
+        };
+
+        if !draft.enabled {
+            item.status = LegacyRemoteImportRequestStatus::Disabled;
+            item.reason = Some("disabled in legacy workspace".to_string());
+            report.disabled_requests += 1;
+            report.requests.push(item);
+            continue;
+        }
+
+        let body_text = match draft.request_kind {
+            session::RemoteDispatchKind::Standard => draft.task.as_deref(),
+            session::RemoteDispatchKind::ComputerUse => draft.goal.as_deref(),
+        };
+        if body_text.is_none() {
+            item.status = LegacyRemoteImportRequestStatus::Invalid;
+            item.reason = Some(match draft.request_kind {
+                session::RemoteDispatchKind::Standard => "missing task/prompt".to_string(),
+                session::RemoteDispatchKind::ComputerUse => {
+                    "missing computer-use goal/prompt".to_string()
+                }
+            });
+            report.invalid_requests += 1;
+            report.requests.push(item);
+            continue;
+        }
+
+        if let Some(profile) = draft.profile.as_deref() {
+            if let Err(error) = cfg.resolve_agent_profile(profile) {
+                item.status = LegacyRemoteImportRequestStatus::Skipped;
+                item.reason = Some(format!("profile `{profile}` is not usable here: {error}"));
+                report.skipped_requests += 1;
+                report.requests.push(item);
+                continue;
+            }
+        }
+
+        let target_session_id = match draft.target_session.as_deref() {
+            Some(value) => match resolve_session_id(db, value) {
+                Ok(resolved) => Some(resolved),
+                Err(error) => {
+                    item.status = LegacyRemoteImportRequestStatus::Skipped;
+                    item.reason = Some(format!(
+                        "target session `{value}` is not usable here: {error}"
+                    ));
+                    report.skipped_requests += 1;
+                    report.requests.push(item);
+                    continue;
+                }
+            },
+            None => None,
+        };
+
+        report.ready_requests += 1;
+        if dry_run {
+            report.requests.push(item);
+            continue;
+        }
+
+        let request = match draft.request_kind {
+            session::RemoteDispatchKind::Standard => {
+                session::manager::create_remote_dispatch_request(
+                    db,
+                    cfg,
+                    body_text.expect("checked task text"),
+                    target_session_id.as_deref(),
+                    draft.priority.unwrap_or(TaskPriorityArg::Normal).into(),
+                    draft.agent.as_deref().unwrap_or(&cfg.default_agent),
+                    draft.profile.as_deref(),
+                    draft.use_worktree.unwrap_or(cfg.auto_create_worktrees),
+                    session::SessionGrouping {
+                        project: draft.project.clone(),
+                        task_group: draft.task_group.clone(),
+                    },
+                    "migrate_remote",
+                    None,
+                )?
+            }
+            session::RemoteDispatchKind::ComputerUse => {
+                let defaults = cfg.computer_use_dispatch_defaults();
+                session::manager::create_computer_use_remote_dispatch_request(
+                    db,
+                    cfg,
+                    body_text.expect("checked goal text"),
+                    draft.target_url.as_deref(),
+                    draft.context.as_deref(),
+                    target_session_id.as_deref(),
+                    draft.priority.unwrap_or(TaskPriorityArg::Normal).into(),
+                    draft.agent.as_deref(),
+                    draft.profile.as_deref(),
+                    Some(draft.use_worktree.unwrap_or(defaults.use_worktree)),
+                    session::SessionGrouping {
+                        project: draft.project.clone(),
+                        task_group: draft.task_group.clone(),
+                    },
+                    "migrate_remote_computer_use",
+                    None,
+                )?
+            }
+        };
+
+        item.status = LegacyRemoteImportRequestStatus::Imported;
+        item.imported_request_id = Some(request.id);
+        report.imported_requests += 1;
+        report.requests.push(item);
+    }
+
+    Ok(report)
+}
+
 fn build_legacy_migration_plan_report(
     audit: &LegacyMigrationAuditReport,
 ) -> LegacyMigrationPlanReport {
@@ -5392,6 +6066,27 @@ fn build_legacy_migration_plan_report(
     let invalid_schedule_jobs = legacy_schedule_drafts
         .iter()
         .filter(|draft| draft.enabled && (draft.cron_expr.is_none() || draft.task.is_none()))
+        .count();
+    let legacy_remote_drafts =
+        load_legacy_remote_dispatch_drafts(Path::new(&audit.source)).unwrap_or_default();
+    let remote_commands = legacy_remote_drafts
+        .iter()
+        .filter(|draft| draft.enabled)
+        .filter_map(build_legacy_remote_add_command)
+        .collect::<Vec<_>>();
+    let disabled_remote_requests = legacy_remote_drafts
+        .iter()
+        .filter(|draft| !draft.enabled)
+        .count();
+    let invalid_remote_requests = legacy_remote_drafts
+        .iter()
+        .filter(|draft| {
+            draft.enabled
+                && match draft.request_kind {
+                    session::RemoteDispatchKind::Standard => draft.task.is_none(),
+                    session::RemoteDispatchKind::ComputerUse => draft.goal.is_none(),
+                }
+        })
         .count();
 
     for artifact in &audit.artifacts {
@@ -5442,13 +6137,42 @@ fn build_legacy_migration_plan_report(
                 title: "Replace legacy gateway intake with ECC2 remote dispatch".to_string(),
                 target_surface: "ECC2 remote dispatch".to_string(),
                 source_paths: artifact.source_paths.clone(),
-                command_snippets: vec![
-                    "ecc remote serve --bind 127.0.0.1:8787 --token <token>".to_string(),
-                    "ecc remote add --task \"Translate legacy dispatch workflow\"".to_string(),
-                    "ecc remote computer-use --goal \"Translate legacy browser/operator flow\"".to_string(),
-                ],
+                command_snippets: if remote_commands.is_empty() {
+                    vec![
+                        "ecc remote serve --bind 127.0.0.1:8787 --token <token>".to_string(),
+                        "ecc remote add --task \"Translate legacy dispatch workflow\"".to_string(),
+                        "ecc remote computer-use --goal \"Translate legacy browser/operator flow\"".to_string(),
+                    ]
+                } else {
+                    let mut commands = vec![
+                        "ecc remote serve --bind 127.0.0.1:8787 --token <token>".to_string(),
+                    ];
+                    commands.extend(remote_commands.clone());
+                    commands.push("ecc remote list".to_string());
+                    commands.push("ecc remote run".to_string());
+                    commands
+                },
                 config_snippets: Vec::new(),
-                notes: artifact.notes.clone(),
+                notes: {
+                    let mut notes = artifact.notes.clone();
+                    if !remote_commands.is_empty() {
+                        notes.push(format!(
+                            "Recovered {} concrete remote dispatch request(s) from gateway JSON/JSONL files.",
+                            remote_commands.len()
+                        ));
+                    }
+                    if disabled_remote_requests > 0 {
+                        notes.push(format!(
+                            "{disabled_remote_requests} legacy remote dispatch request(s) are disabled and were left out of generated ECC2 commands."
+                        ));
+                    }
+                    if invalid_remote_requests > 0 {
+                        notes.push(format!(
+                            "{invalid_remote_requests} legacy remote dispatch request(s) were missing task/goal fields and still need manual translation."
+                        ));
+                    }
+                    notes
+                },
             },
             "memory_tool" => LegacyMigrationPlanStep {
                 category: artifact.category.clone(),
@@ -5815,6 +6539,70 @@ fn format_legacy_memory_import_human(report: &LegacyMemoryImportReport) -> Strin
                 connector.observations_added,
                 connector.skipped_unchanged_sources
             ));
+        }
+    }
+
+    lines.join("\n")
+}
+
+fn format_legacy_remote_import_human(report: &LegacyRemoteImportReport) -> String {
+    let mut lines = vec![
+        format!(
+            "Legacy remote dispatch import {} for {}",
+            if report.dry_run {
+                "preview"
+            } else {
+                "complete"
+            },
+            report.source
+        ),
+        format!("- requests detected {}", report.requests_detected),
+        format!("- ready requests {}", report.ready_requests),
+        format!("- imported requests {}", report.imported_requests),
+        format!("- disabled requests {}", report.disabled_requests),
+        format!("- invalid requests {}", report.invalid_requests),
+        format!("- skipped requests {}", report.skipped_requests),
+    ];
+
+    if report.requests.is_empty() {
+        lines.push("- no importable gateway JSON/JSONL request entries were found".to_string());
+        return lines.join("\n");
+    }
+
+    lines.push("Requests".to_string());
+    for request in &report.requests {
+        let status = match request.status {
+            LegacyRemoteImportRequestStatus::Ready => "ready",
+            LegacyRemoteImportRequestStatus::Imported => "imported",
+            LegacyRemoteImportRequestStatus::Disabled => "disabled",
+            LegacyRemoteImportRequestStatus::Invalid => "invalid",
+            LegacyRemoteImportRequestStatus::Skipped => "skipped",
+        };
+        lines.push(format!(
+            "- {} [{} / {}]",
+            request.request_name, status, request.request_kind
+        ));
+        lines.push(format!("  source {}", request.source_path));
+        if let Some(task) = request.task.as_deref() {
+            lines.push(format!("  task {}", task));
+        }
+        if let Some(goal) = request.goal.as_deref() {
+            lines.push(format!("  goal {}", goal));
+        }
+        if let Some(target_url) = request.target_url.as_deref() {
+            lines.push(format!("  target url {}", target_url));
+        }
+        if let Some(target_session) = request.target_session.as_deref() {
+            lines.push(format!("  target {}", target_session));
+        }
+        if let Some(command) = request.command_snippet.as_deref() {
+            lines.push(format!("  command {}", command));
+        }
+        if let Some(request_id) = request.imported_request_id {
+            lines.push(format!("  request {}", request_id));
+        }
+        if let Some(reason) = request.reason.as_deref() {
+            lines.push(format!("  note {}", reason));
         }
     }
 
@@ -8461,6 +9249,7 @@ mod tests {
         let tempdir = TestDir::new("legacy-migration-plan")?;
         let root = tempdir.path();
         fs::create_dir_all(root.join("cron"))?;
+        fs::create_dir_all(root.join("gateway"))?;
         fs::create_dir_all(root.join("workspace/notes"))?;
         fs::write(root.join("config.yaml"), "model: claude\n")?;
         fs::write(
@@ -8485,6 +9274,37 @@ mod tests {
                 ]
             })
             .to_string(),
+        )?;
+        fs::write(
+            root.join("gateway/dispatch.jsonl"),
+            [
+                serde_json::json!({
+                    "name": "route-account-recovery",
+                    "task": "Handle account recovery triage",
+                    "priority": "high",
+                    "agent": "codex",
+                    "project": "ecc-tools",
+                    "task_group": "recovery"
+                })
+                .to_string(),
+                serde_json::json!({
+                    "name": "browser-billing-check",
+                    "kind": "computer_use",
+                    "goal": "Verify the billing portal warning banner",
+                    "target_url": "https://ecc.tools/account",
+                    "context": "Use the production account flow",
+                    "priority": "critical",
+                    "use_worktree": false
+                })
+                .to_string(),
+                serde_json::json!({
+                    "name": "paused-remote",
+                    "task": "Do not migrate this now",
+                    "disabled": true
+                })
+                .to_string(),
+            ]
+            .join("\n"),
         )?;
         fs::write(root.join("workspace/notes/recovery.md"), "# recovery\n")?;
 
@@ -8519,6 +9339,31 @@ mod tests {
             .iter()
             .any(|command| command.contains("<legacy-cron>")));
         assert!(scheduler_step
+            .notes
+            .iter()
+            .any(|note| note.contains("disabled")));
+
+        let gateway_step = plan
+            .steps
+            .iter()
+            .find(|step| step.category == "gateway_dispatch")
+            .expect("gateway step");
+        assert!(gateway_step
+            .command_snippets
+            .iter()
+            .any(|command| command
+                .contains("ecc remote add --task \"Handle account recovery triage\"")));
+        assert!(gateway_step
+            .command_snippets
+            .iter()
+            .any(|command| command.contains(
+                "ecc remote computer-use --goal \"Verify the billing portal warning banner\""
+            )));
+        assert!(!gateway_step
+            .command_snippets
+            .iter()
+            .any(|command| command.contains("Translate legacy dispatch workflow")));
+        assert!(gateway_step
             .notes
             .iter()
             .any(|note| note.contains("disabled")));
@@ -8717,6 +9562,162 @@ Route existing installs to portal first before checkout.
         assert_eq!(report.report.records_read, 0);
         assert_eq!(report.report.entities_upserted, 0);
         assert_eq!(report.report.observations_added, 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn import_legacy_remote_dispatch_dry_run_reports_ready_disabled_and_invalid_requests(
+    ) -> Result<()> {
+        let tempdir = TestDir::new("legacy-remote-import-dry-run")?;
+        let root = tempdir.path();
+        fs::create_dir_all(root.join("gateway"))?;
+        fs::write(
+            root.join("gateway/dispatch.json"),
+            serde_json::json!({
+                "requests": [
+                    {
+                        "name": "route-account-recovery",
+                        "task": "Handle account recovery triage",
+                        "priority": "high",
+                        "agent": "codex",
+                        "project": "ecc-tools",
+                        "task_group": "recovery",
+                        "use_worktree": false
+                    },
+                    {
+                        "name": "browser-billing-check",
+                        "kind": "computer_use",
+                        "goal": "Verify the billing portal warning banner",
+                        "target_url": "https://ecc.tools/account",
+                        "context": "Use the production account flow",
+                        "priority": "critical"
+                    },
+                    {
+                        "name": "paused-remote",
+                        "task": "Do not migrate this now",
+                        "disabled": true
+                    },
+                    {
+                        "name": "broken-remote",
+                        "kind": "computer_use",
+                        "context": "Missing goal"
+                    }
+                ]
+            })
+            .to_string(),
+        )?;
+
+        let tempdb = TestDir::new("legacy-remote-import-dry-run-db")?;
+        let db = StateStore::open(&tempdb.path().join("state.db"))?;
+        let report = import_legacy_remote_dispatch(&db, &Config::default(), root, true)?;
+
+        assert!(report.dry_run);
+        assert_eq!(report.requests_detected, 4);
+        assert_eq!(report.ready_requests, 2);
+        assert_eq!(report.imported_requests, 0);
+        assert_eq!(report.disabled_requests, 1);
+        assert_eq!(report.invalid_requests, 1);
+        assert_eq!(report.skipped_requests, 0);
+        assert_eq!(report.requests.len(), 4);
+        assert!(report.requests.iter().any(|request| request.command_snippet.as_deref()
+            == Some("ecc remote add --task \"Handle account recovery triage\" --priority high --agent \"codex\" --no-worktree --project \"ecc-tools\" --task-group \"recovery\"")));
+        assert!(report.requests.iter().any(|request| request.command_snippet.as_deref()
+            == Some("ecc remote computer-use --goal \"Verify the billing portal warning banner\" --target-url \"https://ecc.tools/account\" --context \"Use the production account flow\" --priority critical")));
+
+        Ok(())
+    }
+
+    #[test]
+    fn import_legacy_remote_dispatch_creates_real_pending_requests() -> Result<()> {
+        let tempdir = TestDir::new("legacy-remote-import-live")?;
+        let root = tempdir.path();
+        fs::create_dir_all(root.join("gateway"))?;
+        fs::write(
+            root.join("gateway/dispatch.jsonl"),
+            [
+                serde_json::json!({
+                    "name": "route-account-recovery",
+                    "task": "Handle account recovery triage",
+                    "priority": "high",
+                    "agent": "codex",
+                    "project": "ecc-tools",
+                    "task_group": "recovery",
+                    "use_worktree": false
+                })
+                .to_string(),
+                serde_json::json!({
+                    "name": "browser-billing-check",
+                    "kind": "computer_use",
+                    "goal": "Verify the billing portal warning banner",
+                    "target_url": "https://ecc.tools/account",
+                    "context": "Use the production account flow",
+                    "priority": "critical",
+                    "project": "remote-ops",
+                    "task_group": "browser"
+                })
+                .to_string(),
+            ]
+            .join("\n"),
+        )?;
+
+        let target_repo = tempdir.path().join("target");
+        fs::create_dir_all(&target_repo)?;
+        fs::write(target_repo.join(".gitignore"), "target\n")?;
+
+        let tempdb = TestDir::new("legacy-remote-import-live-db")?;
+        let db = StateStore::open(&tempdb.path().join("state.db"))?;
+        struct CurrentDirGuard(PathBuf);
+        impl Drop for CurrentDirGuard {
+            fn drop(&mut self) {
+                let _ = std::env::set_current_dir(&self.0);
+            }
+        }
+        let _cwd_guard = CurrentDirGuard(std::env::current_dir()?);
+        std::env::set_current_dir(&target_repo)?;
+
+        let report = import_legacy_remote_dispatch(&db, &Config::default(), root, false)?;
+
+        assert!(!report.dry_run);
+        assert_eq!(report.ready_requests, 2);
+        assert_eq!(report.imported_requests, 2);
+        assert_eq!(
+            report.requests[0].status,
+            LegacyRemoteImportRequestStatus::Imported
+        );
+        assert!(report
+            .requests
+            .iter()
+            .all(|request| request.imported_request_id.is_some()));
+
+        let requests = db.list_pending_remote_dispatch_requests(10)?;
+        assert_eq!(requests.len(), 2);
+        assert_eq!(
+            requests[0].request_kind,
+            session::RemoteDispatchKind::ComputerUse
+        );
+        assert_eq!(requests[0].priority, comms::TaskPriority::Critical);
+        assert_eq!(requests[0].project, "remote-ops");
+        assert_eq!(requests[0].task_group, "browser");
+        assert_eq!(
+            requests[0].target_url.as_deref(),
+            Some("https://ecc.tools/account")
+        );
+        assert!(requests[0].task.contains("Computer-use task."));
+        assert_eq!(
+            requests[1].request_kind,
+            session::RemoteDispatchKind::Standard
+        );
+        assert_eq!(requests[1].priority, comms::TaskPriority::High);
+        assert_eq!(requests[1].agent_type, "codex");
+        assert_eq!(requests[1].project, "ecc-tools");
+        assert_eq!(requests[1].task_group, "recovery");
+        assert!(!requests[1].use_worktree);
+        assert_eq!(requests[1].task, "Handle account recovery triage");
+        assert_eq!(
+            requests[1].working_dir.canonicalize()?,
+            target_repo.canonicalize()?
+        );
 
         Ok(())
     }
