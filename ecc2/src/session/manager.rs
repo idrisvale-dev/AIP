@@ -480,8 +480,8 @@ pub async fn drain_inbox(
     let mut outcomes = Vec::new();
 
     for message in messages {
-        let task = parse_task_handoff_task(&message.content)
-            .unwrap_or_else(|| message.content.clone());
+        let task =
+            parse_task_handoff_task(&message.content).unwrap_or_else(|| message.content.clone());
 
         let outcome = assign_session_in_dir_with_runner_program(
             db,
@@ -5040,7 +5040,9 @@ mod tests {
         let auth_messages = db.list_messages_for_session("auth-worker", 10)?;
         assert!(auth_messages.iter().any(|message| {
             message.msg_type == "task_handoff"
-                && message.content.contains("Investigate auth callback recovery")
+                && message
+                    .content
+                    .contains("Investigate auth callback recovery")
         }));
 
         Ok(())
