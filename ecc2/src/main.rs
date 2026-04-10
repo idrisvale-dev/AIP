@@ -632,6 +632,21 @@ enum MigrationCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Import safe legacy env/service config context into the ECC2 context graph
+    ImportEnv {
+        /// Path to the legacy Hermes/OpenClaw workspace root
+        #[arg(long)]
+        source: PathBuf,
+        /// Preview detected importable sources without writing to the ECC2 graph
+        #[arg(long)]
+        dry_run: bool,
+        /// Maximum imported records across all synthesized connectors
+        #[arg(long, default_value_t = 100)]
+        limit: usize,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
     /// Import legacy gateway/dispatch tasks into the ECC2 remote queue
     ImportRemote {
         /// Path to the legacy Hermes/OpenClaw workspace root
@@ -1048,6 +1063,34 @@ struct LegacyMemoryImportReport {
     source: String,
     connectors_detected: usize,
     report: GraphConnectorSyncReport,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum LegacyEnvImportSourceStatus {
+    Ready,
+    Imported,
+    ManualOnly,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacyEnvImportSourceReport {
+    source_path: String,
+    connector_name: Option<String>,
+    status: LegacyEnvImportSourceStatus,
+    reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacyEnvImportReport {
+    source: String,
+    dry_run: bool,
+    importable_sources: usize,
+    imported_sources: usize,
+    manual_reentry_sources: usize,
+    connectors_detected: usize,
+    report: GraphConnectorSyncReport,
+    sources: Vec<LegacyEnvImportSourceReport>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -1886,6 +1929,19 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&report)?);
                 } else {
                     println!("{}", format_legacy_memory_import_human(&report));
+                }
+            }
+            MigrationCommands::ImportEnv {
+                source,
+                dry_run,
+                limit,
+                json,
+            } => {
+                let report = import_legacy_env_services(&db, &source, dry_run, limit)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!("{}", format_legacy_env_import_human(&report));
                 }
             }
             MigrationCommands::ImportRemote {
@@ -5062,7 +5118,7 @@ fn build_legacy_migration_next_steps(artifacts: &[LegacyMigrationArtifact]) -> V
     }
     if categories.contains("env_services") {
         steps.push(
-            "Reconfigure credentials locally through Claude connectors, MCP config, OAuth, or local API key setup; do not import raw secret material."
+            "Preview safe env/service context with `ecc migrate import-env --source <legacy-workspace> --dry-run`, then reconfigure credentials locally through Claude connectors, MCP config, OAuth, or local API key setup without importing raw secret material."
                 .to_string(),
         );
     }
@@ -5804,6 +5860,112 @@ fn import_legacy_memory(
     })
 }
 
+fn import_legacy_env_services(
+    db: &session::store::StateStore,
+    source: &Path,
+    dry_run: bool,
+    limit: usize,
+) -> Result<LegacyEnvImportReport> {
+    let source = source
+        .canonicalize()
+        .with_context(|| format!("Legacy workspace not found: {}", source.display()))?;
+    if !source.is_dir() {
+        anyhow::bail!(
+            "Legacy workspace source must be a directory: {}",
+            source.display()
+        );
+    }
+
+    let env_service_paths = collect_env_service_paths(&source)?;
+    let mut report = LegacyEnvImportReport {
+        source: source.display().to_string(),
+        dry_run,
+        importable_sources: 0,
+        imported_sources: 0,
+        manual_reentry_sources: 0,
+        connectors_detected: 0,
+        report: GraphConnectorSyncReport::default(),
+        sources: Vec::new(),
+    };
+
+    let mut import_cfg = config::Config::default();
+    for relative_path in env_service_paths {
+        if let Some(connector) = build_legacy_env_connector(&source, &relative_path) {
+            report.importable_sources += 1;
+            report.connectors_detected += 1;
+            report.sources.push(LegacyEnvImportSourceReport {
+                source_path: relative_path.clone(),
+                connector_name: Some(connector.0.clone()),
+                status: if dry_run {
+                    LegacyEnvImportSourceStatus::Ready
+                } else {
+                    LegacyEnvImportSourceStatus::Imported
+                },
+                reason: Some("safe dotenv-style import available".to_string()),
+            });
+            import_cfg.memory_connectors.insert(
+                connector.0,
+                config::MemoryConnectorConfig::DotenvFile(connector.1),
+            );
+        } else {
+            report.manual_reentry_sources += 1;
+            report.sources.push(LegacyEnvImportSourceReport {
+                source_path: relative_path,
+                connector_name: None,
+                status: LegacyEnvImportSourceStatus::ManualOnly,
+                reason: Some(
+                    "manual auth/config translation still required; raw secret-bearing config is not imported"
+                        .to_string(),
+                ),
+            });
+        }
+    }
+
+    if dry_run || import_cfg.memory_connectors.is_empty() {
+        return Ok(report);
+    }
+
+    let sync_report = sync_all_memory_connectors(db, &import_cfg, limit)?;
+    report.imported_sources = sync_report.connectors_synced;
+    report.report = sync_report;
+    Ok(report)
+}
+
+fn build_legacy_env_connector(
+    source: &Path,
+    relative_path: &str,
+) -> Option<(String, config::MemoryConnectorDotenvFileConfig)> {
+    let is_importable = matches!(
+        relative_path,
+        ".env" | ".env.local" | ".env.production" | ".envrc"
+    );
+    if !is_importable {
+        return None;
+    }
+
+    let connector_name = format!(
+        "legacy_env_{}",
+        relative_path
+            .chars()
+            .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+            .collect::<String>()
+            .trim_matches('_')
+    );
+    Some((
+        connector_name,
+        config::MemoryConnectorDotenvFileConfig {
+            path: source.join(relative_path),
+            session_id: None,
+            default_entity_type: Some("legacy_service_config".to_string()),
+            default_observation_type: Some("legacy_env_context".to_string()),
+            key_prefixes: Vec::new(),
+            include_keys: Vec::new(),
+            exclude_keys: Vec::new(),
+            include_safe_values: true,
+        },
+    ))
+}
+
 fn build_legacy_remote_add_command(draft: &LegacyRemoteDispatchDraft) -> Option<String> {
     match draft.request_kind {
         session::RemoteDispatchKind::Standard => {
@@ -6250,7 +6412,17 @@ fn build_legacy_migration_plan_report(
                 title: "Reconfigure local auth and connectors without importing secrets".to_string(),
                 target_surface: "Claude connectors / MCP / local API key setup".to_string(),
                 source_paths: artifact.source_paths.clone(),
-                command_snippets: Vec::new(),
+                command_snippets: vec![
+                    format!(
+                        "ecc migrate import-env --source {} --dry-run",
+                        shell_quote_double(&audit.source)
+                    ),
+                    format!(
+                        "ecc migrate import-env --source {}",
+                        shell_quote_double(&audit.source)
+                    ),
+                    "ecc graph recall \"<service or env key>\"".to_string(),
+                ],
                 config_snippets: vec![
                     "# Re-enter connector auth locally; do not copy legacy secrets into ECC2.\n# Typical targets: Google Drive OAuth, GitHub, Stripe, Linear, browser creds.".to_string(),
                 ],
@@ -6539,6 +6711,56 @@ fn format_legacy_memory_import_human(report: &LegacyMemoryImportReport) -> Strin
                 connector.observations_added,
                 connector.skipped_unchanged_sources
             ));
+        }
+    }
+
+    lines.join("\n")
+}
+
+fn format_legacy_env_import_human(report: &LegacyEnvImportReport) -> String {
+    let mut lines = vec![
+        format!(
+            "Legacy env/service import {} for {}",
+            if report.dry_run {
+                "preview"
+            } else {
+                "complete"
+            },
+            report.source
+        ),
+        format!("- importable sources {}", report.importable_sources),
+        format!("- imported sources {}", report.imported_sources),
+        format!("- manual reentry sources {}", report.manual_reentry_sources),
+        format!("- connectors detected {}", report.connectors_detected),
+        format!("- connectors synced {}", report.report.connectors_synced),
+        format!("- records read {}", report.report.records_read),
+        format!("- entities upserted {}", report.report.entities_upserted),
+        format!("- observations added {}", report.report.observations_added),
+        format!("- skipped records {}", report.report.skipped_records),
+        format!(
+            "- skipped unchanged sources {}",
+            report.report.skipped_unchanged_sources
+        ),
+    ];
+
+    if report.sources.is_empty() {
+        lines.push("- no recognized env/service migration sources were found".to_string());
+        return lines.join("\n");
+    }
+
+    lines.push("Sources".to_string());
+    for source in &report.sources {
+        let status = match source.status {
+            LegacyEnvImportSourceStatus::Ready => "ready",
+            LegacyEnvImportSourceStatus::Imported => "imported",
+            LegacyEnvImportSourceStatus::ManualOnly => "manual",
+        };
+        lines.push(format!("- {} [{}]", source.source_path, status));
+        if let Some(connector_name) = source.connector_name.as_deref() {
+            lines.push(format!("  connector {}", connector_name));
+        }
+        if let Some(reason) = source.reason.as_deref() {
+            lines.push(format!("  note {}", reason));
         }
     }
 
@@ -9178,6 +9400,40 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_migrate_import_env_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "migrate",
+            "import-env",
+            "--source",
+            "/tmp/hermes",
+            "--dry-run",
+            "--limit",
+            "42",
+            "--json",
+        ])
+        .expect("migrate import-env should parse");
+
+        match cli.command {
+            Some(Commands::Migrate {
+                command:
+                    MigrationCommands::ImportEnv {
+                        source,
+                        dry_run,
+                        limit,
+                        json,
+                    },
+            }) => {
+                assert_eq!(source, PathBuf::from("/tmp/hermes"));
+                assert!(dry_run);
+                assert_eq!(limit, 42);
+                assert!(json);
+            }
+            _ => panic!("expected migrate import-env subcommand"),
+        }
+    }
+
+    #[test]
     fn legacy_migration_audit_report_maps_detected_artifacts() -> Result<()> {
         let tempdir = TestDir::new("legacy-migration-audit")?;
         let root = tempdir.path();
@@ -9371,6 +9627,15 @@ mod tests {
         let rendered = format_legacy_migration_plan_human(&plan);
         assert!(rendered.contains("Legacy migration plan"));
         assert!(rendered.contains("Import sanitized workspace memory through ECC2 connectors"));
+        let env_step = plan
+            .steps
+            .iter()
+            .find(|step| step.category == "env_services")
+            .expect("env services step");
+        assert!(env_step
+            .command_snippets
+            .iter()
+            .any(|command| command.contains("ecc migrate import-env --source")));
 
         Ok(())
     }
@@ -9718,6 +9983,110 @@ Route existing installs to portal first before checkout.
             requests[1].working_dir.canonicalize()?,
             target_repo.canonicalize()?
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn import_legacy_env_dry_run_reports_importable_and_manual_sources() -> Result<()> {
+        let tempdir = TestDir::new("legacy-env-import-dry-run")?;
+        let root = tempdir.path();
+        fs::create_dir_all(root.join("services"))?;
+        fs::write(
+            root.join(".env.local"),
+            "STRIPE_SECRET_KEY=sk_test_secret\nPUBLIC_BASE_URL=https://ecc.tools\n",
+        )?;
+        fs::write(
+            root.join(".envrc"),
+            "export OPENAI_API_KEY=sk-openai-secret\nexport PUBLIC_DOCS_URL=https://docs.ecc.tools\n",
+        )?;
+        fs::write(root.join("config.yaml"), "model: claude\n")?;
+        fs::write(
+            root.join("services").join("billing.json"),
+            "{\"port\": 3000}\n",
+        )?;
+
+        let tempdb = TestDir::new("legacy-env-import-dry-run-db")?;
+        let db = StateStore::open(&tempdb.path().join("state.db"))?;
+        let report = import_legacy_env_services(&db, root, true, 10)?;
+
+        assert!(report.dry_run);
+        assert_eq!(report.importable_sources, 2);
+        assert_eq!(report.imported_sources, 0);
+        assert_eq!(report.manual_reentry_sources, 2);
+        assert_eq!(report.connectors_detected, 2);
+        assert_eq!(report.report.connectors_synced, 0);
+        assert_eq!(
+            report
+                .sources
+                .iter()
+                .filter(|item| item.status == LegacyEnvImportSourceStatus::Ready)
+                .count(),
+            2
+        );
+        assert!(report.sources.iter().any(|item| {
+            item.source_path == "config.yaml"
+                && item.status == LegacyEnvImportSourceStatus::ManualOnly
+        }));
+        assert!(report.sources.iter().any(|item| {
+            item.source_path == "services" && item.status == LegacyEnvImportSourceStatus::ManualOnly
+        }));
+
+        Ok(())
+    }
+
+    #[test]
+    fn import_legacy_env_imports_safe_context_into_graph() -> Result<()> {
+        let tempdir = TestDir::new("legacy-env-import-live")?;
+        let root = tempdir.path();
+        fs::write(
+            root.join(".env.local"),
+            "STRIPE_SECRET_KEY=sk_test_secret\nPUBLIC_BASE_URL=https://ecc.tools\n",
+        )?;
+        fs::write(
+            root.join(".env.production"),
+            "export OPENAI_API_KEY=sk-openai-secret\nexport PUBLIC_DOCS_URL=https://docs.ecc.tools\n",
+        )?;
+
+        let tempdb = TestDir::new("legacy-env-import-live-db")?;
+        let db = StateStore::open(&tempdb.path().join("state.db"))?;
+        let report = import_legacy_env_services(&db, root, false, 10)?;
+
+        assert!(!report.dry_run);
+        assert_eq!(report.importable_sources, 2);
+        assert_eq!(report.imported_sources, 2);
+        assert_eq!(report.manual_reentry_sources, 0);
+        assert_eq!(report.report.connectors_synced, 2);
+        assert_eq!(report.report.records_read, 4);
+        assert!(report.sources.iter().all(|item| {
+            item.status == LegacyEnvImportSourceStatus::Imported
+                || item.status == LegacyEnvImportSourceStatus::Ready
+        }));
+
+        let recalled = db.recall_context_entities(None, "stripe docs ecc.tools", 10)?;
+        assert!(recalled
+            .iter()
+            .any(|entry| entry.entity.name == "STRIPE_SECRET_KEY"));
+        assert!(recalled
+            .iter()
+            .any(|entry| entry.entity.name == "PUBLIC_BASE_URL"));
+        assert!(recalled
+            .iter()
+            .any(|entry| entry.entity.name == "PUBLIC_DOCS_URL"));
+
+        let secret = recalled
+            .iter()
+            .find(|entry| entry.entity.name == "STRIPE_SECRET_KEY")
+            .expect("secret entry should exist");
+        let observations = db.list_context_observations(Some(secret.entity.id), 5)?;
+        assert_eq!(
+            observations[0]
+                .details
+                .get("secret_redacted")
+                .map(String::as_str),
+            Some("true")
+        );
+        assert!(!observations[0].details.contains_key("value"));
 
         Ok(())
     }

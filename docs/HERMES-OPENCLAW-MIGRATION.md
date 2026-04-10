@@ -190,6 +190,7 @@ ECC 2.0 now ships a bounded migration audit entrypoint:
 - `ecc migrate scaffold --source ~/.hermes --output-dir migration-artifacts`
 - `ecc migrate import-schedules --source ~/.hermes --dry-run`
 - `ecc migrate import-remote --source ~/.hermes --dry-run`
+- `ecc migrate import-env --source ~/.hermes --dry-run`
 - `ecc migrate import-memory --source ~/.hermes`
 
 Use that first to inventory the legacy workspace and map detected surfaces onto the current ECC2 scheduler, remote dispatch, memory graph, templates, and manual-translation lanes.
