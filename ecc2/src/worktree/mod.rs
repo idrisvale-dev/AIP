@@ -44,6 +44,18 @@ pub struct BranchConflictPreview {
     pub right_patch_preview: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct GitStatusEntry {
+    pub path: String,
+    pub display_path: String,
+    pub index_status: char,
+    pub worktree_status: char,
+    pub staged: bool,
+    pub unstaged: bool,
+    pub untracked: bool,
+    pub conflicted: bool,
+}
+
 /// Create a new git worktree for an agent session.
 pub fn create_for_session(session_id: &str, cfg: &Config) -> Result<WorktreeInfo> {
     let repo_root = std::env::current_dir().context("Failed to resolve repository root")?;
@@ -220,6 +232,124 @@ pub fn diff_summary(worktree: &WorktreeInfo) -> Result<Option<String>> {
     } else {
         Ok(Some(parts.join(" | ")))
     }
+}
+
+pub fn git_status_entries(worktree: &WorktreeInfo) -> Result<Vec<GitStatusEntry>> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["status", "--porcelain=v1", "--untracked-files=all"])
+        .output()
+        .context("Failed to load git status entries")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git status failed: {stderr}");
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(parse_git_status_entry)
+        .collect())
+}
+
+pub fn stage_path(worktree: &WorktreeInfo, path: &str) -> Result<()> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["add", "--"])
+        .arg(path)
+        .output()
+        .with_context(|| format!("Failed to stage {}", path))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git add failed for {path}: {stderr}");
+    }
+}
+
+pub fn unstage_path(worktree: &WorktreeInfo, path: &str) -> Result<()> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["reset", "HEAD", "--"])
+        .arg(path)
+        .output()
+        .with_context(|| format!("Failed to unstage {}", path))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git reset failed for {path}: {stderr}");
+    }
+}
+
+pub fn reset_path(worktree: &WorktreeInfo, entry: &GitStatusEntry) -> Result<()> {
+    if entry.untracked {
+        let target = worktree.path.join(&entry.path);
+        if !target.exists() {
+            return Ok(());
+        }
+        let metadata = fs::symlink_metadata(&target)
+            .with_context(|| format!("Failed to inspect untracked path {}", target.display()))?;
+        if metadata.is_dir() {
+            fs::remove_dir_all(&target)
+                .with_context(|| format!("Failed to remove {}", target.display()))?;
+        } else {
+            fs::remove_file(&target)
+                .with_context(|| format!("Failed to remove {}", target.display()))?;
+        }
+        return Ok(());
+    }
+
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["restore", "--source=HEAD", "--staged", "--worktree", "--"])
+        .arg(&entry.path)
+        .output()
+        .with_context(|| format!("Failed to reset {}", entry.path))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git restore failed for {}: {stderr}", entry.path);
+    }
+}
+
+pub fn commit_staged(worktree: &WorktreeInfo, message: &str) -> Result<String> {
+    let message = message.trim();
+    if message.is_empty() {
+        anyhow::bail!("commit message cannot be empty");
+    }
+    if !has_staged_changes(worktree)? {
+        anyhow::bail!("no staged changes to commit");
+    }
+
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["commit", "-m", message])
+        .output()
+        .context("Failed to create commit")?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git commit failed: {stderr}");
+    }
+
+    let rev_parse = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["rev-parse", "--short", "HEAD"])
+        .output()
+        .context("Failed to resolve commit hash")?;
+    if !rev_parse.status.success() {
+        let stderr = String::from_utf8_lossy(&rev_parse.stderr);
+        anyhow::bail!("git rev-parse failed: {stderr}");
+    }
+
+    Ok(String::from_utf8_lossy(&rev_parse.stdout).trim().to_string())
 }
 
 pub fn diff_file_preview(worktree: &WorktreeInfo, limit: usize) -> Result<Vec<String>> {
@@ -407,6 +537,10 @@ pub fn health(worktree: &WorktreeInfo) -> Result<WorktreeHealth> {
 
 pub fn has_uncommitted_changes(worktree: &WorktreeInfo) -> Result<bool> {
     Ok(!git_status_short(&worktree.path)?.is_empty())
+}
+
+pub fn has_staged_changes(worktree: &WorktreeInfo) -> Result<bool> {
+    Ok(git_status_entries(worktree)?.iter().any(|entry| entry.staged))
 }
 
 pub fn merge_into_base(worktree: &WorktreeInfo) -> Result<MergeOutcome> {
@@ -852,6 +986,43 @@ fn validate_branch_name(repo_root: &Path, branch: &str) -> Result<()> {
             anyhow::bail!("{stderr}");
         }
     }
+}
+
+fn parse_git_status_entry(line: &str) -> Option<GitStatusEntry> {
+    if line.len() < 4 {
+        return None;
+    }
+    let bytes = line.as_bytes();
+    let index_status = bytes[0] as char;
+    let worktree_status = bytes[1] as char;
+    let raw_path = line.get(3..)?.trim();
+    if raw_path.is_empty() {
+        return None;
+    }
+    let display_path = raw_path.to_string();
+    let normalized_path = raw_path
+        .split(" -> ")
+        .last()
+        .unwrap_or(raw_path)
+        .trim()
+        .to_string();
+    let conflicted = matches!(
+        (index_status, worktree_status),
+        ('U', _)
+            | (_, 'U')
+            | ('A', 'A')
+            | ('D', 'D')
+    );
+    Some(GitStatusEntry {
+        path: normalized_path,
+        display_path,
+        index_status,
+        worktree_status,
+        staged: index_status != ' ' && index_status != '?',
+        unstaged: worktree_status != ' ' && worktree_status != '?',
+        untracked: index_status == '?' && worktree_status == '?',
+        conflicted,
+    })
 }
 
 fn parse_nonempty_lines(stdout: &[u8]) -> Vec<String> {
@@ -1327,6 +1498,68 @@ mod tests {
             .args(["worktree", "remove", "--force"])
             .arg(&right_dir)
             .output();
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn git_status_helpers_stage_unstage_reset_and_commit() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-git-status-helpers-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        let worktree = WorktreeInfo {
+            path: repo.clone(),
+            branch: "main".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        fs::write(repo.join("README.md"), "hello updated\n")?;
+        fs::write(repo.join("notes.txt"), "draft\n")?;
+
+        let mut entries = git_status_entries(&worktree)?;
+        let readme = entries
+            .iter()
+            .find(|entry| entry.path == "README.md")
+            .expect("tracked README entry");
+        assert!(readme.unstaged);
+        let notes = entries
+            .iter()
+            .find(|entry| entry.path == "notes.txt")
+            .expect("untracked notes entry");
+        assert!(notes.untracked);
+
+        stage_path(&worktree, "notes.txt")?;
+        entries = git_status_entries(&worktree)?;
+        let notes = entries
+            .iter()
+            .find(|entry| entry.path == "notes.txt")
+            .expect("staged notes entry");
+        assert!(notes.staged);
+        assert!(!notes.untracked);
+
+        unstage_path(&worktree, "notes.txt")?;
+        entries = git_status_entries(&worktree)?;
+        let notes = entries
+            .iter()
+            .find(|entry| entry.path == "notes.txt")
+            .expect("restored notes entry");
+        assert!(notes.untracked);
+
+        let notes_entry = notes.clone();
+        reset_path(&worktree, &notes_entry)?;
+        assert!(!repo.join("notes.txt").exists());
+
+        stage_path(&worktree, "README.md")?;
+        let hash = commit_staged(&worktree, "update readme")?;
+        assert!(!hash.is_empty());
+        assert!(git_status_entries(&worktree)?.is_empty());
+
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["log", "-1", "--pretty=%s"])
+            .output()?;
+        assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "update readme");
+
         let _ = fs::remove_dir_all(root);
         Ok(())
     }

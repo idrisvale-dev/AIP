@@ -82,6 +82,8 @@ pub struct Dashboard {
     diff_view_mode: DiffViewMode,
     selected_conflict_protocol: Option<String>,
     selected_merge_readiness: Option<worktree::MergeReadiness>,
+    selected_git_status_entries: Vec<worktree::GitStatusEntry>,
+    selected_git_status: usize,
     output_mode: OutputMode,
     output_filter: OutputFilter,
     output_time_filter: OutputTimeFilter,
@@ -101,6 +103,7 @@ pub struct Dashboard {
     collapsed_panes: HashSet<Pane>,
     search_input: Option<String>,
     spawn_input: Option<String>,
+    commit_input: Option<String>,
     search_query: Option<String>,
     search_scope: SearchScope,
     search_agent_filter: SearchAgentFilter,
@@ -144,6 +147,7 @@ enum OutputMode {
     Timeline,
     WorktreeDiff,
     ConflictProtocol,
+    GitStatus,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -346,6 +350,8 @@ impl Dashboard {
             diff_view_mode: DiffViewMode::Split,
             selected_conflict_protocol: None,
             selected_merge_readiness: None,
+            selected_git_status_entries: Vec::new(),
+            selected_git_status: 0,
             output_mode: OutputMode::SessionOutput,
             output_filter: OutputFilter::All,
             output_time_filter: OutputTimeFilter::AllTime,
@@ -365,6 +371,7 @@ impl Dashboard {
             collapsed_panes: HashSet::new(),
             search_input: None,
             spawn_input: None,
+            commit_input: None,
             search_query: None,
             search_scope: SearchScope::SelectedSession,
             search_agent_filter: SearchAgentFilter::AllAgents,
@@ -641,6 +648,14 @@ impl Dashboard {
                     });
                     (" Conflict Protocol ".to_string(), Text::from(content))
                 }
+                OutputMode::GitStatus => {
+                    let content = if self.selected_git_status_entries.is_empty() {
+                        Text::from(self.empty_git_status_message())
+                    } else {
+                        Text::from(self.visible_git_status_lines())
+                    };
+                    (self.output_title(), content)
+                }
             }
         } else {
             (
@@ -712,6 +727,28 @@ impl Dashboard {
             );
         }
 
+        if self.output_mode == OutputMode::GitStatus {
+            let staged = self
+                .selected_git_status_entries
+                .iter()
+                .filter(|entry| entry.staged)
+                .count();
+            let unstaged = self
+                .selected_git_status_entries
+                .iter()
+                .filter(|entry| entry.unstaged || entry.untracked)
+                .count();
+            let total = self.selected_git_status_entries.len();
+            let current = if total == 0 {
+                0
+            } else {
+                self.selected_git_status.min(total.saturating_sub(1)) + 1
+            };
+            return format!(
+                " Git status staged:{staged} unstaged:{unstaged} {current}/{total} "
+            );
+        }
+
         let filter = format!(
             "{}{}",
             self.output_filter.title_suffix(),
@@ -755,6 +792,10 @@ impl Dashboard {
                 "No file-change output in the selected time range."
             }
         }
+    }
+
+    fn empty_git_status_message(&self) -> &'static str {
+        "No staged or unstaged changes for this worktree."
     }
 
     fn empty_timeline_message(&self) -> &'static str {
@@ -980,7 +1021,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [{}] focus pane  [Tab] cycle pane  [{}] move pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  git status [z]  stage [S]  unstage [U]  reset [R]  commit [C]  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [{}] focus pane  [Tab] cycle pane  [{}] move pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.pane_focus_shortcuts_label(),
             self.pane_move_shortcuts_label(),
             self.layout_label(),
@@ -989,6 +1030,8 @@ impl Dashboard {
 
         let search_prefix = if let Some(input) = self.spawn_input.as_ref() {
             format!(" spawn>{input}_ | [Enter] queue [Esc] cancel |")
+        } else if let Some(input) = self.commit_input.as_ref() {
+            format!(" commit>{input}_ | [Enter] commit [Esc] cancel |")
         } else if let Some(input) = self.search_input.as_ref() {
             format!(
                 " /{input}_ | {} | {} | [Enter] apply [Esc] cancel |",
@@ -1015,6 +1058,7 @@ impl Dashboard {
         };
 
         let text = if self.spawn_input.is_some()
+            || self.commit_input.is_some()
             || self.search_input.is_some()
             || self.search_query.is_some()
             || self.pane_command_mode
@@ -1075,8 +1119,11 @@ impl Dashboard {
             "  y       Toggle selected-session timeline view".to_string(),
             "  E       Cycle timeline event filter".to_string(),
             "  v       Toggle selected worktree diff in output pane".to_string(),
+            "  z       Toggle selected worktree git status in output pane".to_string(),
             "  V       Toggle diff view mode between split and unified".to_string(),
             "  {/}     Jump to previous/next diff hunk in the active diff view".to_string(),
+            "  S/U/R   Stage, unstage, or reset the selected git-status entry".to_string(),
+            "  C       Commit staged changes for the selected worktree".to_string(),
             "  c       Show conflict-resolution protocol for selected conflicted worktree"
                 .to_string(),
             "  e       Cycle output content filter: all/errors/tool calls/file changes".to_string(),
@@ -1539,6 +1586,14 @@ impl Dashboard {
                 self.refresh_logs();
             }
             Pane::Output => {
+                if self.output_mode == OutputMode::GitStatus {
+                    self.output_follow = false;
+                    if self.selected_git_status + 1 < self.selected_git_status_entries.len() {
+                        self.selected_git_status += 1;
+                        self.sync_output_scroll(self.last_output_height.max(1));
+                    }
+                    return;
+                }
                 let max_scroll = self.max_output_scroll();
                 if self.output_follow {
                     return;
@@ -1578,6 +1633,12 @@ impl Dashboard {
                 self.refresh_logs();
             }
             Pane::Output => {
+                if self.output_mode == OutputMode::GitStatus {
+                    self.output_follow = false;
+                    self.selected_git_status = self.selected_git_status.saturating_sub(1);
+                    self.sync_output_scroll(self.last_output_height.max(1));
+                    return;
+                }
                 if self.output_follow {
                     self.output_follow = false;
                     self.output_scroll_offset = self.max_output_scroll();
@@ -1789,7 +1850,134 @@ impl Dashboard {
                 self.reset_output_view();
                 self.set_operator_note("showing session output".to_string());
             }
+            OutputMode::GitStatus => {
+                self.output_mode = OutputMode::SessionOutput;
+                self.reset_output_view();
+                self.set_operator_note("showing session output".to_string());
+            }
         }
+    }
+
+    pub fn toggle_git_status_mode(&mut self) {
+        match self.output_mode {
+            OutputMode::GitStatus => {
+                self.output_mode = OutputMode::SessionOutput;
+                self.reset_output_view();
+                self.set_operator_note("showing session output".to_string());
+            }
+            _ => {
+                let has_worktree = self
+                    .sessions
+                    .get(self.selected_session)
+                    .and_then(|session| session.worktree.as_ref())
+                    .is_some();
+                if !has_worktree {
+                    self.set_operator_note("selected session has no worktree".to_string());
+                    return;
+                }
+
+                self.sync_selected_git_status();
+                self.output_mode = OutputMode::GitStatus;
+                self.selected_pane = Pane::Output;
+                self.output_follow = false;
+                self.sync_output_scroll(self.last_output_height.max(1));
+                self.set_operator_note("showing selected worktree git status".to_string());
+            }
+        }
+    }
+
+    pub fn stage_selected_git_status(&mut self) {
+        if self.output_mode != OutputMode::GitStatus {
+            self.set_operator_note(
+                "git staging controls are only available in git status view".to_string(),
+            );
+            return;
+        }
+
+        let Some((entry, worktree)) = self.selected_git_status_context() else {
+            self.set_operator_note("no git status entry selected".to_string());
+            return;
+        };
+
+        if let Err(error) = worktree::stage_path(&worktree, &entry.path) {
+            tracing::warn!("Failed to stage {}: {error}", entry.path);
+            self.set_operator_note(format!("stage failed for {}: {error}", entry.display_path));
+            return;
+        }
+
+        self.refresh_after_git_status_action(Some(&entry.path));
+        self.set_operator_note(format!("staged {}", entry.display_path));
+    }
+
+    pub fn unstage_selected_git_status(&mut self) {
+        if self.output_mode != OutputMode::GitStatus {
+            self.set_operator_note(
+                "git staging controls are only available in git status view".to_string(),
+            );
+            return;
+        }
+
+        let Some((entry, worktree)) = self.selected_git_status_context() else {
+            self.set_operator_note("no git status entry selected".to_string());
+            return;
+        };
+
+        if let Err(error) = worktree::unstage_path(&worktree, &entry.path) {
+            tracing::warn!("Failed to unstage {}: {error}", entry.path);
+            self.set_operator_note(format!("unstage failed for {}: {error}", entry.display_path));
+            return;
+        }
+
+        self.refresh_after_git_status_action(Some(&entry.path));
+        self.set_operator_note(format!("unstaged {}", entry.display_path));
+    }
+
+    pub fn reset_selected_git_status(&mut self) {
+        if self.output_mode != OutputMode::GitStatus {
+            self.set_operator_note(
+                "git staging controls are only available in git status view".to_string(),
+            );
+            return;
+        }
+
+        let Some((entry, worktree)) = self.selected_git_status_context() else {
+            self.set_operator_note("no git status entry selected".to_string());
+            return;
+        };
+
+        if let Err(error) = worktree::reset_path(&worktree, &entry) {
+            tracing::warn!("Failed to reset {}: {error}", entry.path);
+            self.set_operator_note(format!("reset failed for {}: {error}", entry.display_path));
+            return;
+        }
+
+        self.refresh_after_git_status_action(Some(&entry.path));
+        self.set_operator_note(format!("reset {}", entry.display_path));
+    }
+
+    pub fn begin_commit_prompt(&mut self) {
+        if self.output_mode != OutputMode::GitStatus {
+            self.set_operator_note("commit prompt is only available in git status view".to_string());
+            return;
+        }
+
+        if self
+            .sessions
+            .get(self.selected_session)
+            .and_then(|session| session.worktree.as_ref())
+            .is_none()
+        {
+            self.set_operator_note("selected session has no worktree".to_string());
+            return;
+        }
+
+        if !self.selected_git_status_entries.iter().any(|entry| entry.staged) {
+            self.set_operator_note("no staged changes to commit".to_string());
+            return;
+        }
+
+        self.commit_input = Some(String::new());
+        self.set_operator_note("commit mode | type a message and press Enter".to_string());
     }
 
     pub fn toggle_diff_view_mode(&mut self) {
@@ -2445,7 +2633,7 @@ impl Dashboard {
     }
 
     pub fn is_input_mode(&self) -> bool {
-        self.spawn_input.is_some() || self.search_input.is_some()
+        self.spawn_input.is_some() || self.search_input.is_some() || self.commit_input.is_some()
     }
 
     pub fn has_active_search(&self) -> bool {
@@ -2553,6 +2741,8 @@ impl Dashboard {
             input.push(ch);
         } else if let Some(input) = self.search_input.as_mut() {
             input.push(ch);
+        } else if let Some(input) = self.commit_input.as_mut() {
+            input.push(ch);
         }
     }
 
@@ -2560,6 +2750,8 @@ impl Dashboard {
         if let Some(input) = self.spawn_input.as_mut() {
             input.pop();
         } else if let Some(input) = self.search_input.as_mut() {
+            input.pop();
+        } else if let Some(input) = self.commit_input.as_mut() {
             input.pop();
         }
     }
@@ -2569,14 +2761,53 @@ impl Dashboard {
             self.set_operator_note("spawn input cancelled".to_string());
         } else if self.search_input.take().is_some() {
             self.set_operator_note("search input cancelled".to_string());
+        } else if self.commit_input.take().is_some() {
+            self.set_operator_note("commit input cancelled".to_string());
         }
     }
 
     pub async fn submit_input(&mut self) {
         if self.spawn_input.is_some() {
             self.submit_spawn_prompt().await;
+        } else if self.commit_input.is_some() {
+            self.submit_commit_prompt();
         } else {
             self.submit_search();
+        }
+    }
+
+    fn submit_commit_prompt(&mut self) {
+        let Some(input) = self.commit_input.take() else {
+            return;
+        };
+
+        let message = input.trim().to_string();
+        let Some(session_id) = self.selected_session_id().map(ToOwned::to_owned) else {
+            self.set_operator_note("no session selected".to_string());
+            return;
+        };
+        let Some(worktree) = self
+            .sessions
+            .get(self.selected_session)
+            .and_then(|session| session.worktree.clone())
+        else {
+            self.set_operator_note("selected session has no worktree".to_string());
+            return;
+        };
+
+        match worktree::commit_staged(&worktree, &message) {
+            Ok(hash) => {
+                self.refresh_after_git_status_action(None);
+                self.set_operator_note(format!(
+                    "committed {} as {}",
+                    format_session_id(&session_id),
+                    hash
+                ));
+            }
+            Err(error) => {
+                self.commit_input = Some(input);
+                self.set_operator_note(format!("commit failed: {error}"));
+            }
         }
     }
 
@@ -3017,6 +3248,7 @@ impl Dashboard {
         self.ensure_selected_pane_visible();
         self.sync_selected_output();
         self.sync_selected_diff();
+        self.sync_selected_git_status();
         self.sync_selected_messages();
         self.sync_selected_lineage();
         self.refresh_logs();
@@ -3313,6 +3545,53 @@ impl Dashboard {
         {
             self.output_mode = OutputMode::SessionOutput;
         }
+        self.sync_selected_git_status();
+    }
+
+    fn sync_selected_git_status(&mut self) {
+        let session = self.sessions.get(self.selected_session);
+        let worktree = session.and_then(|session| session.worktree.as_ref());
+        self.selected_git_status_entries = worktree
+            .and_then(|worktree| worktree::git_status_entries(worktree).ok())
+            .unwrap_or_default();
+        if self.selected_git_status >= self.selected_git_status_entries.len() {
+            self.selected_git_status = self
+                .selected_git_status_entries
+                .len()
+                .saturating_sub(1);
+        }
+        if self.output_mode == OutputMode::GitStatus && worktree.is_none() {
+            self.output_mode = OutputMode::SessionOutput;
+        }
+    }
+
+    fn selected_git_status_context(
+        &self,
+    ) -> Option<(worktree::GitStatusEntry, crate::session::WorktreeInfo)> {
+        let session = self.sessions.get(self.selected_session)?;
+        let worktree = session.worktree.clone()?;
+        let entry = self
+            .selected_git_status_entries
+            .get(self.selected_git_status)
+            .cloned()?;
+        Some((entry, worktree))
+    }
+
+    fn refresh_after_git_status_action(&mut self, preferred_path: Option<&str>) {
+        self.refresh();
+        self.output_mode = OutputMode::GitStatus;
+        self.selected_pane = Pane::Output;
+        self.output_follow = false;
+        if let Some(path) = preferred_path {
+            if let Some(index) = self
+                .selected_git_status_entries
+                .iter()
+                .position(|entry| entry.path == path)
+            {
+                self.selected_git_status = index;
+            }
+        }
+        self.sync_output_scroll(self.last_output_height.max(1));
     }
 
     fn current_diff_hunk_offsets(&self) -> &[usize] {
@@ -3625,6 +3904,42 @@ impl Dashboard {
             .unwrap_or_default()
     }
 
+    fn visible_git_status_lines(&self) -> Vec<Line<'static>> {
+        self.selected_git_status_entries
+            .iter()
+            .enumerate()
+            .map(|(index, entry)| {
+                let marker = if index == self.selected_git_status { ">>" } else { "-" };
+                let mut flags = Vec::new();
+                if entry.conflicted {
+                    flags.push("conflict");
+                }
+                if entry.staged {
+                    flags.push("staged");
+                }
+                if entry.unstaged {
+                    flags.push("unstaged");
+                }
+                if entry.untracked {
+                    flags.push("untracked");
+                }
+                let flag_text = if flags.is_empty() {
+                    "clean".to_string()
+                } else {
+                    flags.join(",")
+                };
+                Line::from(format!(
+                    "{} [{}{}] [{}] {}",
+                    marker,
+                    entry.index_status,
+                    entry.worktree_status,
+                    flag_text,
+                    entry.display_path
+                ))
+            })
+            .collect()
+    }
+
     fn visible_timeline_lines(&self) -> Vec<Line<'static>> {
         let show_session_label = self.timeline_scope == SearchScope::AllSessions;
         self.timeline_events()
@@ -3928,6 +4243,14 @@ impl Dashboard {
 
     fn sync_output_scroll(&mut self, viewport_height: usize) {
         self.last_output_height = viewport_height.max(1);
+        if self.output_mode == OutputMode::GitStatus {
+            let max_scroll = self.max_output_scroll();
+            let centered = self
+                .selected_git_status
+                .saturating_sub(self.last_output_height.max(1).saturating_sub(1) / 2);
+            self.output_scroll_offset = centered.min(max_scroll);
+            return;
+        }
         let max_scroll = self.max_output_scroll();
 
         if self.output_follow {
@@ -3938,9 +4261,14 @@ impl Dashboard {
     }
 
     fn max_output_scroll(&self) -> usize {
-        self.visible_output_lines()
-            .len()
-            .saturating_sub(self.last_output_height.max(1))
+        let total_lines = if self.output_mode == OutputMode::GitStatus {
+            self.selected_git_status_entries.len()
+        } else if self.output_mode == OutputMode::Timeline {
+            self.visible_timeline_lines().len()
+        } else {
+            self.visible_output_lines().len()
+        };
+        total_lines.saturating_sub(self.last_output_height.max(1))
     }
 
     fn sync_metrics_scroll(&mut self, viewport_height: usize) {
@@ -6707,6 +7035,80 @@ mod tests {
         assert!(rendered.contains("Additions"));
         assert!(rendered.contains("-old line"));
         assert!(rendered.contains("+new line"));
+    }
+
+    #[test]
+    fn toggle_git_status_mode_renders_selected_worktree_status() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-git-status-{}", Uuid::new_v4()));
+        init_git_repo(&root)?;
+        fs::write(root.join("README.md"), "hello from git status\n")?;
+
+        let mut session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        session.working_dir = root.clone();
+        session.worktree = Some(WorktreeInfo {
+            path: root.clone(),
+            branch: "main".to_string(),
+            base_branch: "main".to_string(),
+        });
+        let mut dashboard = test_dashboard(vec![session], 0);
+
+        dashboard.toggle_git_status_mode();
+
+        assert_eq!(dashboard.output_mode, OutputMode::GitStatus);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("showing selected worktree git status")
+        );
+        assert_eq!(dashboard.output_title(), " Git status staged:0 unstaged:1 1/1 ");
+        let rendered = dashboard.rendered_output_text(180, 20);
+        assert!(rendered.contains("Git status"));
+        assert!(rendered.contains("README.md"));
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn begin_commit_prompt_opens_commit_input_for_staged_entries() {
+        let mut dashboard = test_dashboard(
+            vec![sample_session(
+                "focus-12345678",
+                "planner",
+                SessionState::Running,
+                Some("ecc/focus"),
+                512,
+                42,
+            )],
+            0,
+        );
+        dashboard.output_mode = OutputMode::GitStatus;
+        dashboard.selected_git_status_entries = vec![worktree::GitStatusEntry {
+            path: "README.md".to_string(),
+            display_path: "README.md".to_string(),
+            index_status: 'M',
+            worktree_status: ' ',
+            staged: true,
+            unstaged: false,
+            untracked: false,
+            conflicted: false,
+        }];
+
+        dashboard.begin_commit_prompt();
+
+        assert_eq!(dashboard.commit_input.as_deref(), Some(""));
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("commit mode | type a message and press Enter")
+        );
+        let rendered = render_dashboard_text(dashboard, 180, 20);
+        assert!(rendered.contains("commit>_"));
     }
 
     #[test]
@@ -10489,6 +10891,8 @@ diff --git a/src/lib.rs b/src/lib.rs
             diff_view_mode: DiffViewMode::Split,
             selected_conflict_protocol: None,
             selected_merge_readiness: None,
+            selected_git_status_entries: Vec::new(),
+            selected_git_status: 0,
             output_mode: OutputMode::SessionOutput,
             output_filter: OutputFilter::All,
             output_time_filter: OutputTimeFilter::AllTime,
@@ -10507,6 +10911,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             collapsed_panes: HashSet::new(),
             search_input: None,
             spawn_input: None,
+            commit_input: None,
             search_query: None,
             search_scope: SearchScope::SelectedSession,
             search_agent_filter: SearchAgentFilter::AllAgents,
