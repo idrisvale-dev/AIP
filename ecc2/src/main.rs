@@ -1230,8 +1230,8 @@ async fn main() -> Result<()> {
             for s in sessions {
                 let harness = harnesses
                     .get(&s.id)
-                    .map(|info| info.primary.to_string())
-                    .unwrap_or_else(|| "unknown".to_string());
+                    .map(|info| info.primary_label.clone())
+                    .unwrap_or_else(|| session::SessionHarnessInfo::runner_key(&s.agent_type));
                 println!("{} [{}] [{}] {}", s.id, s.state, harness, s.task);
             }
         }

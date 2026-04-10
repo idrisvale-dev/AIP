@@ -706,7 +706,7 @@ impl StateStore {
                 rusqlite::params![
                     session_id,
                     canonical_agent_type,
-                    harness.primary.to_string(),
+                    harness.primary_label,
                     detected_json
                 ],
             )?;
@@ -728,7 +728,7 @@ impl StateStore {
                 session.project,
                 session.task_group,
                 session.agent_type,
-                harness.primary.to_string(),
+                harness.primary_label,
                 detected_json,
                 session.working_dir.to_string_lossy().to_string(),
                 session.state.to_string(),
@@ -1763,16 +1763,17 @@ impl StateStore {
         let harnesses = stmt
             .query_map([], |row| {
                 let session_id: String = row.get(0)?;
-                let primary = HarnessKind::from_db_value(&row.get::<_, String>(1)?);
+                let harness_label: String = row.get(1)?;
                 let detected = serde_json::from_str::<Vec<HarnessKind>>(&row.get::<_, String>(2)?)
                     .unwrap_or_default();
                 let agent_type: String = row.get(3)?;
                 let working_dir = PathBuf::from(row.get::<_, String>(4)?);
-                let info = if primary == HarnessKind::Unknown && detected.is_empty() {
-                    SessionHarnessInfo::detect(&agent_type, &working_dir)
-                } else {
-                    SessionHarnessInfo { primary, detected }
-                };
+                let info = SessionHarnessInfo::from_persisted(
+                    &harness_label,
+                    &agent_type,
+                    &working_dir,
+                    detected,
+                );
                 Ok((session_id, info))
             })?
             .collect::<std::result::Result<HashMap<_, _>, _>>()?;
@@ -1788,16 +1789,17 @@ impl StateStore {
         )?;
 
         stmt.query_row([session_id], |row| {
-            let primary = HarnessKind::from_db_value(&row.get::<_, String>(0)?);
+            let harness_label: String = row.get(0)?;
             let detected = serde_json::from_str::<Vec<HarnessKind>>(&row.get::<_, String>(1)?)
                 .unwrap_or_default();
             let agent_type: String = row.get(2)?;
             let working_dir = PathBuf::from(row.get::<_, String>(3)?);
-            let info = if primary == HarnessKind::Unknown && detected.is_empty() {
-                SessionHarnessInfo::detect(&agent_type, &working_dir)
-            } else {
-                SessionHarnessInfo { primary, detected }
-            };
+            let info = SessionHarnessInfo::from_persisted(
+                &harness_label,
+                &agent_type,
+                &working_dir,
+                detected,
+            );
             Ok(info)
         })
         .optional()
@@ -4191,7 +4193,38 @@ mod tests {
             .get_session_harness_info("sess-legacy")?
             .expect("legacy row should be backfilled");
         assert_eq!(harness.primary, HarnessKind::Gemini);
+        assert_eq!(harness.primary_label, "gemini");
         assert_eq!(harness.detected, vec![HarnessKind::Codex]);
+        Ok(())
+    }
+
+    #[test]
+    fn insert_session_preserves_custom_harness_label_for_unknown_agent_types() -> Result<()> {
+        let tempdir = TestDir::new("store-custom-harness-label")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "sess-custom".to_string(),
+            task: "Run custom harness".to_string(),
+            project: "ecc".to_string(),
+            task_group: "compat".to_string(),
+            agent_type: "acme-runner".to_string(),
+            working_dir: PathBuf::from(tempdir.path()),
+            state: SessionState::Pending,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let harness = db
+            .get_session_harness_info("sess-custom")?
+            .expect("custom session should have harness info");
+        assert_eq!(harness.primary, HarnessKind::Unknown);
+        assert_eq!(harness.primary_label, "acme-runner");
         Ok(())
     }
 

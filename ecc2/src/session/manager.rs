@@ -2004,10 +2004,11 @@ pub async fn delete_session(db: &StateStore, id: &str) -> Result<()> {
 
 fn agent_program(cfg: &Config, agent_type: &str) -> Result<PathBuf> {
     let harness = HarnessKind::from_agent_type(agent_type);
-    if let Some(runner) = cfg.harness_runner(harness.as_str()) {
+    let runner_key = SessionHarnessInfo::runner_key(agent_type);
+    if let Some(runner) = cfg.harness_runner(&runner_key) {
         let program = runner.program.trim();
         if program.is_empty() {
-            anyhow::bail!("Configured harness runner for {harness} is missing a program");
+            anyhow::bail!("Configured harness runner for {runner_key} is missing a program");
         }
         return Ok(PathBuf::from(program));
     }
@@ -2685,7 +2686,7 @@ fn build_agent_command(
     profile: Option<&SessionAgentProfile>,
 ) -> Command {
     let harness = HarnessKind::from_agent_type(agent_type);
-    if let Some(runner) = cfg.harness_runner(harness.as_str()) {
+    if let Some(runner) = cfg.harness_runner(&SessionHarnessInfo::runner_key(agent_type)) {
         return build_configured_harness_command(
             runner,
             agent_program,
@@ -3327,7 +3328,7 @@ impl fmt::Display for SessionStatus {
         writeln!(f, "Session: {}", s.id)?;
         writeln!(f, "Task:    {}", s.task)?;
         writeln!(f, "Agent:   {}", s.agent_type)?;
-        writeln!(f, "Harness: {}", self.harness.primary)?;
+        writeln!(f, "Harness: {}", self.harness.primary_label)?;
         writeln!(f, "Detected: {}", self.harness.detected_summary())?;
         writeln!(f, "State:   {}", s.state)?;
         if let Some(profile) = self.profile.as_ref() {
@@ -3876,6 +3877,24 @@ mod tests {
         assert_eq!(
             agent_program(&cfg, "cursor")?,
             PathBuf::from("cursor-agent")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn agent_program_uses_configured_runner_for_unknown_custom_harness() -> Result<()> {
+        let mut cfg = Config::default();
+        cfg.harness_runners.insert(
+            "acme-runner".to_string(),
+            crate::config::HarnessRunnerConfig {
+                program: "acme-agent".to_string(),
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(
+            agent_program(&cfg, "acme-runner")?,
+            PathBuf::from("acme-agent")
         );
         Ok(())
     }

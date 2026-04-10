@@ -109,11 +109,38 @@ impl fmt::Display for HarnessKind {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SessionHarnessInfo {
     pub primary: HarnessKind,
+    pub primary_label: String,
     pub detected: Vec<HarnessKind>,
 }
 
 impl SessionHarnessInfo {
+    pub fn runner_key(agent_type: &str) -> String {
+        let canonical = HarnessKind::canonical_agent_type(agent_type);
+        match HarnessKind::from_agent_type(&canonical) {
+            HarnessKind::Unknown if canonical.is_empty() => {
+                HarnessKind::Unknown.as_str().to_string()
+            }
+            HarnessKind::Unknown => canonical,
+            harness => harness.as_str().to_string(),
+        }
+    }
+
+    fn primary_label_for(agent_type: &str, primary: HarnessKind) -> String {
+        match primary {
+            HarnessKind::Unknown => {
+                let label = Self::runner_key(agent_type);
+                if label.is_empty() {
+                    HarnessKind::Unknown.as_str().to_string()
+                } else {
+                    label
+                }
+            }
+            harness => harness.as_str().to_string(),
+        }
+    }
+
     pub fn detect(agent_type: &str, working_dir: &Path) -> Self {
+        let runner_key = Self::runner_key(agent_type);
         let detected = [
             HarnessKind::Claude,
             HarnessKind::Codex,
@@ -132,12 +159,43 @@ impl SessionHarnessInfo {
         })
         .collect::<Vec<_>>();
 
-        let primary = match HarnessKind::from_agent_type(agent_type) {
-            HarnessKind::Unknown => detected.first().copied().unwrap_or(HarnessKind::Unknown),
+        let primary = match HarnessKind::from_agent_type(&runner_key) {
+            HarnessKind::Unknown if runner_key == HarnessKind::Unknown.as_str() => {
+                detected.first().copied().unwrap_or(HarnessKind::Unknown)
+            }
+            HarnessKind::Unknown => HarnessKind::Unknown,
             harness => harness,
         };
 
-        Self { primary, detected }
+        Self {
+            primary,
+            primary_label: Self::primary_label_for(agent_type, primary),
+            detected,
+        }
+    }
+
+    pub fn from_persisted(
+        harness_label: &str,
+        agent_type: &str,
+        working_dir: &Path,
+        detected: Vec<HarnessKind>,
+    ) -> Self {
+        let primary = HarnessKind::from_db_value(harness_label);
+        if primary == HarnessKind::Unknown && detected.is_empty() && harness_label.trim().is_empty()
+        {
+            return Self::detect(agent_type, working_dir);
+        }
+
+        let normalized_label = harness_label.trim().to_ascii_lowercase();
+        Self {
+            primary,
+            primary_label: if normalized_label.is_empty() {
+                Self::primary_label_for(agent_type, primary)
+            } else {
+                normalized_label
+            },
+            detected,
+        }
     }
 
     pub fn detected_summary(&self) -> String {
@@ -510,6 +568,7 @@ mod tests {
 
         let harness = SessionHarnessInfo::detect("claude", repo.path());
         assert_eq!(harness.primary, HarnessKind::Claude);
+        assert_eq!(harness.primary_label, "claude");
         assert_eq!(
             harness.detected,
             vec![HarnessKind::Claude, HarnessKind::Codex]
@@ -519,13 +578,14 @@ mod tests {
     }
 
     #[test]
-    fn detect_session_harness_falls_back_to_project_markers_for_unknown_agent(
+    fn detect_session_harness_falls_back_to_project_markers_when_agent_unspecified(
     ) -> Result<(), Box<dyn std::error::Error>> {
         let repo = TestDir::new("session-harness-markers")?;
         fs::create_dir_all(repo.path().join(".gemini"))?;
 
-        let harness = SessionHarnessInfo::detect("custom-runner", repo.path());
+        let harness = SessionHarnessInfo::detect("", repo.path());
         assert_eq!(harness.primary, HarnessKind::Gemini);
+        assert_eq!(harness.primary_label, "gemini");
         assert_eq!(harness.detected, vec![HarnessKind::Gemini]);
         Ok(())
     }
@@ -542,5 +602,39 @@ mod tests {
             HarnessKind::canonical_agent_type(" custom-runner "),
             "custom-runner"
         );
+    }
+
+    #[test]
+    fn detect_session_harness_preserves_custom_agent_label_without_markers() {
+        let harness = SessionHarnessInfo::detect(" custom-runner ", Path::new("."));
+        assert_eq!(harness.primary, HarnessKind::Unknown);
+        assert_eq!(harness.primary_label, "custom-runner");
+        assert!(harness.detected.is_empty());
+    }
+
+    #[test]
+    fn detect_session_harness_preserves_custom_agent_label_with_project_markers(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let repo = TestDir::new("session-harness-custom-markers")?;
+        fs::create_dir_all(repo.path().join(".claude"))?;
+        fs::create_dir_all(repo.path().join(".codex"))?;
+
+        let harness = SessionHarnessInfo::detect("custom-runner", repo.path());
+        assert_eq!(harness.primary, HarnessKind::Unknown);
+        assert_eq!(harness.primary_label, "custom-runner");
+        assert_eq!(
+            harness.detected,
+            vec![HarnessKind::Claude, HarnessKind::Codex]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn runner_key_uses_canonical_label_for_unknown_harnesses() {
+        assert_eq!(
+            SessionHarnessInfo::runner_key(" custom-runner "),
+            "custom-runner"
+        );
+        assert_eq!(SessionHarnessInfo::runner_key("claude-code"), "claude");
     }
 }

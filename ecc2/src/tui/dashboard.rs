@@ -6347,7 +6347,7 @@ impl Dashboard {
             if let Some(harness) = self.session_harnesses.get(&session.id) {
                 lines.push(format!(
                     "Harness {} | Detected {}",
-                    harness.primary,
+                    harness.primary_label,
                     harness.detected_summary()
                 ));
             }
