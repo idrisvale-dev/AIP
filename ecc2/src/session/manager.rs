@@ -10,7 +10,7 @@ use super::output::SessionOutputStore;
 use super::runtime::capture_command_output;
 use super::store::StateStore;
 use super::{
-    default_project_label, default_task_group_label, normalize_group_label, Session,
+    default_project_label, default_task_group_label, normalize_group_label, HarnessKind, Session,
     SessionAgentProfile, SessionGrouping, SessionHarnessInfo, SessionMetrics, SessionState,
 };
 use crate::comms::{self, MessageType};
@@ -1897,8 +1897,10 @@ pub async fn delete_session(db: &StateStore, id: &str) -> Result<()> {
 }
 
 fn agent_program(agent_type: &str) -> Result<PathBuf> {
-    match agent_type {
-        "claude" => Ok(PathBuf::from("claude")),
+    match HarnessKind::from_agent_type(agent_type) {
+        HarnessKind::Claude => Ok(PathBuf::from("claude")),
+        HarnessKind::Codex => Ok(PathBuf::from("codex")),
+        HarnessKind::OpenCode => Ok(PathBuf::from("opencode")),
         other => anyhow::bail!("Unsupported agent type: {other}"),
     }
 }
@@ -1935,6 +1937,7 @@ pub async fn run_session(
     let agent_program = agent_program(agent_type)?;
     let profile = db.get_session_profile(session_id)?;
     let command = build_agent_command(
+        agent_type,
         &agent_program,
         task,
         session_id,
@@ -2521,46 +2524,86 @@ async fn spawn_session_runner_for_program(
 }
 
 fn build_agent_command(
+    agent_type: &str,
     agent_program: &Path,
     task: &str,
     session_id: &str,
     working_dir: &Path,
     profile: Option<&SessionAgentProfile>,
 ) -> Command {
+    let harness = HarnessKind::from_agent_type(agent_type);
+    let task = normalize_task_for_harness(harness, task, profile);
     let mut command = Command::new(agent_program);
     command.env("ECC_SESSION_ID", session_id);
-    command
-        .arg("--print")
-        .arg("--name")
-        .arg(format!("ecc-{session_id}"));
-    if let Some(profile) = profile {
-        if let Some(model) = profile.model.as_ref() {
-            command.arg("--model").arg(model);
-        }
-        if !profile.allowed_tools.is_empty() {
+    match harness {
+        HarnessKind::Claude => {
             command
-                .arg("--allowed-tools")
-                .arg(profile.allowed_tools.join(","));
+                .arg("--print")
+                .arg("--name")
+                .arg(format!("ecc-{session_id}"));
+            if let Some(profile) = profile {
+                if let Some(model) = profile.model.as_ref() {
+                    command.arg("--model").arg(model);
+                }
+                if !profile.allowed_tools.is_empty() {
+                    command
+                        .arg("--allowed-tools")
+                        .arg(profile.allowed_tools.join(","));
+                }
+                if !profile.disallowed_tools.is_empty() {
+                    command
+                        .arg("--disallowed-tools")
+                        .arg(profile.disallowed_tools.join(","));
+                }
+                if let Some(permission_mode) = profile.permission_mode.as_ref() {
+                    command.arg("--permission-mode").arg(permission_mode);
+                }
+                for dir in &profile.add_dirs {
+                    command.arg("--add-dir").arg(dir);
+                }
+                if let Some(max_budget_usd) = profile.max_budget_usd {
+                    command
+                        .arg("--max-budget-usd")
+                        .arg(max_budget_usd.to_string());
+                }
+                if let Some(prompt) = profile.append_system_prompt.as_ref() {
+                    command.arg("--append-system-prompt").arg(prompt);
+                }
+            }
         }
-        if !profile.disallowed_tools.is_empty() {
+        HarnessKind::Codex => {
             command
-                .arg("--disallowed-tools")
-                .arg(profile.disallowed_tools.join(","));
+                .arg("exec")
+                .arg("--skip-git-repo-check")
+                .arg("--sandbox")
+                .arg("workspace-write")
+                .arg("--cd")
+                .arg(working_dir)
+                .arg("--color")
+                .arg("never");
+            if let Some(profile) = profile {
+                if let Some(model) = profile.model.as_ref() {
+                    command.arg("--model").arg(model);
+                }
+                for dir in &profile.add_dirs {
+                    command.arg("--add-dir").arg(dir);
+                }
+            }
         }
-        if let Some(permission_mode) = profile.permission_mode.as_ref() {
-            command.arg("--permission-mode").arg(permission_mode);
-        }
-        for dir in &profile.add_dirs {
-            command.arg("--add-dir").arg(dir);
-        }
-        if let Some(max_budget_usd) = profile.max_budget_usd {
+        HarnessKind::OpenCode => {
             command
-                .arg("--max-budget-usd")
-                .arg(max_budget_usd.to_string());
+                .arg("run")
+                .arg("--dir")
+                .arg(working_dir)
+                .arg("--title")
+                .arg(format!("ecc-{session_id}"));
+            if let Some(profile) = profile {
+                if let Some(model) = profile.model.as_ref() {
+                    command.arg("--model").arg(model);
+                }
+            }
         }
-        if let Some(prompt) = profile.append_system_prompt.as_ref() {
-            command.arg("--append-system-prompt").arg(prompt);
-        }
+        _ => {}
     }
     command
         .arg(task)
@@ -2569,13 +2612,33 @@ fn build_agent_command(
     command
 }
 
+fn normalize_task_for_harness(
+    harness: HarnessKind,
+    task: &str,
+    profile: Option<&SessionAgentProfile>,
+) -> String {
+    let Some(system_prompt) = profile.and_then(|profile| profile.append_system_prompt.as_ref())
+    else {
+        return task.to_string();
+    };
+
+    match harness {
+        HarnessKind::Claude => task.to_string(),
+        HarnessKind::Codex | HarnessKind::OpenCode => {
+            format!("System instructions:\n{system_prompt}\n\nTask:\n{task}")
+        }
+        _ => task.to_string(),
+    }
+}
+
 async fn spawn_claude_code(
     agent_program: &Path,
     task: &str,
     session_id: &str,
     working_dir: &Path,
 ) -> Result<u32> {
-    let mut command = build_agent_command(agent_program, task, session_id, working_dir, None);
+    let mut command =
+        build_agent_command("claude", agent_program, task, session_id, working_dir, None);
     let child = command
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -3302,7 +3365,7 @@ mod tests {
     }
 
     #[test]
-    fn build_agent_command_applies_profile_runner_flags() {
+    fn build_agent_command_applies_profile_runner_flags_for_claude() {
         let profile = SessionAgentProfile {
             profile_name: "reviewer".to_string(),
             agent: None,
@@ -3317,6 +3380,7 @@ mod tests {
         };
 
         let command = build_agent_command(
+            "claude",
             Path::new("claude"),
             "review this change",
             "sess-1234",
@@ -3352,6 +3416,101 @@ mod tests {
                 "--append-system-prompt",
                 "Review thoroughly.",
                 "review this change",
+            ]
+        );
+    }
+
+    #[test]
+    fn build_agent_command_normalizes_runner_flags_for_codex() {
+        let profile = SessionAgentProfile {
+            profile_name: "reviewer".to_string(),
+            agent: None,
+            model: Some("gpt-5.4".to_string()),
+            allowed_tools: vec!["Read".to_string()],
+            disallowed_tools: vec!["Bash".to_string()],
+            permission_mode: Some("plan".to_string()),
+            add_dirs: vec![PathBuf::from("docs"), PathBuf::from("specs")],
+            max_budget_usd: Some(1.25),
+            token_budget: Some(750),
+            append_system_prompt: Some("Review thoroughly.".to_string()),
+        };
+
+        let command = build_agent_command(
+            "codex",
+            Path::new("codex"),
+            "review this change",
+            "sess-1234",
+            Path::new("/tmp/repo"),
+            Some(&profile),
+        );
+        let args = command
+            .as_std()
+            .get_args()
+            .map(|value| value.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            args,
+            vec![
+                "exec",
+                "--skip-git-repo-check",
+                "--sandbox",
+                "workspace-write",
+                "--cd",
+                "/tmp/repo",
+                "--color",
+                "never",
+                "--model",
+                "gpt-5.4",
+                "--add-dir",
+                "docs",
+                "--add-dir",
+                "specs",
+                "System instructions:\nReview thoroughly.\n\nTask:\nreview this change",
+            ]
+        );
+    }
+
+    #[test]
+    fn build_agent_command_normalizes_runner_flags_for_opencode() {
+        let profile = SessionAgentProfile {
+            profile_name: "builder".to_string(),
+            agent: None,
+            model: Some("anthropic/claude-sonnet-4".to_string()),
+            allowed_tools: Vec::new(),
+            disallowed_tools: Vec::new(),
+            permission_mode: None,
+            add_dirs: vec![PathBuf::from("docs")],
+            max_budget_usd: None,
+            token_budget: None,
+            append_system_prompt: Some("Build carefully.".to_string()),
+        };
+
+        let command = build_agent_command(
+            "opencode",
+            Path::new("opencode"),
+            "stabilize callback flow",
+            "sess-9999",
+            Path::new("/tmp/repo"),
+            Some(&profile),
+        );
+        let args = command
+            .as_std()
+            .get_args()
+            .map(|value| value.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            args,
+            vec![
+                "run",
+                "--dir",
+                "/tmp/repo",
+                "--title",
+                "ecc-sess-9999",
+                "--model",
+                "anthropic/claude-sonnet-4",
+                "System instructions:\nBuild carefully.\n\nTask:\nstabilize callback flow",
             ]
         );
     }
