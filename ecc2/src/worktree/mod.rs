@@ -64,6 +64,13 @@ pub struct GitStatusEntry {
     pub conflicted: bool,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DraftPrOptions {
+    pub base_branch: Option<String>,
+    pub labels: Vec<String>,
+    pub reviewers: Vec<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GitPatchSectionKind {
     Staged,
@@ -497,7 +504,16 @@ pub fn latest_commit_subject(worktree: &WorktreeInfo) -> Result<String> {
 }
 
 pub fn create_draft_pr(worktree: &WorktreeInfo, title: &str, body: &str) -> Result<String> {
-    create_draft_pr_with_gh(worktree, title, body, Path::new("gh"))
+    create_draft_pr_with_options(worktree, title, body, &DraftPrOptions::default())
+}
+
+pub fn create_draft_pr_with_options(
+    worktree: &WorktreeInfo,
+    title: &str,
+    body: &str,
+    options: &DraftPrOptions,
+) -> Result<String> {
+    create_draft_pr_with_gh(worktree, title, body, options, Path::new("gh"))
 }
 
 pub fn github_compare_url(worktree: &WorktreeInfo) -> Result<Option<String>> {
@@ -518,12 +534,20 @@ fn create_draft_pr_with_gh(
     worktree: &WorktreeInfo,
     title: &str,
     body: &str,
+    options: &DraftPrOptions,
     gh_bin: &Path,
 ) -> Result<String> {
     let title = title.trim();
     if title.is_empty() {
         anyhow::bail!("PR title cannot be empty");
     }
+
+    let base_branch = options
+        .base_branch
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(&worktree.base_branch);
 
     let push = Command::new("git")
         .arg("-C")
@@ -536,18 +560,36 @@ fn create_draft_pr_with_gh(
         anyhow::bail!("git push failed: {stderr}");
     }
 
-    let output = Command::new(gh_bin)
+    let mut command = Command::new(gh_bin);
+    command
         .arg("pr")
         .arg("create")
         .arg("--draft")
         .arg("--base")
-        .arg(&worktree.base_branch)
+        .arg(base_branch)
         .arg("--head")
         .arg(&worktree.branch)
         .arg("--title")
         .arg(title)
         .arg("--body")
-        .arg(body)
+        .arg(body);
+    for label in options
+        .labels
+        .iter()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+    {
+        command.arg("--label").arg(label);
+    }
+    for reviewer in options
+        .reviewers
+        .iter()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+    {
+        command.arg("--reviewer").arg(reviewer);
+    }
+    let output = command
         .current_dir(&worktree.path)
         .output()
         .context("Failed to create draft PR with gh")?;
@@ -2388,7 +2430,13 @@ mod tests {
             base_branch: "main".to_string(),
         };
 
-        let url = create_draft_pr_with_gh(&worktree, "My PR", "Body line", &gh_path)?;
+        let url = create_draft_pr_with_gh(
+            &worktree,
+            "My PR",
+            "Body line",
+            &DraftPrOptions::default(),
+            &gh_path,
+        )?;
         assert_eq!(url, "https://github.com/example/repo/pull/123");
 
         let remote_branch = Command::new("git")
@@ -2408,6 +2456,75 @@ mod tests {
         assert!(gh_args.contains("--head\nfeat/pr-test"));
         assert!(gh_args.contains("--title\nMy PR"));
         assert!(gh_args.contains("--body\nBody line"));
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn create_draft_pr_forwards_custom_base_labels_and_reviewers() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-pr-create-options-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        let remote = root.join("remote.git");
+        run_git(
+            &root,
+            &["init", "--bare", remote.to_str().expect("utf8 path")],
+        )?;
+        run_git(
+            &repo,
+            &[
+                "remote",
+                "add",
+                "origin",
+                remote.to_str().expect("utf8 path"),
+            ],
+        )?;
+        run_git(&repo, &["push", "-u", "origin", "main"])?;
+        run_git(&repo, &["checkout", "-b", "feat/pr-options"])?;
+        fs::write(repo.join("README.md"), "pr options\n")?;
+        run_git(&repo, &["commit", "-am", "pr options"])?;
+
+        let bin_dir = root.join("bin");
+        fs::create_dir_all(&bin_dir)?;
+        let gh_path = bin_dir.join("gh");
+        let args_path = root.join("gh-args-options.txt");
+        fs::write(
+            &gh_path,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"{}\"\nprintf '%s\\n' 'https://github.com/example/repo/pull/456'\n",
+                args_path.display()
+            ),
+        )?;
+        let mut perms = fs::metadata(&gh_path)?.permissions();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            perms.set_mode(0o755);
+            fs::set_permissions(&gh_path, perms)?;
+        }
+        #[cfg(not(unix))]
+        fs::set_permissions(&gh_path, perms)?;
+
+        let worktree = WorktreeInfo {
+            path: repo.clone(),
+            branch: "feat/pr-options".to_string(),
+            base_branch: "main".to_string(),
+        };
+        let options = DraftPrOptions {
+            base_branch: Some("release/2.0".to_string()),
+            labels: vec!["billing".to_string(), "ui".to_string()],
+            reviewers: vec!["alice".to_string(), "bob".to_string()],
+        };
+
+        let url = create_draft_pr_with_gh(&worktree, "My PR", "Body line", &options, &gh_path)?;
+        assert_eq!(url, "https://github.com/example/repo/pull/456");
+
+        let gh_args = fs::read_to_string(&args_path)?;
+        assert!(gh_args.contains("--base\nrelease/2.0"));
+        assert!(gh_args.contains("--label\nbilling"));
+        assert!(gh_args.contains("--label\nui"));
+        assert!(gh_args.contains("--reviewer\nalice"));
+        assert!(gh_args.contains("--reviewer\nbob"));
 
         let _ = fs::remove_dir_all(root);
         Ok(())

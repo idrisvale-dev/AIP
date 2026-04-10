@@ -243,6 +243,14 @@ struct SearchMatch {
     line_index: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PrPromptSpec {
+    title: String,
+    base_branch: Option<String>,
+    labels: Vec<String>,
+    reviewers: Vec<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TimelineEventType {
     Lifecycle,
@@ -1225,7 +1233,9 @@ impl Dashboard {
         } else if let Some(input) = self.commit_input.as_ref() {
             format!(" commit>{input}_ | [Enter] commit [Esc] cancel |")
         } else if let Some(input) = self.pr_input.as_ref() {
-            format!(" pr>{input}_ | [Enter] create draft PR [Esc] cancel |")
+            format!(
+                " pr>{input}_ | [Enter] create draft PR | title | base=branch | labels=a,b | reviewers=a,b | [Esc] cancel |"
+            )
         } else if let Some(input) = self.search_input.as_ref() {
             format!(
                 " /{input}_ | {} | {} | [Enter] apply [Esc] cancel |",
@@ -1346,7 +1356,7 @@ impl Dashboard {
             "  {/}     Jump to previous/next diff hunk in the active diff view".to_string(),
             "  S/U/R   Stage, unstage, or reset the selected file or active diff hunk".to_string(),
             "  C       Commit staged changes for the selected worktree".to_string(),
-            "  P       Create a draft PR from the selected worktree branch".to_string(),
+            "  P       Create a draft PR; supports title | base=branch | labels=a,b | reviewers=a,b".to_string(),
             "  c       Show conflict-resolution protocol for selected conflicted worktree"
                 .to_string(),
             "  e       Cycle output content filter: all/errors/tool calls/file changes".to_string(),
@@ -2266,7 +2276,9 @@ impl Dashboard {
             .filter(|value| !value.trim().is_empty())
             .unwrap_or_else(|| session.task.clone());
         self.pr_input = Some(seed);
-        self.set_operator_note("pr mode | edit the title and press Enter".to_string());
+        self.set_operator_note(
+            "pr mode | title | base=branch | labels=a,b | reviewers=a,b".to_string(),
+        );
     }
 
     fn stage_selected_git_hunk(&mut self) {
@@ -3169,8 +3181,16 @@ impl Dashboard {
             return;
         };
 
-        let title = input.trim().to_string();
-        if title.is_empty() {
+        let request = match parse_pr_prompt(&input) {
+            Ok(request) => request,
+            Err(error) => {
+                self.pr_input = Some(input);
+                self.set_operator_note(format!("invalid PR input: {error}"));
+                return;
+            }
+        };
+
+        if request.title.is_empty() {
             self.pr_input = Some(input);
             self.set_operator_note("pr title cannot be empty".to_string());
             return;
@@ -3193,11 +3213,20 @@ impl Dashboard {
         }
 
         let body = self.build_pull_request_body(&session);
-        match worktree::create_draft_pr(&worktree, &title, &body) {
+        let options = worktree::DraftPrOptions {
+            base_branch: request.base_branch.clone(),
+            labels: request.labels.clone(),
+            reviewers: request.reviewers.clone(),
+        };
+        match worktree::create_draft_pr_with_options(&worktree, &request.title, &body, &options) {
             Ok(url) => {
                 self.set_operator_note(format!(
-                    "created draft PR for {}: {}",
+                    "created draft PR for {} against {}: {}",
                     format_session_id(&session.id),
+                    options
+                        .base_branch
+                        .as_deref()
+                        .unwrap_or(&worktree.base_branch),
                     url
                 ));
             }
@@ -7786,6 +7815,59 @@ fn assignment_action_label(action: manager::AssignmentAction) -> &'static str {
     }
 }
 
+fn parse_pr_prompt(input: &str) -> std::result::Result<PrPromptSpec, String> {
+    let mut segments = input.split('|').map(str::trim);
+    let title = segments.next().unwrap_or_default().trim().to_string();
+    if title.is_empty() {
+        return Err("missing PR title".to_string());
+    }
+
+    let mut request = PrPromptSpec {
+        title,
+        base_branch: None,
+        labels: Vec::new(),
+        reviewers: Vec::new(),
+    };
+
+    for segment in segments {
+        if segment.is_empty() {
+            continue;
+        }
+        let (key, value) = segment
+            .split_once('=')
+            .ok_or_else(|| format!("expected key=value segment, got `{segment}`"))?;
+        let key = key.trim().to_ascii_lowercase();
+        let value = value.trim();
+        match key.as_str() {
+            "base" => {
+                if value.is_empty() {
+                    return Err("base branch cannot be empty".to_string());
+                }
+                request.base_branch = Some(value.to_string());
+            }
+            "labels" | "label" => {
+                request.labels = value
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned)
+                    .collect();
+            }
+            "reviewers" | "reviewer" => {
+                request.reviewers = value
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned)
+                    .collect();
+            }
+            _ => return Err(format!("unsupported PR field `{key}`")),
+        }
+    }
+
+    Ok(request)
+}
+
 fn delegate_worktree_health_label(health: worktree::WorktreeHealth) -> &'static str {
     match health {
         worktree::WorktreeHealth::Clear => "clear",
@@ -8481,10 +8563,124 @@ mod tests {
         assert_eq!(dashboard.pr_input.as_deref(), Some("seed pr title"));
         assert_eq!(
             dashboard.operator_note.as_deref(),
-            Some("pr mode | edit the title and press Enter")
+            Some("pr mode | title | base=branch | labels=a,b | reviewers=a,b")
         );
 
         let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn parse_pr_prompt_supports_base_labels_and_reviewers() {
+        let parsed = parse_pr_prompt(
+            "Improve retry flow | base=release/2.0 | labels=billing, ux | reviewers=alice, bob",
+        )
+        .expect("parse prompt");
+
+        assert_eq!(parsed.title, "Improve retry flow");
+        assert_eq!(parsed.base_branch.as_deref(), Some("release/2.0"));
+        assert_eq!(parsed.labels, vec!["billing", "ux"]);
+        assert_eq!(parsed.reviewers, vec!["alice", "bob"]);
+    }
+
+    #[test]
+    fn submit_pr_prompt_passes_custom_metadata_to_gh() -> Result<()> {
+        let temp_root =
+            std::env::temp_dir().join(format!("ecc2-dashboard-pr-submit-{}", Uuid::new_v4()));
+        let root = temp_root.join("repo");
+        init_git_repo(&root)?;
+        let remote = temp_root.join("remote.git");
+        run_git(
+            &root,
+            &["init", "--bare", remote.to_str().expect("utf8 path")],
+        )?;
+        run_git(
+            &root,
+            &[
+                "remote",
+                "add",
+                "origin",
+                remote.to_str().expect("utf8 path"),
+            ],
+        )?;
+        run_git(&root, &["push", "-u", "origin", "main"])?;
+        run_git(&root, &["checkout", "-b", "feat/dashboard-pr"])?;
+        fs::write(root.join("README.md"), "dashboard pr\n")?;
+        run_git(&root, &["commit", "-am", "dashboard pr"])?;
+
+        let bin_dir = temp_root.join("bin");
+        fs::create_dir_all(&bin_dir)?;
+        let gh_path = bin_dir.join("gh");
+        let args_path = temp_root.join("gh-dashboard-args.txt");
+        fs::write(
+            &gh_path,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"{}\"\nprintf '%s\\n' 'https://github.com/example/repo/pull/789'\n",
+                args_path.display()
+            ),
+        )?;
+        let mut perms = fs::metadata(&gh_path)?.permissions();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            perms.set_mode(0o755);
+            fs::set_permissions(&gh_path, perms)?;
+        }
+        #[cfg(not(unix))]
+        fs::set_permissions(&gh_path, perms)?;
+
+        let original_path = std::env::var_os("PATH");
+        std::env::set_var(
+            "PATH",
+            format!(
+                "{}:{}",
+                bin_dir.display(),
+                original_path
+                    .as_deref()
+                    .map(std::ffi::OsStr::to_string_lossy)
+                    .unwrap_or_default()
+            ),
+        );
+
+        let mut session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        session.working_dir = root.clone();
+        session.worktree = Some(WorktreeInfo {
+            path: root.clone(),
+            branch: "feat/dashboard-pr".to_string(),
+            base_branch: "main".to_string(),
+        });
+        let mut dashboard = test_dashboard(vec![session], 0);
+        dashboard.pr_input = Some(
+            "Improve retry flow | base=release/2.0 | labels=billing,ux | reviewers=alice,bob"
+                .to_string(),
+        );
+
+        dashboard.submit_pr_prompt();
+
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("created draft PR for focus-12 against release/2.0: https://github.com/example/repo/pull/789")
+        );
+        let gh_args = fs::read_to_string(&args_path)?;
+        assert!(gh_args.contains("--base\nrelease/2.0"));
+        assert!(gh_args.contains("--label\nbilling"));
+        assert!(gh_args.contains("--label\nux"));
+        assert!(gh_args.contains("--reviewer\nalice"));
+        assert!(gh_args.contains("--reviewer\nbob"));
+
+        if let Some(path) = original_path {
+            std::env::set_var("PATH", path);
+        } else {
+            std::env::remove_var("PATH");
+        }
+        let _ = fs::remove_dir_all(temp_root);
         Ok(())
     }
 
