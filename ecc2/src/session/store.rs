@@ -268,6 +268,7 @@ impl StateStore {
                 entity_id INTEGER NOT NULL REFERENCES context_graph_entities(id) ON DELETE CASCADE,
                 observation_type TEXT NOT NULL,
                 priority INTEGER NOT NULL DEFAULT 1,
+                pinned INTEGER NOT NULL DEFAULT 0,
                 summary TEXT NOT NULL,
                 details_json TEXT NOT NULL DEFAULT '{}',
                 created_at TEXT NOT NULL
@@ -472,6 +473,14 @@ impl StateStore {
                     [],
                 )
                 .context("Failed to add priority column to context_graph_observations table")?;
+        }
+        if !self.has_column("context_graph_observations", "pinned")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE context_graph_observations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0",
+                    [],
+                )
+                .context("Failed to add pinned column to context_graph_observations table")?;
         }
 
         if !self.has_column("daemon_activity", "last_dispatch_deferred")? {
@@ -2103,7 +2112,12 @@ impl StateStore {
                         SELECT MAX(priority)
                         FROM context_graph_observations o
                         WHERE o.entity_id = e.id
-                    ), 1) AS max_observation_priority
+                    ), 1) AS max_observation_priority,
+                    COALESCE((
+                        SELECT MAX(pinned)
+                        FROM context_graph_observations o
+                        WHERE o.entity_id = e.id
+                    ), 0) AS has_pinned_observation
              FROM context_graph_entities e
              WHERE (?1 IS NULL OR e.session_id = ?1)
              ORDER BY e.updated_at DESC, e.id DESC
@@ -2120,12 +2134,14 @@ impl StateStore {
                     let observation_count = row.get::<_, i64>(11)?.max(0) as usize;
                     let max_observation_priority =
                         ContextObservationPriority::from_db_value(row.get::<_, i64>(12)?);
+                    let has_pinned_observation = row.get::<_, i64>(13)? != 0;
                     Ok((
                         entity,
                         relation_count,
                         observation_text,
                         observation_count,
                         max_observation_priority,
+                        has_pinned_observation,
                     ))
                 },
             )?
@@ -2141,6 +2157,7 @@ impl StateStore {
                     observation_text,
                     observation_count,
                     max_observation_priority,
+                    has_pinned_observation,
                 )| {
                     let matched_terms =
                         context_graph_matched_terms(&entity, &observation_text, &terms);
@@ -2154,6 +2171,7 @@ impl StateStore {
                             relation_count,
                             observation_count,
                             max_observation_priority,
+                            has_pinned_observation,
                             entity.updated_at,
                             now,
                         ),
@@ -2162,6 +2180,7 @@ impl StateStore {
                         relation_count,
                         observation_count,
                         max_observation_priority,
+                        has_pinned_observation,
                     })
                 },
             )
@@ -2250,6 +2269,7 @@ impl StateStore {
         entity_id: i64,
         observation_type: &str,
         priority: ContextObservationPriority,
+        pinned: bool,
         summary: &str,
         details: &BTreeMap<String, String>,
     ) -> Result<ContextGraphObservation> {
@@ -2268,13 +2288,14 @@ impl StateStore {
         let details_json = serde_json::to_string(details)?;
         self.conn.execute(
             "INSERT INTO context_graph_observations (
-                session_id, entity_id, observation_type, priority, summary, details_json, created_at
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                session_id, entity_id, observation_type, priority, pinned, summary, details_json, created_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             rusqlite::params![
                 session_id,
                 entity_id,
                 observation_type.trim(),
                 priority.as_db_value(),
+                pinned as i64,
                 summary.trim(),
                 details_json,
                 now,
@@ -2289,13 +2310,41 @@ impl StateStore {
         self.conn
             .query_row(
                 "SELECT o.id, o.session_id, o.entity_id, e.entity_type, e.name,
-                        o.observation_type, o.priority, o.summary, o.details_json, o.created_at
+                        o.observation_type, o.priority, o.pinned, o.summary, o.details_json, o.created_at
                  FROM context_graph_observations o
                  JOIN context_graph_entities e ON e.id = o.entity_id
                  WHERE o.id = ?1",
                 rusqlite::params![observation_id],
                 map_context_graph_observation,
             )
+            .map_err(Into::into)
+    }
+
+    pub fn set_context_observation_pinned(
+        &self,
+        observation_id: i64,
+        pinned: bool,
+    ) -> Result<Option<ContextGraphObservation>> {
+        let changed = self.conn.execute(
+            "UPDATE context_graph_observations
+             SET pinned = ?2
+             WHERE id = ?1",
+            rusqlite::params![observation_id, pinned as i64],
+        )?;
+        if changed == 0 {
+            return Ok(None);
+        }
+        self.conn
+            .query_row(
+                "SELECT o.id, o.session_id, o.entity_id, e.entity_type, e.name,
+                        o.observation_type, o.priority, o.pinned, o.summary, o.details_json, o.created_at
+                 FROM context_graph_observations o
+                 JOIN context_graph_entities e ON e.id = o.entity_id
+                 WHERE o.id = ?1",
+                rusqlite::params![observation_id],
+                map_context_graph_observation,
+            )
+            .optional()
             .map_err(Into::into)
     }
 
@@ -2312,6 +2361,7 @@ impl StateStore {
         session_id: &str,
         observation_type: &str,
         priority: ContextObservationPriority,
+        pinned: bool,
         summary: &str,
         details: &BTreeMap<String, String>,
     ) -> Result<ContextGraphObservation> {
@@ -2321,6 +2371,7 @@ impl StateStore {
             session_entity.id,
             observation_type,
             priority,
+            pinned,
             summary,
             details,
         )
@@ -2333,11 +2384,11 @@ impl StateStore {
     ) -> Result<Vec<ContextGraphObservation>> {
         let mut stmt = self.conn.prepare(
             "SELECT o.id, o.session_id, o.entity_id, e.entity_type, e.name,
-                    o.observation_type, o.priority, o.summary, o.details_json, o.created_at
+                    o.observation_type, o.priority, o.pinned, o.summary, o.details_json, o.created_at
              FROM context_graph_observations o
              JOIN context_graph_entities e ON e.id = o.entity_id
              WHERE (?1 IS NULL OR o.entity_id = ?1)
-             ORDER BY o.created_at DESC, o.id DESC
+             ORDER BY o.pinned DESC, o.created_at DESC, o.id DESC
              LIMIT ?2",
         )?;
 
@@ -2414,7 +2465,7 @@ impl StateStore {
                      SELECT o.id,
                             ROW_NUMBER() OVER (
                                 PARTITION BY o.entity_id, o.observation_type, o.summary
-                                ORDER BY o.created_at DESC, o.id DESC
+                                ORDER BY o.pinned DESC, o.created_at DESC, o.id DESC
                             ) AS rn
                      FROM context_graph_observations o
                      JOIN context_graph_entities e ON e.id = o.entity_id
@@ -2435,6 +2486,7 @@ impl StateStore {
                      JOIN context_graph_entities e ON e.id = o.entity_id
                      WHERE (?1 IS NULL OR e.session_id = ?1)
                        AND (?2 IS NULL OR o.entity_id = ?2)
+                       AND o.pinned = 0
                  )",
                 rusqlite::params![session_id, entity_id],
             )?
@@ -2453,6 +2505,7 @@ impl StateStore {
                          JOIN context_graph_entities e ON e.id = o.entity_id
                          WHERE (?1 IS NULL OR e.session_id = ?1)
                            AND (?2 IS NULL OR o.entity_id = ?2)
+                           AND o.pinned = 0
                      ) ranked
                      WHERE ranked.rn > ?3
                  )",
@@ -3464,12 +3517,12 @@ fn map_context_graph_observation(
     row: &rusqlite::Row<'_>,
 ) -> rusqlite::Result<ContextGraphObservation> {
     let details_json = row
-        .get::<_, Option<String>>(8)?
+        .get::<_, Option<String>>(9)?
         .unwrap_or_else(|| "{}".to_string());
     let details = serde_json::from_str(&details_json).map_err(|error| {
-        rusqlite::Error::FromSqlConversionFailure(8, rusqlite::types::Type::Text, Box::new(error))
+        rusqlite::Error::FromSqlConversionFailure(9, rusqlite::types::Type::Text, Box::new(error))
     })?;
-    let created_at = parse_store_timestamp(row.get::<_, String>(9)?, 9)?;
+    let created_at = parse_store_timestamp(row.get::<_, String>(10)?, 10)?;
 
     Ok(ContextGraphObservation {
         id: row.get(0)?,
@@ -3479,7 +3532,8 @@ fn map_context_graph_observation(
         entity_name: row.get(4)?,
         observation_type: row.get(5)?,
         priority: ContextObservationPriority::from_db_value(row.get::<_, i64>(6)?),
-        summary: row.get(7)?,
+        pinned: row.get::<_, i64>(7)? != 0,
+        summary: row.get(8)?,
         details,
         created_at,
     })
@@ -3534,6 +3588,7 @@ fn context_graph_recall_score(
     relation_count: usize,
     observation_count: usize,
     max_observation_priority: ContextObservationPriority,
+    has_pinned_observation: bool,
     updated_at: chrono::DateTime<chrono::Utc>,
     now: chrono::DateTime<chrono::Utc>,
 ) -> u64 {
@@ -3554,6 +3609,7 @@ fn context_graph_recall_score(
         + (relation_count.min(9) as u64 * 10)
         + (observation_count.min(6) as u64 * 8)
         + (max_observation_priority.as_db_value() as u64 * 18)
+        + if has_pinned_observation { 48 } else { 0 }
         + recency_bonus
 }
 
@@ -4376,6 +4432,7 @@ mod tests {
             entity.id,
             "note",
             ContextObservationPriority::Normal,
+            false,
             "Customer wiped setup and got charged twice",
             &BTreeMap::from([("customer".to_string(), "viktor".to_string())]),
         )?;
@@ -4386,6 +4443,7 @@ mod tests {
         assert_eq!(observations[0].entity_name, "Prefer recovery-first routing");
         assert_eq!(observations[0].observation_type, "note");
         assert_eq!(observations[0].priority, ContextObservationPriority::Normal);
+        assert!(!observations[0].pinned);
         assert_eq!(
             observations[0].details.get("customer"),
             Some(&"viktor".to_string())
@@ -4503,6 +4561,7 @@ mod tests {
                 entity.id,
                 "completion_summary",
                 ContextObservationPriority::Normal,
+                false,
                 &summary,
                 &BTreeMap::new(),
             )?;
@@ -4586,6 +4645,7 @@ mod tests {
             recovery.id,
             "incident_note",
             ContextObservationPriority::High,
+            true,
             "Previous auth callback recovery incident affected Viktor after a wipe",
             &BTreeMap::new(),
         )?;
@@ -4605,6 +4665,7 @@ mod tests {
             results[0].max_observation_priority,
             ContextObservationPriority::High
         );
+        assert!(results[0].has_pinned_observation);
         assert_eq!(results[1].entity.id, callback.id);
         assert!(results[1]
             .matched_terms
@@ -4620,7 +4681,130 @@ mod tests {
             results[1].max_observation_priority,
             ContextObservationPriority::Normal
         );
+        assert!(!results[1].has_pinned_observation);
         assert!(!results.iter().any(|entry| entry.entity.id == unrelated.id));
+
+        Ok(())
+    }
+
+    #[test]
+    fn compact_context_graph_preserves_pinned_observations() -> Result<()> {
+        let tempdir = TestDir::new("store-context-pinned-observations")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "deep memory".to_string(),
+            project: "workspace".to_string(),
+            task_group: "knowledge".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let entity = db.upsert_context_entity(
+            Some("session-1"),
+            "incident",
+            "billing-recovery",
+            None,
+            "Recovery notes",
+            &BTreeMap::new(),
+        )?;
+
+        db.add_context_observation(
+            Some("session-1"),
+            entity.id,
+            "incident_note",
+            ContextObservationPriority::High,
+            true,
+            "Pinned billing recovery memory",
+            &BTreeMap::new(),
+        )?;
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        db.add_context_observation(
+            Some("session-1"),
+            entity.id,
+            "incident_note",
+            ContextObservationPriority::Normal,
+            false,
+            "Newest unpinned memory",
+            &BTreeMap::new(),
+        )?;
+
+        let stats = db.compact_context_graph(None, 1)?;
+        assert_eq!(stats.observations_retained, 2);
+
+        let observations = db.list_context_observations(Some(entity.id), 10)?;
+        assert_eq!(observations.len(), 2);
+        assert!(observations.iter().any(|entry| entry.pinned));
+        assert!(observations
+            .iter()
+            .any(|entry| entry.summary == "Pinned billing recovery memory"));
+        assert!(observations
+            .iter()
+            .any(|entry| entry.summary == "Newest unpinned memory"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn set_context_observation_pinned_updates_existing_observation() -> Result<()> {
+        let tempdir = TestDir::new("store-context-pin-toggle")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "deep memory".to_string(),
+            project: "workspace".to_string(),
+            task_group: "knowledge".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let entity = db.upsert_context_entity(
+            Some("session-1"),
+            "incident",
+            "billing-recovery",
+            None,
+            "Recovery notes",
+            &BTreeMap::new(),
+        )?;
+
+        let observation = db.add_context_observation(
+            Some("session-1"),
+            entity.id,
+            "incident_note",
+            ContextObservationPriority::Normal,
+            false,
+            "Temporarily useful note",
+            &BTreeMap::new(),
+        )?;
+        assert!(!observation.pinned);
+
+        let pinned = db
+            .set_context_observation_pinned(observation.id, true)?
+            .expect("observation should exist");
+        assert!(pinned.pinned);
+
+        let unpinned = db
+            .set_context_observation_pinned(observation.id, false)?
+            .expect("observation should still exist");
+        assert!(!unpinned.pinned);
 
         Ok(())
     }

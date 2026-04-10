@@ -199,6 +199,7 @@ pub struct ContextGraphObservation {
     pub entity_name: String,
     pub observation_type: String,
     pub priority: ContextObservationPriority,
+    pub pinned: bool,
     pub summary: String,
     pub details: BTreeMap<String, String>,
     pub created_at: DateTime<Utc>,
@@ -212,6 +213,7 @@ pub struct ContextGraphRecallEntry {
     pub relation_count: usize,
     pub observation_count: usize,
     pub max_observation_priority: ContextObservationPriority,
+    pub has_pinned_observation: bool,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]

@@ -4261,6 +4261,7 @@ impl Dashboard {
             &session.id,
             observation_type,
             priority,
+            false,
             &observation_summary,
             &details,
         ) {
@@ -5374,6 +5375,9 @@ impl Dashboard {
                 entry.observation_count,
                 entry.max_observation_priority
             );
+            if entry.has_pinned_observation {
+                line.push_str(" | pinned");
+            }
             if let Some(session_id) = entry.entity.session_id.as_deref() {
                 if session_id != session.id {
                     line.push_str(&format!(" | {}", format_session_id(session_id)));
@@ -5395,8 +5399,9 @@ impl Dashboard {
             if let Ok(observations) = self.db.list_context_observations(Some(entry.entity.id), 1) {
                 if let Some(observation) = observations.first() {
                     lines.push(format!(
-                        "  memory [{}] {}",
+                        "  memory [{}{}] {}",
                         observation.priority,
+                        if observation.pinned { "/pinned" } else { "" },
                         truncate_for_dashboard(&observation.summary, 72)
                     ));
                 }
@@ -10544,6 +10549,7 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
             entity.id,
             "completion_summary",
             ContextObservationPriority::Normal,
+            true,
             "Recovered auth callback incident with billing fallback",
             &BTreeMap::new(),
         )?;
@@ -10551,10 +10557,11 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Relevant memory"));
         assert!(text.contains("[file] callback.ts"));
+        assert!(text.contains("| pinned"));
         assert!(text.contains("matches auth, callback, recovery"));
-        assert!(
-            text.contains("memory [normal] Recovered auth callback incident with billing fallback")
-        );
+        assert!(text.contains(
+            "memory [normal/pinned] Recovered auth callback incident with billing fallback"
+        ));
         Ok(())
     }
 

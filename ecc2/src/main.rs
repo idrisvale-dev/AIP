@@ -473,12 +473,33 @@ enum GraphCommands {
         /// Observation priority
         #[arg(long, value_enum, default_value_t = ObservationPriorityArg::Normal)]
         priority: ObservationPriorityArg,
+        /// Keep this observation across aggressive compaction
+        #[arg(long)]
+        pinned: bool,
         /// Observation summary
         #[arg(long)]
         summary: String,
         /// Details in key=value form
         #[arg(long = "detail")]
         details: Vec<String>,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
+    /// Pin an existing observation so compaction preserves it
+    PinObservation {
+        /// Observation ID
+        #[arg(long)]
+        observation_id: i64,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
+    /// Remove the pin from an existing observation
+    UnpinObservation {
+        /// Observation ID
+        #[arg(long)]
+        observation_id: i64,
         /// Emit machine-readable JSON instead of the human summary
         #[arg(long)]
         json: bool,
@@ -1388,6 +1409,7 @@ async fn main() -> Result<()> {
                 entity_id,
                 observation_type,
                 priority,
+                pinned,
                 summary,
                 details,
                 json,
@@ -1402,9 +1424,42 @@ async fn main() -> Result<()> {
                     entity_id,
                     &observation_type,
                     priority.into(),
+                    pinned,
                     &summary,
                     &details,
                 )?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&observation)?);
+                } else {
+                    println!("{}", format_graph_observation_human(&observation));
+                }
+            }
+            GraphCommands::PinObservation {
+                observation_id,
+                json,
+            } => {
+                let Some(observation) = db.set_context_observation_pinned(observation_id, true)?
+                else {
+                    return Err(anyhow::anyhow!(
+                        "Context graph observation #{observation_id} was not found"
+                    ));
+                };
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&observation)?);
+                } else {
+                    println!("{}", format_graph_observation_human(&observation));
+                }
+            }
+            GraphCommands::UnpinObservation {
+                observation_id,
+                json,
+            } => {
+                let Some(observation) = db.set_context_observation_pinned(observation_id, false)?
+                else {
+                    return Err(anyhow::anyhow!(
+                        "Context graph observation #{observation_id} was not found"
+                    ));
+                };
                 if json {
                     println!("{}", serde_json::to_string_pretty(&observation)?);
                 } else {
@@ -2144,6 +2199,7 @@ fn import_memory_connector_record(
         entity.id,
         observation_type,
         session::ContextObservationPriority::Normal,
+        false,
         summary,
         &record.details,
     )?;
@@ -3349,6 +3405,7 @@ fn format_graph_observation_human(observation: &session::ContextGraphObservation
         ),
         format!("Type: {}", observation.observation_type),
         format!("Priority: {}", observation.priority),
+        format!("Pinned: {}", if observation.pinned { "yes" } else { "no" }),
         format!("Summary: {}", observation.summary),
     ];
     if let Some(session_id) = observation.session_id.as_deref() {
@@ -3380,10 +3437,11 @@ fn format_graph_observations_human(observations: &[session::ContextGraphObservat
     )];
     for observation in observations {
         let mut line = format!(
-            "- #{} [{}/{}] {}",
+            "- #{} [{}/{}{}] {}",
             observation.id,
             observation.observation_type,
             observation.priority,
+            if observation.pinned { "/pinned" } else { "" },
             observation.entity_name
         );
         if let Some(session_id) = observation.session_id.as_deref() {
@@ -3424,6 +3482,9 @@ fn format_graph_recall_human(
             entry.observation_count,
             entry.max_observation_priority
         );
+        if entry.has_pinned_observation {
+            line.push_str(" | pinned");
+        }
         if let Some(session_id) = entry.entity.session_id.as_deref() {
             line.push_str(&format!(" | {}", short_session(session_id)));
         }
@@ -5463,6 +5524,7 @@ mod tests {
             "7",
             "--type",
             "completion_summary",
+            "--pinned",
             "--summary",
             "Finished auth callback recovery",
             "--detail",
@@ -5479,6 +5541,7 @@ mod tests {
                         entity_id,
                         observation_type,
                         priority,
+                        pinned,
                         summary,
                         details,
                         json,
@@ -5488,11 +5551,66 @@ mod tests {
                 assert_eq!(entity_id, 7);
                 assert_eq!(observation_type, "completion_summary");
                 assert!(matches!(priority, ObservationPriorityArg::Normal));
+                assert!(pinned);
                 assert_eq!(summary, "Finished auth callback recovery");
                 assert_eq!(details, vec!["tests_run=2"]);
                 assert!(json);
             }
             _ => panic!("expected graph add-observation subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_graph_pin_observation_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "graph",
+            "pin-observation",
+            "--observation-id",
+            "42",
+            "--json",
+        ])
+        .expect("graph pin-observation should parse");
+
+        match cli.command {
+            Some(Commands::Graph {
+                command:
+                    GraphCommands::PinObservation {
+                        observation_id,
+                        json,
+                    },
+            }) => {
+                assert_eq!(observation_id, 42);
+                assert!(json);
+            }
+            _ => panic!("expected graph pin-observation subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_graph_unpin_observation_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "graph",
+            "unpin-observation",
+            "--observation-id",
+            "42",
+            "--json",
+        ])
+        .expect("graph unpin-observation should parse");
+
+        match cli.command {
+            Some(Commands::Graph {
+                command:
+                    GraphCommands::UnpinObservation {
+                        observation_id,
+                        json,
+                    },
+            }) => {
+                assert_eq!(observation_id, 42);
+                assert!(json);
+            }
+            _ => panic!("expected graph unpin-observation subcommand"),
         }
     }
 
@@ -5701,6 +5819,7 @@ mod tests {
                 relation_count: 2,
                 observation_count: 1,
                 max_observation_priority: session::ContextObservationPriority::High,
+                has_pinned_observation: true,
             }],
             Some("sess-12345678"),
             "auth callback recovery",
@@ -5709,6 +5828,7 @@ mod tests {
         assert!(text.contains("Relevant memory: 1 entries"));
         assert!(text.contains("[file] callback.ts | score 319 | relations 2 | observations 1"));
         assert!(text.contains("priority high"));
+        assert!(text.contains("| pinned"));
         assert!(text.contains("matches auth, callback, recovery"));
         assert!(text.contains("path src/routes/auth/callback.ts"));
     }
@@ -5723,6 +5843,7 @@ mod tests {
             entity_name: "sess-12345678".to_string(),
             observation_type: "completion_summary".to_string(),
             priority: session::ContextObservationPriority::High,
+            pinned: true,
             summary: "Finished auth callback recovery with 2 tests".to_string(),
             details: BTreeMap::from([("tests_run".to_string(), "2".to_string())]),
             created_at: chrono::DateTime::parse_from_rfc3339("2026-04-10T01:02:03Z")
@@ -5731,7 +5852,7 @@ mod tests {
         }]);
 
         assert!(text.contains("Context graph observations: 1"));
-        assert!(text.contains("[completion_summary/high] sess-12345678"));
+        assert!(text.contains("[completion_summary/high/pinned] sess-12345678"));
         assert!(text.contains("summary Finished auth callback recovery with 2 tests"));
     }
 
