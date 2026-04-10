@@ -86,6 +86,13 @@ impl HarnessKind {
         }
     }
 
+    fn supports_direct_execution(self) -> bool {
+        matches!(
+            self,
+            Self::Claude | Self::Codex | Self::OpenCode | Self::Gemini
+        )
+    }
+
     fn project_markers(self) -> &'static [&'static str] {
         match self {
             Self::Claude => &[".claude"],
@@ -95,7 +102,10 @@ impl HarnessKind {
             Self::Cursor => &[".cursor"],
             Self::Kiro => &[".kiro"],
             Self::Trae => &[".trae"],
-            Self::Unknown | Self::Zed | Self::FactoryDroid | Self::Windsurf => &[],
+            Self::Zed => &[".zed"],
+            Self::FactoryDroid => &[".factory-droid", ".factory_droid"],
+            Self::Windsurf => &[".windsurf"],
+            Self::Unknown => &[],
         }
     }
 }
@@ -174,6 +184,9 @@ impl SessionHarnessInfo {
             HarnessKind::Cursor,
             HarnessKind::Kiro,
             HarnessKind::Trae,
+            HarnessKind::Zed,
+            HarnessKind::FactoryDroid,
+            HarnessKind::Windsurf,
         ]
         .into_iter()
         .filter(|harness| {
@@ -259,11 +272,24 @@ impl SessionHarnessInfo {
         }
 
         let detected = Self::detect("", working_dir).with_config_detection(cfg, working_dir);
-        if detected.primary_label != HarnessKind::Unknown.as_str() {
+        if detected.primary_label != HarnessKind::Unknown.as_str()
+            && Self::can_launch_detected_label(cfg, &detected.primary_label)
+        {
             return Self::runner_key(&detected.primary_label);
         }
 
+        for label in &detected.detected_labels {
+            if Self::can_launch_detected_label(cfg, label) {
+                return Self::runner_key(label);
+            }
+        }
+
         HarnessKind::Claude.as_str().to_string()
+    }
+
+    fn can_launch_detected_label(cfg: &crate::config::Config, label: &str) -> bool {
+        cfg.harness_runner(label).is_some()
+            || HarnessKind::from_agent_type(label).supports_direct_execution()
     }
 
     pub fn detected_summary(&self) -> String {
@@ -735,6 +761,32 @@ mod tests {
     }
 
     #[test]
+    fn detect_session_harness_collects_extended_builtin_markers(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let repo = TestDir::new("session-harness-extended-markers")?;
+        fs::create_dir_all(repo.path().join(".zed"))?;
+        fs::create_dir_all(repo.path().join(".factory-droid"))?;
+        fs::create_dir_all(repo.path().join(".windsurf"))?;
+
+        let harness = SessionHarnessInfo::detect("", repo.path());
+        assert_eq!(harness.primary, HarnessKind::Zed);
+        assert_eq!(harness.primary_label, "zed");
+        assert_eq!(
+            harness.detected,
+            vec![
+                HarnessKind::Zed,
+                HarnessKind::FactoryDroid,
+                HarnessKind::Windsurf
+            ]
+        );
+        assert_eq!(
+            harness.detected_labels,
+            vec!["zed", "factory_droid", "windsurf"]
+        );
+        Ok(())
+    }
+
+    #[test]
     fn canonical_agent_type_normalizes_known_aliases() {
         assert_eq!(HarnessKind::canonical_agent_type("claude-code"), "claude");
         assert_eq!(HarnessKind::canonical_agent_type("gemini-cli"), "gemini");
@@ -862,6 +914,40 @@ mod tests {
 
         let resolved = SessionHarnessInfo::resolve_requested_agent_type(&cfg, "auto", repo.path());
         assert_eq!(resolved, "acme-runner");
+        Ok(())
+    }
+
+    #[test]
+    fn resolve_requested_agent_type_skips_nonlaunchable_builtin_markers_without_runner(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let repo = TestDir::new("session-harness-resolve-auto-nonlaunchable")?;
+        fs::create_dir_all(repo.path().join(".zed"))?;
+
+        let resolved = SessionHarnessInfo::resolve_requested_agent_type(
+            &crate::config::Config::default(),
+            "auto",
+            repo.path(),
+        );
+        assert_eq!(resolved, "claude");
+        Ok(())
+    }
+
+    #[test]
+    fn resolve_requested_agent_type_uses_configured_runner_for_extended_builtin_markers(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let repo = TestDir::new("session-harness-resolve-auto-extended-runner")?;
+        fs::create_dir_all(repo.path().join(".windsurf"))?;
+        let mut cfg = crate::config::Config::default();
+        cfg.harness_runners.insert(
+            "windsurf".to_string(),
+            crate::config::HarnessRunnerConfig {
+                program: "windsurf".to_string(),
+                ..Default::default()
+            },
+        );
+
+        let resolved = SessionHarnessInfo::resolve_requested_agent_type(&cfg, "auto", repo.path());
+        assert_eq!(resolved, "windsurf");
         Ok(())
     }
 
