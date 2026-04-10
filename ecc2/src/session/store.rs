@@ -1262,6 +1262,7 @@ impl StateStore {
         alternatives: &[String],
         reasoning: &str,
     ) -> Result<()> {
+        let session_entity = self.sync_context_graph_session(session_id)?;
         let mut metadata = BTreeMap::new();
         metadata.insert(
             "alternatives_count".to_string(),
@@ -1270,13 +1271,21 @@ impl StateStore {
         if !alternatives.is_empty() {
             metadata.insert("alternatives".to_string(), alternatives.join(" | "));
         }
-        self.upsert_context_entity(
+        let decision_entity = self.upsert_context_entity(
             Some(session_id),
             "decision",
             decision,
             None,
             reasoning,
             &metadata,
+        )?;
+        let relation_summary = format!("{} recorded this decision", session_entity.name);
+        self.upsert_context_relation(
+            Some(session_id),
+            session_entity.id,
+            decision_entity.id,
+            "decided",
+            &relation_summary,
         )?;
         Ok(())
     }
@@ -1287,6 +1296,7 @@ impl StateStore {
         tool_name: &str,
         event: &PersistedFileEvent,
     ) -> Result<()> {
+        let session_entity = self.sync_context_graph_session(session_id)?;
         let mut metadata = BTreeMap::new();
         metadata.insert(
             "last_action".to_string(),
@@ -1305,7 +1315,7 @@ impl StateStore {
             format!("Last activity: {action} via {tool_name}")
         };
         let name = context_graph_file_name(&event.path);
-        self.upsert_context_entity(
+        let file_entity = self.upsert_context_entity(
             Some(session_id),
             "file",
             &name,
@@ -1313,7 +1323,55 @@ impl StateStore {
             &summary,
             &metadata,
         )?;
+        self.upsert_context_relation(
+            Some(session_id),
+            session_entity.id,
+            file_entity.id,
+            action,
+            &summary,
+        )?;
         Ok(())
+    }
+
+    fn sync_context_graph_session(&self, session_id: &str) -> Result<ContextGraphEntity> {
+        let session = self
+            .get_session(session_id)?
+            .ok_or_else(|| anyhow::anyhow!("Session not found for context graph sync: {session_id}"))?;
+
+        let mut metadata = BTreeMap::new();
+        metadata.insert("task".to_string(), session.task.clone());
+        metadata.insert("project".to_string(), session.project.clone());
+        metadata.insert("task_group".to_string(), session.task_group.clone());
+        metadata.insert("agent_type".to_string(), session.agent_type.clone());
+        metadata.insert("state".to_string(), session.state.to_string());
+        metadata.insert(
+            "working_dir".to_string(),
+            session.working_dir.display().to_string(),
+        );
+        if let Some(pid) = session.pid {
+            metadata.insert("pid".to_string(), pid.to_string());
+        }
+        if let Some(worktree) = &session.worktree {
+            metadata.insert(
+                "worktree_path".to_string(),
+                worktree.path.display().to_string(),
+            );
+            metadata.insert("worktree_branch".to_string(), worktree.branch.clone());
+            metadata.insert("base_branch".to_string(), worktree.base_branch.clone());
+        }
+
+        let summary = format!(
+            "{} | {} | {} / {}",
+            session.state, session.agent_type, session.project, session.task_group
+        );
+        self.upsert_context_entity(
+            Some(&session.id),
+            "session",
+            &session.id,
+            None,
+            &summary,
+            &metadata,
+        )
     }
 
     pub fn increment_tool_calls(&self, session_id: &str) -> Result<()> {
@@ -3832,6 +3890,20 @@ mod tests {
             .summary
             .contains("SQLite keeps the graph queryable"));
 
+        let session_entities = db.list_context_entities(Some("session-1"), Some("session"), 10)?;
+        assert_eq!(session_entities.len(), 1);
+        assert_eq!(session_entities[0].name, "session-1");
+        assert_eq!(
+            session_entities[0].metadata.get("task"),
+            Some(&"context graph".to_string())
+        );
+
+        let relations = db.list_context_relations(Some(session_entities[0].id), 10)?;
+        assert_eq!(relations.len(), 1);
+        assert_eq!(relations[0].relation_type, "decided");
+        assert_eq!(relations[0].to_entity_type, "decision");
+        assert_eq!(relations[0].to_entity_name, "Use sqlite for shared context");
+
         Ok(())
     }
 
@@ -3882,6 +3954,14 @@ mod tests {
         assert!(entities[0]
             .summary
             .contains("Last activity: modify via Edit"));
+
+        let session_entities = db.list_context_entities(Some("session-1"), Some("session"), 10)?;
+        assert_eq!(session_entities.len(), 1);
+        let relations = db.list_context_relations(Some(session_entities[0].id), 10)?;
+        assert_eq!(relations.len(), 1);
+        assert_eq!(relations[0].relation_type, "modify");
+        assert_eq!(relations[0].to_entity_type, "file");
+        assert_eq!(relations[0].to_entity_name, "config.ts");
 
         Ok(())
     }
@@ -3953,6 +4033,14 @@ mod tests {
                 && entity.name == "Backfill historical decision"));
         assert!(entities.iter().any(|entity| entity.entity_type == "file"
             && entity.path.as_deref() == Some("src/backfill.rs")));
+        let session_entity = entities
+            .iter()
+            .find(|entity| entity.entity_type == "session" && entity.name == "session-1")
+            .expect("session entity should exist");
+        let relations = db.list_context_relations(Some(session_entity.id), 10)?;
+        assert_eq!(relations.len(), 2);
+        assert!(relations.iter().any(|relation| relation.relation_type == "decided"));
+        assert!(relations.iter().any(|relation| relation.relation_type == "modify"));
 
         Ok(())
     }

@@ -10104,12 +10104,14 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
 
         dashboard.toggle_context_graph_mode();
         dashboard.toggle_search_scope();
+        dashboard.cycle_graph_entity_filter();
         dashboard.begin_search();
         for ch in "alpha.*".chars() {
             dashboard.push_input_char(ch);
         }
         dashboard.submit_search();
 
+        assert_eq!(dashboard.graph_entity_filter, GraphEntityFilter::Decisions);
         assert_eq!(dashboard.search_matches.len(), 2);
         let first_session = dashboard.selected_session_id().map(str::to_string);
         dashboard.next_search_match();
@@ -10118,6 +10120,40 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
             Some("graph search /alpha.* match 2/2 | all sessions")
         );
         assert_ne!(dashboard.selected_session_id().map(str::to_string), first_session);
+        Ok(())
+    }
+
+    #[test]
+    fn graph_sessions_filter_renders_auto_session_relations() -> Result<()> {
+        let session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            None,
+            1,
+            1,
+        );
+        let mut dashboard = test_dashboard(vec![session.clone()], 0);
+        dashboard.db.insert_session(&session)?;
+        dashboard.db.insert_decision(
+            &session.id,
+            "Use graph relations",
+            &[],
+            "Edges make the context graph navigable",
+        )?;
+
+        dashboard.toggle_context_graph_mode();
+        dashboard.cycle_graph_entity_filter();
+        dashboard.cycle_graph_entity_filter();
+        dashboard.cycle_graph_entity_filter();
+        dashboard.cycle_graph_entity_filter();
+
+        assert_eq!(dashboard.graph_entity_filter, GraphEntityFilter::Sessions);
+        assert_eq!(dashboard.output_title(), " Graph sessions ");
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("focus-12345678"));
+        assert!(rendered.contains("summary running | planner |"));
+        assert!(rendered.contains("-> decided decision:Use graph relations"));
         Ok(())
     }
 
