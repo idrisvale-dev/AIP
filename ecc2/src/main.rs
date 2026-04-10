@@ -244,6 +244,12 @@ enum Commands {
         #[arg(long)]
         keep_worktree: bool,
     },
+    /// Show the merge queue for inactive worktrees and any branch-to-branch blockers
+    MergeQueue {
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
     /// Prune worktrees for inactive sessions and report any active sessions still holding one
     PruneWorktrees {
         /// Emit machine-readable JSON instead of the human summary
@@ -835,6 +841,14 @@ async fn main() -> Result<()> {
                 } else {
                     println!("{}", format_worktree_merge_human(&outcome));
                 }
+            }
+        }
+        Some(Commands::MergeQueue { json }) => {
+            let report = session::manager::build_merge_queue(&db)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                println!("{}", format_merge_queue_human(&report));
             }
         }
         Some(Commands::PruneWorktrees { json }) => {
@@ -1582,6 +1596,59 @@ fn format_prune_worktrees_human(outcome: &session::manager::WorktreePruneOutcome
         ));
         for session_id in &outcome.retained_session_ids {
             lines.push(format!("- retained {}", short_session(session_id)));
+        }
+    }
+
+    lines.join("\n")
+}
+
+fn format_merge_queue_human(report: &session::manager::MergeQueueReport) -> String {
+    let mut lines = Vec::new();
+    lines.push(format!(
+        "Merge queue: {} ready / {} blocked",
+        report.ready_entries.len(),
+        report.blocked_entries.len()
+    ));
+
+    if report.ready_entries.is_empty() {
+        lines.push("No merge-ready worktrees queued".to_string());
+    } else {
+        lines.push("Ready".to_string());
+        for entry in &report.ready_entries {
+            lines.push(format!(
+                "- #{} {} [{}] | {} / {} | {}",
+                entry.queue_position.unwrap_or(0),
+                entry.session_id,
+                entry.branch,
+                entry.project,
+                entry.task_group,
+                entry.task
+            ));
+        }
+    }
+
+    if !report.blocked_entries.is_empty() {
+        lines.push(String::new());
+        lines.push("Blocked".to_string());
+        for entry in &report.blocked_entries {
+            lines.push(format!(
+                "- {} [{}] | {} / {} | {}",
+                entry.session_id, entry.branch, entry.project, entry.task_group, entry.suggested_action
+            ));
+            for blocker in entry.blocked_by.iter().take(2) {
+                lines.push(format!(
+                    "  blocker {} [{}] | {}",
+                    blocker.session_id, blocker.branch, blocker.summary
+                ));
+                for conflict in blocker.conflicts.iter().take(3) {
+                    lines.push(format!("    conflict {conflict}"));
+                }
+                if let Some(preview) = blocker.conflicting_patch_preview.as_ref() {
+                    for line in preview.lines().take(6) {
+                        lines.push(format!("    {}", line));
+                    }
+                }
+            }
         }
     }
 
@@ -2536,6 +2603,17 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_merge_queue_json_flag() {
+        let cli = Cli::try_parse_from(["ecc", "merge-queue", "--json"])
+            .expect("merge-queue --json should parse");
+
+        match cli.command {
+            Some(Commands::MergeQueue { json }) => assert!(json),
+            _ => panic!("expected merge-queue subcommand"),
+        }
+    }
+
+    #[test]
     fn format_worktree_status_human_includes_readiness_and_conflicts() {
         let report = WorktreeStatusReport {
             session_id: "deadbeefcafefeed".to_string(),
@@ -2664,6 +2742,58 @@ mod tests {
         assert!(text.contains("Branch ecc/deadbeef -> main"));
         assert!(text.contains("Result merged into base"));
         assert!(text.contains("Cleanup removed worktree and branch"));
+    }
+
+    #[test]
+    fn format_merge_queue_human_reports_ready_and_blocked_entries() {
+        let text = format_merge_queue_human(&session::manager::MergeQueueReport {
+            ready_entries: vec![session::manager::MergeQueueEntry {
+                session_id: "alpha1234".to_string(),
+                task: "merge alpha".to_string(),
+                project: "ecc".to_string(),
+                task_group: "checkout".to_string(),
+                branch: "ecc/alpha1234".to_string(),
+                base_branch: "main".to_string(),
+                state: session::SessionState::Stopped,
+                worktree_health: worktree::WorktreeHealth::InProgress,
+                dirty: false,
+                queue_position: Some(1),
+                ready_to_merge: true,
+                blocked_by: Vec::new(),
+                suggested_action: "merge in queue order #1".to_string(),
+            }],
+            blocked_entries: vec![session::manager::MergeQueueEntry {
+                session_id: "beta5678".to_string(),
+                task: "merge beta".to_string(),
+                project: "ecc".to_string(),
+                task_group: "checkout".to_string(),
+                branch: "ecc/beta5678".to_string(),
+                base_branch: "main".to_string(),
+                state: session::SessionState::Stopped,
+                worktree_health: worktree::WorktreeHealth::InProgress,
+                dirty: false,
+                queue_position: None,
+                ready_to_merge: false,
+                blocked_by: vec![session::manager::MergeQueueBlocker {
+                    session_id: "alpha1234".to_string(),
+                    branch: "ecc/alpha1234".to_string(),
+                    state: session::SessionState::Stopped,
+                    conflicts: vec!["README.md".to_string()],
+                    summary: "merge after alpha1234 to avoid branch conflicts".to_string(),
+                    conflicting_patch_preview: Some("--- Branch diff vs main ---\nREADME.md".to_string()),
+                    blocker_patch_preview: None,
+                }],
+                suggested_action: "merge after alpha1234".to_string(),
+            }],
+        });
+
+        assert!(text.contains("Merge queue: 1 ready / 1 blocked"));
+        assert!(text.contains("Ready"));
+        assert!(text.contains("#1 alpha1234"));
+        assert!(text.contains("Blocked"));
+        assert!(text.contains("beta5678"));
+        assert!(text.contains("blocker alpha1234"));
+        assert!(text.contains("conflict README.md"));
     }
 
     #[test]

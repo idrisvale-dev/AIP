@@ -4371,6 +4371,35 @@ impl Dashboard {
                         lines.push(format!("- conflict {conflict}"));
                     }
                 }
+                if let Ok(merge_queue) = manager::build_merge_queue(&self.db) {
+                    let entry = merge_queue
+                        .ready_entries
+                        .iter()
+                        .chain(merge_queue.blocked_entries.iter())
+                        .find(|entry| entry.session_id == session.id);
+                    if let Some(entry) = entry {
+                        lines.push("Merge queue".to_string());
+                        if let Some(position) = entry.queue_position {
+                            lines.push(format!(
+                                "- ready #{} | {}",
+                                position, entry.suggested_action
+                            ));
+                        } else {
+                            lines.push(format!("- blocked | {}", entry.suggested_action));
+                        }
+                        for blocker in entry.blocked_by.iter().take(2) {
+                            lines.push(format!(
+                                "  blocker {} [{}] | {}",
+                                format_session_id(&blocker.session_id),
+                                blocker.branch,
+                                blocker.summary
+                            ));
+                            for conflict in blocker.conflicts.iter().take(3) {
+                                lines.push(format!("    conflict {conflict}"));
+                            }
+                        }
+                    }
+                }
             }
 
             lines.push(format!(

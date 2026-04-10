@@ -19,7 +19,7 @@ pub struct MergeReadiness {
     pub conflicts: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 pub enum WorktreeHealth {
     Clear,
     InProgress,
@@ -31,6 +31,15 @@ pub struct MergeOutcome {
     pub branch: String,
     pub base_branch: String,
     pub already_up_to_date: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct BranchConflictPreview {
+    pub left_branch: String,
+    pub right_branch: String,
+    pub conflicts: Vec<String>,
+    pub left_patch_preview: Option<String>,
+    pub right_patch_preview: Option<String>,
 }
 
 /// Create a new git worktree for an agent session.
@@ -255,15 +264,45 @@ pub fn diff_patch_preview(worktree: &WorktreeInfo, max_lines: usize) -> Result<O
 }
 
 pub fn merge_readiness(worktree: &WorktreeInfo) -> Result<MergeReadiness> {
+    let mut readiness = merge_readiness_for_branches(
+        &base_checkout_path(worktree)?,
+        &worktree.base_branch,
+        &worktree.branch,
+    )?;
+    readiness.summary = match readiness.status {
+        MergeReadinessStatus::Ready => format!("Merge ready into {}", worktree.base_branch),
+        MergeReadinessStatus::Conflicted => {
+            let conflict_summary = readiness
+                .conflicts
+                .iter()
+                .take(3)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", ");
+            let overflow = readiness.conflicts.len().saturating_sub(3);
+            let detail = if overflow > 0 {
+                format!("{conflict_summary}, +{overflow} more")
+            } else {
+                conflict_summary
+            };
+            format!(
+                "Merge blocked by {} conflict(s): {detail}",
+                readiness.conflicts.len()
+            )
+        }
+    };
+    Ok(readiness)
+}
+
+pub fn merge_readiness_for_branches(
+    repo_root: &Path,
+    left_branch: &str,
+    right_branch: &str,
+) -> Result<MergeReadiness> {
     let output = Command::new("git")
         .arg("-C")
-        .arg(&worktree.path)
-        .args([
-            "merge-tree",
-            "--write-tree",
-            &worktree.base_branch,
-            &worktree.branch,
-        ])
+        .arg(repo_root)
+        .args(["merge-tree", "--write-tree", left_branch, right_branch])
         .output()
         .context("Failed to generate merge readiness preview")?;
 
@@ -280,7 +319,7 @@ pub fn merge_readiness(worktree: &WorktreeInfo) -> Result<MergeReadiness> {
     if output.status.success() {
         return Ok(MergeReadiness {
             status: MergeReadinessStatus::Ready,
-            summary: format!("Merge ready into {}", worktree.base_branch),
+            summary: format!("Merge ready: {right_branch} into {left_branch}"),
             conflicts: Vec::new(),
         });
     }
@@ -301,13 +340,40 @@ pub fn merge_readiness(worktree: &WorktreeInfo) -> Result<MergeReadiness> {
 
         return Ok(MergeReadiness {
             status: MergeReadinessStatus::Conflicted,
-            summary: format!("Merge blocked by {} conflict(s): {detail}", conflicts.len()),
+            summary: format!(
+                "Merge blocked between {left_branch} and {right_branch} by {} conflict(s): {detail}",
+                conflicts.len()
+            ),
             conflicts,
         });
     }
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     anyhow::bail!("git merge-tree failed: {stderr}");
+}
+
+pub fn branch_conflict_preview(
+    left: &WorktreeInfo,
+    right: &WorktreeInfo,
+    max_lines: usize,
+) -> Result<Option<BranchConflictPreview>> {
+    if left.base_branch != right.base_branch {
+        return Ok(None);
+    }
+
+    let repo_root = base_checkout_path(left)?;
+    let readiness = merge_readiness_for_branches(&repo_root, &left.branch, &right.branch)?;
+    if readiness.status != MergeReadinessStatus::Conflicted {
+        return Ok(None);
+    }
+
+    Ok(Some(BranchConflictPreview {
+        left_branch: left.branch.clone(),
+        right_branch: right.branch.clone(),
+        conflicts: readiness.conflicts.clone(),
+        left_patch_preview: diff_patch_preview_for_paths(left, &readiness.conflicts, max_lines)?,
+        right_patch_preview: diff_patch_preview_for_paths(right, &readiness.conflicts, max_lines)?,
+    }))
 }
 
 pub fn health(worktree: &WorktreeInfo) -> Result<WorktreeHealth> {
@@ -460,6 +526,79 @@ fn git_diff_patch_lines(worktree_path: &Path, extra_args: &[&str]) -> Result<Vec
     }
 
     Ok(parse_nonempty_lines(&output.stdout))
+}
+
+fn git_diff_patch_lines_for_paths(
+    worktree_path: &Path,
+    extra_args: &[&str],
+    paths: &[String],
+) -> Result<Vec<String>> {
+    if paths.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut command = Command::new("git");
+    command
+        .arg("-C")
+        .arg(worktree_path)
+        .arg("diff")
+        .args(["--stat", "--patch", "--find-renames"]);
+    command.args(extra_args);
+    command.arg("--");
+    for path in paths {
+        command.arg(path);
+    }
+
+    let output = command
+        .output()
+        .context("Failed to generate filtered worktree patch preview")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        tracing::warn!(
+            "Filtered worktree patch preview warning for {}: {stderr}",
+            worktree_path.display()
+        );
+        return Ok(Vec::new());
+    }
+
+    Ok(parse_nonempty_lines(&output.stdout))
+}
+
+pub fn diff_patch_preview_for_paths(
+    worktree: &WorktreeInfo,
+    paths: &[String],
+    max_lines: usize,
+) -> Result<Option<String>> {
+    if paths.is_empty() {
+        return Ok(None);
+    }
+
+    let mut remaining = max_lines.max(1);
+    let mut sections = Vec::new();
+    let base_ref = format!("{}...HEAD", worktree.base_branch);
+
+    let committed = git_diff_patch_lines_for_paths(&worktree.path, &[&base_ref], paths)?;
+    if !committed.is_empty() && remaining > 0 {
+        let taken = take_preview_lines(&committed, &mut remaining);
+        sections.push(format!(
+            "--- Branch diff vs {} ---\n{}",
+            worktree.base_branch,
+            taken.join("\n")
+        ));
+    }
+
+    let working = git_diff_patch_lines_for_paths(&worktree.path, &[], paths)?;
+    if !working.is_empty() && remaining > 0 {
+        let taken = take_preview_lines(&working, &mut remaining);
+        sections.push(format!("--- Working tree diff ---\n{}", taken.join("\n")));
+    }
+
+    if sections.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(sections.join("\n\n")))
+    }
 }
 
 fn git_status_short(worktree_path: &Path) -> Result<Vec<String>> {
@@ -897,6 +1036,83 @@ mod tests {
             .arg(&repo)
             .args(["worktree", "remove", "--force"])
             .arg(&worktree_dir)
+            .output();
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn branch_conflict_preview_reports_conflicting_branches() -> Result<()> {
+        let root = std::env::temp_dir()
+            .join(format!("ecc2-worktree-branch-conflict-preview-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+
+        let left_dir = root.join("wt-left");
+        run_git(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "-b",
+                "ecc/left",
+                left_dir.to_str().expect("utf8 path"),
+                "HEAD",
+            ],
+        )?;
+        fs::write(left_dir.join("README.md"), "left\n")?;
+        run_git(&left_dir, &["add", "README.md"])?;
+        run_git(&left_dir, &["commit", "-m", "left change"])?;
+
+        let right_dir = root.join("wt-right");
+        run_git(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "-b",
+                "ecc/right",
+                right_dir.to_str().expect("utf8 path"),
+                "HEAD",
+            ],
+        )?;
+        fs::write(right_dir.join("README.md"), "right\n")?;
+        run_git(&right_dir, &["add", "README.md"])?;
+        run_git(&right_dir, &["commit", "-m", "right change"])?;
+
+        let left = WorktreeInfo {
+            path: left_dir.clone(),
+            branch: "ecc/left".to_string(),
+            base_branch: "main".to_string(),
+        };
+        let right = WorktreeInfo {
+            path: right_dir.clone(),
+            branch: "ecc/right".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        let preview = branch_conflict_preview(&left, &right, 12)?
+            .expect("expected branch conflict preview");
+        assert_eq!(preview.conflicts, vec!["README.md".to_string()]);
+        assert!(preview
+            .left_patch_preview
+            .as_ref()
+            .is_some_and(|preview| preview.contains("README.md")));
+        assert!(preview
+            .right_patch_preview
+            .as_ref()
+            .is_some_and(|preview| preview.contains("README.md")));
+
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["worktree", "remove", "--force"])
+            .arg(&left_dir)
+            .output();
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo)
+            .args(["worktree", "remove", "--force"])
+            .arg(&right_dir)
             .output();
         let _ = fs::remove_dir_all(root);
         Ok(())
