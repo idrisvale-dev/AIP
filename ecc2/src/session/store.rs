@@ -13,8 +13,8 @@ use crate::observability::{ToolCallEvent, ToolLogEntry, ToolLogPage};
 
 use super::output::{OutputLine, OutputStream, OUTPUT_BUFFER_LIMIT};
 use super::{
-    FileActivityAction, FileActivityEntry, Session, SessionMessage, SessionMetrics, SessionState,
-    WorktreeInfo,
+    default_project_label, default_task_group_label, normalize_group_label, FileActivityAction,
+    FileActivityEntry, Session, SessionMessage, SessionMetrics, SessionState, WorktreeInfo,
 };
 
 pub struct StateStore {
@@ -138,6 +138,8 @@ impl StateStore {
             CREATE TABLE IF NOT EXISTS sessions (
                 id TEXT PRIMARY KEY,
                 task TEXT NOT NULL,
+                project TEXT NOT NULL DEFAULT '',
+                task_group TEXT NOT NULL DEFAULT '',
                 agent_type TEXT NOT NULL,
                 working_dir TEXT NOT NULL DEFAULT '.',
                 state TEXT NOT NULL DEFAULT 'pending',
@@ -253,6 +255,24 @@ impl StateStore {
             self.conn
                 .execute("ALTER TABLE sessions ADD COLUMN pid INTEGER", [])
                 .context("Failed to add pid column to sessions table")?;
+        }
+
+        if !self.has_column("sessions", "project")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE sessions ADD COLUMN project TEXT NOT NULL DEFAULT ''",
+                    [],
+                )
+                .context("Failed to add project column to sessions table")?;
+        }
+
+        if !self.has_column("sessions", "task_group")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE sessions ADD COLUMN task_group TEXT NOT NULL DEFAULT ''",
+                    [],
+                )
+                .context("Failed to add task_group column to sessions table")?;
         }
 
         if !self.has_column("sessions", "input_tokens")? {
@@ -478,11 +498,13 @@ impl StateStore {
 
     pub fn insert_session(&self, session: &Session) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO sessions (id, task, agent_type, working_dir, state, pid, worktree_path, worktree_branch, worktree_base, created_at, updated_at, last_heartbeat_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            "INSERT INTO sessions (id, task, project, task_group, agent_type, working_dir, state, pid, worktree_path, worktree_branch, worktree_base, created_at, updated_at, last_heartbeat_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             rusqlite::params![
                 session.id,
                 session.task,
+                session.project,
+                session.task_group,
                 session.agent_type,
                 session.working_dir.to_string_lossy().to_string(),
                 session.state.to_string(),
@@ -1062,7 +1084,7 @@ impl StateStore {
 
     pub fn list_sessions(&self) -> Result<Vec<Session>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, task, agent_type, working_dir, state, pid, worktree_path, worktree_branch, worktree_base,
+            "SELECT id, task, project, task_group, agent_type, working_dir, state, pid, worktree_path, worktree_branch, worktree_base,
                     input_tokens, output_tokens, tokens_used, tool_calls, files_changed, duration_secs, cost_usd,
                     created_at, updated_at, last_heartbeat_at
              FROM sessions ORDER BY updated_at DESC",
@@ -1070,27 +1092,42 @@ impl StateStore {
 
         let sessions = stmt
             .query_map([], |row| {
-                let state_str: String = row.get(4)?;
+                let state_str: String = row.get(6)?;
                 let state = SessionState::from_db_value(&state_str);
 
-                let worktree_path: Option<String> = row.get(6)?;
+                let working_dir = PathBuf::from(row.get::<_, String>(5)?);
+                let project = row
+                    .get::<_, String>(2)
+                    .ok()
+                    .and_then(|value| normalize_group_label(&value))
+                    .unwrap_or_else(|| default_project_label(&working_dir));
+                let task: String = row.get(1)?;
+                let task_group = row
+                    .get::<_, String>(3)
+                    .ok()
+                    .and_then(|value| normalize_group_label(&value))
+                    .unwrap_or_else(|| default_task_group_label(&task));
+
+                let worktree_path: Option<String> = row.get(8)?;
                 let worktree = worktree_path.map(|path| super::WorktreeInfo {
                     path: PathBuf::from(path),
-                    branch: row.get::<_, String>(7).unwrap_or_default(),
-                    base_branch: row.get::<_, String>(8).unwrap_or_default(),
+                    branch: row.get::<_, String>(9).unwrap_or_default(),
+                    base_branch: row.get::<_, String>(10).unwrap_or_default(),
                 });
 
-                let created_str: String = row.get(16)?;
-                let updated_str: String = row.get(17)?;
-                let heartbeat_str: String = row.get(18)?;
+                let created_str: String = row.get(18)?;
+                let updated_str: String = row.get(19)?;
+                let heartbeat_str: String = row.get(20)?;
 
                 Ok(Session {
                     id: row.get(0)?,
-                    task: row.get(1)?,
-                    agent_type: row.get(2)?,
-                    working_dir: PathBuf::from(row.get::<_, String>(3)?),
+                    task,
+                    project,
+                    task_group,
+                    agent_type: row.get(4)?,
+                    working_dir,
                     state,
-                    pid: row.get::<_, Option<u32>>(5)?,
+                    pid: row.get::<_, Option<u32>>(7)?,
                     worktree,
                     created_at: chrono::DateTime::parse_from_rfc3339(&created_str)
                         .unwrap_or_default()
@@ -1104,13 +1141,13 @@ impl StateStore {
                         })
                         .with_timezone(&chrono::Utc),
                     metrics: SessionMetrics {
-                        input_tokens: row.get(9)?,
-                        output_tokens: row.get(10)?,
-                        tokens_used: row.get(11)?,
-                        tool_calls: row.get(12)?,
-                        files_changed: row.get(13)?,
-                        duration_secs: row.get(14)?,
-                        cost_usd: row.get(15)?,
+                        input_tokens: row.get(11)?,
+                        output_tokens: row.get(12)?,
+                        tokens_used: row.get(13)?,
+                        tool_calls: row.get(14)?,
+                        files_changed: row.get(15)?,
+                        duration_secs: row.get(16)?,
+                        cost_usd: row.get(17)?,
                     },
                 })
             })?
@@ -2023,6 +2060,8 @@ mod tests {
         Session {
             id: id.to_string(),
             task: "task".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state,
@@ -2106,6 +2145,8 @@ mod tests {
         db.insert_session(&Session {
             id: "session-1".to_string(),
             task: "sync usage".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -2151,6 +2192,8 @@ mod tests {
         db.insert_session(&Session {
             id: "session-1".to_string(),
             task: "sync tools".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -2164,6 +2207,8 @@ mod tests {
         db.insert_session(&Session {
             id: "session-2".to_string(),
             task: "no activity".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Pending,
@@ -2228,6 +2273,8 @@ mod tests {
         db.insert_session(&Session {
             id: "session-1".to_string(),
             task: "sync tools".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -2273,6 +2320,8 @@ mod tests {
         db.insert_session(&Session {
             id: "session-1".to_string(),
             task: "sync tools".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -2321,6 +2370,8 @@ mod tests {
         db.insert_session(&Session {
             id: "session-1".to_string(),
             task: "focus".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -2334,6 +2385,8 @@ mod tests {
         db.insert_session(&Session {
             id: "session-2".to_string(),
             task: "delegate".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Idle,
@@ -2347,6 +2400,8 @@ mod tests {
         db.insert_session(&Session {
             id: "session-3".to_string(),
             task: "done".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Completed,
@@ -2392,6 +2447,8 @@ mod tests {
         db.insert_session(&Session {
             id: "running-1".to_string(),
             task: "live run".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -2405,6 +2462,8 @@ mod tests {
         db.insert_session(&Session {
             id: "done-1".to_string(),
             task: "finished run".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Completed,
@@ -2440,6 +2499,8 @@ mod tests {
         db.insert_session(&Session {
             id: "session-1".to_string(),
             task: "heartbeat".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -2470,6 +2531,8 @@ mod tests {
         db.insert_session(&Session {
             id: "session-1".to_string(),
             task: "buffer output".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,

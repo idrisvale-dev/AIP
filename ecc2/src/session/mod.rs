@@ -7,12 +7,15 @@ pub mod store;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::path::Path;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
     pub id: String,
     pub task: String,
+    pub project: String,
+    pub task_group: String,
     pub agent_type: String,
     pub working_dir: PathBuf,
     pub state: SessionState,
@@ -148,4 +151,31 @@ pub enum FileActivityAction {
     Move,
     Delete,
     Touch,
+}
+
+pub fn normalize_group_label(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
+pub fn default_project_label(working_dir: &Path) -> String {
+    working_dir
+        .file_name()
+        .and_then(|value| value.to_str())
+        .and_then(normalize_group_label)
+        .unwrap_or_else(|| "workspace".to_string())
+}
+
+pub fn default_task_group_label(task: &str) -> String {
+    normalize_group_label(task).unwrap_or_else(|| "general".to_string())
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SessionGrouping {
+    pub project: Option<String>,
+    pub task_group: Option<String>,
 }

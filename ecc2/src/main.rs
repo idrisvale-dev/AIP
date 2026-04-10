@@ -344,10 +344,29 @@ async fn main() -> Result<()> {
             from_session,
         }) => {
             let use_worktree = worktree.resolve(&cfg);
-            let session_id =
-                session::manager::create_session(&db, &cfg, &task, &agent, use_worktree).await?;
-            if let Some(from_session) = from_session {
-                let from_id = resolve_session_id(&db, &from_session)?;
+            let source = if let Some(from_session) = from_session.as_ref() {
+                let from_id = resolve_session_id(&db, from_session)?;
+                Some(
+                    db.get_session(&from_id)?
+                        .ok_or_else(|| anyhow::anyhow!("Session not found: {from_id}"))?,
+                )
+            } else {
+                None
+            };
+            let session_id = session::manager::create_session_with_grouping(
+                &db,
+                &cfg,
+                &task,
+                &agent,
+                use_worktree,
+                session::SessionGrouping {
+                    project: source.as_ref().map(|session| session.project.clone()),
+                    task_group: source.as_ref().map(|session| session.task_group.clone()),
+                },
+            )
+            .await?;
+            if let Some(source) = source {
+                let from_id = source.id;
                 send_handoff_message(&db, &from_id, &session_id)?;
             }
             println!("Session started: {session_id}");
@@ -371,8 +390,18 @@ async fn main() -> Result<()> {
                 )
             });
 
-            let session_id =
-                session::manager::create_session(&db, &cfg, &task, &agent, use_worktree).await?;
+            let session_id = session::manager::create_session_with_grouping(
+                &db,
+                &cfg,
+                &task,
+                &agent,
+                use_worktree,
+                session::SessionGrouping {
+                    project: Some(source.project.clone()),
+                    task_group: Some(source.task_group.clone()),
+                },
+            )
+            .await?;
             send_handoff_message(&db, &source.id, &session_id)?;
             println!(
                 "Delegated session started: {} <- {}",
@@ -1908,6 +1937,8 @@ mod tests {
         Session {
             id: id.to_string(),
             task: task.to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp/ecc"),
             state,

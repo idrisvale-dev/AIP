@@ -272,6 +272,8 @@ mod tests {
         db.insert_session(&Session {
             id: session_id.clone(),
             task: "stream output".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "test".to_string(),
             working_dir: env::temp_dir(),
             state: SessionState::Pending,
@@ -338,6 +340,8 @@ mod tests {
         db.insert_session(&Session {
             id: session_id.clone(),
             task: "quiet process".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "test".to_string(),
             working_dir: env::temp_dir(),
             state: SessionState::Pending,

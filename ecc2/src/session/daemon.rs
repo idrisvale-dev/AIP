@@ -480,6 +480,8 @@ mod tests {
         Session {
             id: id.to_string(),
             task: "Recover crashed worker".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state,

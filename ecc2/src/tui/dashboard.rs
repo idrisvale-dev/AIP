@@ -20,7 +20,7 @@ use crate::session::output::{
     OutputEvent, OutputLine, OutputStream, SessionOutputStore, OUTPUT_BUFFER_LIMIT,
 };
 use crate::session::store::{DaemonActivity, FileActivityOverlap, StateStore};
-use crate::session::{FileActivityEntry, Session, SessionMessage, SessionState};
+use crate::session::{FileActivityEntry, Session, SessionGrouping, SessionMessage, SessionState};
 use crate::worktree;
 
 #[cfg(test)]
@@ -115,6 +115,8 @@ pub struct Dashboard {
 #[derive(Debug, Default, PartialEq, Eq)]
 struct SessionSummary {
     total: usize,
+    projects: usize,
+    task_groups: usize,
     pending: usize,
     running: usize,
     idle: usize,
@@ -373,6 +375,7 @@ impl Dashboard {
             last_tool_activity_signature: initial_tool_activity_signature,
             last_budget_alert_state: BudgetState::Normal,
         };
+        sort_sessions_for_display(&mut dashboard.sessions);
         dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap_or_default();
         dashboard.sync_handoff_backlog_counts();
         dashboard.sync_global_handoff_backlog();
@@ -489,9 +492,27 @@ impl Dashboard {
 
         frame.render_widget(Paragraph::new(overview_lines), chunks[0]);
 
+        let mut previous_project: Option<&str> = None;
+        let mut previous_task_group: Option<&str> = None;
         let rows = self.sessions.iter().map(|session| {
+            let project_cell = if previous_project == Some(session.project.as_str()) {
+                None
+            } else {
+                previous_project = Some(session.project.as_str());
+                previous_task_group = None;
+                Some(session.project.clone())
+            };
+            let task_group_cell = if previous_task_group == Some(session.task_group.as_str()) {
+                None
+            } else {
+                previous_task_group = Some(session.task_group.as_str());
+                Some(session.task_group.clone())
+            };
+
             session_row(
                 session,
+                project_cell,
+                task_group_cell,
                 self.approval_queue_counts
                     .get(&session.id)
                     .copied()
@@ -504,6 +525,8 @@ impl Dashboard {
         });
         let header = Row::new([
             "ID",
+            "Project",
+            "Group",
             "Agent",
             "State",
             "Branch",
@@ -517,6 +540,8 @@ impl Dashboard {
         .style(Style::default().add_modifier(Modifier::BOLD));
         let widths = [
             Constraint::Length(8),
+            Constraint::Length(12),
+            Constraint::Length(18),
             Constraint::Length(10),
             Constraint::Length(10),
             Constraint::Min(12),
@@ -1650,13 +1675,22 @@ impl Dashboard {
 
         let task = self.new_session_task();
         let agent = self.cfg.default_agent.clone();
+        let grouping = self
+            .sessions
+            .get(self.selected_session)
+            .map(|session| SessionGrouping {
+                project: Some(session.project.clone()),
+                task_group: Some(session.task_group.clone()),
+            })
+            .unwrap_or_default();
 
-        let session_id = match manager::create_session(
+        let session_id = match manager::create_session_with_grouping(
             &self.db,
             &self.cfg,
             &task,
             &agent,
             self.cfg.auto_create_worktrees,
+            grouping,
         )
         .await
         {
@@ -2610,16 +2644,24 @@ impl Dashboard {
         });
         let source_task = source_session.as_ref().map(|session| session.task.clone());
         let source_session_id = source_session.as_ref().map(|session| session.id.clone());
+        let source_grouping = source_session
+            .as_ref()
+            .map(|session| SessionGrouping {
+                project: Some(session.project.clone()),
+                task_group: Some(session.task_group.clone()),
+            })
+            .unwrap_or_default();
         let agent = self.cfg.default_agent.clone();
         let mut created_ids = Vec::new();
 
         for task in expand_spawn_tasks(&plan.task, plan.spawn_count) {
-            let session_id = match manager::create_session(
+            let session_id = match manager::create_session_with_grouping(
                 &self.db,
                 &self.cfg,
                 &task,
                 &agent,
                 self.cfg.auto_create_worktrees,
+                source_grouping.clone(),
             )
             .await
             {
@@ -2950,7 +2992,10 @@ impl Dashboard {
         let (heartbeat_enforcement, budget_enforcement) = self.sync_runtime_metrics();
         let selected_id = self.selected_session_id().map(ToOwned::to_owned);
         self.sessions = match self.db.list_sessions() {
-            Ok(sessions) => sessions,
+            Ok(mut sessions) => {
+                sort_sessions_for_display(&mut sessions);
+                sessions
+            }
             Err(error) => {
                 tracing::warn!("Failed to refresh sessions: {error}");
                 Vec::new()
@@ -4105,6 +4150,14 @@ impl Dashboard {
     fn selected_session_metrics_text(&self) -> String {
         if let Some(session) = self.sessions.get(self.selected_session) {
             let metrics = &session.metrics;
+            let group_peers = self
+                .sessions
+                .iter()
+                .filter(|candidate| {
+                    candidate.project == session.project
+                        && candidate.task_group == session.task_group
+                })
+                .count();
             let mut lines = vec![
                 format!(
                     "Selected {} [{}]",
@@ -4112,6 +4165,10 @@ impl Dashboard {
                     session.state
                 ),
                 format!("Task {}", session.task),
+                format!(
+                    "Project {} | Group {} | Peer sessions {}",
+                    session.project, session.task_group, group_peers
+                ),
             ];
 
             if let Some(parent) = self.selected_parent_session.as_ref() {
@@ -5203,9 +5260,21 @@ impl SessionSummary {
         worktree_health_by_session: &HashMap<String, worktree::WorktreeHealth>,
         suppress_inbox_attention: bool,
     ) -> Self {
+        let projects = sessions
+            .iter()
+            .map(|session| session.project.as_str())
+            .collect::<HashSet<_>>()
+            .len();
+        let task_groups = sessions
+            .iter()
+            .map(|session| (session.project.as_str(), session.task_group.as_str()))
+            .collect::<HashSet<_>>()
+            .len();
         sessions.iter().fold(
             Self {
                 total: sessions.len(),
+                projects,
+                task_groups,
                 unread_messages: if suppress_inbox_attention {
                     0
                 } else {
@@ -5248,6 +5317,8 @@ impl SessionSummary {
 
 fn session_row(
     session: &Session,
+    project_label: Option<String>,
+    task_group_label: Option<String>,
     approval_requests: usize,
     unread_messages: usize,
 ) -> Row<'static> {
@@ -5255,6 +5326,8 @@ fn session_row(
     let state_color = session_state_color(&session.state);
     Row::new(vec![
         Cell::from(format_session_id(&session.id)),
+        Cell::from(project_label.unwrap_or_default()),
+        Cell::from(task_group_label.unwrap_or_default()),
         Cell::from(session.agent_type.clone()),
         Cell::from(state_label).style(
             Style::default()
@@ -5293,12 +5366,24 @@ fn session_row(
     ])
 }
 
+fn sort_sessions_for_display(sessions: &mut [Session]) {
+    sessions.sort_by(|left, right| {
+        left.project
+            .cmp(&right.project)
+            .then_with(|| left.task_group.cmp(&right.task_group))
+            .then_with(|| right.updated_at.cmp(&left.updated_at))
+            .then_with(|| left.id.cmp(&right.id))
+    });
+}
+
 fn summary_line(summary: &SessionSummary) -> Line<'static> {
     let mut spans = vec![
         Span::styled(
             format!("Total {}  ", summary.total),
             Style::default().add_modifier(Modifier::BOLD),
         ),
+        summary_span("Projects", summary.projects, Color::Cyan),
+        summary_span("Groups", summary.task_groups, Color::Magenta),
         summary_span("Running", summary.running, Color::Green),
         summary_span("Idle", summary.idle, Color::Yellow),
         summary_span("Stale", summary.stale, Color::LightRed),
@@ -6284,8 +6369,9 @@ mod tests {
 
         let rendered = render_dashboard_text(dashboard, 220, 24);
         assert!(rendered.contains("ID"));
+        assert!(rendered.contains("Project"));
+        assert!(rendered.contains("Group"));
         assert!(rendered.contains("Branch"));
-        assert!(rendered.contains("Tool Files"));
         assert!(rendered.contains("Total 2"));
         assert!(rendered.contains("Running 1"));
         assert!(rendered.contains("Completed 1"));
@@ -8285,6 +8371,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "sess-1".to_string(),
             task: "sync activity".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -8326,6 +8414,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "stale-1".to_string(),
             task: "stale session".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -8479,6 +8569,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "older".to_string(),
             task: "older".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Idle,
@@ -8493,6 +8585,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "newer".to_string(),
             task: "newer".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -8523,6 +8617,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "session-1".to_string(),
             task: "inspect output".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -8566,6 +8662,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "session-1".to_string(),
             task: "tail output".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -9201,6 +9299,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "running-1".to_string(),
             task: "stop me".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             state: SessionState::Running,
             working_dir: PathBuf::from("/tmp"),
@@ -9235,6 +9335,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "failed-1".to_string(),
             task: "resume me".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             state: SessionState::Failed,
             working_dir: PathBuf::from("/tmp/ecc2-resume"),
@@ -9275,6 +9377,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "stopped-1".to_string(),
             task: "cleanup me".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             state: SessionState::Stopped,
             working_dir: worktree_path.clone(),
@@ -9316,6 +9420,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "running-1".to_string(),
             task: "keep alive".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -9353,6 +9459,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "running-1".to_string(),
             task: "keep worktree".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: active_path.clone(),
             state: SessionState::Running,
@@ -9370,6 +9478,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "stopped-1".to_string(),
             task: "prune me".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: stopped_path.clone(),
             state: SessionState::Stopped,
@@ -9421,6 +9531,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "stopped-1".to_string(),
             task: "retain me".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: retained_path.clone(),
             state: SessionState::Stopped,
@@ -9473,6 +9585,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: session_id.clone(),
             task: "merge via dashboard".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: worktree.path.clone(),
             state: SessionState::Completed,
@@ -9555,6 +9669,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "merge-ready".to_string(),
             task: "merge via dashboard".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: merged_worktree.path.clone(),
             state: SessionState::Completed,
@@ -9571,6 +9687,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "active-ready".to_string(),
             task: "still active".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: active_worktree.path.clone(),
             state: SessionState::Running,
@@ -9615,6 +9733,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "done-1".to_string(),
             task: "delete me".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Completed,
@@ -9648,6 +9768,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "lead-1".to_string(),
             task: "coordinate".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -9681,6 +9803,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "lead-1".to_string(),
             task: "coordinate".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -9714,6 +9838,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "lead-1".to_string(),
             task: "coordinate".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -9747,6 +9873,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         db.insert_session(&Session {
             id: "lead-1".to_string(),
             task: "coordinate".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             working_dir: PathBuf::from("/tmp"),
             state: SessionState::Running,
@@ -10424,6 +10552,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         Session {
             id: id.to_string(),
             task: "Render dashboard rows".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: agent_type.to_string(),
             state,
             working_dir: branch
@@ -10455,6 +10585,8 @@ diff --git a/src/lib.rs b/src/lib.rs
         Session {
             id: id.to_string(),
             task: "Budget tracking".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
             agent_type: "claude".to_string(),
             state: SessionState::Running,
             working_dir: PathBuf::from("/tmp"),
