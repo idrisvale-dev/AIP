@@ -272,6 +272,14 @@ impl StateStore {
                 created_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS context_graph_connector_checkpoints (
+                connector_name TEXT NOT NULL,
+                source_path TEXT NOT NULL,
+                source_signature TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (connector_name, source_path)
+            );
+
             CREATE TABLE IF NOT EXISTS pending_worktree_queue (
                 session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
                 repo_root TEXT NOT NULL,
@@ -334,6 +342,8 @@ impl StateStore {
                 ON context_graph_relations(to_entity_id, created_at, id);
             CREATE INDEX IF NOT EXISTS idx_context_graph_observations_entity
                 ON context_graph_observations(entity_id, created_at, id);
+            CREATE INDEX IF NOT EXISTS idx_context_graph_connector_checkpoints_updated_at
+                ON context_graph_connector_checkpoints(updated_at, connector_name, source_path);
             CREATE INDEX IF NOT EXISTS idx_conflict_incidents_sessions
                 ON conflict_incidents(first_session_id, second_session_id, resolved_at, updated_at);
             CREATE INDEX IF NOT EXISTS idx_pending_worktree_queue_requested_at
@@ -2302,6 +2312,46 @@ impl StateStore {
             )?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(entries)
+    }
+
+    pub fn connector_source_is_unchanged(
+        &self,
+        connector_name: &str,
+        source_path: &str,
+        source_signature: &str,
+    ) -> Result<bool> {
+        let stored_signature = self
+            .conn
+            .query_row(
+                "SELECT source_signature
+                 FROM context_graph_connector_checkpoints
+                 WHERE connector_name = ?1 AND source_path = ?2",
+                rusqlite::params![connector_name, source_path],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?;
+        Ok(stored_signature
+            .as_deref()
+            .is_some_and(|stored| stored == source_signature))
+    }
+
+    pub fn upsert_connector_source_checkpoint(
+        &self,
+        connector_name: &str,
+        source_path: &str,
+        source_signature: &str,
+    ) -> Result<()> {
+        let now = chrono::Utc::now().to_rfc3339();
+        self.conn.execute(
+            "INSERT INTO context_graph_connector_checkpoints (
+                connector_name, source_path, source_signature, updated_at
+             ) VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(connector_name, source_path)
+             DO UPDATE SET source_signature = excluded.source_signature,
+                           updated_at = excluded.updated_at",
+            rusqlite::params![connector_name, source_path, source_signature, now],
+        )?;
+        Ok(())
     }
 
     fn compact_context_graph_observations(
