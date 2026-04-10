@@ -18,8 +18,8 @@ use super::{
     ContextGraphCompactionStats, ContextGraphEntity, ContextGraphEntityDetail,
     ContextGraphObservation, ContextGraphRecallEntry, ContextGraphRelation, ContextGraphSyncStats,
     ContextObservationPriority, DecisionLogEntry, FileActivityAction, FileActivityEntry,
-    HarnessKind, RemoteDispatchRequest, RemoteDispatchStatus, ScheduledTask, Session,
-    SessionAgentProfile, SessionHarnessInfo, SessionMessage, SessionMetrics, SessionState,
+    HarnessKind, RemoteDispatchKind, RemoteDispatchRequest, RemoteDispatchStatus, ScheduledTask,
+    Session, SessionAgentProfile, SessionHarnessInfo, SessionMessage, SessionMetrics, SessionState,
     WorktreeInfo,
 };
 
@@ -318,8 +318,10 @@ impl StateStore {
 
             CREATE TABLE IF NOT EXISTS remote_dispatch_requests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                request_kind TEXT NOT NULL DEFAULT 'standard',
                 target_session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
                 task TEXT NOT NULL,
+                target_url TEXT,
                 priority INTEGER NOT NULL DEFAULT 1,
                 agent_type TEXT NOT NULL,
                 profile_name TEXT,
@@ -679,6 +681,24 @@ impl StateStore {
                     [],
                 )
                 .context("Failed to add last_auto_prune_active_skipped column to daemon_activity table")?;
+        }
+
+        if !self.has_column("remote_dispatch_requests", "request_kind")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE remote_dispatch_requests ADD COLUMN request_kind TEXT NOT NULL DEFAULT 'standard'",
+                    [],
+                )
+                .context("Failed to add request_kind column to remote_dispatch_requests table")?;
+        }
+
+        if !self.has_column("remote_dispatch_requests", "target_url")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE remote_dispatch_requests ADD COLUMN target_url TEXT",
+                    [],
+                )
+                .context("Failed to add target_url column to remote_dispatch_requests table")?;
         }
 
         self.conn.execute_batch(
@@ -1192,8 +1212,10 @@ impl StateStore {
     #[allow(clippy::too_many_arguments)]
     pub fn insert_remote_dispatch_request(
         &self,
+        request_kind: RemoteDispatchKind,
         target_session_id: Option<&str>,
         task: &str,
+        target_url: Option<&str>,
         priority: crate::comms::TaskPriority,
         agent_type: &str,
         profile_name: Option<&str>,
@@ -1207,8 +1229,10 @@ impl StateStore {
         let now = chrono::Utc::now();
         self.conn.execute(
             "INSERT INTO remote_dispatch_requests (
+                request_kind,
                 target_session_id,
                 task,
+                target_url,
                 priority,
                 agent_type,
                 profile_name,
@@ -1221,10 +1245,12 @@ impl StateStore {
                 status,
                 created_at,
                 updated_at
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 'pending', ?12, ?13)",
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, 'pending', ?14, ?15)",
             rusqlite::params![
+                request_kind.to_string(),
                 target_session_id,
                 task,
+                target_url,
                 task_priority_db_value(priority),
                 agent_type,
                 profile_name,
@@ -1250,7 +1276,7 @@ impl StateStore {
         limit: usize,
     ) -> Result<Vec<RemoteDispatchRequest>> {
         let sql = if include_processed {
-            "SELECT id, target_session_id, task, priority, agent_type, profile_name, working_dir,
+            "SELECT id, request_kind, target_session_id, task, target_url, priority, agent_type, profile_name, working_dir,
                     project, task_group, use_worktree, source, requester, status,
                     result_session_id, result_action, error, created_at, updated_at, dispatched_at
              FROM remote_dispatch_requests
@@ -1258,7 +1284,7 @@ impl StateStore {
                       priority DESC, created_at ASC, id ASC
              LIMIT ?1"
         } else {
-            "SELECT id, target_session_id, task, priority, agent_type, profile_name, working_dir,
+            "SELECT id, request_kind, target_session_id, task, target_url, priority, agent_type, profile_name, working_dir,
                     project, task_group, use_worktree, source, requester, status,
                     result_session_id, result_action, error, created_at, updated_at, dispatched_at
              FROM remote_dispatch_requests
@@ -1285,7 +1311,7 @@ impl StateStore {
     ) -> Result<Option<RemoteDispatchRequest>> {
         self.conn
             .query_row(
-                "SELECT id, target_session_id, task, priority, agent_type, profile_name, working_dir,
+                "SELECT id, request_kind, target_session_id, task, target_url, priority, agent_type, profile_name, working_dir,
                         project, task_group, use_worktree, source, requester, status,
                         result_session_id, result_action, error, created_at, updated_at, dispatched_at
                  FROM remote_dispatch_requests
@@ -3900,29 +3926,31 @@ fn map_scheduled_task(row: &rusqlite::Row<'_>) -> rusqlite::Result<ScheduledTask
 }
 
 fn map_remote_dispatch_request(row: &rusqlite::Row<'_>) -> rusqlite::Result<RemoteDispatchRequest> {
-    let created_at = parse_store_timestamp(row.get::<_, String>(16)?, 16)?;
-    let updated_at = parse_store_timestamp(row.get::<_, String>(17)?, 17)?;
+    let created_at = parse_store_timestamp(row.get::<_, String>(18)?, 18)?;
+    let updated_at = parse_store_timestamp(row.get::<_, String>(19)?, 19)?;
     let dispatched_at = row
-        .get::<_, Option<String>>(18)?
-        .map(|value| parse_store_timestamp(value, 18))
+        .get::<_, Option<String>>(20)?
+        .map(|value| parse_store_timestamp(value, 20))
         .transpose()?;
     Ok(RemoteDispatchRequest {
         id: row.get(0)?,
-        target_session_id: normalize_optional_string(row.get(1)?),
-        task: row.get(2)?,
-        priority: task_priority_from_db_value(row.get::<_, i64>(3)?),
-        agent_type: row.get(4)?,
-        profile_name: normalize_optional_string(row.get(5)?),
-        working_dir: PathBuf::from(row.get::<_, String>(6)?),
-        project: row.get(7)?,
-        task_group: row.get(8)?,
-        use_worktree: row.get::<_, i64>(9)? != 0,
-        source: row.get(10)?,
-        requester: normalize_optional_string(row.get(11)?),
-        status: RemoteDispatchStatus::from_db_value(&row.get::<_, String>(12)?),
-        result_session_id: normalize_optional_string(row.get(13)?),
-        result_action: normalize_optional_string(row.get(14)?),
-        error: normalize_optional_string(row.get(15)?),
+        request_kind: RemoteDispatchKind::from_db_value(&row.get::<_, String>(1)?),
+        target_session_id: normalize_optional_string(row.get(2)?),
+        task: row.get(3)?,
+        target_url: normalize_optional_string(row.get(4)?),
+        priority: task_priority_from_db_value(row.get::<_, i64>(5)?),
+        agent_type: row.get(6)?,
+        profile_name: normalize_optional_string(row.get(7)?),
+        working_dir: PathBuf::from(row.get::<_, String>(8)?),
+        project: row.get(9)?,
+        task_group: row.get(10)?,
+        use_worktree: row.get::<_, i64>(11)? != 0,
+        source: row.get(12)?,
+        requester: normalize_optional_string(row.get(13)?),
+        status: RemoteDispatchStatus::from_db_value(&row.get::<_, String>(14)?),
+        result_session_id: normalize_optional_string(row.get(15)?),
+        result_action: normalize_optional_string(row.get(16)?),
+        error: normalize_optional_string(row.get(17)?),
         created_at,
         updated_at,
         dispatched_at,

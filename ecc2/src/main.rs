@@ -45,6 +45,28 @@ impl WorktreePolicyArgs {
     }
 }
 
+#[derive(clap::Args, Debug, Clone, Default)]
+struct OptionalWorktreePolicyArgs {
+    /// Create a dedicated worktree
+    #[arg(short = 'w', long = "worktree", action = clap::ArgAction::SetTrue, overrides_with = "no_worktree")]
+    worktree: bool,
+    /// Skip dedicated worktree creation
+    #[arg(long = "no-worktree", action = clap::ArgAction::SetTrue, overrides_with = "worktree")]
+    no_worktree: bool,
+}
+
+impl OptionalWorktreePolicyArgs {
+    fn resolve(&self, default_value: bool) -> bool {
+        if self.worktree {
+            true
+        } else if self.no_worktree {
+            false
+        } else {
+            default_value
+        }
+    }
+}
+
 #[derive(clap::Subcommand, Debug)]
 enum Commands {
     /// Launch the TUI dashboard
@@ -479,6 +501,41 @@ enum RemoteCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Queue a remote computer-use task request
+    ComputerUse {
+        /// Goal to complete with computer-use/browser tools
+        #[arg(long)]
+        goal: String,
+        /// Optional target URL to open first
+        #[arg(long)]
+        target_url: Option<String>,
+        /// Extra context for the operator
+        #[arg(long)]
+        context: Option<String>,
+        /// Optional lead session ID or alias to route through
+        #[arg(long)]
+        to_session: Option<String>,
+        /// Task priority
+        #[arg(long, value_enum, default_value_t = TaskPriorityArg::Normal)]
+        priority: TaskPriorityArg,
+        /// Agent type override (defaults to [computer_use_dispatch] or ECC default agent)
+        #[arg(short, long)]
+        agent: Option<String>,
+        /// Agent profile override (defaults to [computer_use_dispatch] or ECC default profile)
+        #[arg(long)]
+        profile: Option<String>,
+        #[command(flatten)]
+        worktree: OptionalWorktreePolicyArgs,
+        /// Optional project grouping override
+        #[arg(long)]
+        project: Option<String>,
+        /// Optional task-group grouping override
+        #[arg(long)]
+        task_group: Option<String>,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
     /// List queued remote task requests
     List {
         /// Include already dispatched or failed requests
@@ -807,6 +864,20 @@ struct GraphConnectorStatusReport {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 struct RemoteDispatchHttpRequest {
     task: String,
+    to_session: Option<String>,
+    priority: Option<TaskPriorityArg>,
+    agent: Option<String>,
+    profile: Option<String>,
+    use_worktree: Option<bool>,
+    project: Option<String>,
+    task_group: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+struct RemoteComputerUseHttpRequest {
+    goal: String,
+    target_url: Option<String>,
+    context: Option<String>,
     to_session: Option<String>,
     priority: Option<TaskPriorityArg>,
     agent: Option<String>,
@@ -1996,6 +2067,57 @@ async fn main() -> Result<()> {
                     }
                 }
             }
+            RemoteCommands::ComputerUse {
+                goal,
+                target_url,
+                context,
+                to_session,
+                priority,
+                agent,
+                profile,
+                worktree,
+                project,
+                task_group,
+                json,
+            } => {
+                let target_session_id = to_session
+                    .as_deref()
+                    .map(|value| resolve_session_id(&db, value))
+                    .transpose()?;
+                let defaults = cfg.computer_use_dispatch_defaults();
+                let request = session::manager::create_computer_use_remote_dispatch_request(
+                    &db,
+                    &cfg,
+                    &goal,
+                    target_url.as_deref(),
+                    context.as_deref(),
+                    target_session_id.as_deref(),
+                    priority.into(),
+                    agent.as_deref(),
+                    profile.as_deref(),
+                    Some(worktree.resolve(defaults.use_worktree)),
+                    session::SessionGrouping {
+                        project,
+                        task_group,
+                    },
+                    "cli_computer_use",
+                    None,
+                )?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&request)?);
+                } else {
+                    println!(
+                        "Queued remote {} request #{} [{}] {}",
+                        request.request_kind, request.id, request.priority, goal
+                    );
+                    if let Some(target_url) = request.target_url.as_deref() {
+                        println!("- target url {target_url}");
+                    }
+                    if let Some(target_session_id) = request.target_session_id.as_deref() {
+                        println!("- target {}", short_session(target_session_id));
+                    }
+                }
+            }
             RemoteCommands::List { all, limit, json } => {
                 let requests = session::manager::list_remote_dispatch_requests(&db, all, limit)?;
                 if json {
@@ -2010,9 +2132,15 @@ async fn main() -> Result<()> {
                             .as_deref()
                             .map(short_session)
                             .unwrap_or_else(|| "new-session".to_string());
+                        let label = format_remote_dispatch_kind(request.request_kind);
                         println!(
-                            "#{} [{}] {} -> {} | {}",
-                            request.id, request.priority, request.status, target, request.task
+                            "#{} [{}] {} {} -> {} | {}",
+                            request.id,
+                            request.priority,
+                            label,
+                            request.status,
+                            target,
+                            request.task.lines().next().unwrap_or(&request.task)
                         );
                     }
                 }
@@ -3096,6 +3224,13 @@ fn format_remote_dispatch_action(action: &session::manager::RemoteDispatchAction
     }
 }
 
+fn format_remote_dispatch_kind(kind: session::RemoteDispatchKind) -> &'static str {
+    match kind {
+        session::RemoteDispatchKind::Standard => "standard",
+        session::RemoteDispatchKind::ComputerUse => "computer_use",
+    }
+}
+
 fn short_session(session_id: &str) -> String {
     session_id.chars().take(8).collect()
 }
@@ -3205,6 +3340,86 @@ fn handle_remote_dispatch_connection(
                     task_group: payload.task_group,
                 },
                 "http",
+                requester.as_deref(),
+            ) {
+                Ok(request) => request,
+                Err(error) => {
+                    return write_http_response(
+                        stream,
+                        400,
+                        "application/json",
+                        &serde_json::json!({"error": error.to_string()}).to_string(),
+                    );
+                }
+            };
+
+            write_http_response(
+                stream,
+                202,
+                "application/json",
+                &serde_json::to_string(&request)?,
+            )
+        }
+        ("POST", "/computer-use") => {
+            let auth = headers
+                .get("authorization")
+                .map(String::as_str)
+                .unwrap_or_default();
+            let expected = format!("Bearer {bearer_token}");
+            if auth != expected {
+                return write_http_response(
+                    stream,
+                    401,
+                    "application/json",
+                    &serde_json::json!({"error": "unauthorized"}).to_string(),
+                );
+            }
+
+            let payload: RemoteComputerUseHttpRequest =
+                serde_json::from_slice(&body).context("Invalid remote computer-use JSON body")?;
+            if payload.goal.trim().is_empty() {
+                return write_http_response(
+                    stream,
+                    400,
+                    "application/json",
+                    &serde_json::json!({"error": "goal is required"}).to_string(),
+                );
+            }
+
+            let target_session_id = match payload
+                .to_session
+                .as_deref()
+                .map(|value| resolve_session_id(db, value))
+                .transpose()
+            {
+                Ok(value) => value,
+                Err(error) => {
+                    return write_http_response(
+                        stream,
+                        400,
+                        "application/json",
+                        &serde_json::json!({"error": error.to_string()}).to_string(),
+                    );
+                }
+            };
+            let requester = stream.peer_addr().ok().map(|addr| addr.ip().to_string());
+            let defaults = cfg.computer_use_dispatch_defaults();
+            let request = match session::manager::create_computer_use_remote_dispatch_request(
+                db,
+                cfg,
+                &payload.goal,
+                payload.target_url.as_deref(),
+                payload.context.as_deref(),
+                target_session_id.as_deref(),
+                payload.priority.unwrap_or(TaskPriorityArg::Normal).into(),
+                payload.agent.as_deref(),
+                payload.profile.as_deref(),
+                Some(payload.use_worktree.unwrap_or(defaults.use_worktree)),
+                session::SessionGrouping {
+                    project: payload.project,
+                    task_group: payload.task_group,
+                },
+                "http_computer_use",
                 requester.as_deref(),
             ) {
                 Ok(request) => request,
@@ -4992,6 +5207,55 @@ mod tests {
                 assert_eq!(task_group.as_deref(), Some("scheduled maintenance"));
             }
             _ => panic!("expected schedule add subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_remote_computer_use_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "remote",
+            "computer-use",
+            "--goal",
+            "Confirm the recovery banner",
+            "--target-url",
+            "https://ecc.tools/account",
+            "--context",
+            "Use the production flow",
+            "--priority",
+            "critical",
+            "--agent",
+            "codex",
+            "--profile",
+            "browser",
+            "--no-worktree",
+        ])
+        .expect("remote computer-use should parse");
+
+        match cli.command {
+            Some(Commands::Remote {
+                command:
+                    RemoteCommands::ComputerUse {
+                        goal,
+                        target_url,
+                        context,
+                        priority,
+                        agent,
+                        profile,
+                        worktree,
+                        ..
+                    },
+            }) => {
+                assert_eq!(goal, "Confirm the recovery banner");
+                assert_eq!(target_url.as_deref(), Some("https://ecc.tools/account"));
+                assert_eq!(context.as_deref(), Some("Use the production flow"));
+                assert_eq!(priority, TaskPriorityArg::Critical);
+                assert_eq!(agent.as_deref(), Some("codex"));
+                assert_eq!(profile.as_deref(), Some("browser"));
+                assert!(worktree.no_worktree);
+                assert!(!worktree.worktree);
+            }
+            _ => panic!("expected remote computer-use subcommand"),
         }
     }
 

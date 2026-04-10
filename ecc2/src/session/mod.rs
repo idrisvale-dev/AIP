@@ -398,8 +398,10 @@ pub struct ScheduledTask {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RemoteDispatchRequest {
     pub id: i64,
+    pub request_kind: RemoteDispatchKind,
     pub target_session_id: Option<String>,
     pub task: String,
+    pub target_url: Option<String>,
     pub priority: crate::comms::TaskPriority,
     pub agent_type: String,
     pub profile_name: Option<String>,
@@ -416,6 +418,31 @@ pub struct RemoteDispatchRequest {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub dispatched_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum RemoteDispatchKind {
+    Standard,
+    ComputerUse,
+}
+
+impl fmt::Display for RemoteDispatchKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Standard => write!(f, "standard"),
+            Self::ComputerUse => write!(f, "computer_use"),
+        }
+    }
+}
+
+impl RemoteDispatchKind {
+    pub fn from_db_value(value: &str) -> Self {
+        match value {
+            "computer_use" => Self::ComputerUse,
+            _ => Self::Standard,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]

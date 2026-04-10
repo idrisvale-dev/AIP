@@ -50,6 +50,16 @@ pub struct ConflictResolutionConfig {
     pub notify_lead: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ComputerUseDispatchConfig {
+    pub agent: Option<String>,
+    pub profile: Option<String>,
+    pub use_worktree: bool,
+    pub project: Option<String>,
+    pub task_group: Option<String>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AgentProfileConfig {
@@ -223,6 +233,7 @@ pub struct Config {
     pub agent_profiles: BTreeMap<String, AgentProfileConfig>,
     pub orchestration_templates: BTreeMap<String, OrchestrationTemplateConfig>,
     pub memory_connectors: BTreeMap<String, MemoryConnectorConfig>,
+    pub computer_use_dispatch: ComputerUseDispatchConfig,
     pub auto_dispatch_unread_handoffs: bool,
     pub auto_dispatch_limit_per_session: usize,
     pub auto_create_worktrees: bool,
@@ -289,6 +300,7 @@ impl Default for Config {
             agent_profiles: BTreeMap::new(),
             orchestration_templates: BTreeMap::new(),
             memory_connectors: BTreeMap::new(),
+            computer_use_dispatch: ComputerUseDispatchConfig::default(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
@@ -345,6 +357,26 @@ impl Config {
 
     pub fn effective_budget_alert_thresholds(&self) -> BudgetAlertThresholds {
         self.budget_alert_thresholds.sanitized()
+    }
+
+    pub fn computer_use_dispatch_defaults(&self) -> ResolvedComputerUseDispatchConfig {
+        let agent = self
+            .computer_use_dispatch
+            .agent
+            .clone()
+            .unwrap_or_else(|| self.default_agent.clone());
+        let profile = self
+            .computer_use_dispatch
+            .profile
+            .clone()
+            .or_else(|| self.default_agent_profile.clone());
+        ResolvedComputerUseDispatchConfig {
+            agent,
+            profile,
+            use_worktree: self.computer_use_dispatch.use_worktree,
+            project: self.computer_use_dispatch.project.clone(),
+            task_group: self.computer_use_dispatch.task_group.clone(),
+        }
     }
 
     pub fn resolve_agent_profile(&self, name: &str) -> Result<ResolvedAgentProfile> {
@@ -771,6 +803,27 @@ impl Default for HarnessRunnerConfig {
     }
 }
 
+impl Default for ComputerUseDispatchConfig {
+    fn default() -> Self {
+        Self {
+            agent: None,
+            profile: None,
+            use_worktree: false,
+            project: None,
+            task_group: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ResolvedComputerUseDispatchConfig {
+    pub agent: String,
+    pub profile: Option<String>,
+    pub use_worktree: bool,
+    pub project: Option<String>,
+    pub task_group: Option<String>,
+}
+
 fn merge_unique<T>(base: &mut Vec<T>, additions: &[T])
 where
     T: Clone + PartialEq,
@@ -851,8 +904,8 @@ impl BudgetAlertThresholds {
 #[cfg(test)]
 mod tests {
     use super::{
-        BudgetAlertThresholds, Config, ConflictResolutionConfig, ConflictResolutionStrategy,
-        PaneLayout,
+        BudgetAlertThresholds, ComputerUseDispatchConfig, Config, ConflictResolutionConfig,
+        ConflictResolutionStrategy, PaneLayout, ResolvedComputerUseDispatchConfig,
     };
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use std::collections::BTreeMap;
@@ -1198,6 +1251,42 @@ notify_lead = false
                 enabled: true,
                 strategy: ConflictResolutionStrategy::LastWriteWins,
                 notify_lead: false,
+            }
+        );
+    }
+
+    #[test]
+    fn computer_use_dispatch_deserializes_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[computer_use_dispatch]
+agent = "codex"
+profile = "browser"
+use_worktree = true
+project = "ops"
+task_group = "remote browser"
+"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            config.computer_use_dispatch,
+            ComputerUseDispatchConfig {
+                agent: Some("codex".to_string()),
+                profile: Some("browser".to_string()),
+                use_worktree: true,
+                project: Some("ops".to_string()),
+                task_group: Some("remote browser".to_string()),
+            }
+        );
+        assert_eq!(
+            config.computer_use_dispatch_defaults(),
+            ResolvedComputerUseDispatchConfig {
+                agent: "codex".to_string(),
+                profile: Some("browser".to_string()),
+                use_worktree: true,
+                project: Some("ops".to_string()),
+                task_group: Some("remote browser".to_string()),
             }
         );
     }

@@ -14,8 +14,8 @@ use super::runtime::capture_command_output;
 use super::store::StateStore;
 use super::{
     default_project_label, default_task_group_label, normalize_group_label, HarnessKind,
-    ScheduledTask, Session, SessionAgentProfile, SessionGrouping, SessionHarnessInfo,
-    SessionMetrics, SessionState,
+    RemoteDispatchKind, ScheduledTask, Session, SessionAgentProfile, SessionGrouping,
+    SessionHarnessInfo, SessionMetrics, SessionState,
 };
 use crate::comms::{self, MessageType, TaskPriority};
 use crate::config::Config;
@@ -268,6 +268,125 @@ pub fn create_remote_dispatch_request(
 ) -> Result<super::RemoteDispatchRequest> {
     let working_dir =
         std::env::current_dir().context("Failed to resolve current working directory")?;
+    create_remote_dispatch_request_inner(
+        db,
+        cfg,
+        RemoteDispatchKind::Standard,
+        &working_dir,
+        task,
+        None,
+        target_session_id,
+        priority,
+        agent_type,
+        profile_name,
+        use_worktree,
+        grouping,
+        source,
+        requester,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn create_computer_use_remote_dispatch_request(
+    db: &StateStore,
+    cfg: &Config,
+    goal: &str,
+    target_url: Option<&str>,
+    context: Option<&str>,
+    target_session_id: Option<&str>,
+    priority: TaskPriority,
+    agent_type_override: Option<&str>,
+    profile_name_override: Option<&str>,
+    use_worktree_override: Option<bool>,
+    grouping: SessionGrouping,
+    source: &str,
+    requester: Option<&str>,
+) -> Result<super::RemoteDispatchRequest> {
+    let working_dir =
+        std::env::current_dir().context("Failed to resolve current working directory")?;
+    create_computer_use_remote_dispatch_request_in_dir(
+        db,
+        cfg,
+        &working_dir,
+        goal,
+        target_url,
+        context,
+        target_session_id,
+        priority,
+        agent_type_override,
+        profile_name_override,
+        use_worktree_override,
+        grouping,
+        source,
+        requester,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn create_computer_use_remote_dispatch_request_in_dir(
+    db: &StateStore,
+    cfg: &Config,
+    working_dir: &Path,
+    goal: &str,
+    target_url: Option<&str>,
+    context: Option<&str>,
+    target_session_id: Option<&str>,
+    priority: TaskPriority,
+    agent_type_override: Option<&str>,
+    profile_name_override: Option<&str>,
+    use_worktree_override: Option<bool>,
+    grouping: SessionGrouping,
+    source: &str,
+    requester: Option<&str>,
+) -> Result<super::RemoteDispatchRequest> {
+    let defaults = cfg.computer_use_dispatch_defaults();
+    let task = render_computer_use_task(goal, target_url, context);
+    let agent_type = agent_type_override.unwrap_or(&defaults.agent);
+    let profile_name = profile_name_override.or(defaults.profile.as_deref());
+    let use_worktree = use_worktree_override.unwrap_or(defaults.use_worktree);
+    let grouping = SessionGrouping {
+        project: grouping.project.or(defaults.project),
+        task_group: grouping
+            .task_group
+            .or(defaults.task_group)
+            .or_else(|| Some(default_task_group_label(goal))),
+    };
+
+    create_remote_dispatch_request_inner(
+        db,
+        cfg,
+        RemoteDispatchKind::ComputerUse,
+        working_dir,
+        &task,
+        target_url,
+        target_session_id,
+        priority,
+        agent_type,
+        profile_name,
+        use_worktree,
+        grouping,
+        source,
+        requester,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn create_remote_dispatch_request_inner(
+    db: &StateStore,
+    cfg: &Config,
+    request_kind: RemoteDispatchKind,
+    working_dir: &Path,
+    task: &str,
+    target_url: Option<&str>,
+    target_session_id: Option<&str>,
+    priority: TaskPriority,
+    agent_type: &str,
+    profile_name: Option<&str>,
+    use_worktree: bool,
+    grouping: SessionGrouping,
+    source: &str,
+    requester: Option<&str>,
+) -> Result<super::RemoteDispatchRequest> {
     let project = grouping
         .project
         .as_deref()
@@ -288,8 +407,10 @@ pub fn create_remote_dispatch_request(
     }
 
     db.insert_remote_dispatch_request(
+        request_kind,
         target_session_id,
         task,
+        target_url,
         priority,
         &agent_type,
         profile_name,
@@ -300,6 +421,24 @@ pub fn create_remote_dispatch_request(
         source,
         requester,
     )
+}
+
+fn render_computer_use_task(goal: &str, target_url: Option<&str>, context: Option<&str>) -> String {
+    let mut lines = vec![
+        "Computer-use task.".to_string(),
+        format!("Goal: {}", goal.trim()),
+    ];
+    if let Some(target_url) = target_url.map(str::trim).filter(|value| !value.is_empty()) {
+        lines.push(format!("Target URL: {target_url}"));
+    }
+    if let Some(context) = context.map(str::trim).filter(|value| !value.is_empty()) {
+        lines.push(format!("Context: {context}"));
+    }
+    lines.push(
+        "Use browser or computer-use tools directly when available, and report blockers clearly if auth, approvals, or local-device access prevent completion."
+            .to_string(),
+    );
+    lines.join("\n")
 }
 
 pub fn list_remote_dispatch_requests(
@@ -3840,6 +3979,7 @@ mod tests {
             agent_profiles: Default::default(),
             orchestration_templates: Default::default(),
             memory_connectors: Default::default(),
+            computer_use_dispatch: crate::config::ComputerUseDispatchConfig::default(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
@@ -4656,8 +4796,10 @@ mod tests {
         let (fake_runner, _log_path) = write_fake_claude(tempdir.path())?;
 
         let request = db.insert_remote_dispatch_request(
+            RemoteDispatchKind::Standard,
             None,
             "Remote phone triage",
+            None,
             TaskPriority::High,
             "claude",
             None,
@@ -4700,6 +4842,59 @@ mod tests {
         assert_eq!(session.project, "ecc-core");
         assert_eq!(session.task_group, "phone dispatch");
 
+        Ok(())
+    }
+
+    #[test]
+    fn create_computer_use_remote_dispatch_request_uses_config_defaults() -> Result<()> {
+        let tempdir = TestDir::new("manager-create-computer-use-remote-defaults")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.computer_use_dispatch = crate::config::ComputerUseDispatchConfig {
+            agent: Some("codex".to_string()),
+            profile: None,
+            use_worktree: false,
+            project: Some("ops".to_string()),
+            task_group: Some("remote browser".to_string()),
+        };
+        let db = StateStore::open(&cfg.db_path)?;
+
+        let request = create_computer_use_remote_dispatch_request_in_dir(
+            &db,
+            &cfg,
+            &repo_root,
+            "Open the billing portal and confirm the refund banner",
+            Some("https://ecc.tools/account"),
+            Some("Use the production account flow"),
+            None,
+            TaskPriority::Critical,
+            None,
+            None,
+            None,
+            SessionGrouping::default(),
+            "http_computer_use",
+            Some("127.0.0.1"),
+        )?;
+
+        assert_eq!(request.request_kind, RemoteDispatchKind::ComputerUse);
+        assert_eq!(
+            request.target_url.as_deref(),
+            Some("https://ecc.tools/account")
+        );
+        assert_eq!(request.agent_type, "codex");
+        assert_eq!(request.project, "ops");
+        assert_eq!(request.task_group, "remote browser");
+        assert!(!request.use_worktree);
+        assert!(request.task.contains("Computer-use task."));
+        assert!(request.task.contains("Goal: Open the billing portal"));
+        assert!(request
+            .task
+            .contains("Target URL: https://ecc.tools/account"));
+        assert!(request
+            .task
+            .contains("Context: Use the production account flow"));
         Ok(())
     }
 
