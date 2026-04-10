@@ -4153,6 +4153,11 @@ impl Dashboard {
                         }
                         SessionState::Completed => {
                             let summary = self.build_completion_summary(session);
+                            self.persist_completion_summary_observation(
+                                session,
+                                &summary,
+                                "completion_summary",
+                            );
                             if self.cfg.completion_summary_notifications.enabled {
                                 completion_summaries.push(summary.clone());
                             } else if self.cfg.desktop_notifications.session_completed {
@@ -4174,6 +4179,11 @@ impl Dashboard {
                         }
                         SessionState::Failed => {
                             let summary = self.build_completion_summary(session);
+                            self.persist_completion_summary_observation(
+                                session,
+                                &summary,
+                                "failure_summary",
+                            );
                             failed_notifications.push((
                                 "ECC 2.0: Session failed".to_string(),
                                 format!(
@@ -4224,6 +4234,34 @@ impl Dashboard {
         }
 
         self.last_session_states = next_states;
+    }
+
+    fn persist_completion_summary_observation(
+        &self,
+        session: &Session,
+        summary: &SessionCompletionSummary,
+        observation_type: &str,
+    ) {
+        let observation_summary = format!(
+            "{} | files {} | tests {}/{} | warnings {}",
+            truncate_for_dashboard(&summary.task, 72),
+            summary.files_changed,
+            summary.tests_passed,
+            summary.tests_run,
+            summary.warnings.len()
+        );
+        let details = completion_summary_observation_details(summary, session);
+        if let Err(error) = self.db.add_session_observation(
+            &session.id,
+            observation_type,
+            &observation_summary,
+            &details,
+        ) {
+            tracing::warn!(
+                "Failed to persist completion observation for {}: {error}",
+                session.id
+            );
+        }
     }
 
     fn sync_approval_notifications(&mut self) {
@@ -5320,12 +5358,13 @@ impl Dashboard {
         let mut lines = vec!["Relevant memory".to_string()];
         for entry in entries {
             let mut line = format!(
-                "- #{} [{}] {} | score {} | relations {}",
+                "- #{} [{}] {} | score {} | relations {} | observations {}",
                 entry.entity.id,
                 entry.entity.entity_type,
                 truncate_for_dashboard(&entry.entity.name, 60),
                 entry.score,
-                entry.relation_count
+                entry.relation_count,
+                entry.observation_count
             );
             if let Some(session_id) = entry.entity.session_id.as_deref() {
                 if session_id != session.id {
@@ -5344,6 +5383,14 @@ impl Dashboard {
                     "  summary {}",
                     truncate_for_dashboard(&entry.entity.summary, 72)
                 ));
+            }
+            if let Ok(observations) = self.db.list_context_observations(Some(entry.entity.id), 1) {
+                if let Some(observation) = observations.first() {
+                    lines.push(format!(
+                        "  memory {}",
+                        truncate_for_dashboard(&observation.summary, 72)
+                    ));
+                }
             }
         }
 
@@ -8517,6 +8564,39 @@ fn summarize_completion_warnings(
     warnings
 }
 
+fn completion_summary_observation_details(
+    summary: &SessionCompletionSummary,
+    session: &Session,
+) -> BTreeMap<String, String> {
+    let mut details = BTreeMap::new();
+    details.insert("state".to_string(), session.state.to_string());
+    details.insert(
+        "files_changed".to_string(),
+        summary.files_changed.to_string(),
+    );
+    details.insert("tokens_used".to_string(), summary.tokens_used.to_string());
+    details.insert(
+        "duration_secs".to_string(),
+        summary.duration_secs.to_string(),
+    );
+    details.insert("cost_usd".to_string(), format!("{:.4}", summary.cost_usd));
+    details.insert("tests_run".to_string(), summary.tests_run.to_string());
+    details.insert("tests_passed".to_string(), summary.tests_passed.to_string());
+    if !summary.recent_files.is_empty() {
+        details.insert("recent_files".to_string(), summary.recent_files.join(" | "));
+    }
+    if !summary.key_decisions.is_empty() {
+        details.insert(
+            "key_decisions".to_string(),
+            summary.key_decisions.join(" | "),
+        );
+    }
+    if !summary.warnings.is_empty() {
+        details.insert("warnings".to_string(), summary.warnings.join(" | "));
+    }
+    details
+}
+
 fn session_started_webhook_body(session: &Session, compare_url: Option<&str>) -> String {
     let mut lines = vec![
         "*ECC 2.0: Session started*".to_string(),
@@ -10444,11 +10524,25 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
             "Handles auth callback recovery and billing fallback",
             &BTreeMap::from([("area".to_string(), "auth".to_string())]),
         )?;
+        let entity = dashboard
+            .db
+            .list_context_entities(Some(&memory.id), Some("file"), 10)?
+            .into_iter()
+            .find(|entry| entry.name == "callback.ts")
+            .expect("callback entity");
+        dashboard.db.add_context_observation(
+            Some(&memory.id),
+            entity.id,
+            "completion_summary",
+            "Recovered auth callback incident with billing fallback",
+            &BTreeMap::new(),
+        )?;
 
         let text = dashboard.selected_session_metrics_text();
         assert!(text.contains("Relevant memory"));
         assert!(text.contains("[file] callback.ts"));
         assert!(text.contains("matches auth, callback, recovery"));
+        assert!(text.contains("memory Recovered auth callback incident with billing fallback"));
         Ok(())
     }
 
@@ -11871,6 +11965,73 @@ diff --git a/src/lib.rs b/src/lib.rs
         assert!(popup_text.contains("create README.md"));
         assert!(popup_text.contains("Warnings"));
         assert!(popup_text.contains("high-risk tool call"));
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn refresh_persists_completion_summary_observation() -> Result<()> {
+        let root =
+            std::env::temp_dir().join(format!("ecc2-completion-observation-{}", Uuid::new_v4()));
+        fs::create_dir_all(root.join(".claude").join("metrics"))?;
+
+        let mut cfg = build_config(&root.join(".claude"));
+        cfg.completion_summary_notifications.delivery =
+            crate::notifications::CompletionSummaryDelivery::TuiPopup;
+        cfg.desktop_notifications.session_completed = false;
+
+        let db = StateStore::open(&cfg.db_path)?;
+        let mut session = sample_session(
+            "done-observation",
+            "claude",
+            SessionState::Running,
+            Some("ecc/observation"),
+            144,
+            42,
+        );
+        session.task = "Recover auth callback after wipe".to_string();
+        db.insert_session(&session)?;
+
+        let metrics_path = cfg.tool_activity_metrics_path();
+        fs::create_dir_all(metrics_path.parent().unwrap())?;
+        fs::write(
+            &metrics_path,
+            concat!(
+                "{\"id\":\"evt-1\",\"session_id\":\"done-observation\",\"tool_name\":\"Bash\",\"input_summary\":\"cargo test -q\",\"input_params_json\":\"{\\\"command\\\":\\\"cargo test -q\\\"}\",\"output_summary\":\"ok\",\"timestamp\":\"2026-04-09T00:00:00Z\"}\n",
+                "{\"id\":\"evt-2\",\"session_id\":\"done-observation\",\"tool_name\":\"Write\",\"input_summary\":\"Write src/routes/auth/callback.ts\",\"output_summary\":\"updated callback\",\"file_events\":[{\"path\":\"src/routes/auth/callback.ts\",\"action\":\"modify\",\"diff_preview\":\"portal first\",\"patch_preview\":\"+ portal first\"}],\"timestamp\":\"2026-04-09T00:01:00Z\"}\n"
+            ),
+        )?;
+
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard
+            .db
+            .update_state("done-observation", &SessionState::Completed)?;
+
+        dashboard.refresh();
+
+        let session_entity = dashboard
+            .db
+            .list_context_entities(Some("done-observation"), Some("session"), 10)?
+            .into_iter()
+            .find(|entity| entity.name == "done-observation")
+            .expect("session entity");
+        let observations = dashboard
+            .db
+            .list_context_observations(Some(session_entity.id), 10)?;
+        assert!(!observations.is_empty());
+        assert_eq!(observations[0].observation_type, "completion_summary");
+        assert!(observations[0]
+            .summary
+            .contains("Recover auth callback after wipe"));
+        assert_eq!(
+            observations[0].details.get("tests_run"),
+            Some(&"1".to_string())
+        );
+        assert!(observations[0]
+            .details
+            .get("recent_files")
+            .is_some_and(|value| value.contains("modify src/routes/auth/callback.ts")));
 
         let _ = fs::remove_dir_all(root);
         Ok(())

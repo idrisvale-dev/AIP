@@ -457,6 +457,39 @@ enum GraphCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Record an observation against a context graph entity
+    AddObservation {
+        /// Optional source session ID or alias for provenance
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Entity ID
+        #[arg(long)]
+        entity_id: i64,
+        /// Observation type such as completion_summary, incident_note, or reminder
+        #[arg(long = "type")]
+        observation_type: String,
+        /// Observation summary
+        #[arg(long)]
+        summary: String,
+        /// Details in key=value form
+        #[arg(long = "detail")]
+        details: Vec<String>,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
+    /// List observations in the shared context graph
+    Observations {
+        /// Filter to observations for a specific entity ID
+        #[arg(long)]
+        entity_id: Option<i64>,
+        /// Maximum observations to return
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
     /// Recall relevant context graph entities for a query
     Recall {
         /// Filter by source session ID or alias
@@ -1241,6 +1274,44 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&relations)?);
                 } else {
                     println!("{}", format_graph_relations_human(&relations));
+                }
+            }
+            GraphCommands::AddObservation {
+                session_id,
+                entity_id,
+                observation_type,
+                summary,
+                details,
+                json,
+            } => {
+                let resolved_session_id = session_id
+                    .as_deref()
+                    .map(|value| resolve_session_id(&db, value))
+                    .transpose()?;
+                let details = parse_key_value_pairs(&details, "graph observation details")?;
+                let observation = db.add_context_observation(
+                    resolved_session_id.as_deref(),
+                    entity_id,
+                    &observation_type,
+                    &summary,
+                    &details,
+                )?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&observation)?);
+                } else {
+                    println!("{}", format_graph_observation_human(&observation));
+                }
+            }
+            GraphCommands::Observations {
+                entity_id,
+                limit,
+                json,
+            } => {
+                let observations = db.list_context_observations(entity_id, limit)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&observations)?);
+                } else {
+                    println!("{}", format_graph_observations_human(&observations));
                 }
             }
             GraphCommands::Recall {
@@ -2249,6 +2320,58 @@ fn format_graph_relations_human(relations: &[session::ContextGraphRelation]) -> 
     lines.join("\n")
 }
 
+fn format_graph_observation_human(observation: &session::ContextGraphObservation) -> String {
+    let mut lines = vec![
+        format!("Context graph observation #{}", observation.id),
+        format!(
+            "Entity: #{} [{}] {}",
+            observation.entity_id, observation.entity_type, observation.entity_name
+        ),
+        format!("Type: {}", observation.observation_type),
+        format!("Summary: {}", observation.summary),
+    ];
+    if let Some(session_id) = observation.session_id.as_deref() {
+        lines.push(format!("Session: {}", short_session(session_id)));
+    }
+    if observation.details.is_empty() {
+        lines.push("Details: none recorded".to_string());
+    } else {
+        lines.push("Details:".to_string());
+        for (key, value) in &observation.details {
+            lines.push(format!("- {key}={value}"));
+        }
+    }
+    lines.push(format!(
+        "Created: {}",
+        observation.created_at.format("%Y-%m-%d %H:%M:%S UTC")
+    ));
+    lines.join("\n")
+}
+
+fn format_graph_observations_human(observations: &[session::ContextGraphObservation]) -> String {
+    if observations.is_empty() {
+        return "No context graph observations found.".to_string();
+    }
+
+    let mut lines = vec![format!(
+        "Context graph observations: {}",
+        observations.len()
+    )];
+    for observation in observations {
+        let mut line = format!(
+            "- #{} [{}] {}",
+            observation.id, observation.observation_type, observation.entity_name
+        );
+        if let Some(session_id) = observation.session_id.as_deref() {
+            line.push_str(&format!(" | {}", short_session(session_id)));
+        }
+        lines.push(line);
+        lines.push(format!("  summary {}", observation.summary));
+    }
+
+    lines.join("\n")
+}
+
 fn format_graph_recall_human(
     entries: &[session::ContextGraphRecallEntry],
     session_id: Option<&str>,
@@ -2268,12 +2391,13 @@ fn format_graph_recall_human(
     )];
     for entry in entries {
         let mut line = format!(
-            "- #{} [{}] {} | score {} | relations {}",
+            "- #{} [{}] {} | score {} | relations {} | observations {}",
             entry.entity.id,
             entry.entity.entity_type,
             entry.entity.name,
             entry.score,
-            entry.relation_count
+            entry.relation_count,
+            entry.observation_count
         );
         if let Some(session_id) = entry.entity.session_id.as_deref() {
             line.push_str(&format!(" | {}", short_session(session_id)));
@@ -4227,6 +4351,49 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_graph_add_observation_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "graph",
+            "add-observation",
+            "--session-id",
+            "latest",
+            "--entity-id",
+            "7",
+            "--type",
+            "completion_summary",
+            "--summary",
+            "Finished auth callback recovery",
+            "--detail",
+            "tests_run=2",
+            "--json",
+        ])
+        .expect("graph add-observation should parse");
+
+        match cli.command {
+            Some(Commands::Graph {
+                command:
+                    GraphCommands::AddObservation {
+                        session_id,
+                        entity_id,
+                        observation_type,
+                        summary,
+                        details,
+                        json,
+                    },
+            }) => {
+                assert_eq!(session_id.as_deref(), Some("latest"));
+                assert_eq!(entity_id, 7);
+                assert_eq!(observation_type, "completion_summary");
+                assert_eq!(summary, "Finished auth callback recovery");
+                assert_eq!(details, vec!["tests_run=2"]);
+                assert!(json);
+            }
+            _ => panic!("expected graph add-observation subcommand"),
+        }
+    }
+
+    #[test]
     fn format_decisions_human_renders_details() {
         let text = format_decisions_human(
             &[session::DecisionLogEntry {
@@ -4334,15 +4501,37 @@ mod tests {
                     "recovery".to_string(),
                 ],
                 relation_count: 2,
+                observation_count: 1,
             }],
             Some("sess-12345678"),
             "auth callback recovery",
         );
 
         assert!(text.contains("Relevant memory: 1 entries"));
-        assert!(text.contains("[file] callback.ts | score 319 | relations 2"));
+        assert!(text.contains("[file] callback.ts | score 319 | relations 2 | observations 1"));
         assert!(text.contains("matches auth, callback, recovery"));
         assert!(text.contains("path src/routes/auth/callback.ts"));
+    }
+
+    #[test]
+    fn format_graph_observations_human_renders_summaries() {
+        let text = format_graph_observations_human(&[session::ContextGraphObservation {
+            id: 5,
+            session_id: Some("sess-12345678".to_string()),
+            entity_id: 11,
+            entity_type: "session".to_string(),
+            entity_name: "sess-12345678".to_string(),
+            observation_type: "completion_summary".to_string(),
+            summary: "Finished auth callback recovery with 2 tests".to_string(),
+            details: BTreeMap::from([("tests_run".to_string(), "2".to_string())]),
+            created_at: chrono::DateTime::parse_from_rfc3339("2026-04-10T01:02:03Z")
+                .unwrap()
+                .with_timezone(&chrono::Utc),
+        }]);
+
+        assert!(text.contains("Context graph observations: 1"));
+        assert!(text.contains("[completion_summary] sess-12345678"));
+        assert!(text.contains("summary Finished auth callback recovery with 2 tests"));
     }
 
     #[test]

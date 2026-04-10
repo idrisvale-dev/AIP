@@ -191,11 +191,25 @@ pub struct ContextGraphEntityDetail {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ContextGraphObservation {
+    pub id: i64,
+    pub session_id: Option<String>,
+    pub entity_id: i64,
+    pub entity_type: String,
+    pub entity_name: String,
+    pub observation_type: String,
+    pub summary: String,
+    pub details: BTreeMap<String, String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ContextGraphRecallEntry {
     pub entity: ContextGraphEntity,
     pub score: u64,
     pub matched_terms: Vec<String>,
     pub relation_count: usize,
+    pub observation_count: usize,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
