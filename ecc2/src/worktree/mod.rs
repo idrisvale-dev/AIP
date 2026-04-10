@@ -2,8 +2,9 @@ use anyhow::{Context, Result};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use crate::config::Config;
 use crate::session::WorktreeInfo;
@@ -61,6 +62,27 @@ pub struct GitStatusEntry {
     pub unstaged: bool,
     pub untracked: bool,
     pub conflicted: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GitPatchSectionKind {
+    Staged,
+    Unstaged,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GitPatchHunk {
+    pub section: GitPatchSectionKind,
+    pub header: String,
+    pub patch: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GitStatusPatchView {
+    pub path: String,
+    pub display_path: String,
+    pub patch: String,
+    pub hunks: Vec<GitPatchHunk>,
 }
 
 /// Create a new git worktree for an agent session.
@@ -322,6 +344,104 @@ pub fn reset_path(worktree: &WorktreeInfo, entry: &GitStatusEntry) -> Result<()>
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!("git restore failed for {}: {stderr}", entry.path);
+    }
+}
+
+pub fn git_status_patch_view(
+    worktree: &WorktreeInfo,
+    entry: &GitStatusEntry,
+) -> Result<Option<GitStatusPatchView>> {
+    if entry.untracked {
+        return Ok(None);
+    }
+
+    let staged_patch =
+        git_diff_patch_text_for_paths(&worktree.path, &["--cached"], &[entry.path.clone()])?;
+    let unstaged_patch = git_diff_patch_text_for_paths(&worktree.path, &[], &[entry.path.clone()])?;
+
+    let mut sections = Vec::new();
+    let mut hunks = Vec::new();
+
+    if !staged_patch.trim().is_empty() {
+        sections.push(format!("--- Staged diff ---\n{}", staged_patch.trim_end()));
+        hunks.extend(extract_patch_hunks(
+            GitPatchSectionKind::Staged,
+            &staged_patch,
+        ));
+    }
+    if !unstaged_patch.trim().is_empty() {
+        sections.push(format!(
+            "--- Working tree diff ---\n{}",
+            unstaged_patch.trim_end()
+        ));
+        hunks.extend(extract_patch_hunks(
+            GitPatchSectionKind::Unstaged,
+            &unstaged_patch,
+        ));
+    }
+
+    if sections.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(GitStatusPatchView {
+            path: entry.path.clone(),
+            display_path: entry.display_path.clone(),
+            patch: sections.join("\n\n"),
+            hunks,
+        }))
+    }
+}
+
+pub fn stage_hunk(worktree: &WorktreeInfo, hunk: &GitPatchHunk) -> Result<()> {
+    if hunk.section != GitPatchSectionKind::Unstaged {
+        anyhow::bail!("selected hunk is already staged");
+    }
+    git_apply_patch(
+        &worktree.path,
+        &["--cached"],
+        &hunk.patch,
+        "stage selected hunk",
+    )
+}
+
+pub fn unstage_hunk(worktree: &WorktreeInfo, hunk: &GitPatchHunk) -> Result<()> {
+    if hunk.section != GitPatchSectionKind::Staged {
+        anyhow::bail!("selected hunk is not staged");
+    }
+    git_apply_patch(
+        &worktree.path,
+        &["-R", "--cached"],
+        &hunk.patch,
+        "unstage selected hunk",
+    )
+}
+
+pub fn reset_hunk(
+    worktree: &WorktreeInfo,
+    entry: &GitStatusEntry,
+    hunk: &GitPatchHunk,
+) -> Result<()> {
+    if entry.untracked {
+        anyhow::bail!("cannot reset hunks for untracked files");
+    }
+
+    match hunk.section {
+        GitPatchSectionKind::Unstaged => {
+            git_apply_patch(&worktree.path, &["-R"], &hunk.patch, "reset selected hunk")
+        }
+        GitPatchSectionKind::Staged => {
+            if entry.unstaged {
+                anyhow::bail!(
+                    "cannot reset a staged hunk while the file also has unstaged changes; unstage it first"
+                );
+            }
+            git_apply_patch(
+                &worktree.path,
+                &["-R", "--index"],
+                &hunk.patch,
+                "reset selected staged hunk",
+            )
+        }
     }
 }
 
@@ -887,6 +1007,39 @@ fn git_diff_patch_lines(worktree_path: &Path, extra_args: &[&str]) -> Result<Vec
     Ok(parse_nonempty_lines(&output.stdout))
 }
 
+fn git_diff_patch_text_for_paths(
+    worktree_path: &Path,
+    extra_args: &[&str],
+    paths: &[String],
+) -> Result<String> {
+    if paths.is_empty() {
+        return Ok(String::new());
+    }
+
+    let mut command = Command::new("git");
+    command
+        .arg("-C")
+        .arg(worktree_path)
+        .arg("diff")
+        .args(["--patch", "--find-renames"]);
+    command.args(extra_args);
+    command.arg("--");
+    for path in paths {
+        command.arg(path);
+    }
+
+    let output = command
+        .output()
+        .context("Failed to generate filtered git patch")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git diff failed: {stderr}");
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
 fn git_diff_patch_lines_for_paths(
     worktree_path: &Path,
     extra_args: &[&str],
@@ -922,6 +1075,86 @@ fn git_diff_patch_lines_for_paths(
     }
 
     Ok(parse_nonempty_lines(&output.stdout))
+}
+
+fn extract_patch_hunks(section: GitPatchSectionKind, patch_text: &str) -> Vec<GitPatchHunk> {
+    let lines: Vec<&str> = patch_text.lines().collect();
+    let Some(diff_start) = lines
+        .iter()
+        .position(|line| line.starts_with("diff --git "))
+    else {
+        return Vec::new();
+    };
+    let Some(first_hunk_start) = lines
+        .iter()
+        .enumerate()
+        .skip(diff_start)
+        .find_map(|(index, line)| line.starts_with("@@").then_some(index))
+    else {
+        return Vec::new();
+    };
+
+    let header_lines = lines[diff_start..first_hunk_start].to_vec();
+    let hunk_starts = lines
+        .iter()
+        .enumerate()
+        .skip(first_hunk_start)
+        .filter_map(|(index, line)| line.starts_with("@@").then_some(index))
+        .collect::<Vec<_>>();
+
+    hunk_starts
+        .iter()
+        .enumerate()
+        .map(|(position, start)| {
+            let end = hunk_starts
+                .get(position + 1)
+                .copied()
+                .unwrap_or(lines.len());
+            let mut patch_lines = header_lines
+                .iter()
+                .map(|line| (*line).to_string())
+                .collect::<Vec<_>>();
+            patch_lines.extend(lines[*start..end].iter().map(|line| (*line).to_string()));
+            GitPatchHunk {
+                section,
+                header: lines[*start].to_string(),
+                patch: format!("{}\n", patch_lines.join("\n")),
+            }
+        })
+        .collect()
+}
+
+fn git_apply_patch(worktree_path: &Path, args: &[&str], patch: &str, action: &str) -> Result<()> {
+    let mut child = Command::new("git")
+        .arg("-C")
+        .arg(worktree_path)
+        .arg("apply")
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .with_context(|| format!("Failed to {action}"))?;
+
+    {
+        let stdin = child
+            .stdin
+            .as_mut()
+            .context("Failed to open git apply stdin")?;
+        stdin
+            .write_all(patch.as_bytes())
+            .with_context(|| format!("Failed to write patch for {action}"))?;
+    }
+
+    let output = child
+        .wait_with_output()
+        .with_context(|| format!("Failed to wait for git apply while trying to {action}"))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git apply failed while trying to {action}: {stderr}");
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1362,6 +1595,18 @@ mod tests {
             anyhow::bail!("{}", String::from_utf8_lossy(&output.stderr));
         }
         Ok(())
+    }
+
+    fn git_stdout(repo: &Path, args: &[&str]) -> Result<String> {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(repo)
+            .args(args)
+            .output()?;
+        if !output.status.success() {
+            anyhow::bail!("{}", String::from_utf8_lossy(&output.stderr));
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
     }
 
     fn init_repo(root: &Path) -> Result<PathBuf> {
@@ -1911,6 +2156,163 @@ mod tests {
         assert_eq!(
             String::from_utf8_lossy(&output.stdout).trim(),
             "update readme"
+        );
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn git_status_patch_view_supports_hunk_stage_and_unstage() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-hunk-stage-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        let worktree = WorktreeInfo {
+            path: repo.clone(),
+            branch: "main".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        let original = (1..=12)
+            .map(|index| format!("line {index}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(repo.join("notes.txt"), format!("{original}\n"))?;
+        run_git(&repo, &["add", "notes.txt"])?;
+        run_git(&repo, &["commit", "-m", "add notes"])?;
+
+        let updated = (1..=12)
+            .map(|index| match index {
+                2 => "line 2 changed".to_string(),
+                11 => "line 11 changed".to_string(),
+                _ => format!("line {index}"),
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(repo.join("notes.txt"), format!("{updated}\n"))?;
+
+        let entry = git_status_entries(&worktree)?
+            .into_iter()
+            .find(|entry| entry.path == "notes.txt")
+            .expect("notes status entry");
+        let patch =
+            git_status_patch_view(&worktree, &entry)?.expect("selected-file patch view for notes");
+        assert_eq!(patch.hunks.len(), 2);
+        assert!(patch
+            .hunks
+            .iter()
+            .all(|hunk| hunk.section == GitPatchSectionKind::Unstaged));
+
+        stage_hunk(&worktree, &patch.hunks[0])?;
+
+        let cached = git_stdout(&repo, &["diff", "--cached", "--", "notes.txt"])?;
+        assert!(cached.contains("line 2 changed"));
+        assert!(!cached.contains("line 11 changed"));
+
+        let working = git_stdout(&repo, &["diff", "--", "notes.txt"])?;
+        assert!(!working.contains("line 2 changed"));
+        assert!(working.contains("line 11 changed"));
+
+        let entry = git_status_entries(&worktree)?
+            .into_iter()
+            .find(|entry| entry.path == "notes.txt")
+            .expect("notes status entry after stage");
+        let patch = git_status_patch_view(&worktree, &entry)?.expect("patch after hunk stage");
+        let staged_hunk = patch
+            .hunks
+            .iter()
+            .find(|hunk| hunk.section == GitPatchSectionKind::Staged)
+            .cloned()
+            .expect("staged hunk");
+
+        unstage_hunk(&worktree, &staged_hunk)?;
+
+        let cached = git_stdout(&repo, &["diff", "--cached", "--", "notes.txt"])?;
+        assert!(cached.trim().is_empty());
+
+        let working = git_stdout(&repo, &["diff", "--", "notes.txt"])?;
+        assert!(working.contains("line 2 changed"));
+        assert!(working.contains("line 11 changed"));
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn reset_hunk_discards_unstaged_then_staged_hunks() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-hunk-reset-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        let worktree = WorktreeInfo {
+            path: repo.clone(),
+            branch: "main".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        let original = (1..=12)
+            .map(|index| format!("line {index}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(repo.join("notes.txt"), format!("{original}\n"))?;
+        run_git(&repo, &["add", "notes.txt"])?;
+        run_git(&repo, &["commit", "-m", "add notes"])?;
+
+        let updated = (1..=12)
+            .map(|index| match index {
+                2 => "line 2 changed".to_string(),
+                11 => "line 11 changed".to_string(),
+                _ => format!("line {index}"),
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(repo.join("notes.txt"), format!("{updated}\n"))?;
+
+        let entry = git_status_entries(&worktree)?
+            .into_iter()
+            .find(|entry| entry.path == "notes.txt")
+            .expect("notes status entry");
+        let patch =
+            git_status_patch_view(&worktree, &entry)?.expect("selected-file patch view for notes");
+        stage_hunk(&worktree, &patch.hunks[0])?;
+
+        let entry = git_status_entries(&worktree)?
+            .into_iter()
+            .find(|entry| entry.path == "notes.txt")
+            .expect("notes status entry after stage");
+        let patch = git_status_patch_view(&worktree, &entry)?.expect("patch after stage");
+        let unstaged_hunk = patch
+            .hunks
+            .iter()
+            .find(|hunk| hunk.section == GitPatchSectionKind::Unstaged)
+            .cloned()
+            .expect("unstaged hunk");
+        reset_hunk(&worktree, &entry, &unstaged_hunk)?;
+
+        let working = git_stdout(&repo, &["diff", "--", "notes.txt"])?;
+        assert!(working.trim().is_empty());
+
+        let entry = git_status_entries(&worktree)?
+            .into_iter()
+            .find(|entry| entry.path == "notes.txt")
+            .expect("notes status entry after unstaged reset");
+        assert!(!entry.unstaged);
+
+        let patch = git_status_patch_view(&worktree, &entry)?.expect("staged-only patch");
+        let staged_hunk = patch
+            .hunks
+            .iter()
+            .find(|hunk| hunk.section == GitPatchSectionKind::Staged)
+            .cloned()
+            .expect("staged hunk");
+        reset_hunk(&worktree, &entry, &staged_hunk)?;
+
+        assert!(git_stdout(&repo, &["diff", "--cached", "--", "notes.txt"])?
+            .trim()
+            .is_empty());
+        assert!(git_stdout(&repo, &["diff", "--", "notes.txt"])?
+            .trim()
+            .is_empty());
+        assert_eq!(
+            fs::read_to_string(repo.join("notes.txt"))?,
+            format!("{original}\n")
         );
 
         let _ = fs::remove_dir_all(root);

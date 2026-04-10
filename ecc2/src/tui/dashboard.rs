@@ -110,6 +110,10 @@ pub struct Dashboard {
     selected_merge_readiness: Option<worktree::MergeReadiness>,
     selected_git_status_entries: Vec<worktree::GitStatusEntry>,
     selected_git_status: usize,
+    selected_git_patch: Option<worktree::GitStatusPatchView>,
+    selected_git_patch_hunk_offsets_unified: Vec<usize>,
+    selected_git_patch_hunk_offsets_split: Vec<usize>,
+    selected_git_patch_hunk: usize,
     output_mode: OutputMode,
     output_filter: OutputFilter,
     output_time_filter: OutputTimeFilter,
@@ -179,6 +183,7 @@ enum OutputMode {
     WorktreeDiff,
     ConflictProtocol,
     GitStatus,
+    GitPatch,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -498,6 +503,10 @@ impl Dashboard {
             selected_merge_readiness: None,
             selected_git_status_entries: Vec::new(),
             selected_git_status: 0,
+            selected_git_patch: None,
+            selected_git_patch_hunk_offsets_unified: Vec::new(),
+            selected_git_patch_hunk_offsets_split: Vec::new(),
+            selected_git_patch_hunk: 0,
             output_mode: OutputMode::SessionOutput,
             output_filter: OutputFilter::All,
             output_time_filter: OutputTimeFilter::AllTime,
@@ -743,8 +752,11 @@ impl Dashboard {
         self.sync_output_scroll(area.height.saturating_sub(2) as usize);
 
         if self.sessions.get(self.selected_session).is_some()
-            && self.output_mode == OutputMode::WorktreeDiff
-            && self.selected_diff_patch.is_some()
+            && matches!(
+                self.output_mode,
+                OutputMode::WorktreeDiff | OutputMode::GitPatch
+            )
+            && self.active_patch_text().is_some()
             && self.diff_view_mode == DiffViewMode::Split
         {
             self.render_split_diff_output(frame, area);
@@ -798,6 +810,16 @@ impl Dashboard {
                     };
                     (self.output_title(), content)
                 }
+                OutputMode::GitPatch => {
+                    let content = if let Some(patch) = self.selected_git_patch.as_ref() {
+                        build_unified_diff_text(&patch.patch, self.theme_palette())
+                    } else {
+                        Text::from(
+                            "No selected-file patch available for the current git-status entry.",
+                        )
+                    };
+                    (self.output_title(), content)
+                }
                 OutputMode::ConflictProtocol => {
                     let content = self.selected_conflict_protocol.clone().unwrap_or_else(|| {
                         "No conflicted worktree available for the selected session.".to_string()
@@ -843,7 +865,7 @@ impl Dashboard {
             return;
         }
 
-        let Some(patch) = self.selected_diff_patch.as_ref() else {
+        let Some(patch) = self.active_patch_text() else {
             return;
         };
         let columns = build_worktree_diff_columns(patch, self.theme_palette());
@@ -878,6 +900,20 @@ impl Dashboard {
         if self.output_mode == OutputMode::WorktreeDiff {
             return format!(
                 " Diff{}{} ",
+                self.diff_view_mode.title_suffix(),
+                self.diff_hunk_title_suffix()
+            );
+        }
+
+        if self.output_mode == OutputMode::GitPatch {
+            let path = self
+                .selected_git_patch
+                .as_ref()
+                .map(|patch| patch.display_path.as_str())
+                .unwrap_or("selected file");
+            return format!(
+                " Git patch {}{}{} ",
+                path,
                 self.diff_view_mode.title_suffix(),
                 self.diff_hunk_title_suffix()
             );
@@ -1175,7 +1211,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  git status [z]  stage [S]  unstage [U]  reset [R]  commit [C]  create PR [P]  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [{}] focus pane  [Tab] cycle pane  [{}] move pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  file patch [v]  git status [z]  stage [S]  unstage [U]  reset [R]  commit [C]  create PR [P]  diff mode [V]  hunks [{{/}}]  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [{}] focus pane  [Tab] cycle pane  [{}] move pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.pane_focus_shortcuts_label(),
             self.pane_move_shortcuts_label(),
             self.layout_label(),
@@ -1303,11 +1339,12 @@ impl Dashboard {
             "  H       Restore all collapsed panes".to_string(),
             "  y       Toggle selected-session timeline view".to_string(),
             "  E       Cycle timeline event filter".to_string(),
-            "  v       Toggle selected worktree diff in output pane".to_string(),
+            "  v       Toggle selected worktree diff or selected-file patch in output pane"
+                .to_string(),
             "  z       Toggle selected worktree git status in output pane".to_string(),
             "  V       Toggle diff view mode between split and unified".to_string(),
             "  {/}     Jump to previous/next diff hunk in the active diff view".to_string(),
-            "  S/U/R   Stage, unstage, or reset the selected git-status entry".to_string(),
+            "  S/U/R   Stage, unstage, or reset the selected file or active diff hunk".to_string(),
             "  C       Commit staged changes for the selected worktree".to_string(),
             "  P       Create a draft PR from the selected worktree branch".to_string(),
             "  c       Show conflict-resolution protocol for selected conflicted worktree"
@@ -2037,16 +2074,31 @@ impl Dashboard {
                 self.set_operator_note("showing session output".to_string());
             }
             OutputMode::GitStatus => {
-                self.output_mode = OutputMode::SessionOutput;
-                self.reset_output_view();
-                self.set_operator_note("showing session output".to_string());
+                self.sync_selected_git_patch();
+                if self.selected_git_patch.is_some() {
+                    self.output_mode = OutputMode::GitPatch;
+                    self.selected_pane = Pane::Output;
+                    self.output_follow = false;
+                    self.output_scroll_offset = self.current_diff_hunk_offset();
+                    self.set_operator_note("showing selected file patch".to_string());
+                } else {
+                    self.set_operator_note(
+                        "no patch hunks available for the selected git-status entry".to_string(),
+                    );
+                }
+            }
+            OutputMode::GitPatch => {
+                self.output_mode = OutputMode::GitStatus;
+                self.output_follow = false;
+                self.sync_output_scroll(self.last_output_height.max(1));
+                self.set_operator_note("showing selected worktree git status".to_string());
             }
         }
     }
 
     pub fn toggle_git_status_mode(&mut self) {
         match self.output_mode {
-            OutputMode::GitStatus => {
+            OutputMode::GitStatus | OutputMode::GitPatch => {
                 self.output_mode = OutputMode::SessionOutput;
                 self.reset_output_view();
                 self.set_operator_note("showing session output".to_string());
@@ -2073,6 +2125,11 @@ impl Dashboard {
     }
 
     pub fn stage_selected_git_status(&mut self) {
+        if self.output_mode == OutputMode::GitPatch {
+            self.stage_selected_git_hunk();
+            return;
+        }
+
         if self.output_mode != OutputMode::GitStatus {
             self.set_operator_note(
                 "git staging controls are only available in git status view".to_string(),
@@ -2096,6 +2153,11 @@ impl Dashboard {
     }
 
     pub fn unstage_selected_git_status(&mut self) {
+        if self.output_mode == OutputMode::GitPatch {
+            self.unstage_selected_git_hunk();
+            return;
+        }
+
         if self.output_mode != OutputMode::GitStatus {
             self.set_operator_note(
                 "git staging controls are only available in git status view".to_string(),
@@ -2122,6 +2184,11 @@ impl Dashboard {
     }
 
     pub fn reset_selected_git_status(&mut self) {
+        if self.output_mode == OutputMode::GitPatch {
+            self.reset_selected_git_hunk();
+            return;
+        }
+
         if self.output_mode != OutputMode::GitStatus {
             self.set_operator_note(
                 "git staging controls are only available in git status view".to_string(),
@@ -2145,7 +2212,10 @@ impl Dashboard {
     }
 
     pub fn begin_commit_prompt(&mut self) {
-        if self.output_mode != OutputMode::GitStatus {
+        if !matches!(
+            self.output_mode,
+            OutputMode::GitStatus | OutputMode::GitPatch
+        ) {
             self.set_operator_note(
                 "commit prompt is only available in git status view".to_string(),
             );
@@ -2199,8 +2269,69 @@ impl Dashboard {
         self.set_operator_note("pr mode | edit the title and press Enter".to_string());
     }
 
+    fn stage_selected_git_hunk(&mut self) {
+        let Some((entry, worktree, _, hunk)) = self.selected_git_patch_context() else {
+            self.set_operator_note("no git hunk selected".to_string());
+            return;
+        };
+
+        if let Err(error) = worktree::stage_hunk(&worktree, &hunk) {
+            tracing::warn!("Failed to stage hunk for {}: {error}", entry.path);
+            self.set_operator_note(format!(
+                "stage hunk failed for {}: {error}",
+                entry.display_path
+            ));
+            return;
+        }
+
+        self.refresh_after_git_status_action(Some(&entry.path));
+        self.set_operator_note(format!("staged hunk in {}", entry.display_path));
+    }
+
+    fn unstage_selected_git_hunk(&mut self) {
+        let Some((entry, worktree, _, hunk)) = self.selected_git_patch_context() else {
+            self.set_operator_note("no git hunk selected".to_string());
+            return;
+        };
+
+        if let Err(error) = worktree::unstage_hunk(&worktree, &hunk) {
+            tracing::warn!("Failed to unstage hunk for {}: {error}", entry.path);
+            self.set_operator_note(format!(
+                "unstage hunk failed for {}: {error}",
+                entry.display_path
+            ));
+            return;
+        }
+
+        self.refresh_after_git_status_action(Some(&entry.path));
+        self.set_operator_note(format!("unstaged hunk in {}", entry.display_path));
+    }
+
+    fn reset_selected_git_hunk(&mut self) {
+        let Some((entry, worktree, _, hunk)) = self.selected_git_patch_context() else {
+            self.set_operator_note("no git hunk selected".to_string());
+            return;
+        };
+
+        if let Err(error) = worktree::reset_hunk(&worktree, &entry, &hunk) {
+            tracing::warn!("Failed to reset hunk for {}: {error}", entry.path);
+            self.set_operator_note(format!(
+                "reset hunk failed for {}: {error}",
+                entry.display_path
+            ));
+            return;
+        }
+
+        self.refresh_after_git_status_action(Some(&entry.path));
+        self.set_operator_note(format!("reset hunk in {}", entry.display_path));
+    }
+
     pub fn toggle_diff_view_mode(&mut self) {
-        if self.output_mode != OutputMode::WorktreeDiff || self.selected_diff_patch.is_none() {
+        if !matches!(
+            self.output_mode,
+            OutputMode::WorktreeDiff | OutputMode::GitPatch
+        ) || self.active_patch_text().is_none()
+        {
             self.set_operator_note("no active worktree diff view to toggle".to_string());
             return;
         }
@@ -2223,7 +2354,11 @@ impl Dashboard {
     }
 
     fn move_diff_hunk(&mut self, delta: isize) {
-        if self.output_mode != OutputMode::WorktreeDiff || self.selected_diff_patch.is_none() {
+        if !matches!(
+            self.output_mode,
+            OutputMode::WorktreeDiff | OutputMode::GitPatch
+        ) || self.active_patch_text().is_none()
+        {
             self.set_operator_note("no active worktree diff to navigate".to_string());
             return;
         }
@@ -2236,12 +2371,14 @@ impl Dashboard {
             }
 
             let len = offsets.len();
-            let next = (self.selected_diff_hunk as isize + delta).rem_euclid(len as isize) as usize;
+            let next =
+                (self.current_diff_hunk_index() as isize + delta).rem_euclid(len as isize) as usize;
             (len, offsets[next])
         };
 
-        let next = (self.selected_diff_hunk as isize + delta).rem_euclid(len as isize) as usize;
-        self.selected_diff_hunk = next;
+        let next =
+            (self.current_diff_hunk_index() as isize + delta).rem_euclid(len as isize) as usize;
+        self.set_current_diff_hunk_index(next);
         self.output_follow = false;
         self.output_scroll_offset = next_offset;
         self.set_operator_note(format!("diff hunk {}/{}", next + 1, len));
@@ -4136,6 +4273,7 @@ impl Dashboard {
             self.output_mode = OutputMode::SessionOutput;
         }
         self.sync_selected_git_status();
+        self.sync_selected_git_patch();
     }
 
     fn sync_selected_git_status(&mut self) {
@@ -4147,8 +4285,47 @@ impl Dashboard {
         if self.selected_git_status >= self.selected_git_status_entries.len() {
             self.selected_git_status = self.selected_git_status_entries.len().saturating_sub(1);
         }
-        if self.output_mode == OutputMode::GitStatus && worktree.is_none() {
+        if matches!(
+            self.output_mode,
+            OutputMode::GitStatus | OutputMode::GitPatch
+        ) && worktree.is_none()
+        {
             self.output_mode = OutputMode::SessionOutput;
+        }
+    }
+
+    fn sync_selected_git_patch(&mut self) {
+        let Some((entry, worktree)) = self.selected_git_status_context() else {
+            self.selected_git_patch = None;
+            self.selected_git_patch_hunk_offsets_unified.clear();
+            self.selected_git_patch_hunk_offsets_split.clear();
+            self.selected_git_patch_hunk = 0;
+            if self.output_mode == OutputMode::GitPatch {
+                self.output_mode = OutputMode::GitStatus;
+            }
+            return;
+        };
+
+        self.selected_git_patch = worktree::git_status_patch_view(&worktree, &entry)
+            .ok()
+            .flatten();
+        self.selected_git_patch_hunk_offsets_unified = self
+            .selected_git_patch
+            .as_ref()
+            .map(|patch| build_unified_diff_hunk_offsets(&patch.patch))
+            .unwrap_or_default();
+        self.selected_git_patch_hunk_offsets_split = self
+            .selected_git_patch
+            .as_ref()
+            .map(|patch| {
+                build_worktree_diff_columns(&patch.patch, self.theme_palette()).hunk_offsets
+            })
+            .unwrap_or_default();
+        if self.selected_git_patch_hunk >= self.current_diff_hunk_offsets().len() {
+            self.selected_git_patch_hunk = 0;
+        }
+        if self.output_mode == OutputMode::GitPatch && self.selected_git_patch.is_none() {
+            self.output_mode = OutputMode::GitStatus;
         }
     }
 
@@ -4164,9 +4341,24 @@ impl Dashboard {
         Some((entry, worktree))
     }
 
+    fn selected_git_patch_context(
+        &self,
+    ) -> Option<(
+        worktree::GitStatusEntry,
+        crate::session::WorktreeInfo,
+        worktree::GitStatusPatchView,
+        worktree::GitPatchHunk,
+    )> {
+        let (entry, worktree) = self.selected_git_status_context()?;
+        let patch = self.selected_git_patch.clone()?;
+        let hunk = patch.hunks.get(self.selected_git_patch_hunk).cloned()?;
+        Some((entry, worktree, patch, hunk))
+    }
+
     fn refresh_after_git_status_action(&mut self, preferred_path: Option<&str>) {
+        let keep_patch_view = self.output_mode == OutputMode::GitPatch;
+        let preferred_hunk = self.selected_git_patch_hunk;
         self.refresh();
-        self.output_mode = OutputMode::GitStatus;
         self.selected_pane = Pane::Output;
         self.output_follow = false;
         if let Some(path) = preferred_path {
@@ -4178,19 +4370,56 @@ impl Dashboard {
                 self.selected_git_status = index;
             }
         }
+        self.sync_selected_git_patch();
+        if keep_patch_view && self.selected_git_patch.is_some() {
+            self.output_mode = OutputMode::GitPatch;
+            let max_index = self.current_diff_hunk_offsets().len().saturating_sub(1);
+            self.selected_git_patch_hunk = preferred_hunk.min(max_index);
+            self.output_scroll_offset = self.current_diff_hunk_offset();
+        } else {
+            self.output_mode = OutputMode::GitStatus;
+        }
         self.sync_output_scroll(self.last_output_height.max(1));
     }
 
+    fn active_patch_text(&self) -> Option<&String> {
+        match self.output_mode {
+            OutputMode::GitPatch => self.selected_git_patch.as_ref().map(|patch| &patch.patch),
+            OutputMode::WorktreeDiff => self.selected_diff_patch.as_ref(),
+            _ => None,
+        }
+    }
+
     fn current_diff_hunk_offsets(&self) -> &[usize] {
-        match self.diff_view_mode {
-            DiffViewMode::Split => &self.selected_diff_hunk_offsets_split,
-            DiffViewMode::Unified => &self.selected_diff_hunk_offsets_unified,
+        match self.output_mode {
+            OutputMode::GitPatch => match self.diff_view_mode {
+                DiffViewMode::Split => &self.selected_git_patch_hunk_offsets_split,
+                DiffViewMode::Unified => &self.selected_git_patch_hunk_offsets_unified,
+            },
+            _ => match self.diff_view_mode {
+                DiffViewMode::Split => &self.selected_diff_hunk_offsets_split,
+                DiffViewMode::Unified => &self.selected_diff_hunk_offsets_unified,
+            },
+        }
+    }
+
+    fn current_diff_hunk_index(&self) -> usize {
+        match self.output_mode {
+            OutputMode::GitPatch => self.selected_git_patch_hunk,
+            _ => self.selected_diff_hunk,
+        }
+    }
+
+    fn set_current_diff_hunk_index(&mut self, index: usize) {
+        match self.output_mode {
+            OutputMode::GitPatch => self.selected_git_patch_hunk = index,
+            _ => self.selected_diff_hunk = index,
         }
     }
 
     fn current_diff_hunk_offset(&self) -> usize {
         self.current_diff_hunk_offsets()
-            .get(self.selected_diff_hunk)
+            .get(self.current_diff_hunk_index())
             .copied()
             .unwrap_or(0)
     }
@@ -4200,7 +4429,7 @@ impl Dashboard {
         if total == 0 {
             String::new()
         } else {
-            format!(" {}/{}", self.selected_diff_hunk + 1, total)
+            format!(" {}/{}", self.current_diff_hunk_index() + 1, total)
         }
     }
 
@@ -4854,6 +5083,13 @@ impl Dashboard {
     fn max_output_scroll(&self) -> usize {
         let total_lines = if self.output_mode == OutputMode::GitStatus {
             self.selected_git_status_entries.len()
+        } else if matches!(
+            self.output_mode,
+            OutputMode::WorktreeDiff | OutputMode::GitPatch
+        ) {
+            self.active_patch_text()
+                .map(|patch| patch.lines().count())
+                .unwrap_or(0)
         } else if self.output_mode == OutputMode::Timeline {
             self.visible_timeline_lines().len()
         } else {
@@ -8071,6 +8307,111 @@ mod tests {
         let rendered = dashboard.rendered_output_text(180, 20);
         assert!(rendered.contains("Git status"));
         assert!(rendered.contains("README.md"));
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn toggle_output_mode_from_git_status_opens_selected_file_patch() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-git-patch-view-{}", Uuid::new_v4()));
+        init_git_repo(&root)?;
+        fs::write(
+            root.join("README.md"),
+            "line 1\nline 2\nline 3\nline 4\nline 5\nline 6 updated\n",
+        )?;
+
+        let mut session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        session.working_dir = root.clone();
+        session.worktree = Some(WorktreeInfo {
+            path: root.clone(),
+            branch: "main".to_string(),
+            base_branch: "main".to_string(),
+        });
+        let mut dashboard = test_dashboard(vec![session], 0);
+        let stored = dashboard.sessions[0].clone();
+        dashboard.db.insert_session(&stored)?;
+
+        dashboard.toggle_git_status_mode();
+        dashboard.toggle_output_mode();
+
+        assert_eq!(dashboard.output_mode, OutputMode::GitPatch);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("showing selected file patch")
+        );
+        assert!(dashboard.output_title().contains("Git patch README.md"));
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("Git patch README.md"));
+        assert!(rendered.contains("+line 6 updated"));
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn git_patch_mode_stages_only_selected_hunk() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-git-patch-stage-{}", Uuid::new_v4()));
+        init_git_repo(&root)?;
+        let original = (1..=12)
+            .map(|index| format!("line {index}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(root.join("notes.txt"), format!("{original}\n"))?;
+        run_git(&root, &["add", "notes.txt"])?;
+        run_git(&root, &["commit", "-qm", "add notes"])?;
+
+        let updated = (1..=12)
+            .map(|index| match index {
+                2 => "line 2 changed".to_string(),
+                11 => "line 11 changed".to_string(),
+                _ => format!("line {index}"),
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(root.join("notes.txt"), format!("{updated}\n"))?;
+
+        let mut session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        session.working_dir = root.clone();
+        session.worktree = Some(WorktreeInfo {
+            path: root.clone(),
+            branch: "main".to_string(),
+            base_branch: "main".to_string(),
+        });
+        let mut dashboard = test_dashboard(vec![session], 0);
+        let stored = dashboard.sessions[0].clone();
+        dashboard.db.insert_session(&stored)?;
+
+        dashboard.toggle_git_status_mode();
+        dashboard.toggle_output_mode();
+        dashboard.stage_selected_git_status();
+
+        assert_eq!(dashboard.output_mode, OutputMode::GitPatch);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("staged hunk in notes.txt")
+        );
+        let cached = git_stdout(&root, &["diff", "--cached", "--", "notes.txt"])?;
+        assert!(cached.contains("line 2 changed"));
+        assert!(!cached.contains("line 11 changed"));
+        let working = git_stdout(&root, &["diff", "--", "notes.txt"])?;
+        assert!(!working.contains("line 2 changed"));
+        assert!(working.contains("line 11 changed"));
+        assert!(dashboard.output_title().contains("Git patch notes.txt"));
 
         let _ = fs::remove_dir_all(root);
         Ok(())
@@ -12078,6 +12419,10 @@ diff --git a/src/lib.rs b/src/lib.rs
             selected_merge_readiness: None,
             selected_git_status_entries: Vec::new(),
             selected_git_status: 0,
+            selected_git_patch: None,
+            selected_git_patch_hunk_offsets_unified: Vec::new(),
+            selected_git_patch_hunk_offsets_split: Vec::new(),
+            selected_git_patch_hunk: 0,
             output_mode: OutputMode::SessionOutput,
             output_filter: OutputFilter::All,
             output_time_filter: OutputTimeFilter::AllTime,
@@ -12167,6 +12512,18 @@ diff --git a/src/lib.rs b/src/lib.rs
             anyhow::bail!("{}", String::from_utf8_lossy(&output.stderr));
         }
         Ok(())
+    }
+
+    fn git_stdout(path: &Path, args: &[&str]) -> Result<String> {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(path)
+            .args(args)
+            .output()?;
+        if !output.status.success() {
+            anyhow::bail!("{}", String::from_utf8_lossy(&output.stderr));
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
     }
 
     fn sample_session(
