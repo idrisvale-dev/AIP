@@ -4910,8 +4910,12 @@ impl Dashboard {
                 }
 
                 self.selected_team_summary = if team.total > 0 { Some(team) } else { None };
+                let selected_agent_type = self
+                    .selected_agent_type()
+                    .unwrap_or(self.cfg.default_agent.as_str())
+                    .to_string();
                 self.selected_route_preview =
-                    self.build_route_preview(team.total, &route_candidates);
+                    self.build_route_preview(&session_id, &selected_agent_type, team.total, &route_candidates);
                 delegated.sort_by_key(|delegate| {
                     (
                         delegate_attention_priority(delegate),
@@ -4934,9 +4938,23 @@ impl Dashboard {
 
     fn build_route_preview(
         &self,
+        lead_id: &str,
+        lead_agent_type: &str,
         delegate_count: usize,
         delegates: &[DelegatedChildSummary],
     ) -> Option<String> {
+        if let Some(task) = self.latest_route_task(lead_id) {
+            if let Ok(preview) = manager::preview_assignment_for_task(
+                &self.db,
+                &self.cfg,
+                lead_id,
+                &task,
+                lead_agent_type,
+            ) {
+                return Some(self.format_assignment_preview(&task, &preview));
+            }
+        }
+
         if let Some(idle_clear) = delegates
             .iter()
             .filter(|delegate| {
@@ -4960,7 +4978,7 @@ impl Dashboard {
             .min_by_key(|delegate| (delegate.handoff_backlog, delegate.session_id.as_str()))
         {
             return Some(format!(
-                "reuse idle {} with backlog {}",
+                "defer; idle {} backlog {}",
                 format_session_id(&idle_backed_up.session_id),
                 idle_backed_up.handoff_backlog
             ));
@@ -4977,9 +4995,18 @@ impl Dashboard {
             .min_by_key(|delegate| (delegate.handoff_backlog, delegate.session_id.as_str()))
         {
             return Some(format!(
-                "reuse active {} with backlog {}",
+                "{} active {}{}",
+                if active_delegate.handoff_backlog > 0 {
+                    "defer;"
+                } else {
+                    "reuse"
+                },
                 format_session_id(&active_delegate.session_id),
-                active_delegate.handoff_backlog
+                if active_delegate.handoff_backlog > 0 {
+                    format!(" backlog {}", active_delegate.handoff_backlog)
+                } else {
+                    String::new()
+                }
             ));
         }
 
@@ -4987,6 +5014,78 @@ impl Dashboard {
             Some("spawn new delegate".to_string())
         } else {
             Some("spawn fallback delegate".to_string())
+        }
+    }
+
+    fn latest_route_task(&self, session_id: &str) -> Option<String> {
+        self.db
+            .list_messages_for_session(session_id, 16)
+            .ok()?
+            .into_iter()
+            .rev()
+            .find_map(|message| {
+                if message.to_session != session_id || message.msg_type != "task_handoff" {
+                    return None;
+                }
+                manager::parse_task_handoff_task(&message.content)
+                    .or_else(|| Some(message.content))
+            })
+    }
+
+    fn format_assignment_preview(
+        &self,
+        task: &str,
+        preview: &manager::AssignmentPreview,
+    ) -> String {
+        let task_preview = truncate_for_dashboard(task, 40);
+        let graph_suffix = if preview.graph_match_terms.is_empty() {
+            String::new()
+        } else {
+            format!(
+                " | graph {}",
+                truncate_for_dashboard(&preview.graph_match_terms.join(", "), 36)
+            )
+        };
+
+        match preview.action {
+            manager::AssignmentAction::Spawned => {
+                format!("for `{task_preview}` spawn new delegate")
+            }
+            manager::AssignmentAction::ReusedIdle => format!(
+                "for `{task_preview}` reuse idle {}{}",
+                preview
+                    .session_id
+                    .as_deref()
+                    .map(format_session_id)
+                    .unwrap_or_else(|| "unknown".to_string()),
+                graph_suffix
+            ),
+            manager::AssignmentAction::ReusedActive => format!(
+                "for `{task_preview}` reuse active {}{}",
+                preview
+                    .session_id
+                    .as_deref()
+                    .map(format_session_id)
+                    .unwrap_or_else(|| "unknown".to_string()),
+                graph_suffix
+            ),
+            manager::AssignmentAction::DeferredSaturated => {
+                let state_label = match preview.delegate_state {
+                    Some(SessionState::Idle) => "idle",
+                    Some(SessionState::Running) | Some(SessionState::Pending) => "active",
+                    _ => "delegate",
+                };
+                format!(
+                    "for `{task_preview}` defer; {state_label} {} backlog {}{}",
+                    preview
+                        .session_id
+                        .as_deref()
+                        .map(format_session_id)
+                        .unwrap_or_else(|| "unknown".to_string()),
+                    preview.handoff_backlog,
+                    graph_suffix
+                )
+            }
         }
     }
 
@@ -11050,6 +11149,89 @@ diff --git a/src/lib.rs b/src/lib.rs
         assert!(text.contains("Needs attention:"));
         assert!(text.contains("Conflicted worktree focus-12"));
         assert!(!text.contains("Backlog focus-12"));
+    }
+
+    #[test]
+    fn route_preview_uses_graph_context_for_latest_incoming_handoff() {
+        let lead = sample_session(
+            "lead-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/lead"),
+            512,
+            42,
+        );
+        let older_worker = sample_session(
+            "older-worker",
+            "planner",
+            SessionState::Idle,
+            Some("ecc/older"),
+            128,
+            12,
+        );
+        let auth_worker = sample_session(
+            "auth-worker",
+            "planner",
+            SessionState::Idle,
+            Some("ecc/auth"),
+            256,
+            24,
+        );
+
+        let mut dashboard =
+            test_dashboard(vec![lead.clone(), older_worker.clone(), auth_worker.clone()], 0);
+        dashboard.db.insert_session(&lead).unwrap();
+        dashboard.db.insert_session(&older_worker).unwrap();
+        dashboard.db.insert_session(&auth_worker).unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "older-worker",
+                "{\"task\":\"Legacy delegated work\",\"context\":\"Delegated from lead\"}",
+                "task_handoff",
+            )
+            .unwrap();
+        dashboard
+            .db
+            .send_message(
+                "lead-12345678",
+                "auth-worker",
+                "{\"task\":\"Auth delegated work\",\"context\":\"Delegated from lead\"}",
+                "task_handoff",
+            )
+            .unwrap();
+        dashboard.db.mark_messages_read("older-worker").unwrap();
+        dashboard.db.mark_messages_read("auth-worker").unwrap();
+        dashboard
+            .db
+            .send_message(
+                "planner-root",
+                "lead-12345678",
+                "{\"task\":\"Investigate auth callback recovery\",\"context\":\"Delegated from planner-root\"}",
+                "task_handoff",
+            )
+            .unwrap();
+        dashboard
+            .db
+            .upsert_context_entity(
+                Some("auth-worker"),
+                "file",
+                "auth-callback.ts",
+                Some("src/auth/callback.ts"),
+                "Auth callback recovery edge cases",
+                &BTreeMap::new(),
+            )
+            .unwrap();
+
+        dashboard.unread_message_counts = dashboard.db.unread_message_counts().unwrap();
+        dashboard.sync_selected_messages();
+        dashboard.sync_selected_lineage();
+
+        assert_eq!(
+            dashboard.selected_route_preview.as_deref(),
+            Some("for `Investigate auth callback recovery` reuse idle auth-wor | graph auth, callback, recovery")
+        );
     }
 
     #[test]
