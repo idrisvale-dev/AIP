@@ -117,6 +117,7 @@ pub struct Dashboard {
     selected_git_patch_hunk_offsets_split: Vec<usize>,
     selected_git_patch_hunk: usize,
     output_mode: OutputMode,
+    graph_entity_filter: GraphEntityFilter,
     output_filter: OutputFilter,
     output_time_filter: OutputTimeFilter,
     timeline_event_filter: TimelineEventFilter,
@@ -182,10 +183,20 @@ enum Pane {
 enum OutputMode {
     SessionOutput,
     Timeline,
+    ContextGraph,
     WorktreeDiff,
     ConflictProtocol,
     GitStatus,
     GitPatch,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GraphEntityFilter {
+    All,
+    Decisions,
+    Files,
+    Functions,
+    Sessions,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -244,6 +255,12 @@ enum PaneDirection {
 struct SearchMatch {
     session_id: String,
     line_index: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct GraphDisplayLine {
+    session_id: String,
+    text: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -535,6 +552,7 @@ impl Dashboard {
             selected_git_patch_hunk_offsets_split: Vec::new(),
             selected_git_patch_hunk: 0,
             output_mode: OutputMode::SessionOutput,
+            graph_entity_filter: GraphEntityFilter::All,
             output_filter: OutputFilter::All,
             output_time_filter: OutputTimeFilter::AllTime,
             timeline_event_filter: TimelineEventFilter::All,
@@ -817,6 +835,21 @@ impl Dashboard {
                     };
                     (self.output_title(), content)
                 }
+                OutputMode::ContextGraph => {
+                    let lines = self.visible_graph_lines();
+                    let content = if lines.is_empty() {
+                        Text::from(self.empty_graph_message())
+                    } else if self.search_query.is_some() {
+                        self.render_searchable_graph(&lines)
+                    } else {
+                        Text::from(
+                            lines.into_iter()
+                                .map(|line| Line::from(line.text))
+                                .collect::<Vec<_>>(),
+                        )
+                    };
+                    (self.output_title(), content)
+                }
                 OutputMode::WorktreeDiff => {
                     let content = if let Some(patch) = self.selected_diff_patch.as_ref() {
                         build_unified_diff_text(patch, self.theme_palette())
@@ -922,6 +955,25 @@ impl Dashboard {
                 self.timeline_event_filter.title_suffix(),
                 self.output_time_filter.title_suffix()
             );
+        }
+
+        if self.output_mode == OutputMode::ContextGraph {
+            let scope = self.search_scope.title_suffix();
+            let filter = self.graph_entity_filter.title_suffix();
+            let time = self.output_time_filter.title_suffix();
+            if let Some(input) = self.search_input.as_ref() {
+                return format!(" Graph{scope}{filter}{time} /{input}_ ");
+            }
+            if let Some(query) = self.search_query.as_ref() {
+                let total = self.search_matches.len();
+                let current = if total == 0 {
+                    0
+                } else {
+                    self.selected_search_match.min(total.saturating_sub(1)) + 1
+                };
+                return format!(" Graph{scope}{filter}{time} /{query} {current}/{total} ");
+            }
+            return format!(" Graph{scope}{filter}{time} ");
         }
 
         if self.output_mode == OutputMode::WorktreeDiff {
@@ -1116,6 +1168,34 @@ impl Dashboard {
         }
     }
 
+    fn empty_graph_message(&self) -> &'static str {
+        match (
+            self.search_scope,
+            self.graph_entity_filter,
+            self.output_time_filter,
+        ) {
+            (SearchScope::SelectedSession, GraphEntityFilter::All, OutputTimeFilter::AllTime) => {
+                "No graph entities for this session yet."
+            }
+            (_, GraphEntityFilter::Decisions, OutputTimeFilter::AllTime) => {
+                "No decision graph entities in the current scope yet."
+            }
+            (_, GraphEntityFilter::Files, OutputTimeFilter::AllTime) => {
+                "No file graph entities in the current scope yet."
+            }
+            (_, GraphEntityFilter::Functions, OutputTimeFilter::AllTime) => {
+                "No function graph entities in the current scope yet."
+            }
+            (_, GraphEntityFilter::Sessions, OutputTimeFilter::AllTime) => {
+                "No session graph entities in the current scope yet."
+            }
+            (SearchScope::AllSessions, GraphEntityFilter::All, OutputTimeFilter::AllTime) => {
+                "No graph entities across all sessions yet."
+            }
+            (_, _, _) => "No graph entities in the selected filter/time range.",
+        }
+    }
+
     fn render_searchable_output(&self, lines: &[&OutputLine]) -> Text<'static> {
         let Some(query) = self.search_query.as_deref() else {
             return Text::from(
@@ -1141,6 +1221,39 @@ impl Dashboard {
                             .zip(selected_session_id)
                             .map(|(search_match, session_id)| {
                                 search_match.session_id == session_id
+                                    && search_match.line_index == index
+                            })
+                            .unwrap_or(false),
+                        self.theme_palette(),
+                    )
+                })
+            .collect::<Vec<_>>(),
+        )
+    }
+
+    fn render_searchable_graph(&self, lines: &[GraphDisplayLine]) -> Text<'static> {
+        let Some(query) = self.search_query.as_deref() else {
+            return Text::from(
+                lines
+                    .iter()
+                    .map(|line| Line::from(line.text.clone()))
+                    .collect::<Vec<_>>(),
+            );
+        };
+
+        let active_match = self.search_matches.get(self.selected_search_match);
+
+        Text::from(
+            lines
+                .iter()
+                .enumerate()
+                .map(|(index, line)| {
+                    highlight_output_line(
+                        &line.text,
+                        query,
+                        active_match
+                            .map(|search_match| {
+                                search_match.session_id == line.session_id
                                     && search_match.line_index == index
                             })
                             .unwrap_or(false),
@@ -1380,10 +1493,11 @@ impl Dashboard {
             "  I       Jump to the next unread approval/conflict target session".to_string(),
             "  g       Auto-dispatch unread handoffs across lead sessions".to_string(),
             "  G       Dispatch then rebalance backlog across lead teams".to_string(),
+            "  K       Toggle selected-session context graph view".to_string(),
             "  h       Collapse the focused non-session pane".to_string(),
             "  H       Restore all collapsed panes".to_string(),
             "  y       Toggle selected-session timeline view".to_string(),
-            "  E       Cycle timeline event filter".to_string(),
+            "  E       Cycle timeline event filter or graph entity filter".to_string(),
             "  v       Toggle selected worktree diff or selected-file patch in output pane"
                 .to_string(),
             "  z       Toggle selected worktree git status in output pane".to_string(),
@@ -1396,7 +1510,7 @@ impl Dashboard {
                 .to_string(),
             "  e       Cycle output content filter: all/errors/tool calls/file changes".to_string(),
             "  f       Cycle output or timeline time range between all/15m/1h/24h".to_string(),
-            "  A       Toggle search or timeline scope between selected session and all sessions"
+            "  A       Toggle search, graph, or timeline scope between selected session and all sessions"
                 .to_string(),
             "  o       Toggle search agent filter between all agents and selected agent type"
                 .to_string(),
@@ -1430,7 +1544,7 @@ impl Dashboard {
             "  k/↑     Scroll up".to_string(),
             "  [ or ]  Focus previous/next delegate in lead Metrics board".to_string(),
             "  Enter   Open focused delegate from lead Metrics board".to_string(),
-            "  /       Search current session output".to_string(),
+            "  /       Search session output or graph lines".to_string(),
             "  n/N     Next/previous search match when search is active".to_string(),
             "  Esc     Clear active search or cancel search input".to_string(),
             "  +/=     Increase pane size and persist it".to_string(),
@@ -2109,6 +2223,11 @@ impl Dashboard {
                 self.set_operator_note("showing session output".to_string());
             }
             OutputMode::Timeline => {
+                self.output_mode = OutputMode::SessionOutput;
+                self.reset_output_view();
+                self.set_operator_note("showing session output".to_string());
+            }
+            OutputMode::ContextGraph => {
                 self.output_mode = OutputMode::SessionOutput;
                 self.reset_output_view();
                 self.set_operator_note("showing session output".to_string());
@@ -3057,6 +3176,10 @@ impl Dashboard {
         self.search_query.is_some()
     }
 
+    pub fn is_context_graph_mode(&self) -> bool {
+        self.output_mode == OutputMode::ContextGraph
+    }
+
     pub fn has_active_completion_popup(&self) -> bool {
         self.active_completion_popup.is_some()
     }
@@ -3092,9 +3215,27 @@ impl Dashboard {
             return;
         }
 
+        if self.output_mode == OutputMode::ContextGraph {
+            self.search_scope = self.search_scope.next();
+            self.recompute_search_matches();
+            self.sync_output_scroll(self.last_output_height.max(1));
+
+            if self.search_query.is_some() {
+                self.set_operator_note(format!(
+                    "graph scope set to {} | {} match(es)",
+                    self.search_scope.label(),
+                    self.search_matches.len()
+                ));
+            } else {
+                self.set_operator_note(format!("graph scope set to {}", self.search_scope.label()));
+            }
+            return;
+        }
+
         if self.output_mode != OutputMode::SessionOutput {
             self.set_operator_note(
-                "scope toggle is only available in session output or timeline view".to_string(),
+                "scope toggle is only available in session output, graph, or timeline view"
+                    .to_string(),
             );
             return;
         }
@@ -3154,13 +3295,20 @@ impl Dashboard {
             return;
         }
 
-        if self.output_mode != OutputMode::SessionOutput {
-            self.set_operator_note("search is only available in session output view".to_string());
+        if !matches!(self.output_mode, OutputMode::SessionOutput | OutputMode::ContextGraph) {
+            self.set_operator_note(
+                "search is only available in session output or graph view".to_string(),
+            );
             return;
         }
 
         self.search_input = Some(self.search_query.clone().unwrap_or_default());
-        self.set_operator_note("search mode | type a query and press Enter".to_string());
+        let mode = if self.output_mode == OutputMode::ContextGraph {
+            "graph search"
+        } else {
+            "search"
+        };
+        self.set_operator_note(format!("{mode} mode | type a query and press Enter"));
     }
 
     pub fn push_input_char(&mut self, ch: char) {
@@ -3327,10 +3475,20 @@ impl Dashboard {
         self.search_query = Some(query.clone());
         self.recompute_search_matches();
         if self.search_matches.is_empty() {
-            self.set_operator_note(format!("search /{query} found no matches"));
+            let mode = if self.output_mode == OutputMode::ContextGraph {
+                "graph search"
+            } else {
+                "search"
+            };
+            self.set_operator_note(format!("{mode} /{query} found no matches"));
         } else {
+            let mode = if self.output_mode == OutputMode::ContextGraph {
+                "graph search"
+            } else {
+                "search"
+            };
             self.set_operator_note(format!(
-                "search /{query} matched {} line(s) across {} session(s) | n/N navigate matches",
+                "{mode} /{query} matched {} line(s) across {} session(s) | n/N navigate matches",
                 self.search_matches.len(),
                 self.search_match_session_count()
             ));
@@ -3551,7 +3709,12 @@ impl Dashboard {
         self.search_matches.clear();
         self.selected_search_match = 0;
         if had_query || had_input {
-            self.set_operator_note("cleared output search".to_string());
+            let mode = if self.output_mode == OutputMode::ContextGraph {
+                "graph search"
+            } else {
+                "output search"
+            };
+            self.set_operator_note(format!("cleared {mode}"));
         }
     }
 
@@ -3601,23 +3764,27 @@ impl Dashboard {
     pub fn cycle_output_time_filter(&mut self) {
         if !matches!(
             self.output_mode,
-            OutputMode::SessionOutput | OutputMode::Timeline
+            OutputMode::SessionOutput | OutputMode::Timeline | OutputMode::ContextGraph
         ) {
             self.set_operator_note(
-                "time filters are only available in session output or timeline view".to_string(),
+                "time filters are only available in session output, graph, or timeline view"
+                    .to_string(),
             );
             return;
         }
 
         self.output_time_filter = self.output_time_filter.next();
-        if self.output_mode == OutputMode::SessionOutput {
+        if matches!(
+            self.output_mode,
+            OutputMode::SessionOutput | OutputMode::ContextGraph
+        ) {
             self.recompute_search_matches();
         }
         self.sync_output_scroll(self.last_output_height.max(1));
-        let note_prefix = if self.output_mode == OutputMode::Timeline {
-            "timeline range"
-        } else {
-            "output time filter"
+        let note_prefix = match self.output_mode {
+            OutputMode::Timeline => "timeline range",
+            OutputMode::ContextGraph => "graph range",
+            _ => "output time filter",
         };
         self.set_operator_note(format!(
             "{note_prefix} set to {}",
@@ -3638,6 +3805,41 @@ impl Dashboard {
         self.set_operator_note(format!(
             "timeline filter set to {}",
             self.timeline_event_filter.label()
+        ));
+    }
+
+    pub fn toggle_context_graph_mode(&mut self) {
+        match self.output_mode {
+            OutputMode::ContextGraph => {
+                self.output_mode = OutputMode::SessionOutput;
+                self.reset_output_view();
+                self.set_operator_note("showing session output".to_string());
+            }
+            _ => {
+                self.output_mode = OutputMode::ContextGraph;
+                self.selected_pane = Pane::Output;
+                self.output_follow = false;
+                self.output_scroll_offset = 0;
+                self.recompute_search_matches();
+                self.set_operator_note("showing selected session context graph".to_string());
+            }
+        }
+    }
+
+    pub fn cycle_graph_entity_filter(&mut self) {
+        if self.output_mode != OutputMode::ContextGraph {
+            self.set_operator_note(
+                "graph entity filters are only available in context graph view".to_string(),
+            );
+            return;
+        }
+
+        self.graph_entity_filter = self.graph_entity_filter.next();
+        self.recompute_search_matches();
+        self.sync_output_scroll(self.last_output_height.max(1));
+        self.set_operator_note(format!(
+            "graph filter set to {}",
+            self.graph_entity_filter.label()
         ));
     }
 
@@ -4842,6 +5044,97 @@ impl Dashboard {
             .unwrap_or_default()
     }
 
+    fn visible_graph_lines(&self) -> Vec<GraphDisplayLine> {
+        let session_scope = match self.search_scope {
+            SearchScope::SelectedSession => self.selected_session_id(),
+            SearchScope::AllSessions => None,
+        };
+        let entity_type = self.graph_entity_filter.entity_type();
+        let entities = self
+            .db
+            .list_context_entities(session_scope, entity_type, 48)
+            .unwrap_or_default();
+        let show_session_label = self.search_scope == SearchScope::AllSessions;
+
+        entities
+            .into_iter()
+            .filter(|entity| self.output_time_filter.matches_timestamp(entity.updated_at))
+            .flat_map(|entity| self.graph_lines_for_entity(entity, show_session_label))
+            .collect()
+    }
+
+    fn graph_lines_for_entity(
+        &self,
+        entity: crate::session::ContextGraphEntity,
+        show_session_label: bool,
+    ) -> Vec<GraphDisplayLine> {
+        let session_id = entity.session_id.clone().unwrap_or_default();
+        let session_label = if show_session_label {
+            if session_id.is_empty() {
+                "global ".to_string()
+            } else {
+                format!("{} ", format_session_id(&session_id))
+            }
+        } else {
+            String::new()
+        };
+        let entity_title = format!(
+            "[{}] {}{:<8} {}",
+            entity.updated_at.format("%H:%M:%S"),
+            session_label,
+            entity.entity_type,
+            entity.name
+        );
+        let mut lines = vec![GraphDisplayLine {
+            session_id: session_id.clone(),
+            text: entity_title,
+        }];
+
+        if let Some(path) = entity.path.as_ref() {
+            lines.push(GraphDisplayLine {
+                session_id: session_id.clone(),
+                text: format!("               path {}", truncate_for_dashboard(path, 96)),
+            });
+        }
+
+        if !entity.summary.trim().is_empty() {
+            lines.push(GraphDisplayLine {
+                session_id: session_id.clone(),
+                text: format!(
+                    "               summary {}",
+                    truncate_for_dashboard(&entity.summary, 96)
+                ),
+            });
+        }
+
+        if let Ok(Some(detail)) = self.db.get_context_entity_detail(entity.id, 2) {
+            for relation in detail.outgoing {
+                lines.push(GraphDisplayLine {
+                    session_id: session_id.clone(),
+                    text: format!(
+                        "               -> {} {}:{}",
+                        relation.relation_type,
+                        relation.to_entity_type,
+                        truncate_for_dashboard(&relation.to_entity_name, 72)
+                    ),
+                });
+            }
+            for relation in detail.incoming {
+                lines.push(GraphDisplayLine {
+                    session_id: session_id.clone(),
+                    text: format!(
+                        "               <- {} {}:{}",
+                        relation.relation_type,
+                        relation.from_entity_type,
+                        truncate_for_dashboard(&relation.from_entity_name, 72)
+                    ),
+                });
+            }
+        }
+
+        lines
+    }
+
     fn visible_git_status_lines(&self) -> Vec<Line<'static>> {
         self.selected_git_status_entries
             .iter()
@@ -5066,22 +5359,34 @@ impl Dashboard {
             return;
         };
 
-        self.search_matches = self
-            .search_target_session_ids()
-            .into_iter()
-            .flat_map(|session_id| {
-                self.visible_output_lines_for_session(session_id)
-                    .into_iter()
-                    .enumerate()
-                    .filter_map(|(index, line)| {
-                        regex.is_match(&line.text).then_some(SearchMatch {
-                            session_id: session_id.to_string(),
-                            line_index: index,
-                        })
+        self.search_matches = if self.output_mode == OutputMode::ContextGraph {
+            self.visible_graph_lines()
+                .into_iter()
+                .enumerate()
+                .filter_map(|(index, line)| {
+                    regex.is_match(&line.text).then_some(SearchMatch {
+                        session_id: line.session_id,
+                        line_index: index,
                     })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
+                })
+                .collect()
+        } else {
+            self.search_target_session_ids()
+                .into_iter()
+                .flat_map(|session_id| {
+                    self.visible_output_lines_for_session(session_id)
+                        .into_iter()
+                        .enumerate()
+                        .filter_map(|(index, line)| {
+                            regex.is_match(&line.text).then_some(SearchMatch {
+                                session_id: session_id.to_string(),
+                                line_index: index,
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect()
+        };
 
         if self.search_matches.is_empty() {
             self.selected_search_match = 0;
@@ -5100,7 +5405,9 @@ impl Dashboard {
             return;
         };
 
-        if self.selected_session_id() != Some(search_match.session_id.as_str()) {
+        if !search_match.session_id.is_empty()
+            && self.selected_session_id() != Some(search_match.session_id.as_str())
+        {
             self.sync_selection_by_id(Some(&search_match.session_id));
             self.sync_selected_output();
             self.sync_selected_diff();
@@ -5126,8 +5433,13 @@ impl Dashboard {
             self.selected_search_match.min(total.saturating_sub(1)) + 1
         };
 
+        let mode = if self.output_mode == OutputMode::ContextGraph {
+            "graph search"
+        } else {
+            "search"
+        };
         format!(
-            "search /{query} match {current}/{total} | {}",
+            "{mode} /{query} match {current}/{total} | {}",
             self.search_scope.label()
         )
     }
@@ -5135,6 +5447,7 @@ impl Dashboard {
     fn search_match_session_count(&self) -> usize {
         self.search_matches
             .iter()
+            .filter(|search_match| !search_match.session_id.is_empty())
             .map(|search_match| search_match.session_id.as_str())
             .collect::<HashSet<_>>()
             .len()
@@ -5224,6 +5537,8 @@ impl Dashboard {
             self.active_patch_text()
                 .map(|patch| patch.lines().count())
                 .unwrap_or(0)
+        } else if self.output_mode == OutputMode::ContextGraph {
+            self.visible_graph_lines().len()
         } else if self.output_mode == OutputMode::Timeline {
             self.visible_timeline_lines().len()
         } else {
@@ -6701,6 +7016,48 @@ impl TimelineEventFilter {
             Self::ToolCalls => " tool calls",
             Self::FileChanges => " file changes",
             Self::Decisions => " decisions",
+        }
+    }
+}
+
+impl GraphEntityFilter {
+    fn next(self) -> Self {
+        match self {
+            Self::All => Self::Decisions,
+            Self::Decisions => Self::Files,
+            Self::Files => Self::Functions,
+            Self::Functions => Self::Sessions,
+            Self::Sessions => Self::All,
+        }
+    }
+
+    fn entity_type(self) -> Option<&'static str> {
+        match self {
+            Self::All => None,
+            Self::Decisions => Some("decision"),
+            Self::Files => Some("file"),
+            Self::Functions => Some("function"),
+            Self::Sessions => Some("session"),
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::All => "all entities",
+            Self::Decisions => "decisions",
+            Self::Files => "files",
+            Self::Functions => "functions",
+            Self::Sessions => "sessions",
+        }
+    }
+
+    fn title_suffix(self) -> &'static str {
+        match self {
+            Self::All => "",
+            Self::Decisions => " decisions",
+            Self::Files => " files",
+            Self::Functions => " functions",
+            Self::Sessions => " sessions",
         }
     }
 }
@@ -9581,6 +9938,187 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
         assert!(rendered.contains("review-8"));
         assert!(rendered.contains("tool bash"));
         assert!(rendered.contains("tool git"));
+    }
+
+    #[test]
+    fn toggle_context_graph_mode_renders_selected_session_entities_and_relations() -> Result<()> {
+        let session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            None,
+            1,
+            1,
+        );
+        let mut dashboard = test_dashboard(vec![session.clone()], 0);
+        dashboard.db.insert_session(&session)?;
+
+        let file = dashboard.db.upsert_context_entity(
+            Some(&session.id),
+            "file",
+            "dashboard.rs",
+            Some("ecc2/src/tui/dashboard.rs"),
+            "dashboard renderer",
+            &std::collections::BTreeMap::new(),
+        )?;
+        let function = dashboard.db.upsert_context_entity(
+            Some(&session.id),
+            "function",
+            "render_output",
+            None,
+            "renders the output pane",
+            &std::collections::BTreeMap::new(),
+        )?;
+        dashboard.db.upsert_context_relation(
+            Some(&session.id),
+            file.id,
+            function.id,
+            "contains",
+            "output rendering path",
+        )?;
+
+        dashboard.toggle_context_graph_mode();
+
+        assert_eq!(dashboard.output_mode, OutputMode::ContextGraph);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("showing selected session context graph")
+        );
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("Graph"));
+        assert!(rendered.contains("dashboard.rs"));
+        assert!(rendered.contains("summary dashboard renderer"));
+        assert!(rendered.contains("-> contains function:render_output"));
+        Ok(())
+    }
+
+    #[test]
+    fn cycle_graph_entity_filter_limits_rendered_entities() -> Result<()> {
+        let session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            None,
+            1,
+            1,
+        );
+        let mut dashboard = test_dashboard(vec![session.clone()], 0);
+        dashboard.db.insert_session(&session)?;
+        dashboard.db.insert_decision(
+            &session.id,
+            "Use sqlite graph sync",
+            &[],
+            "Keeps shared memory queryable",
+        )?;
+        dashboard.db.upsert_context_entity(
+            Some(&session.id),
+            "file",
+            "dashboard.rs",
+            Some("ecc2/src/tui/dashboard.rs"),
+            "dashboard renderer",
+            &std::collections::BTreeMap::new(),
+        )?;
+
+        dashboard.toggle_context_graph_mode();
+        dashboard.cycle_graph_entity_filter();
+
+        assert_eq!(dashboard.graph_entity_filter, GraphEntityFilter::Decisions);
+        assert_eq!(dashboard.output_title(), " Graph decisions ");
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("Use sqlite graph sync"));
+        assert!(!rendered.contains("dashboard.rs"));
+
+        dashboard.cycle_graph_entity_filter();
+        assert_eq!(dashboard.graph_entity_filter, GraphEntityFilter::Files);
+        assert_eq!(dashboard.output_title(), " Graph files ");
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("dashboard.rs"));
+        assert!(!rendered.contains("Use sqlite graph sync"));
+        Ok(())
+    }
+
+    #[test]
+    fn graph_scope_all_sessions_renders_cross_session_entities() -> Result<()> {
+        let focus = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            None,
+            1,
+            1,
+        );
+        let review = sample_session(
+            "review-87654321",
+            "reviewer",
+            SessionState::Running,
+            None,
+            1,
+            1,
+        );
+        let mut dashboard = test_dashboard(vec![focus.clone(), review.clone()], 0);
+        dashboard.db.insert_session(&focus)?;
+        dashboard.db.insert_session(&review)?;
+        dashboard.db.insert_decision(&focus.id, "Alpha graph path", &[], "planner path")?;
+        dashboard.db.insert_decision(&review.id, "Beta graph path", &[], "review path")?;
+
+        dashboard.toggle_context_graph_mode();
+        dashboard.toggle_search_scope();
+
+        assert_eq!(dashboard.search_scope, SearchScope::AllSessions);
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("graph scope set to all sessions")
+        );
+        assert_eq!(dashboard.output_title(), " Graph all sessions ");
+        let rendered = dashboard.rendered_output_text(180, 30);
+        assert!(rendered.contains("focus-12"));
+        assert!(rendered.contains("review-8"));
+        assert!(rendered.contains("Alpha graph path"));
+        assert!(rendered.contains("Beta graph path"));
+        Ok(())
+    }
+
+    #[test]
+    fn graph_search_matches_and_switches_selected_session() -> Result<()> {
+        let focus = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            None,
+            1,
+            1,
+        );
+        let review = sample_session(
+            "review-87654321",
+            "reviewer",
+            SessionState::Running,
+            None,
+            1,
+            1,
+        );
+        let mut dashboard = test_dashboard(vec![focus.clone(), review.clone()], 0);
+        dashboard.db.insert_session(&focus)?;
+        dashboard.db.insert_session(&review)?;
+        dashboard.db.insert_decision(&focus.id, "alpha local graph", &[], "planner path")?;
+        dashboard.db.insert_decision(&review.id, "alpha remote graph", &[], "review path")?;
+
+        dashboard.toggle_context_graph_mode();
+        dashboard.toggle_search_scope();
+        dashboard.begin_search();
+        for ch in "alpha.*".chars() {
+            dashboard.push_input_char(ch);
+        }
+        dashboard.submit_search();
+
+        assert_eq!(dashboard.search_matches.len(), 2);
+        let first_session = dashboard.selected_session_id().map(str::to_string);
+        dashboard.next_search_match();
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("graph search /alpha.* match 2/2 | all sessions")
+        );
+        assert_ne!(dashboard.selected_session_id().map(str::to_string), first_session);
+        Ok(())
     }
 
     #[test]
@@ -13343,6 +13881,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             selected_git_patch_hunk_offsets_split: Vec::new(),
             selected_git_patch_hunk: 0,
             output_mode: OutputMode::SessionOutput,
+            graph_entity_filter: GraphEntityFilter::All,
             output_filter: OutputFilter::All,
             output_time_filter: OutputTimeFilter::AllTime,
             timeline_event_filter: TimelineEventFilter::All,
