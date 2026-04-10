@@ -186,6 +186,9 @@ It is mostly:
 ECC 2.0 now ships a bounded migration audit entrypoint:
 
 - `ecc migrate audit --source ~/.hermes`
+- `ecc migrate plan --source ~/.hermes --output migration-plan.md`
+- `ecc migrate scaffold --source ~/.hermes --output-dir migration-artifacts`
+- `ecc migrate import-schedules --source ~/.hermes --dry-run`
 
 Use that first to inventory the legacy workspace and map detected surfaces onto the current ECC2 scheduler, remote dispatch, memory graph, templates, and manual-translation lanes.
 
