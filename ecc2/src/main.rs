@@ -470,6 +470,9 @@ enum GraphCommands {
         /// Observation type such as completion_summary, incident_note, or reminder
         #[arg(long = "type")]
         observation_type: String,
+        /// Observation priority
+        #[arg(long, value_enum, default_value_t = ObservationPriorityArg::Normal)]
+        priority: ObservationPriorityArg,
         /// Observation summary
         #[arg(long)]
         summary: String,
@@ -567,6 +570,25 @@ enum MessageKindArg {
     Response,
     Completed,
     Conflict,
+}
+
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum ObservationPriorityArg {
+    Low,
+    Normal,
+    High,
+    Critical,
+}
+
+impl From<ObservationPriorityArg> for session::ContextObservationPriority {
+    fn from(value: ObservationPriorityArg) -> Self {
+        match value {
+            ObservationPriorityArg::Low => Self::Low,
+            ObservationPriorityArg::Normal => Self::Normal,
+            ObservationPriorityArg::High => Self::High,
+            ObservationPriorityArg::Critical => Self::Critical,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -1365,6 +1387,7 @@ async fn main() -> Result<()> {
                 session_id,
                 entity_id,
                 observation_type,
+                priority,
                 summary,
                 details,
                 json,
@@ -1378,6 +1401,7 @@ async fn main() -> Result<()> {
                     resolved_session_id.as_deref(),
                     entity_id,
                     &observation_type,
+                    priority.into(),
                     &summary,
                     &details,
                 )?;
@@ -2119,6 +2143,7 @@ fn import_memory_connector_record(
         session_id.as_deref(),
         entity.id,
         observation_type,
+        session::ContextObservationPriority::Normal,
         summary,
         &record.details,
     )?;
@@ -3323,6 +3348,7 @@ fn format_graph_observation_human(observation: &session::ContextGraphObservation
             observation.entity_id, observation.entity_type, observation.entity_name
         ),
         format!("Type: {}", observation.observation_type),
+        format!("Priority: {}", observation.priority),
         format!("Summary: {}", observation.summary),
     ];
     if let Some(session_id) = observation.session_id.as_deref() {
@@ -3354,8 +3380,11 @@ fn format_graph_observations_human(observations: &[session::ContextGraphObservat
     )];
     for observation in observations {
         let mut line = format!(
-            "- #{} [{}] {}",
-            observation.id, observation.observation_type, observation.entity_name
+            "- #{} [{}/{}] {}",
+            observation.id,
+            observation.observation_type,
+            observation.priority,
+            observation.entity_name
         );
         if let Some(session_id) = observation.session_id.as_deref() {
             line.push_str(&format!(" | {}", short_session(session_id)));
@@ -3386,13 +3415,14 @@ fn format_graph_recall_human(
     )];
     for entry in entries {
         let mut line = format!(
-            "- #{} [{}] {} | score {} | relations {} | observations {}",
+            "- #{} [{}] {} | score {} | relations {} | observations {} | priority {}",
             entry.entity.id,
             entry.entity.entity_type,
             entry.entity.name,
             entry.score,
             entry.relation_count,
-            entry.observation_count
+            entry.observation_count,
+            entry.max_observation_priority
         );
         if let Some(session_id) = entry.entity.session_id.as_deref() {
             line.push_str(&format!(" | {}", short_session(session_id)));
@@ -5448,6 +5478,7 @@ mod tests {
                         session_id,
                         entity_id,
                         observation_type,
+                        priority,
                         summary,
                         details,
                         json,
@@ -5456,6 +5487,7 @@ mod tests {
                 assert_eq!(session_id.as_deref(), Some("latest"));
                 assert_eq!(entity_id, 7);
                 assert_eq!(observation_type, "completion_summary");
+                assert!(matches!(priority, ObservationPriorityArg::Normal));
                 assert_eq!(summary, "Finished auth callback recovery");
                 assert_eq!(details, vec!["tests_run=2"]);
                 assert!(json);
@@ -5668,6 +5700,7 @@ mod tests {
                 ],
                 relation_count: 2,
                 observation_count: 1,
+                max_observation_priority: session::ContextObservationPriority::High,
             }],
             Some("sess-12345678"),
             "auth callback recovery",
@@ -5675,6 +5708,7 @@ mod tests {
 
         assert!(text.contains("Relevant memory: 1 entries"));
         assert!(text.contains("[file] callback.ts | score 319 | relations 2 | observations 1"));
+        assert!(text.contains("priority high"));
         assert!(text.contains("matches auth, callback, recovery"));
         assert!(text.contains("path src/routes/auth/callback.ts"));
     }
@@ -5688,6 +5722,7 @@ mod tests {
             entity_type: "session".to_string(),
             entity_name: "sess-12345678".to_string(),
             observation_type: "completion_summary".to_string(),
+            priority: session::ContextObservationPriority::High,
             summary: "Finished auth callback recovery with 2 tests".to_string(),
             details: BTreeMap::from([("tests_run".to_string(), "2".to_string())]),
             created_at: chrono::DateTime::parse_from_rfc3339("2026-04-10T01:02:03Z")
@@ -5696,7 +5731,7 @@ mod tests {
         }]);
 
         assert!(text.contains("Context graph observations: 1"));
-        assert!(text.contains("[completion_summary] sess-12345678"));
+        assert!(text.contains("[completion_summary/high] sess-12345678"));
         assert!(text.contains("summary Finished auth callback recovery with 2 tests"));
     }
 

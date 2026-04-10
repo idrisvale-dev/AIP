@@ -198,6 +198,7 @@ pub struct ContextGraphObservation {
     pub entity_type: String,
     pub entity_name: String,
     pub observation_type: String,
+    pub priority: ContextObservationPriority,
     pub summary: String,
     pub details: BTreeMap<String, String>,
     pub created_at: DateTime<Utc>,
@@ -210,6 +211,53 @@ pub struct ContextGraphRecallEntry {
     pub matched_terms: Vec<String>,
     pub relation_count: usize,
     pub observation_count: usize,
+    pub max_observation_priority: ContextObservationPriority,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "snake_case")]
+pub enum ContextObservationPriority {
+    Low,
+    Normal,
+    High,
+    Critical,
+}
+
+impl Default for ContextObservationPriority {
+    fn default() -> Self {
+        Self::Normal
+    }
+}
+
+impl fmt::Display for ContextObservationPriority {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Low => write!(f, "low"),
+            Self::Normal => write!(f, "normal"),
+            Self::High => write!(f, "high"),
+            Self::Critical => write!(f, "critical"),
+        }
+    }
+}
+
+impl ContextObservationPriority {
+    pub fn from_db_value(value: i64) -> Self {
+        match value {
+            0 => Self::Low,
+            2 => Self::High,
+            3 => Self::Critical,
+            _ => Self::Normal,
+        }
+    }
+
+    pub fn as_db_value(self) -> i64 {
+        match self {
+            Self::Low => 0,
+            Self::Normal => 1,
+            Self::High => 2,
+            Self::Critical => 3,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]

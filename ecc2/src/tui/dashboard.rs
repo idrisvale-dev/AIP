@@ -23,7 +23,8 @@ use crate::session::output::{
 };
 use crate::session::store::{DaemonActivity, FileActivityOverlap, StateStore};
 use crate::session::{
-    DecisionLogEntry, FileActivityEntry, Session, SessionGrouping, SessionMessage, SessionState,
+    ContextObservationPriority, DecisionLogEntry, FileActivityEntry, Session, SessionGrouping,
+    SessionMessage, SessionState,
 };
 use crate::worktree;
 
@@ -4251,9 +4252,15 @@ impl Dashboard {
             summary.warnings.len()
         );
         let details = completion_summary_observation_details(summary, session);
+        let priority = if observation_type == "failure_summary" {
+            ContextObservationPriority::High
+        } else {
+            ContextObservationPriority::Normal
+        };
         if let Err(error) = self.db.add_session_observation(
             &session.id,
             observation_type,
+            priority,
             &observation_summary,
             &details,
         ) {
@@ -5358,13 +5365,14 @@ impl Dashboard {
         let mut lines = vec!["Relevant memory".to_string()];
         for entry in entries {
             let mut line = format!(
-                "- #{} [{}] {} | score {} | relations {} | observations {}",
+                "- #{} [{}] {} | score {} | relations {} | observations {} | priority {}",
                 entry.entity.id,
                 entry.entity.entity_type,
                 truncate_for_dashboard(&entry.entity.name, 60),
                 entry.score,
                 entry.relation_count,
-                entry.observation_count
+                entry.observation_count,
+                entry.max_observation_priority
             );
             if let Some(session_id) = entry.entity.session_id.as_deref() {
                 if session_id != session.id {
@@ -5387,7 +5395,8 @@ impl Dashboard {
             if let Ok(observations) = self.db.list_context_observations(Some(entry.entity.id), 1) {
                 if let Some(observation) = observations.first() {
                     lines.push(format!(
-                        "  memory {}",
+                        "  memory [{}] {}",
+                        observation.priority,
                         truncate_for_dashboard(&observation.summary, 72)
                     ));
                 }
@@ -10534,6 +10543,7 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
             Some(&memory.id),
             entity.id,
             "completion_summary",
+            ContextObservationPriority::Normal,
             "Recovered auth callback incident with billing fallback",
             &BTreeMap::new(),
         )?;
@@ -10542,7 +10552,9 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
         assert!(text.contains("Relevant memory"));
         assert!(text.contains("[file] callback.ts"));
         assert!(text.contains("matches auth, callback, recovery"));
-        assert!(text.contains("memory Recovered auth callback incident with billing fallback"));
+        assert!(
+            text.contains("memory [normal] Recovered auth callback incident with billing fallback")
+        );
         Ok(())
     }
 

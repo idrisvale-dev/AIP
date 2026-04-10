@@ -16,8 +16,8 @@ use super::{
     default_project_label, default_task_group_label, normalize_group_label,
     ContextGraphCompactionStats, ContextGraphEntity, ContextGraphEntityDetail,
     ContextGraphObservation, ContextGraphRecallEntry, ContextGraphRelation, ContextGraphSyncStats,
-    DecisionLogEntry, FileActivityAction, FileActivityEntry, Session, SessionAgentProfile,
-    SessionMessage, SessionMetrics, SessionState, WorktreeInfo,
+    ContextObservationPriority, DecisionLogEntry, FileActivityAction, FileActivityEntry, Session,
+    SessionAgentProfile, SessionMessage, SessionMetrics, SessionState, WorktreeInfo,
 };
 
 pub struct StateStore {
@@ -267,6 +267,7 @@ impl StateStore {
                 session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
                 entity_id INTEGER NOT NULL REFERENCES context_graph_entities(id) ON DELETE CASCADE,
                 observation_type TEXT NOT NULL,
+                priority INTEGER NOT NULL DEFAULT 1,
                 summary TEXT NOT NULL,
                 details_json TEXT NOT NULL DEFAULT '{}',
                 created_at TEXT NOT NULL
@@ -462,6 +463,15 @@ impl StateStore {
                     [],
                 )
                 .context("Failed to add trigger_summary column to tool_log table")?;
+        }
+
+        if !self.has_column("context_graph_observations", "priority")? {
+            self.conn
+                .execute(
+                    "ALTER TABLE context_graph_observations ADD COLUMN priority INTEGER NOT NULL DEFAULT 1",
+                    [],
+                )
+                .context("Failed to add priority column to context_graph_observations table")?;
         }
 
         if !self.has_column("daemon_activity", "last_dispatch_deferred")? {
@@ -2088,6 +2098,12 @@ impl StateStore {
                         FROM context_graph_observations o
                         WHERE o.entity_id = e.id
                     ) AS observation_count
+                    ,
+                    COALESCE((
+                        SELECT MAX(priority)
+                        FROM context_graph_observations o
+                        WHERE o.entity_id = e.id
+                    ), 1) AS max_observation_priority
              FROM context_graph_entities e
              WHERE (?1 IS NULL OR e.session_id = ?1)
              ORDER BY e.updated_at DESC, e.id DESC
@@ -2102,7 +2118,15 @@ impl StateStore {
                     let relation_count = row.get::<_, i64>(9)?.max(0) as usize;
                     let observation_text = row.get::<_, String>(10)?;
                     let observation_count = row.get::<_, i64>(11)?.max(0) as usize;
-                    Ok((entity, relation_count, observation_text, observation_count))
+                    let max_observation_priority =
+                        ContextObservationPriority::from_db_value(row.get::<_, i64>(12)?);
+                    Ok((
+                        entity,
+                        relation_count,
+                        observation_text,
+                        observation_count,
+                        max_observation_priority,
+                    ))
                 },
             )?
             .collect::<Result<Vec<_>, _>>()?;
@@ -2111,7 +2135,13 @@ impl StateStore {
         let mut entries = candidates
             .into_iter()
             .filter_map(
-                |(entity, relation_count, observation_text, observation_count)| {
+                |(
+                    entity,
+                    relation_count,
+                    observation_text,
+                    observation_count,
+                    max_observation_priority,
+                )| {
                     let matched_terms =
                         context_graph_matched_terms(&entity, &observation_text, &terms);
                     if matched_terms.is_empty() {
@@ -2123,6 +2153,7 @@ impl StateStore {
                             matched_terms.len(),
                             relation_count,
                             observation_count,
+                            max_observation_priority,
                             entity.updated_at,
                             now,
                         ),
@@ -2130,6 +2161,7 @@ impl StateStore {
                         matched_terms,
                         relation_count,
                         observation_count,
+                        max_observation_priority,
                     })
                 },
             )
@@ -2217,6 +2249,7 @@ impl StateStore {
         session_id: Option<&str>,
         entity_id: i64,
         observation_type: &str,
+        priority: ContextObservationPriority,
         summary: &str,
         details: &BTreeMap<String, String>,
     ) -> Result<ContextGraphObservation> {
@@ -2235,12 +2268,13 @@ impl StateStore {
         let details_json = serde_json::to_string(details)?;
         self.conn.execute(
             "INSERT INTO context_graph_observations (
-                session_id, entity_id, observation_type, summary, details_json, created_at
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                session_id, entity_id, observation_type, priority, summary, details_json, created_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             rusqlite::params![
                 session_id,
                 entity_id,
                 observation_type.trim(),
+                priority.as_db_value(),
                 summary.trim(),
                 details_json,
                 now,
@@ -2255,7 +2289,7 @@ impl StateStore {
         self.conn
             .query_row(
                 "SELECT o.id, o.session_id, o.entity_id, e.entity_type, e.name,
-                        o.observation_type, o.summary, o.details_json, o.created_at
+                        o.observation_type, o.priority, o.summary, o.details_json, o.created_at
                  FROM context_graph_observations o
                  JOIN context_graph_entities e ON e.id = o.entity_id
                  WHERE o.id = ?1",
@@ -2277,6 +2311,7 @@ impl StateStore {
         &self,
         session_id: &str,
         observation_type: &str,
+        priority: ContextObservationPriority,
         summary: &str,
         details: &BTreeMap<String, String>,
     ) -> Result<ContextGraphObservation> {
@@ -2285,6 +2320,7 @@ impl StateStore {
             Some(session_id),
             session_entity.id,
             observation_type,
+            priority,
             summary,
             details,
         )
@@ -2297,7 +2333,7 @@ impl StateStore {
     ) -> Result<Vec<ContextGraphObservation>> {
         let mut stmt = self.conn.prepare(
             "SELECT o.id, o.session_id, o.entity_id, e.entity_type, e.name,
-                    o.observation_type, o.summary, o.details_json, o.created_at
+                    o.observation_type, o.priority, o.summary, o.details_json, o.created_at
              FROM context_graph_observations o
              JOIN context_graph_entities e ON e.id = o.entity_id
              WHERE (?1 IS NULL OR o.entity_id = ?1)
@@ -3428,12 +3464,12 @@ fn map_context_graph_observation(
     row: &rusqlite::Row<'_>,
 ) -> rusqlite::Result<ContextGraphObservation> {
     let details_json = row
-        .get::<_, Option<String>>(7)?
+        .get::<_, Option<String>>(8)?
         .unwrap_or_else(|| "{}".to_string());
     let details = serde_json::from_str(&details_json).map_err(|error| {
-        rusqlite::Error::FromSqlConversionFailure(7, rusqlite::types::Type::Text, Box::new(error))
+        rusqlite::Error::FromSqlConversionFailure(8, rusqlite::types::Type::Text, Box::new(error))
     })?;
-    let created_at = parse_store_timestamp(row.get::<_, String>(8)?, 8)?;
+    let created_at = parse_store_timestamp(row.get::<_, String>(9)?, 9)?;
 
     Ok(ContextGraphObservation {
         id: row.get(0)?,
@@ -3442,7 +3478,8 @@ fn map_context_graph_observation(
         entity_type: row.get(3)?,
         entity_name: row.get(4)?,
         observation_type: row.get(5)?,
-        summary: row.get(6)?,
+        priority: ContextObservationPriority::from_db_value(row.get::<_, i64>(6)?),
+        summary: row.get(7)?,
         details,
         created_at,
     })
@@ -3496,6 +3533,7 @@ fn context_graph_recall_score(
     matched_term_count: usize,
     relation_count: usize,
     observation_count: usize,
+    max_observation_priority: ContextObservationPriority,
     updated_at: chrono::DateTime<chrono::Utc>,
     now: chrono::DateTime<chrono::Utc>,
 ) -> u64 {
@@ -3515,6 +3553,7 @@ fn context_graph_recall_score(
     (matched_term_count as u64 * 100)
         + (relation_count.min(9) as u64 * 10)
         + (observation_count.min(6) as u64 * 8)
+        + (max_observation_priority.as_db_value() as u64 * 18)
         + recency_bonus
 }
 
@@ -4336,6 +4375,7 @@ mod tests {
             Some("session-1"),
             entity.id,
             "note",
+            ContextObservationPriority::Normal,
             "Customer wiped setup and got charged twice",
             &BTreeMap::from([("customer".to_string(), "viktor".to_string())]),
         )?;
@@ -4345,6 +4385,7 @@ mod tests {
         assert_eq!(observations[0].id, observation.id);
         assert_eq!(observations[0].entity_name, "Prefer recovery-first routing");
         assert_eq!(observations[0].observation_type, "note");
+        assert_eq!(observations[0].priority, ContextObservationPriority::Normal);
         assert_eq!(
             observations[0].details.get("customer"),
             Some(&"viktor".to_string())
@@ -4393,12 +4434,13 @@ mod tests {
         ] {
             db.conn.execute(
                 "INSERT INTO context_graph_observations (
-                    session_id, entity_id, observation_type, summary, details_json, created_at
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    session_id, entity_id, observation_type, priority, summary, details_json, created_at
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 rusqlite::params![
                     "session-1",
                     entity.id,
                     "note",
+                    ContextObservationPriority::Normal.as_db_value(),
                     summary,
                     "{}",
                     chrono::Utc::now().to_rfc3339(),
@@ -4460,6 +4502,7 @@ mod tests {
                 Some("session-1"),
                 entity.id,
                 "completion_summary",
+                ContextObservationPriority::Normal,
                 &summary,
                 &BTreeMap::new(),
             )?;
@@ -4542,6 +4585,7 @@ mod tests {
             Some("session-1"),
             recovery.id,
             "incident_note",
+            ContextObservationPriority::High,
             "Previous auth callback recovery incident affected Viktor after a wipe",
             &BTreeMap::new(),
         )?;
@@ -4550,19 +4594,32 @@ mod tests {
             db.recall_context_entities(Some("session-1"), "Investigate auth callback recovery", 3)?;
 
         assert_eq!(results.len(), 2);
-        assert_eq!(results[0].entity.id, callback.id);
+        assert_eq!(results[0].entity.id, recovery.id);
         assert!(results[0].matched_terms.iter().any(|term| term == "auth"));
         assert!(results[0]
             .matched_terms
             .iter()
+            .any(|term| term == "recovery"));
+        assert_eq!(results[0].observation_count, 1);
+        assert_eq!(
+            results[0].max_observation_priority,
+            ContextObservationPriority::High
+        );
+        assert_eq!(results[1].entity.id, callback.id);
+        assert!(results[1]
+            .matched_terms
+            .iter()
             .any(|term| term == "callback"));
-        assert!(results[0]
+        assert!(results[1]
             .matched_terms
             .iter()
             .any(|term| term == "recovery"));
-        assert_eq!(results[0].relation_count, 2);
-        assert_eq!(results[1].entity.id, recovery.id);
-        assert_eq!(results[1].observation_count, 1);
+        assert_eq!(results[1].relation_count, 2);
+        assert_eq!(results[1].observation_count, 0);
+        assert_eq!(
+            results[1].max_observation_priority,
+            ContextObservationPriority::Normal
+        );
         assert!(!results.iter().any(|entry| entry.entity.id == unrelated.id));
 
         Ok(())
