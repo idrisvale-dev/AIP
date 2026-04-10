@@ -248,6 +248,24 @@ impl SessionHarnessInfo {
         self
     }
 
+    pub fn resolve_requested_agent_type(
+        cfg: &crate::config::Config,
+        requested_agent_type: &str,
+        working_dir: &Path,
+    ) -> String {
+        let canonical = HarnessKind::canonical_agent_type(requested_agent_type);
+        if !canonical.is_empty() && canonical != "auto" {
+            return canonical;
+        }
+
+        let detected = Self::detect("", working_dir).with_config_detection(cfg, working_dir);
+        if detected.primary_label != HarnessKind::Unknown.as_str() {
+            return Self::runner_key(&detected.primary_label);
+        }
+
+        HarnessKind::Claude.as_str().to_string()
+    }
+
     pub fn detected_summary(&self) -> String {
         if self.detected_labels.is_empty() {
             "none detected".to_string()
@@ -811,5 +829,49 @@ mod tests {
             "custom-runner"
         );
         assert_eq!(SessionHarnessInfo::runner_key("claude-code"), "claude");
+    }
+
+    #[test]
+    fn resolve_requested_agent_type_uses_detected_builtin_marker_for_auto(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let repo = TestDir::new("session-harness-resolve-auto-built-in")?;
+        fs::create_dir_all(repo.path().join(".codex"))?;
+
+        let resolved = SessionHarnessInfo::resolve_requested_agent_type(
+            &crate::config::Config::default(),
+            "auto",
+            repo.path(),
+        );
+        assert_eq!(resolved, "codex");
+        Ok(())
+    }
+
+    #[test]
+    fn resolve_requested_agent_type_uses_configured_marker_for_auto(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let repo = TestDir::new("session-harness-resolve-auto-custom")?;
+        fs::create_dir_all(repo.path().join(".acme"))?;
+        let mut cfg = crate::config::Config::default();
+        cfg.harness_runners.insert(
+            "acme-runner".to_string(),
+            crate::config::HarnessRunnerConfig {
+                project_markers: vec![PathBuf::from(".acme")],
+                ..Default::default()
+            },
+        );
+
+        let resolved = SessionHarnessInfo::resolve_requested_agent_type(&cfg, "auto", repo.path());
+        assert_eq!(resolved, "acme-runner");
+        Ok(())
+    }
+
+    #[test]
+    fn resolve_requested_agent_type_falls_back_to_claude_without_markers() {
+        let resolved = SessionHarnessInfo::resolve_requested_agent_type(
+            &crate::config::Config::default(),
+            "auto",
+            Path::new("."),
+        );
+        assert_eq!(resolved, "claude");
     }
 }

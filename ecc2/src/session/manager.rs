@@ -1067,7 +1067,7 @@ pub async fn rebalance_team_backlog(
         return Ok(outcomes);
     }
 
-    let delegates = direct_delegate_sessions(db, &lead.id, agent_type)?;
+    let delegates = direct_delegate_sessions(db, cfg, &lead, agent_type)?;
     let unread_counts = db.unread_message_counts()?;
     let team_has_capacity = delegates.len() < cfg.max_parallel_sessions;
 
@@ -1099,7 +1099,7 @@ pub async fn rebalance_team_backlog(
                 break;
             }
 
-            let current_delegates = direct_delegate_sessions(db, &lead.id, agent_type)?;
+            let current_delegates = direct_delegate_sessions(db, cfg, &lead, agent_type)?;
             let current_unread_counts = db.unread_message_counts()?;
             let current_team_has_capacity = current_delegates.len() < cfg.max_parallel_sessions;
             let current_has_clear_idle_elsewhere = current_delegates.iter().any(|candidate| {
@@ -1567,7 +1567,7 @@ async fn assign_session_in_dir_with_runner_program(
             .task_group
             .or_else(|| normalize_group_label(&lead.task_group)),
     };
-    let delegates = direct_delegate_sessions(db, &lead.id, agent_type)?;
+    let delegates = direct_delegate_sessions(db, cfg, &lead, agent_type)?;
     let delegate_handoff_backlog = delegates
         .iter()
         .map(|session| {
@@ -2601,7 +2601,6 @@ async fn queue_session_with_resolved_profile_and_runner_program(
         .as_ref()
         .and_then(|profile| profile.agent.as_deref())
         .unwrap_or(agent_type);
-    let effective_agent_type = HarnessKind::canonical_agent_type(effective_agent_type);
     let session = build_session_record(
         db,
         task,
@@ -2658,7 +2657,8 @@ fn build_session_record(
     repo_root: &Path,
     grouping: SessionGrouping,
 ) -> Result<Session> {
-    let canonical_agent_type = HarnessKind::canonical_agent_type(agent_type);
+    let canonical_agent_type =
+        SessionHarnessInfo::resolve_requested_agent_type(cfg, agent_type, repo_root);
     let id = uuid::Uuid::new_v4().to_string()[..8].to_string();
     let now = chrono::Utc::now();
 
@@ -2809,12 +2809,15 @@ async fn spawn_session_runner(
 
 fn direct_delegate_sessions(
     db: &StateStore,
-    lead_id: &str,
+    cfg: &Config,
+    lead: &Session,
     agent_type: &str,
 ) -> Result<Vec<Session>> {
-    let target_harness = HarnessKind::from_agent_type(agent_type);
+    let resolved_agent_type =
+        SessionHarnessInfo::resolve_requested_agent_type(cfg, agent_type, &lead.working_dir);
+    let target_harness = HarnessKind::from_agent_type(&resolved_agent_type);
     let mut sessions = Vec::new();
-    for child_id in db.delegated_children(lead_id, 50)? {
+    for child_id in db.delegated_children(&lead.id, 50)? {
         let Some(session) = db.get_session(&child_id)? else {
             continue;
         };
@@ -2823,7 +2826,7 @@ fn direct_delegate_sessions(
             if HarnessKind::from_agent_type(&session.agent_type) != target_harness {
                 continue;
             }
-        } else if session.agent_type != HarnessKind::canonical_agent_type(agent_type) {
+        } else if session.agent_type != resolved_agent_type {
             continue;
         }
 
@@ -2904,7 +2907,8 @@ fn summarize_backlog_pressure(
     let mut summary = BacklogPressureSummary::default();
 
     for (session_id, _) in targets {
-        let delegates = direct_delegate_sessions(db, session_id, agent_type)?;
+        let lead = resolve_session(db, session_id)?;
+        let delegates = direct_delegate_sessions(db, cfg, &lead, agent_type)?;
         let has_clear_idle_delegate = delegates.iter().any(|delegate| {
             delegate.state == SessionState::Idle
                 && db.unread_task_handoff_count(&delegate.id).unwrap_or(0) == 0
@@ -3615,7 +3619,7 @@ pub fn preview_assignment_for_task(
     agent_type: &str,
 ) -> Result<AssignmentPreview> {
     let lead = resolve_session(db, lead_id)?;
-    let delegates = direct_delegate_sessions(db, &lead.id, agent_type)?;
+    let delegates = direct_delegate_sessions(db, cfg, &lead, agent_type)?;
     let delegate_handoff_backlog = delegates
         .iter()
         .map(|session| {
@@ -4579,9 +4583,93 @@ mod tests {
             "task_handoff",
         )?;
 
-        let delegates = direct_delegate_sessions(&db, "lead", "claude")?;
+        let lead = resolve_session(&db, "lead")?;
+        let delegates = direct_delegate_sessions(&db, &cfg, &lead, "claude")?;
         assert_eq!(delegates.len(), 1);
         assert_eq!(delegates[0].id, "child");
+        Ok(())
+    }
+
+    #[test]
+    fn direct_delegate_sessions_resolves_auto_to_configured_harness() -> Result<()> {
+        let tempdir = TestDir::new("manager-delegate-auto-custom-harness")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+        fs::create_dir_all(repo_root.join(".acme"))?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.harness_runners.insert(
+            "acme-runner".to_string(),
+            crate::config::HarnessRunnerConfig {
+                project_markers: vec![PathBuf::from(".acme")],
+                ..Default::default()
+            },
+        );
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "Lead task".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "acme-runner".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(42),
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "custom-child".to_string(),
+            task: "Delegate task".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "acme-runner".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Idle,
+            pid: Some(7),
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+        db.insert_session(&Session {
+            id: "claude-child".to_string(),
+            task: "Other delegate task".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Idle,
+            pid: Some(8),
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+        db.send_message(
+            "lead",
+            "custom-child",
+            "{\"task\":\"Delegate task\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+        db.send_message(
+            "lead",
+            "claude-child",
+            "{\"task\":\"Other delegate task\",\"context\":\"Delegated from lead\"}",
+            "task_handoff",
+        )?;
+
+        let lead = resolve_session(&db, "lead")?;
+        let delegates = direct_delegate_sessions(&db, &cfg, &lead, "auto")?;
+        assert_eq!(delegates.len(), 1);
+        assert_eq!(delegates[0].id, "custom-child");
         Ok(())
     }
 
@@ -4781,6 +4869,37 @@ mod tests {
         assert!(log.contains("--print"));
         assert!(log.contains("implement lifecycle"));
         assert!(log.contains(&format!("ECC_SESSION_ID={session_id}")));
+
+        stop_session_with_options(&db, &session_id, false).await?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn create_session_resolves_auto_agent_from_repo_markers() -> Result<()> {
+        let tempdir = TestDir::new("manager-create-session-auto-agent")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+        fs::create_dir_all(repo_root.join(".codex"))?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_runner, _log_path) = write_fake_claude(tempdir.path())?;
+
+        let session_id = create_session_in_dir(
+            &db,
+            &cfg,
+            "implement lifecycle",
+            "auto",
+            false,
+            &repo_root,
+            &fake_runner,
+        )
+        .await?;
+
+        let session = db
+            .get_session(&session_id)?
+            .context("session should exist")?;
+        assert_eq!(session.agent_type, "codex");
 
         stop_session_with_options(&db, &session_id, false).await?;
         Ok(())
@@ -7229,7 +7348,7 @@ mod tests {
         let now = Utc::now();
 
         db.insert_session(&Session {
-            id: "worker".to_string(),
+            id: "lead".to_string(),
             task: "worker task".to_string(),
             project: "workspace".to_string(),
             task_group: "general".to_string(),
@@ -7245,7 +7364,7 @@ mod tests {
         })?;
 
         db.insert_session(&Session {
-            id: "worker-child".to_string(),
+            id: "delegate".to_string(),
             task: "delegate task".to_string(),
             project: "workspace".to_string(),
             task_group: "general".to_string(),
@@ -7261,31 +7380,31 @@ mod tests {
         })?;
 
         db.send_message(
-            "worker",
-            "worker-child",
+            "lead",
+            "delegate",
             "{\"task\":\"seed delegate\",\"context\":\"Delegated from worker\"}",
             "task_handoff",
         )?;
-        let _ = db.mark_messages_read("worker-child")?;
+        let _ = db.mark_messages_read("delegate")?;
 
         db.send_message(
             "planner",
-            "worker",
+            "lead",
             "{\"task\":\"task-a\",\"context\":\"Inbound\"}",
             "task_handoff",
         )?;
         db.send_message(
             "planner",
-            "worker",
+            "lead",
             "{\"task\":\"task-b\",\"context\":\"Inbound\"}",
             "task_handoff",
         )?;
 
         let outcome = coordinate_backlog(&db, &cfg, "claude", true, 10).await?;
 
-        assert_eq!(outcome.remaining_backlog_sessions, 1);
+        assert_eq!(outcome.remaining_backlog_sessions, 2);
         assert_eq!(outcome.remaining_backlog_messages, 2);
-        assert_eq!(outcome.remaining_absorbable_sessions, 0);
+        assert_eq!(outcome.remaining_absorbable_sessions, 1);
         assert_eq!(outcome.remaining_saturated_sessions, 1);
 
         Ok(())
