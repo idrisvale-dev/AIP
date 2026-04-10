@@ -352,6 +352,70 @@ pub fn commit_staged(worktree: &WorktreeInfo, message: &str) -> Result<String> {
     Ok(String::from_utf8_lossy(&rev_parse.stdout).trim().to_string())
 }
 
+pub fn latest_commit_subject(worktree: &WorktreeInfo) -> Result<String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["log", "-1", "--pretty=%s"])
+        .output()
+        .context("Failed to read latest commit subject")?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git log failed: {stderr}");
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+pub fn create_draft_pr(worktree: &WorktreeInfo, title: &str, body: &str) -> Result<String> {
+    create_draft_pr_with_gh(worktree, title, body, Path::new("gh"))
+}
+
+fn create_draft_pr_with_gh(
+    worktree: &WorktreeInfo,
+    title: &str,
+    body: &str,
+    gh_bin: &Path,
+) -> Result<String> {
+    let title = title.trim();
+    if title.is_empty() {
+        anyhow::bail!("PR title cannot be empty");
+    }
+
+    let push = Command::new("git")
+        .arg("-C")
+        .arg(&worktree.path)
+        .args(["push", "-u", "origin", &worktree.branch])
+        .output()
+        .context("Failed to push worktree branch before PR creation")?;
+    if !push.status.success() {
+        let stderr = String::from_utf8_lossy(&push.stderr);
+        anyhow::bail!("git push failed: {stderr}");
+    }
+
+    let output = Command::new(gh_bin)
+        .arg("pr")
+        .arg("create")
+        .arg("--draft")
+        .arg("--base")
+        .arg(&worktree.base_branch)
+        .arg("--head")
+        .arg(&worktree.branch)
+        .arg("--title")
+        .arg(title)
+        .arg("--body")
+        .arg(body)
+        .current_dir(&worktree.path)
+        .output()
+        .context("Failed to create draft PR with gh")?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("gh pr create failed: {stderr}");
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
 pub fn diff_file_preview(worktree: &WorktreeInfo, limit: usize) -> Result<Vec<String>> {
     let mut preview = Vec::new();
     let base_ref = format!("{}...HEAD", worktree.base_branch);
@@ -1559,6 +1623,89 @@ mod tests {
             .args(["log", "-1", "--pretty=%s"])
             .output()?;
         assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "update readme");
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn latest_commit_subject_reads_head_subject() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-pr-subject-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        fs::write(repo.join("README.md"), "subject test\n")?;
+        run_git(&repo, &["commit", "-am", "subject test"])?;
+
+        let worktree = WorktreeInfo {
+            path: repo.clone(),
+            branch: "main".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        assert_eq!(latest_commit_subject(&worktree)?, "subject test");
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn create_draft_pr_pushes_branch_and_invokes_gh() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-pr-create-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        let remote = root.join("remote.git");
+        run_git(&root, &["init", "--bare", remote.to_str().expect("utf8 path")])?;
+        run_git(&repo, &["remote", "add", "origin", remote.to_str().expect("utf8 path")])?;
+        run_git(&repo, &["push", "-u", "origin", "main"])?;
+        run_git(&repo, &["checkout", "-b", "feat/pr-test"])?;
+        fs::write(repo.join("README.md"), "pr test\n")?;
+        run_git(&repo, &["commit", "-am", "pr test"])?;
+
+        let bin_dir = root.join("bin");
+        fs::create_dir_all(&bin_dir)?;
+        let gh_path = bin_dir.join("gh");
+        let args_path = root.join("gh-args.txt");
+        fs::write(
+            &gh_path,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"{}\"\nprintf '%s\\n' 'https://github.com/example/repo/pull/123'\n",
+                args_path.display()
+            ),
+        )?;
+        let mut perms = fs::metadata(&gh_path)?.permissions();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            perms.set_mode(0o755);
+            fs::set_permissions(&gh_path, perms)?;
+        }
+        #[cfg(not(unix))]
+        fs::set_permissions(&gh_path, perms)?;
+
+        let worktree = WorktreeInfo {
+            path: repo.clone(),
+            branch: "feat/pr-test".to_string(),
+            base_branch: "main".to_string(),
+        };
+
+        let url = create_draft_pr_with_gh(&worktree, "My PR", "Body line", &gh_path)?;
+        assert_eq!(url, "https://github.com/example/repo/pull/123");
+
+        let remote_branch = Command::new("git")
+            .arg("--git-dir")
+            .arg(&remote)
+            .args(["branch", "--list", "feat/pr-test"])
+            .output()?;
+        assert!(remote_branch.status.success());
+        assert_eq!(
+            String::from_utf8_lossy(&remote_branch.stdout).trim(),
+            "feat/pr-test"
+        );
+
+        let gh_args = fs::read_to_string(&args_path)?;
+        assert!(gh_args.contains("pr\ncreate\n--draft"));
+        assert!(gh_args.contains("--base\nmain"));
+        assert!(gh_args.contains("--head\nfeat/pr-test"));
+        assert!(gh_args.contains("--title\nMy PR"));
+        assert!(gh_args.contains("--body\nBody line"));
 
         let _ = fs::remove_dir_all(root);
         Ok(())

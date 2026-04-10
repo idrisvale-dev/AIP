@@ -104,6 +104,7 @@ pub struct Dashboard {
     search_input: Option<String>,
     spawn_input: Option<String>,
     commit_input: Option<String>,
+    pr_input: Option<String>,
     search_query: Option<String>,
     search_scope: SearchScope,
     search_agent_filter: SearchAgentFilter,
@@ -372,6 +373,7 @@ impl Dashboard {
             search_input: None,
             spawn_input: None,
             commit_input: None,
+            pr_input: None,
             search_query: None,
             search_scope: SearchScope::SelectedSession,
             search_agent_filter: SearchAgentFilter::AllAgents,
@@ -1021,7 +1023,7 @@ impl Dashboard {
 
     fn render_status_bar(&self, frame: &mut Frame, area: Rect) {
         let base_text = format!(
-            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  git status [z]  stage [S]  unstage [U]  reset [R]  commit [C]  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [{}] focus pane  [Tab] cycle pane  [{}] move pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
+            " [n]ew session  natural spawn [N]  [a]ssign  re[b]alance  global re[B]alance  dra[i]n inbox  approval jump [I]  [g]lobal dispatch  coordinate [G]lobal  collapse pane [h]  restore panes [H]  timeline [y]  timeline filter [E]  [v]iew diff  git status [z]  stage [S]  unstage [U]  reset [R]  commit [C]  create PR [P]  conflict proto[c]ol  cont[e]nt filter  time [f]ilter  scope [A]  agent filter [o]  [m]erge  merge ready [M]  auto-worktree [t]  auto-merge [w]  toggle [p]olicy  [,/.] dispatch limit  [s]top  [u]resume  [x]cleanup  prune inactive [X]  [d]elete  [r]efresh  [{}] focus pane  [Tab] cycle pane  [{}] move pane  [j/k] scroll  delegate [ or ]  [Enter] open  [+/-] resize  [l]ayout {}  [T]heme {}  [?] help  [q]uit ",
             self.pane_focus_shortcuts_label(),
             self.pane_move_shortcuts_label(),
             self.layout_label(),
@@ -1032,6 +1034,8 @@ impl Dashboard {
             format!(" spawn>{input}_ | [Enter] queue [Esc] cancel |")
         } else if let Some(input) = self.commit_input.as_ref() {
             format!(" commit>{input}_ | [Enter] commit [Esc] cancel |")
+        } else if let Some(input) = self.pr_input.as_ref() {
+            format!(" pr>{input}_ | [Enter] create draft PR [Esc] cancel |")
         } else if let Some(input) = self.search_input.as_ref() {
             format!(
                 " /{input}_ | {} | {} | [Enter] apply [Esc] cancel |",
@@ -1059,6 +1063,7 @@ impl Dashboard {
 
         let text = if self.spawn_input.is_some()
             || self.commit_input.is_some()
+            || self.pr_input.is_some()
             || self.search_input.is_some()
             || self.search_query.is_some()
             || self.pane_command_mode
@@ -1124,6 +1129,7 @@ impl Dashboard {
             "  {/}     Jump to previous/next diff hunk in the active diff view".to_string(),
             "  S/U/R   Stage, unstage, or reset the selected git-status entry".to_string(),
             "  C       Commit staged changes for the selected worktree".to_string(),
+            "  P       Create a draft PR from the selected worktree branch".to_string(),
             "  c       Show conflict-resolution protocol for selected conflicted worktree"
                 .to_string(),
             "  e       Cycle output content filter: all/errors/tool calls/file changes".to_string(),
@@ -1980,6 +1986,30 @@ impl Dashboard {
         self.set_operator_note("commit mode | type a message and press Enter".to_string());
     }
 
+    pub fn begin_pr_prompt(&mut self) {
+        let Some(session) = self.sessions.get(self.selected_session) else {
+            self.set_operator_note("no session selected".to_string());
+            return;
+        };
+        let Some(worktree) = session.worktree.as_ref() else {
+            self.set_operator_note("selected session has no worktree".to_string());
+            return;
+        };
+        if worktree::has_uncommitted_changes(worktree).unwrap_or(false) {
+            self.set_operator_note(
+                "commit or reset worktree changes before creating a PR".to_string(),
+            );
+            return;
+        }
+
+        let seed = worktree::latest_commit_subject(worktree)
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| session.task.clone());
+        self.pr_input = Some(seed);
+        self.set_operator_note("pr mode | edit the title and press Enter".to_string());
+    }
+
     pub fn toggle_diff_view_mode(&mut self) {
         if self.output_mode != OutputMode::WorktreeDiff || self.selected_diff_patch.is_none() {
             self.set_operator_note("no active worktree diff view to toggle".to_string());
@@ -2633,7 +2663,10 @@ impl Dashboard {
     }
 
     pub fn is_input_mode(&self) -> bool {
-        self.spawn_input.is_some() || self.search_input.is_some() || self.commit_input.is_some()
+        self.spawn_input.is_some()
+            || self.search_input.is_some()
+            || self.commit_input.is_some()
+            || self.pr_input.is_some()
     }
 
     pub fn has_active_search(&self) -> bool {
@@ -2743,6 +2776,8 @@ impl Dashboard {
             input.push(ch);
         } else if let Some(input) = self.commit_input.as_mut() {
             input.push(ch);
+        } else if let Some(input) = self.pr_input.as_mut() {
+            input.push(ch);
         }
     }
 
@@ -2752,6 +2787,8 @@ impl Dashboard {
         } else if let Some(input) = self.search_input.as_mut() {
             input.pop();
         } else if let Some(input) = self.commit_input.as_mut() {
+            input.pop();
+        } else if let Some(input) = self.pr_input.as_mut() {
             input.pop();
         }
     }
@@ -2763,6 +2800,8 @@ impl Dashboard {
             self.set_operator_note("search input cancelled".to_string());
         } else if self.commit_input.take().is_some() {
             self.set_operator_note("commit input cancelled".to_string());
+        } else if self.pr_input.take().is_some() {
+            self.set_operator_note("pr input cancelled".to_string());
         }
     }
 
@@ -2771,8 +2810,54 @@ impl Dashboard {
             self.submit_spawn_prompt().await;
         } else if self.commit_input.is_some() {
             self.submit_commit_prompt();
+        } else if self.pr_input.is_some() {
+            self.submit_pr_prompt();
         } else {
             self.submit_search();
+        }
+    }
+
+    fn submit_pr_prompt(&mut self) {
+        let Some(input) = self.pr_input.take() else {
+            return;
+        };
+
+        let title = input.trim().to_string();
+        if title.is_empty() {
+            self.pr_input = Some(input);
+            self.set_operator_note("pr title cannot be empty".to_string());
+            return;
+        }
+
+        let Some(session) = self.sessions.get(self.selected_session).cloned() else {
+            self.set_operator_note("no session selected".to_string());
+            return;
+        };
+        let Some(worktree) = session.worktree.clone() else {
+            self.set_operator_note("selected session has no worktree".to_string());
+            return;
+        };
+        if let Ok(true) = worktree::has_uncommitted_changes(&worktree) {
+            self.pr_input = Some(input);
+            self.set_operator_note(
+                "commit or reset worktree changes before creating a PR".to_string(),
+            );
+            return;
+        }
+
+        let body = self.build_pull_request_body(&session);
+        match worktree::create_draft_pr(&worktree, &title, &body) {
+            Ok(url) => {
+                self.set_operator_note(format!(
+                    "created draft PR for {}: {}",
+                    format_session_id(&session.id),
+                    url
+                ));
+            }
+            Err(error) => {
+                self.pr_input = Some(input);
+                self.set_operator_note(format!("draft PR failed: {error}"));
+            }
         }
     }
 
@@ -2839,6 +2924,54 @@ impl Dashboard {
                 self.search_match_session_count()
             ));
         }
+    }
+
+    fn build_pull_request_body(&self, session: &Session) -> String {
+        let mut lines = vec![
+            "## Summary".to_string(),
+            format!("- Task: {}", session.task),
+            format!("- Agent: {}", session.agent_type),
+            format!("- Project: {}", session.project),
+            format!("- Task group: {}", session.task_group),
+        ];
+        if let Some(worktree) = session.worktree.as_ref() {
+            lines.push(format!(
+                "- Branch: {} -> {}",
+                worktree.branch, worktree.base_branch
+            ));
+        }
+        if let Some(summary) = self.selected_diff_summary.as_ref() {
+            lines.push(format!("- Diff: {summary}"));
+        }
+        let changed_files = self
+            .selected_diff_preview
+            .iter()
+            .take(5)
+            .cloned()
+            .collect::<Vec<_>>();
+        if !changed_files.is_empty() {
+            lines.push(String::new());
+            lines.push("## Changed Files".to_string());
+            for file in changed_files {
+                lines.push(format!("- {file}"));
+            }
+        }
+        lines.push(String::new());
+        lines.push("## Session Metrics".to_string());
+        lines.push(format!(
+            "- Tokens: {} total (in {} / out {})",
+            session.metrics.tokens_used, session.metrics.input_tokens, session.metrics.output_tokens
+        ));
+        lines.push(format!("- Tool calls: {}", session.metrics.tool_calls));
+        lines.push(format!("- Files changed: {}", session.metrics.files_changed));
+        lines.push(format!(
+            "- Duration: {}",
+            format_duration(session.metrics.duration_secs)
+        ));
+        lines.push(String::new());
+        lines.push("## Testing".to_string());
+        lines.push("- Verified in ECC 2.0 dashboard workflow".to_string());
+        lines.join("\n")
     }
 
     async fn submit_spawn_prompt(&mut self) {
@@ -7112,6 +7245,41 @@ mod tests {
     }
 
     #[test]
+    fn begin_pr_prompt_seeds_latest_commit_subject() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-pr-prompt-{}", Uuid::new_v4()));
+        init_git_repo(&root)?;
+        fs::write(root.join("README.md"), "seed pr title\n")?;
+        run_git(&root, &["commit", "-am", "seed pr title"])?;
+
+        let mut session = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            Some("ecc/focus"),
+            512,
+            42,
+        );
+        session.working_dir = root.clone();
+        session.worktree = Some(WorktreeInfo {
+            path: root.clone(),
+            branch: "main".to_string(),
+            base_branch: "main".to_string(),
+        });
+        let mut dashboard = test_dashboard(vec![session], 0);
+
+        dashboard.begin_pr_prompt();
+
+        assert_eq!(dashboard.pr_input.as_deref(), Some("seed pr title"));
+        assert_eq!(
+            dashboard.operator_note.as_deref(),
+            Some("pr mode | edit the title and press Enter")
+        );
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
     fn toggle_diff_view_mode_switches_to_unified_rendering() {
         let mut dashboard = test_dashboard(
             vec![sample_session(
@@ -10912,6 +11080,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             search_input: None,
             spawn_input: None,
             commit_input: None,
+            pr_input: None,
             search_query: None,
             search_scope: SearchScope::SelectedSession,
             search_agent_filter: SearchAgentFilter::AllAgents,

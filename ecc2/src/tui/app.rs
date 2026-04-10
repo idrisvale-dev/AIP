@@ -97,6 +97,7 @@ pub async fn run(db: StateStore, cfg: Config) -> Result<()> {
                     (_, KeyCode::Char('U')) => dashboard.unstage_selected_git_status(),
                     (_, KeyCode::Char('R')) => dashboard.reset_selected_git_status(),
                     (_, KeyCode::Char('C')) => dashboard.begin_commit_prompt(),
+                    (_, KeyCode::Char('P')) => dashboard.begin_pr_prompt(),
                     (_, KeyCode::Char('{')) => dashboard.prev_diff_hunk(),
                     (_, KeyCode::Char('}')) => dashboard.next_diff_hunk(),
                     (_, KeyCode::Char('c')) => dashboard.toggle_conflict_protocol_mode(),
