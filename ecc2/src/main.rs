@@ -76,9 +76,9 @@ enum Commands {
         /// Task description for the agent
         #[arg(short, long)]
         task: String,
-        /// Agent type (claude, codex, custom)
-        #[arg(short, long, default_value = "claude")]
-        agent: String,
+        /// Agent type (defaults to `default_agent` from ecc2.toml)
+        #[arg(short, long)]
+        agent: Option<String>,
         /// Agent profile defined in ecc2.toml
         #[arg(long)]
         profile: Option<String>,
@@ -95,9 +95,9 @@ enum Commands {
         /// Task description for the delegated session
         #[arg(short, long)]
         task: Option<String>,
-        /// Agent type (claude, codex, custom)
-        #[arg(short, long, default_value = "claude")]
-        agent: String,
+        /// Agent type (defaults to `default_agent` from ecc2.toml)
+        #[arg(short, long)]
+        agent: Option<String>,
         /// Agent profile defined in ecc2.toml
         #[arg(long)]
         profile: Option<String>,
@@ -125,9 +125,9 @@ enum Commands {
         /// Task description for the assignment
         #[arg(short, long)]
         task: String,
-        /// Agent type (claude, codex, custom)
-        #[arg(short, long, default_value = "claude")]
-        agent: String,
+        /// Agent type (defaults to `default_agent` from ecc2.toml)
+        #[arg(short, long)]
+        agent: Option<String>,
         /// Agent profile defined in ecc2.toml
         #[arg(long)]
         profile: Option<String>,
@@ -138,9 +138,9 @@ enum Commands {
     DrainInbox {
         /// Lead session ID or alias
         session_id: String,
-        /// Agent type for routed delegates
-        #[arg(short, long, default_value = "claude")]
-        agent: String,
+        /// Agent type for routed delegates (defaults to `default_agent` from ecc2.toml)
+        #[arg(short, long)]
+        agent: Option<String>,
         #[command(flatten)]
         worktree: WorktreePolicyArgs,
         /// Maximum unread task handoffs to route
@@ -149,9 +149,9 @@ enum Commands {
     },
     /// Sweep unread task handoffs across lead sessions and route them through the assignment policy
     AutoDispatch {
-        /// Agent type for routed delegates
-        #[arg(short, long, default_value = "claude")]
-        agent: String,
+        /// Agent type for routed delegates (defaults to `default_agent` from ecc2.toml)
+        #[arg(short, long)]
+        agent: Option<String>,
         #[command(flatten)]
         worktree: WorktreePolicyArgs,
         /// Maximum lead sessions to sweep in one pass
@@ -160,9 +160,9 @@ enum Commands {
     },
     /// Dispatch unread handoffs, then rebalance delegate backlog across lead teams
     CoordinateBacklog {
-        /// Agent type for routed delegates
-        #[arg(short, long, default_value = "claude")]
-        agent: String,
+        /// Agent type for routed delegates (defaults to `default_agent` from ecc2.toml)
+        #[arg(short, long)]
+        agent: Option<String>,
         #[command(flatten)]
         worktree: WorktreePolicyArgs,
         /// Maximum lead sessions to sweep in one pass
@@ -192,9 +192,9 @@ enum Commands {
     },
     /// Coordinate only when backlog pressure actually needs work
     MaintainCoordination {
-        /// Agent type for routed delegates
-        #[arg(short, long, default_value = "claude")]
-        agent: String,
+        /// Agent type for routed delegates (defaults to `default_agent` from ecc2.toml)
+        #[arg(short, long)]
+        agent: Option<String>,
         #[command(flatten)]
         worktree: WorktreePolicyArgs,
         /// Maximum lead sessions to sweep in one pass
@@ -212,9 +212,9 @@ enum Commands {
     },
     /// Rebalance unread handoffs across lead teams with backed-up delegates
     RebalanceAll {
-        /// Agent type for routed delegates
-        #[arg(short, long, default_value = "claude")]
-        agent: String,
+        /// Agent type for routed delegates (defaults to `default_agent` from ecc2.toml)
+        #[arg(short, long)]
+        agent: Option<String>,
         #[command(flatten)]
         worktree: WorktreePolicyArgs,
         /// Maximum lead sessions to sweep in one pass
@@ -225,9 +225,9 @@ enum Commands {
     RebalanceTeam {
         /// Lead session ID or alias
         session_id: String,
-        /// Agent type for routed delegates
-        #[arg(short, long, default_value = "claude")]
-        agent: String,
+        /// Agent type for routed delegates (defaults to `default_agent` from ecc2.toml)
+        #[arg(short, long)]
+        agent: Option<String>,
         #[command(flatten)]
         worktree: WorktreePolicyArgs,
         /// Maximum handoffs to reroute in one pass
@@ -963,7 +963,7 @@ async fn main() -> Result<()> {
                     &db,
                     &cfg,
                     &task,
-                    &agent,
+                    agent.as_deref().unwrap_or(&cfg.default_agent),
                     use_worktree,
                     profile.as_deref(),
                     &source.id,
@@ -975,7 +975,7 @@ async fn main() -> Result<()> {
                     &db,
                     &cfg,
                     &task,
-                    &agent,
+                    agent.as_deref().unwrap_or(&cfg.default_agent),
                     use_worktree,
                     profile.as_deref(),
                     grouping,
@@ -1013,7 +1013,7 @@ async fn main() -> Result<()> {
                     &db,
                     &cfg,
                     &task,
-                    &agent,
+                    agent.as_deref().unwrap_or(&cfg.default_agent),
                     use_worktree,
                     profile.as_deref(),
                     &source.id,
@@ -1081,7 +1081,7 @@ async fn main() -> Result<()> {
                 &cfg,
                 &lead_id,
                 &task,
-                &agent,
+                agent.as_deref().unwrap_or(&cfg.default_agent),
                 use_worktree,
                 profile.as_deref(),
                 session::SessionGrouping::default(),
@@ -1115,9 +1115,15 @@ async fn main() -> Result<()> {
         }) => {
             let use_worktree = worktree.resolve(&cfg);
             let lead_id = resolve_session_id(&db, &session_id)?;
-            let outcomes =
-                session::manager::drain_inbox(&db, &cfg, &lead_id, &agent, use_worktree, limit)
-                    .await?;
+            let outcomes = session::manager::drain_inbox(
+                &db,
+                &cfg,
+                &lead_id,
+                agent.as_deref().unwrap_or(&cfg.default_agent),
+                use_worktree,
+                limit,
+            )
+            .await?;
             if outcomes.is_empty() {
                 println!("No unread task handoffs for {}", short_session(&lead_id));
             } else {
@@ -1162,7 +1168,7 @@ async fn main() -> Result<()> {
             let outcomes = session::manager::auto_dispatch_backlog(
                 &db,
                 &cfg,
-                &agent,
+                agent.as_deref().unwrap_or(&cfg.default_agent),
                 use_worktree,
                 lead_limit,
             )
@@ -1223,7 +1229,7 @@ async fn main() -> Result<()> {
             let run = run_coordination_loop(
                 &db,
                 &cfg,
-                &agent,
+                agent.as_deref().unwrap_or(&cfg.default_agent),
                 use_worktree,
                 lead_limit,
                 pass_budget,
@@ -1271,7 +1277,7 @@ async fn main() -> Result<()> {
                     run_coordination_loop(
                         &db,
                         &cfg,
-                        &agent,
+                        agent.as_deref().unwrap_or(&cfg.default_agent),
                         use_worktree,
                         lead_limit,
                         max_passes.max(1),
@@ -1307,9 +1313,14 @@ async fn main() -> Result<()> {
             lead_limit,
         }) => {
             let use_worktree = worktree.resolve(&cfg);
-            let outcomes =
-                session::manager::rebalance_all_teams(&db, &cfg, &agent, use_worktree, lead_limit)
-                    .await?;
+            let outcomes = session::manager::rebalance_all_teams(
+                &db,
+                &cfg,
+                agent.as_deref().unwrap_or(&cfg.default_agent),
+                use_worktree,
+                lead_limit,
+            )
+            .await?;
             if outcomes.is_empty() {
                 println!("No delegate backlog needed global rebalancing");
             } else {
@@ -1341,7 +1352,7 @@ async fn main() -> Result<()> {
                 &db,
                 &cfg,
                 &lead_id,
-                &agent,
+                agent.as_deref().unwrap_or(&cfg.default_agent),
                 use_worktree,
                 limit,
             )
@@ -5281,8 +5292,22 @@ mod tests {
                 ..
             }) => {
                 assert_eq!(task, "Follow up");
-                assert_eq!(agent, "claude");
+                assert_eq!(agent.as_deref(), Some("claude"));
                 assert_eq!(from_session.as_deref(), Some("planner"));
+            }
+            _ => panic!("expected start subcommand"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_start_without_agent_override() {
+        let cli = Cli::try_parse_from(["ecc", "start", "--task", "Follow up"])
+            .expect("start without --agent should parse");
+
+        match cli.command {
+            Some(Commands::Start { task, agent, .. }) => {
+                assert_eq!(task, "Follow up");
+                assert!(agent.is_none());
             }
             _ => panic!("expected start subcommand"),
         }
@@ -5324,7 +5349,7 @@ mod tests {
             }) => {
                 assert_eq!(from_session, "planner");
                 assert_eq!(task.as_deref(), Some("Review auth changes"));
-                assert_eq!(agent, "codex");
+                assert_eq!(agent.as_deref(), Some("codex"));
             }
             _ => panic!("expected delegate subcommand"),
         }
@@ -6226,7 +6251,7 @@ mod tests {
             }) => {
                 assert_eq!(from_session, "lead");
                 assert_eq!(task, "Review auth changes");
-                assert_eq!(agent, "claude");
+                assert_eq!(agent.as_deref(), Some("claude"));
             }
             _ => panic!("expected assign subcommand"),
         }
@@ -6253,7 +6278,7 @@ mod tests {
                 ..
             }) => {
                 assert_eq!(session_id, "lead");
-                assert_eq!(agent, "claude");
+                assert_eq!(agent.as_deref(), Some("claude"));
                 assert_eq!(limit, 3);
             }
             _ => panic!("expected drain-inbox subcommand"),
@@ -6276,7 +6301,7 @@ mod tests {
             Some(Commands::AutoDispatch {
                 agent, lead_limit, ..
             }) => {
-                assert_eq!(agent, "claude");
+                assert_eq!(agent.as_deref(), Some("claude"));
                 assert_eq!(lead_limit, 4);
             }
             _ => panic!("expected auto-dispatch subcommand"),
@@ -6304,7 +6329,7 @@ mod tests {
                 max_passes,
                 ..
             }) => {
-                assert_eq!(agent, "claude");
+                assert_eq!(agent.as_deref(), Some("claude"));
                 assert_eq!(lead_limit, 7);
                 assert!(!check);
                 assert!(!until_healthy);
@@ -6400,7 +6425,7 @@ mod tests {
             Some(Commands::RebalanceAll {
                 agent, lead_limit, ..
             }) => {
-                assert_eq!(agent, "claude");
+                assert_eq!(agent.as_deref(), Some("claude"));
                 assert_eq!(lead_limit, 6);
             }
             _ => panic!("expected rebalance-all subcommand"),
@@ -7794,7 +7819,7 @@ Guide users to repair before reinstall.
                 max_passes,
                 ..
             }) => {
-                assert_eq!(agent, "claude");
+                assert!(agent.is_none());
                 assert!(!json);
                 assert!(!check);
                 assert_eq!(max_passes, 5);
@@ -7988,7 +8013,7 @@ Guide users to repair before reinstall.
                 ..
             }) => {
                 assert_eq!(session_id, "lead");
-                assert_eq!(agent, "claude");
+                assert_eq!(agent.as_deref(), Some("claude"));
                 assert_eq!(limit, 2);
             }
             _ => panic!("expected rebalance-team subcommand"),
