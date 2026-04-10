@@ -584,6 +584,18 @@ enum MigrationCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Generate an actionable ECC2 migration plan from a legacy workspace audit
+    Plan {
+        /// Path to the legacy Hermes/OpenClaw workspace root
+        #[arg(long)]
+        source: PathBuf,
+        /// Write the plan to a file instead of stdout
+        #[arg(long)]
+        output: Option<PathBuf>,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -912,6 +924,26 @@ struct LegacyMigrationAuditReport {
     summary: LegacyMigrationAuditSummary,
     recommended_next_steps: Vec<String>,
     artifacts: Vec<LegacyMigrationArtifact>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacyMigrationPlanStep {
+    category: String,
+    readiness: LegacyMigrationReadiness,
+    title: String,
+    target_surface: String,
+    source_paths: Vec<String>,
+    command_snippets: Vec<String>,
+    config_snippets: Vec<String>,
+    notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacyMigrationPlanReport {
+    source: String,
+    generated_at: String,
+    audit_summary: LegacyMigrationAuditSummary,
+    steps: Vec<LegacyMigrationPlanStep>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -1648,6 +1680,25 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&report)?);
                 } else {
                     println!("{}", format_legacy_migration_audit_human(&report));
+                }
+            }
+            MigrationCommands::Plan {
+                source,
+                output,
+                json,
+            } => {
+                let audit = build_legacy_migration_audit_report(&source)?;
+                let plan = build_legacy_migration_plan_report(&audit);
+                let rendered = if json {
+                    serde_json::to_string_pretty(&plan)?
+                } else {
+                    format_legacy_migration_plan_human(&plan)
+                };
+                if let Some(path) = output {
+                    std::fs::write(&path, &rendered)?;
+                    println!("Migration plan written to {}", path.display());
+                } else {
+                    println!("{rendered}");
                 }
             }
         },
@@ -4797,6 +4848,145 @@ fn build_legacy_migration_next_steps(artifacts: &[LegacyMigrationArtifact]) -> V
     steps
 }
 
+fn build_legacy_migration_plan_report(
+    audit: &LegacyMigrationAuditReport,
+) -> LegacyMigrationPlanReport {
+    let mut steps = Vec::new();
+
+    for artifact in &audit.artifacts {
+        let step = match artifact.category.as_str() {
+            "scheduler" => LegacyMigrationPlanStep {
+                category: artifact.category.clone(),
+                readiness: artifact.readiness,
+                title: "Recreate Hermes/OpenClaw recurring jobs in ECC2 scheduler".to_string(),
+                target_surface: "ECC2 scheduler".to_string(),
+                source_paths: artifact.source_paths.clone(),
+                command_snippets: vec![
+                    "ecc schedule add --cron \"<legacy-cron>\" --task \"Translate legacy recurring job from cron/scheduler.py\"".to_string(),
+                    "ecc schedule list".to_string(),
+                    "ecc daemon".to_string(),
+                ],
+                config_snippets: Vec::new(),
+                notes: artifact.notes.clone(),
+            },
+            "gateway_dispatch" => LegacyMigrationPlanStep {
+                category: artifact.category.clone(),
+                readiness: artifact.readiness,
+                title: "Replace legacy gateway intake with ECC2 remote dispatch".to_string(),
+                target_surface: "ECC2 remote dispatch".to_string(),
+                source_paths: artifact.source_paths.clone(),
+                command_snippets: vec![
+                    "ecc remote serve --bind 127.0.0.1:8787 --token <token>".to_string(),
+                    "ecc remote add --task \"Translate legacy dispatch workflow\"".to_string(),
+                    "ecc remote computer-use --goal \"Translate legacy browser/operator flow\"".to_string(),
+                ],
+                config_snippets: Vec::new(),
+                notes: artifact.notes.clone(),
+            },
+            "memory_tool" => LegacyMigrationPlanStep {
+                category: artifact.category.clone(),
+                readiness: artifact.readiness,
+                title: "Port legacy memory tool usage to ECC2 deep memory".to_string(),
+                target_surface: "ECC2 context graph".to_string(),
+                source_paths: artifact.source_paths.clone(),
+                command_snippets: vec![
+                    "ecc graph add-observation --entity-id <id> --type migration_note --summary \"Imported legacy memory pattern\"".to_string(),
+                    "ecc graph recall \"<query>\"".to_string(),
+                    "ecc graph connectors".to_string(),
+                ],
+                config_snippets: Vec::new(),
+                notes: artifact.notes.clone(),
+            },
+            "workspace_memory" => LegacyMigrationPlanStep {
+                category: artifact.category.clone(),
+                readiness: artifact.readiness,
+                title: "Import sanitized workspace memory through ECC2 connectors".to_string(),
+                target_surface: "ECC2 memory connectors".to_string(),
+                source_paths: artifact.source_paths.clone(),
+                command_snippets: vec![
+                    "ecc graph connector-sync hermes_workspace".to_string(),
+                    "ecc graph recall \"<query>\"".to_string(),
+                ],
+                config_snippets: vec![format!(
+                    "[memory_connectors.hermes_workspace]\nkind = \"markdown_directory\"\npath = \"{}\"\nrecurse = true\ndefault_entity_type = \"legacy_workspace_note\"\ndefault_observation_type = \"legacy_workspace_memory\"",
+                    Path::new(&audit.source).join("workspace").display()
+                )],
+                notes: artifact.notes.clone(),
+            },
+            "skills" => LegacyMigrationPlanStep {
+                category: artifact.category.clone(),
+                readiness: artifact.readiness,
+                title: "Translate reusable legacy skills into ECC-native surfaces".to_string(),
+                target_surface: "ECC skills / orchestration templates".to_string(),
+                source_paths: artifact.source_paths.clone(),
+                command_snippets: vec![
+                    "ecc template <template-name> --task \"<translated workflow goal>\"".to_string(),
+                ],
+                config_snippets: vec![
+                    "[orchestration_templates.legacy_workflow]\nproject = \"legacy-migration\"\ntask_group = \"legacy workflow\"\nagent = \"claude\"\nworktree = false\n\n[[orchestration_templates.legacy_workflow.steps]]\nname = \"operator\"\ntask = \"Translate and run the legacy workflow for {{task}}\"".to_string(),
+                ],
+                notes: artifact.notes.clone(),
+            },
+            "tools" => LegacyMigrationPlanStep {
+                category: artifact.category.clone(),
+                readiness: artifact.readiness,
+                title: "Rebuild valuable legacy tools as ECC agents, hooks, commands, or harness runners".to_string(),
+                target_surface: "ECC agents / hooks / commands / harness runners".to_string(),
+                source_paths: artifact.source_paths.clone(),
+                command_snippets: vec![
+                    "ecc start --task \"Rebuild one legacy tool as an ECC-native command or hook\"".to_string(),
+                ],
+                config_snippets: vec![
+                    "[harness_runners.legacy-runner]\nprogram = \"<runner-binary>\"\nbase_args = []\nproject_markers = [\".legacy-runner\"]".to_string(),
+                ],
+                notes: artifact.notes.clone(),
+            },
+            "plugins" => LegacyMigrationPlanStep {
+                category: artifact.category.clone(),
+                readiness: artifact.readiness,
+                title: "Translate legacy bridge plugins into ECC-native automation".to_string(),
+                target_surface: "ECC hooks / commands / skills".to_string(),
+                source_paths: artifact.source_paths.clone(),
+                command_snippets: vec![
+                    "ecc start --task \"Port one bridge plugin behavior into an ECC hook or command\"".to_string(),
+                ],
+                config_snippets: Vec::new(),
+                notes: artifact.notes.clone(),
+            },
+            "env_services" => LegacyMigrationPlanStep {
+                category: artifact.category.clone(),
+                readiness: artifact.readiness,
+                title: "Reconfigure local auth and connectors without importing secrets".to_string(),
+                target_surface: "Claude connectors / MCP / local API key setup".to_string(),
+                source_paths: artifact.source_paths.clone(),
+                command_snippets: Vec::new(),
+                config_snippets: vec![
+                    "# Re-enter connector auth locally; do not copy legacy secrets into ECC2.\n# Typical targets: Google Drive OAuth, GitHub, Stripe, Linear, browser creds.".to_string(),
+                ],
+                notes: artifact.notes.clone(),
+            },
+            _ => LegacyMigrationPlanStep {
+                category: artifact.category.clone(),
+                readiness: artifact.readiness,
+                title: format!("Review legacy {} surface", artifact.category),
+                target_surface: "Manual ECC2 translation".to_string(),
+                source_paths: artifact.source_paths.clone(),
+                command_snippets: Vec::new(),
+                config_snippets: Vec::new(),
+                notes: artifact.notes.clone(),
+            },
+        };
+        steps.push(step);
+    }
+
+    LegacyMigrationPlanReport {
+        source: audit.source.clone(),
+        generated_at: chrono::Utc::now().to_rfc3339(),
+        audit_summary: audit.summary.clone(),
+        steps,
+    }
+}
+
 fn format_legacy_migration_audit_human(report: &LegacyMigrationAuditReport) -> String {
     let mut lines = vec![
         format!("Legacy migration audit: {}", report.source),
@@ -4853,6 +5043,53 @@ fn format_legacy_migration_readiness(readiness: LegacyMigrationReadiness) -> &'s
         LegacyMigrationReadiness::ManualTranslation => "manual_translation",
         LegacyMigrationReadiness::LocalAuthRequired => "local_auth_required",
     }
+}
+
+fn format_legacy_migration_plan_human(report: &LegacyMigrationPlanReport) -> String {
+    let mut lines = vec![
+        format!("Legacy migration plan: {}", report.source),
+        format!("Generated at: {}", report.generated_at),
+        format!(
+            "Audit summary: {} categories | ready now {} | manual translation {} | local auth {}",
+            report.audit_summary.artifact_categories_detected,
+            report.audit_summary.ready_now_categories,
+            report.audit_summary.manual_translation_categories,
+            report.audit_summary.local_auth_required_categories
+        ),
+    ];
+
+    if report.steps.is_empty() {
+        lines.push("No migration steps generated.".to_string());
+        return lines.join("\n");
+    }
+
+    lines.push(String::new());
+    lines.push("Plan".to_string());
+    for step in &report.steps {
+        lines.push(format!(
+            "- {} [{}] -> {}",
+            step.title,
+            format_legacy_migration_readiness(step.readiness),
+            step.target_surface
+        ));
+        if !step.source_paths.is_empty() {
+            lines.push(format!("  sources {}", step.source_paths.join(", ")));
+        }
+        for command in &step.command_snippets {
+            lines.push(format!("  command {}", command));
+        }
+        for snippet in &step.config_snippets {
+            lines.push("  config".to_string());
+            for line in snippet.lines() {
+                lines.push(format!("    {}", line));
+            }
+        }
+        for note in &step.notes {
+            lines.push(format!("  note {}", note));
+        }
+    }
+
+    lines.join("\n")
 }
 
 fn format_graph_recall_human(
@@ -7302,6 +7539,36 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_migrate_plan_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "migrate",
+            "plan",
+            "--source",
+            "/tmp/hermes",
+            "--output",
+            "/tmp/plan.md",
+        ])
+        .expect("migrate plan should parse");
+
+        match cli.command {
+            Some(Commands::Migrate {
+                command:
+                    MigrationCommands::Plan {
+                        source,
+                        output,
+                        json,
+                    },
+            }) => {
+                assert_eq!(source, PathBuf::from("/tmp/hermes"));
+                assert_eq!(output, Some(PathBuf::from("/tmp/plan.md")));
+                assert!(!json);
+            }
+            _ => panic!("expected migrate plan subcommand"),
+        }
+    }
+
+    #[test]
     fn legacy_migration_audit_report_maps_detected_artifacts() -> Result<()> {
         let tempdir = TestDir::new("legacy-migration-audit")?;
         let root = tempdir.path();
@@ -7364,6 +7631,38 @@ mod tests {
         assert!(env_services
             .source_paths
             .contains(&".env.local".to_string()));
+
+        Ok(())
+    }
+
+    #[test]
+    fn legacy_migration_plan_report_generates_workspace_connector_step() -> Result<()> {
+        let tempdir = TestDir::new("legacy-migration-plan")?;
+        let root = tempdir.path();
+        fs::create_dir_all(root.join("workspace/notes"))?;
+        fs::write(root.join("config.yaml"), "model: claude\n")?;
+        fs::write(root.join("workspace/notes/recovery.md"), "# recovery\n")?;
+
+        let audit = build_legacy_migration_audit_report(root)?;
+        let plan = build_legacy_migration_plan_report(&audit);
+
+        let workspace_step = plan
+            .steps
+            .iter()
+            .find(|step| step.category == "workspace_memory")
+            .expect("workspace memory step");
+        assert_eq!(workspace_step.readiness, LegacyMigrationReadiness::ReadyNow);
+        assert!(workspace_step
+            .config_snippets
+            .iter()
+            .any(|snippet| snippet.contains("[memory_connectors.hermes_workspace]")));
+        assert!(workspace_step
+            .command_snippets
+            .contains(&"ecc graph connector-sync hermes_workspace".to_string()));
+
+        let rendered = format_legacy_migration_plan_human(&plan);
+        assert!(rendered.contains("Legacy migration plan"));
+        assert!(rendered.contains("Import sanitized workspace memory through ECC2 connectors"));
 
         Ok(())
     }
