@@ -104,6 +104,21 @@ pub struct OrchestrationTemplateStepConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum MemoryConnectorConfig {
+    JsonlFile(MemoryConnectorJsonlFileConfig),
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MemoryConnectorJsonlFileConfig {
+    pub path: PathBuf,
+    pub session_id: Option<String>,
+    pub default_entity_type: Option<String>,
+    pub default_observation_type: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolvedOrchestrationTemplate {
     pub template_name: String,
     pub description: Option<String>,
@@ -139,6 +154,7 @@ pub struct Config {
     pub default_agent_profile: Option<String>,
     pub agent_profiles: BTreeMap<String, AgentProfileConfig>,
     pub orchestration_templates: BTreeMap<String, OrchestrationTemplateConfig>,
+    pub memory_connectors: BTreeMap<String, MemoryConnectorConfig>,
     pub auto_dispatch_unread_handoffs: bool,
     pub auto_dispatch_limit_per_session: usize,
     pub auto_create_worktrees: bool,
@@ -203,6 +219,7 @@ impl Default for Config {
             default_agent_profile: None,
             agent_profiles: BTreeMap::new(),
             orchestration_templates: BTreeMap::new(),
+            memory_connectors: BTreeMap::new(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
@@ -1229,6 +1246,37 @@ task = "Plan {{task}} for {{component}}"
         assert!(error_text
             .contains("resolve task for orchestration template feature_development step 1"));
         assert!(error_text.contains("missing orchestration template variable(s): component"));
+    }
+
+    #[test]
+    fn memory_connectors_deserialize_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[memory_connectors.hermes_notes]
+kind = "jsonl_file"
+path = "/tmp/hermes-memory.jsonl"
+session_id = "latest"
+default_entity_type = "incident"
+default_observation_type = "external_note"
+"#,
+        )
+        .unwrap();
+
+        let connector = config
+            .memory_connectors
+            .get("hermes_notes")
+            .expect("connector should deserialize");
+        match connector {
+            crate::config::MemoryConnectorConfig::JsonlFile(settings) => {
+                assert_eq!(settings.path, PathBuf::from("/tmp/hermes-memory.jsonl"));
+                assert_eq!(settings.session_id.as_deref(), Some("latest"));
+                assert_eq!(settings.default_entity_type.as_deref(), Some("incident"));
+                assert_eq!(
+                    settings.default_observation_type.as_deref(),
+                    Some("external_note")
+                );
+            }
+        }
     }
 
     #[test]

@@ -14509,6 +14509,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             default_agent_profile: None,
             agent_profiles: Default::default(),
             orchestration_templates: Default::default(),
+            memory_connectors: Default::default(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
