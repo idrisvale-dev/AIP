@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
 use serde::Serialize;
+use sha2::{Digest, Sha256};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -82,11 +84,25 @@ pub(crate) fn create_for_session_in_repo(
         branch
     );
 
-    Ok(WorktreeInfo {
+    let info = WorktreeInfo {
         path,
         branch,
         base_branch: base,
-    })
+    };
+
+    if let Err(error) = sync_shared_dependency_dirs_in_repo(&info, repo_root) {
+        tracing::warn!(
+            "Shared dependency cache sync warning for {}: {error}",
+            info.path.display()
+        );
+    }
+
+    Ok(info)
+}
+
+pub fn sync_shared_dependency_dirs(worktree: &WorktreeInfo) -> Result<Vec<String>> {
+    let repo_root = base_checkout_path(worktree)?;
+    sync_shared_dependency_dirs_in_repo(worktree, &repo_root)
 }
 
 pub(crate) fn branch_name_for_session(
@@ -563,6 +579,203 @@ fn git_diff_patch_lines_for_paths(
     }
 
     Ok(parse_nonempty_lines(&output.stdout))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SharedDependencyStrategy {
+    label: &'static str,
+    dir_name: &'static str,
+    fingerprint_files: Vec<&'static str>,
+}
+
+fn sync_shared_dependency_dirs_in_repo(
+    worktree: &WorktreeInfo,
+    repo_root: &Path,
+) -> Result<Vec<String>> {
+    let mut applied = Vec::new();
+    for strategy in detect_shared_dependency_strategies(repo_root) {
+        if sync_shared_dependency_dir(worktree, repo_root, &strategy)? {
+            applied.push(strategy.label.to_string());
+        }
+    }
+    Ok(applied)
+}
+
+fn detect_shared_dependency_strategies(repo_root: &Path) -> Vec<SharedDependencyStrategy> {
+    let mut strategies = Vec::new();
+
+    if repo_root.join("node_modules").is_dir() {
+        if repo_root.join("pnpm-lock.yaml").is_file() && repo_root.join("package.json").is_file() {
+            strategies.push(SharedDependencyStrategy {
+                label: "node_modules (pnpm)",
+                dir_name: "node_modules",
+                fingerprint_files: vec!["package.json", "pnpm-lock.yaml"],
+            });
+        } else if repo_root.join("bun.lockb").is_file() && repo_root.join("package.json").is_file()
+        {
+            strategies.push(SharedDependencyStrategy {
+                label: "node_modules (bun)",
+                dir_name: "node_modules",
+                fingerprint_files: vec!["package.json", "bun.lockb"],
+            });
+        } else if repo_root.join("yarn.lock").is_file() && repo_root.join("package.json").is_file()
+        {
+            strategies.push(SharedDependencyStrategy {
+                label: "node_modules (yarn)",
+                dir_name: "node_modules",
+                fingerprint_files: vec!["package.json", "yarn.lock"],
+            });
+        } else if repo_root.join("package-lock.json").is_file()
+            && repo_root.join("package.json").is_file()
+        {
+            strategies.push(SharedDependencyStrategy {
+                label: "node_modules (npm)",
+                dir_name: "node_modules",
+                fingerprint_files: vec!["package.json", "package-lock.json"],
+            });
+        }
+    }
+
+    if repo_root.join("target").is_dir() && repo_root.join("Cargo.toml").is_file() {
+        let mut fingerprint_files = vec!["Cargo.toml"];
+        if repo_root.join("Cargo.lock").is_file() {
+            fingerprint_files.push("Cargo.lock");
+        }
+        strategies.push(SharedDependencyStrategy {
+            label: "target (cargo)",
+            dir_name: "target",
+            fingerprint_files,
+        });
+    }
+
+    if repo_root.join(".venv").is_dir() {
+        let python_files = [
+            "uv.lock",
+            "poetry.lock",
+            "Pipfile.lock",
+            "requirements.txt",
+            "pyproject.toml",
+            "setup.py",
+            "setup.cfg",
+        ];
+        let fingerprint_files = python_files
+            .into_iter()
+            .filter(|file| repo_root.join(file).is_file())
+            .collect::<Vec<_>>();
+        if !fingerprint_files.is_empty() {
+            strategies.push(SharedDependencyStrategy {
+                label: ".venv (python)",
+                dir_name: ".venv",
+                fingerprint_files,
+            });
+        }
+    }
+
+    strategies
+}
+
+fn sync_shared_dependency_dir(
+    worktree: &WorktreeInfo,
+    repo_root: &Path,
+    strategy: &SharedDependencyStrategy,
+) -> Result<bool> {
+    let root_dir = repo_root.join(strategy.dir_name);
+    if !root_dir.exists() {
+        return Ok(false);
+    }
+
+    let worktree_dir = worktree.path.join(strategy.dir_name);
+    let worktree_is_symlink = fs::symlink_metadata(&worktree_dir)
+        .map(|metadata| metadata.file_type().is_symlink())
+        .unwrap_or(false);
+    let root_fingerprint = dependency_fingerprint(repo_root, &strategy.fingerprint_files)?;
+    let worktree_fingerprint =
+        dependency_fingerprint(&worktree.path, &strategy.fingerprint_files).ok();
+
+    if worktree_fingerprint.as_deref() != Some(root_fingerprint.as_str()) {
+        if worktree_is_symlink {
+            remove_symlink(&worktree_dir)?;
+            fs::create_dir_all(&worktree_dir).with_context(|| {
+                format!(
+                    "Failed to create independent {} directory in {}",
+                    strategy.dir_name,
+                    worktree.path.display()
+                )
+            })?;
+        }
+        return Ok(false);
+    }
+
+    if worktree_dir.exists() {
+        if is_symlink_to(&worktree_dir, &root_dir)? {
+            return Ok(true);
+        }
+        return Ok(false);
+    }
+
+    create_dir_symlink(&root_dir, &worktree_dir).with_context(|| {
+        format!(
+            "Failed to link shared dependency cache {} into {}",
+            strategy.dir_name,
+            worktree.path.display()
+        )
+    })?;
+    Ok(true)
+}
+
+fn dependency_fingerprint(root: &Path, files: &[&str]) -> Result<String> {
+    let mut hasher = Sha256::new();
+    for rel in files {
+        let path = root.join(rel);
+        let content = fs::read(&path)
+            .with_context(|| format!("Failed to read dependency fingerprint input {}", path.display()))?;
+        hasher.update(rel.as_bytes());
+        hasher.update([0]);
+        hasher.update(&content);
+        hasher.update([0xff]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn is_symlink_to(path: &Path, target: &Path) -> Result<bool> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => {
+            return Err(error).with_context(|| {
+                format!("Failed to inspect dependency cache link {}", path.display())
+            })
+        }
+    };
+    if !metadata.file_type().is_symlink() {
+        return Ok(false);
+    }
+
+    let linked = fs::read_link(path)
+        .with_context(|| format!("Failed to read dependency cache link {}", path.display()))?;
+    Ok(linked == target)
+}
+
+fn remove_symlink(path: &Path) -> Result<()> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::IsADirectory => {
+            fs::remove_dir(path)
+                .with_context(|| format!("Failed to remove dependency cache link {}", path.display()))
+        }
+        Err(error) => Err(error)
+            .with_context(|| format!("Failed to remove dependency cache link {}", path.display())),
+    }
+}
+
+#[cfg(unix)]
+fn create_dir_symlink(src: &Path, dst: &Path) -> std::io::Result<()> {
+    std::os::unix::fs::symlink(src, dst)
+}
+
+#[cfg(windows)]
+fn create_dir_symlink(src: &Path, dst: &Path) -> std::io::Result<()> {
+    std::os::windows::fs::symlink_dir(src, dst)
 }
 
 pub fn diff_patch_preview_for_paths(
@@ -1114,6 +1327,92 @@ mod tests {
             .args(["worktree", "remove", "--force"])
             .arg(&right_dir)
             .output();
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn create_for_session_links_shared_node_modules_cache() -> Result<()> {
+        let root = std::env::temp_dir().join(format!("ecc2-worktree-node-cache-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        fs::write(repo.join("package.json"), "{\n  \"name\": \"repo\"\n}\n")?;
+        fs::write(repo.join("package-lock.json"), "{\n  \"lockfileVersion\": 3\n}\n")?;
+        fs::create_dir_all(repo.join("node_modules"))?;
+        fs::write(repo.join("node_modules/.cache-marker"), "shared\n")?;
+        run_git(&repo, &["add", "package.json", "package-lock.json"])?;
+        run_git(&repo, &["commit", "-m", "add node deps"])?;
+
+        let mut cfg = Config::default();
+        cfg.worktree_root = root.join("worktrees");
+        let worktree = create_for_session_in_repo("worker-123", &cfg, &repo)?;
+
+        let node_modules = worktree.path.join("node_modules");
+        assert!(fs::symlink_metadata(&node_modules)?.file_type().is_symlink());
+        assert_eq!(fs::read_link(&node_modules)?, repo.join("node_modules"));
+
+        remove(&worktree)?;
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn sync_shared_dependency_dirs_falls_back_when_lockfiles_diverge() -> Result<()> {
+        let root =
+            std::env::temp_dir().join(format!("ecc2-worktree-node-fallback-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        fs::write(repo.join("package.json"), "{\n  \"name\": \"repo\"\n}\n")?;
+        fs::write(repo.join("package-lock.json"), "{\n  \"lockfileVersion\": 3\n}\n")?;
+        fs::create_dir_all(repo.join("node_modules"))?;
+        fs::write(repo.join("node_modules/.cache-marker"), "shared\n")?;
+        run_git(&repo, &["add", "package.json", "package-lock.json"])?;
+        run_git(&repo, &["commit", "-m", "add node deps"])?;
+
+        let mut cfg = Config::default();
+        cfg.worktree_root = root.join("worktrees");
+        let worktree = create_for_session_in_repo("worker-123", &cfg, &repo)?;
+
+        let node_modules = worktree.path.join("node_modules");
+        assert!(fs::symlink_metadata(&node_modules)?.file_type().is_symlink());
+
+        fs::write(
+            worktree.path.join("package-lock.json"),
+            "{\n  \"lockfileVersion\": 4\n}\n",
+        )?;
+        let applied = sync_shared_dependency_dirs(&worktree)?;
+        assert!(applied.is_empty());
+        assert!(node_modules.is_dir());
+        assert!(!fs::symlink_metadata(&node_modules)?.file_type().is_symlink());
+        assert!(repo.join("node_modules/.cache-marker").exists());
+
+        remove(&worktree)?;
+        let _ = fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn create_for_session_links_shared_cargo_target_cache() -> Result<()> {
+        let root =
+            std::env::temp_dir().join(format!("ecc2-worktree-cargo-cache-{}", Uuid::new_v4()));
+        let repo = init_repo(&root)?;
+        fs::write(
+            repo.join("Cargo.toml"),
+            "[package]\nname = \"repo\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+        )?;
+        fs::write(repo.join("Cargo.lock"), "# lock\n")?;
+        fs::create_dir_all(repo.join("target/debug"))?;
+        fs::write(repo.join("target/debug/.cache-marker"), "shared\n")?;
+        run_git(&repo, &["add", "Cargo.toml", "Cargo.lock"])?;
+        run_git(&repo, &["commit", "-m", "add cargo deps"])?;
+
+        let mut cfg = Config::default();
+        cfg.worktree_root = root.join("worktrees");
+        let worktree = create_for_session_in_repo("worker-123", &cfg, &repo)?;
+
+        let target = worktree.path.join("target");
+        assert!(fs::symlink_metadata(&target)?.file_type().is_symlink());
+        assert_eq!(fs::read_link(&target)?, repo.join("target"));
+
+        remove(&worktree)?;
         let _ = fs::remove_dir_all(root);
         Ok(())
     }

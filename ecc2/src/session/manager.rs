@@ -539,12 +539,13 @@ pub fn query_tool_calls(
     ToolLogger::new(db).query(&session.id, page, page_size)
 }
 
-pub async fn resume_session(db: &StateStore, _cfg: &Config, id: &str) -> Result<String> {
-    resume_session_with_program(db, id, None).await
+pub async fn resume_session(db: &StateStore, cfg: &Config, id: &str) -> Result<String> {
+    resume_session_with_program(db, cfg, id, None).await
 }
 
 async fn resume_session_with_program(
     db: &StateStore,
+    _cfg: &Config,
     id: &str,
     runner_executable_override: Option<&Path>,
 ) -> Result<String> {
@@ -559,6 +560,14 @@ async fn resume_session_with_program(
     }
 
     db.update_state_and_pid(&session.id, &SessionState::Pending, None)?;
+    if let Some(worktree) = session.worktree.as_ref() {
+        if let Err(error) = worktree::sync_shared_dependency_dirs(worktree) {
+            tracing::warn!(
+                "Shared dependency cache sync warning for resumed session {}: {error}",
+                session.id
+            );
+        }
+    }
     let runner_executable = match runner_executable_override {
         Some(program) => program.to_path_buf(),
         None => std::env::current_exe().context("Failed to resolve ECC executable path")?,
@@ -2824,7 +2833,8 @@ mod tests {
         fs::create_dir_all(tempdir.path().join("resume-working-dir"))?;
         let (fake_claude, log_path) = write_fake_claude(tempdir.path())?;
 
-        let resumed_id = resume_session_with_program(&db, "deadbeef", Some(&fake_claude)).await?;
+        let resumed_id =
+            resume_session_with_program(&db, &cfg, "deadbeef", Some(&fake_claude)).await?;
         let resumed = db
             .get_session(&resumed_id)?
             .context("resumed session should exist")?;
