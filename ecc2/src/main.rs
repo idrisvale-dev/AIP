@@ -596,6 +596,18 @@ enum MigrationCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Scaffold migration artifacts on disk from a legacy workspace audit
+    Scaffold {
+        /// Path to the legacy Hermes/OpenClaw workspace root
+        #[arg(long)]
+        source: PathBuf,
+        /// Directory where scaffolded migration artifacts should be written
+        #[arg(long)]
+        output_dir: PathBuf,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -944,6 +956,14 @@ struct LegacyMigrationPlanReport {
     generated_at: String,
     audit_summary: LegacyMigrationAuditSummary,
     steps: Vec<LegacyMigrationPlanStep>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct LegacyMigrationScaffoldReport {
+    source: String,
+    output_dir: String,
+    files_written: Vec<String>,
+    steps_scaffolded: usize,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -1699,6 +1719,20 @@ async fn main() -> Result<()> {
                     println!("Migration plan written to {}", path.display());
                 } else {
                     println!("{rendered}");
+                }
+            }
+            MigrationCommands::Scaffold {
+                source,
+                output_dir,
+                json,
+            } => {
+                let audit = build_legacy_migration_audit_report(&source)?;
+                let plan = build_legacy_migration_plan_report(&audit);
+                let report = write_legacy_migration_scaffold(&plan, &output_dir)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!("{}", format_legacy_migration_scaffold_human(&report));
                 }
             }
         },
@@ -4987,6 +5021,62 @@ fn build_legacy_migration_plan_report(
     }
 }
 
+fn write_legacy_migration_scaffold(
+    plan: &LegacyMigrationPlanReport,
+    output_dir: &Path,
+) -> Result<LegacyMigrationScaffoldReport> {
+    fs::create_dir_all(output_dir).with_context(|| {
+        format!(
+            "create migration scaffold output directory: {}",
+            output_dir.display()
+        )
+    })?;
+
+    let plan_path = output_dir.join("migration-plan.md");
+    let config_path = output_dir.join("ecc2.migration.toml");
+
+    fs::write(&plan_path, format_legacy_migration_plan_human(plan))
+        .with_context(|| format!("write migration plan: {}", plan_path.display()))?;
+    fs::write(&config_path, render_legacy_migration_config_scaffold(plan))
+        .with_context(|| format!("write migration config scaffold: {}", config_path.display()))?;
+
+    Ok(LegacyMigrationScaffoldReport {
+        source: plan.source.clone(),
+        output_dir: output_dir.display().to_string(),
+        files_written: vec![
+            plan_path.display().to_string(),
+            config_path.display().to_string(),
+        ],
+        steps_scaffolded: plan.steps.len(),
+    })
+}
+
+fn render_legacy_migration_config_scaffold(plan: &LegacyMigrationPlanReport) -> String {
+    let mut sections = vec![
+        format!(
+            "# ECC2 migration scaffold generated from {}\n# Review every section before merging it into a real ecc2.toml.",
+            plan.source
+        ),
+    ];
+
+    for step in &plan.steps {
+        if step.config_snippets.is_empty() {
+            continue;
+        }
+        sections.push(format!(
+            "\n# {} [{} -> {}]",
+            step.title,
+            format_legacy_migration_readiness(step.readiness),
+            step.target_surface
+        ));
+        for snippet in &step.config_snippets {
+            sections.push(snippet.clone());
+        }
+    }
+
+    sections.join("\n\n")
+}
+
 fn format_legacy_migration_audit_human(report: &LegacyMigrationAuditReport) -> String {
     let mut lines = vec![
         format!("Legacy migration audit: {}", report.source),
@@ -5089,6 +5179,19 @@ fn format_legacy_migration_plan_human(report: &LegacyMigrationPlanReport) -> Str
         }
     }
 
+    lines.join("\n")
+}
+
+fn format_legacy_migration_scaffold_human(report: &LegacyMigrationScaffoldReport) -> String {
+    let mut lines = vec![
+        format!("Legacy migration scaffold written for {}", report.source),
+        format!("- output dir {}", report.output_dir),
+        format!("- steps scaffolded {}", report.steps_scaffolded),
+        "- files".to_string(),
+    ];
+    for path in &report.files_written {
+        lines.push(format!("  {}", path));
+    }
     lines.join("\n")
 }
 
@@ -7569,6 +7672,37 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_migrate_scaffold_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "migrate",
+            "scaffold",
+            "--source",
+            "/tmp/hermes",
+            "--output-dir",
+            "/tmp/migration-scaffold",
+            "--json",
+        ])
+        .expect("migrate scaffold should parse");
+
+        match cli.command {
+            Some(Commands::Migrate {
+                command:
+                    MigrationCommands::Scaffold {
+                        source,
+                        output_dir,
+                        json,
+                    },
+            }) => {
+                assert_eq!(source, PathBuf::from("/tmp/hermes"));
+                assert_eq!(output_dir, PathBuf::from("/tmp/migration-scaffold"));
+                assert!(json);
+            }
+            _ => panic!("expected migrate scaffold subcommand"),
+        }
+    }
+
+    #[test]
     fn legacy_migration_audit_report_maps_detected_artifacts() -> Result<()> {
         let tempdir = TestDir::new("legacy-migration-audit")?;
         let root = tempdir.path();
@@ -7663,6 +7797,33 @@ mod tests {
         let rendered = format_legacy_migration_plan_human(&plan);
         assert!(rendered.contains("Legacy migration plan"));
         assert!(rendered.contains("Import sanitized workspace memory through ECC2 connectors"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn legacy_migration_scaffold_writes_plan_and_config_files() -> Result<()> {
+        let tempdir = TestDir::new("legacy-migration-scaffold")?;
+        let root = tempdir.path();
+        fs::create_dir_all(root.join("workspace/notes"))?;
+        fs::create_dir_all(root.join("skills/ecc-imports"))?;
+        fs::write(root.join("config.yaml"), "model: claude\n")?;
+        fs::write(root.join("workspace/notes/recovery.md"), "# recovery\n")?;
+        fs::write(root.join("skills/ecc-imports/triage.md"), "# triage\n")?;
+
+        let audit = build_legacy_migration_audit_report(root)?;
+        let plan = build_legacy_migration_plan_report(&audit);
+        let output_dir = root.join("out");
+        let report = write_legacy_migration_scaffold(&plan, &output_dir)?;
+
+        assert_eq!(report.steps_scaffolded, plan.steps.len());
+        assert_eq!(report.files_written.len(), 2);
+
+        let plan_text = fs::read_to_string(output_dir.join("migration-plan.md"))?;
+        let config_text = fs::read_to_string(output_dir.join("ecc2.migration.toml"))?;
+        assert!(plan_text.contains("Legacy migration plan"));
+        assert!(config_text.contains("[memory_connectors.hermes_workspace]"));
+        assert!(config_text.contains("[orchestration_templates.legacy_workflow]"));
 
         Ok(())
     }
