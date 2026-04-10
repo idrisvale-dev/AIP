@@ -150,6 +150,197 @@ pub fn get_team_status(db: &StateStore, id: &str, depth: usize) -> Result<TeamSt
     })
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct TemplateLaunchStepOutcome {
+    pub step_name: String,
+    pub session_id: String,
+    pub task: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct TemplateLaunchOutcome {
+    pub template_name: String,
+    pub step_count: usize,
+    pub anchor_session_id: Option<String>,
+    pub created: Vec<TemplateLaunchStepOutcome>,
+}
+
+pub async fn launch_orchestration_template(
+    db: &StateStore,
+    cfg: &Config,
+    template_name: &str,
+    source_session_id: Option<&str>,
+    task: Option<&str>,
+    variables: BTreeMap<String, String>,
+) -> Result<TemplateLaunchOutcome> {
+    let repo_root =
+        std::env::current_dir().context("Failed to resolve current working directory")?;
+    let runner_program =
+        std::env::current_exe().context("Failed to resolve ECC executable path")?;
+    let source_session = source_session_id
+        .map(|id| resolve_session(db, id))
+        .transpose()?;
+    let vars = build_template_variables(&repo_root, source_session.as_ref(), task, variables);
+    let template = cfg.resolve_orchestration_template(template_name, &vars)?;
+    let live_sessions = db
+        .list_sessions()?
+        .into_iter()
+        .filter(|session| {
+            matches!(
+                session.state,
+                SessionState::Pending
+                    | SessionState::Running
+                    | SessionState::Idle
+                    | SessionState::Stale
+            )
+        })
+        .count();
+    let available_slots = cfg.max_parallel_sessions.saturating_sub(live_sessions);
+    if template.steps.len() > available_slots {
+        anyhow::bail!(
+            "template {template_name} requires {} session slots but only {available_slots} available",
+            template.steps.len()
+        );
+    }
+
+    let default_profile = cfg
+        .default_agent_profile
+        .as_deref()
+        .map(|name| cfg.resolve_agent_profile(name))
+        .transpose()?;
+    let base_grouping = SessionGrouping {
+        project: Some(
+            source_session
+                .as_ref()
+                .map(|session| session.project.clone())
+                .unwrap_or_else(|| default_project_label(&repo_root)),
+        ),
+        task_group: Some(
+            source_session
+                .as_ref()
+                .map(|session| session.task_group.clone())
+                .or_else(|| task.map(default_task_group_label))
+                .unwrap_or_else(|| template_name.replace(['_', '-'], " ")),
+        ),
+    };
+
+    let mut created = Vec::with_capacity(template.steps.len());
+    let mut anchor_session_id = source_session.as_ref().map(|session| session.id.clone());
+    let mut created_anchor_id: Option<String> = None;
+
+    for step in template.steps {
+        let profile = match step.profile.as_deref() {
+            Some(name) => Some(cfg.resolve_agent_profile(name)?),
+            None if step.agent.is_some() => None,
+            None => default_profile.clone(),
+        };
+        let agent = step
+            .agent
+            .as_deref()
+            .unwrap_or(&cfg.default_agent)
+            .to_string();
+        let grouping = SessionGrouping {
+            project: step
+                .project
+                .clone()
+                .or_else(|| base_grouping.project.clone()),
+            task_group: step
+                .task_group
+                .clone()
+                .or_else(|| base_grouping.task_group.clone()),
+        };
+        let session_id = queue_session_with_resolved_profile_and_runner_program(
+            db,
+            cfg,
+            &step.task,
+            &agent,
+            step.worktree,
+            &repo_root,
+            &runner_program,
+            profile,
+            grouping,
+        )
+        .await?;
+
+        if let Some(parent_id) = anchor_session_id.as_deref() {
+            let parent = resolve_session(db, parent_id)?;
+            send_task_handoff(
+                db,
+                &parent,
+                &session_id,
+                &step.task,
+                &format!("template {} | {}", template_name, step.name),
+            )?;
+        } else {
+            created_anchor_id = Some(session_id.clone());
+            anchor_session_id = Some(session_id.clone());
+        }
+
+        if created_anchor_id.is_none() {
+            created_anchor_id = Some(session_id.clone());
+        }
+
+        created.push(TemplateLaunchStepOutcome {
+            step_name: step.name,
+            session_id,
+            task: step.task,
+        });
+    }
+
+    Ok(TemplateLaunchOutcome {
+        template_name: template_name.to_string(),
+        step_count: created.len(),
+        anchor_session_id: source_session
+            .as_ref()
+            .map(|session| session.id.clone())
+            .or(created_anchor_id),
+        created,
+    })
+}
+
+pub(crate) fn build_template_variables(
+    repo_root: &Path,
+    source_session: Option<&Session>,
+    task: Option<&str>,
+    mut variables: BTreeMap<String, String>,
+) -> BTreeMap<String, String> {
+    if let Some(source) = source_session {
+        variables
+            .entry("source_task".to_string())
+            .or_insert_with(|| source.task.clone());
+        variables
+            .entry("source_project".to_string())
+            .or_insert_with(|| source.project.clone());
+        variables
+            .entry("source_task_group".to_string())
+            .or_insert_with(|| source.task_group.clone());
+        variables
+            .entry("source_agent".to_string())
+            .or_insert_with(|| source.agent_type.clone());
+    }
+
+    let effective_task = task
+        .map(ToOwned::to_owned)
+        .or_else(|| source_session.map(|session| session.task.clone()));
+    if let Some(task) = effective_task {
+        variables.entry("task".to_string()).or_insert(task.clone());
+        variables
+            .entry("task_group".to_string())
+            .or_insert_with(|| default_task_group_label(&task));
+    }
+
+    variables.entry("project".to_string()).or_insert_with(|| {
+        source_session
+            .map(|session| session.project.clone())
+            .unwrap_or_else(|| default_project_label(repo_root))
+    });
+    variables
+        .entry("cwd".to_string())
+        .or_insert_with(|| repo_root.display().to_string());
+
+    variables
+}
+
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct HeartbeatEnforcementOutcome {
     pub stale_sessions: Vec<String>,
@@ -1743,7 +1934,13 @@ pub async fn run_session(
 
     let agent_program = agent_program(agent_type)?;
     let profile = db.get_session_profile(session_id)?;
-    let command = build_agent_command(&agent_program, task, session_id, working_dir, profile.as_ref());
+    let command = build_agent_command(
+        &agent_program,
+        task,
+        session_id,
+        working_dir,
+        profile.as_ref(),
+    );
     capture_command_output(
         cfg.db_path.clone(),
         session_id.to_string(),
@@ -1901,8 +2098,32 @@ async fn queue_session_in_dir_with_runner_program(
     inherited_profile_session_id: Option<&str>,
     grouping: SessionGrouping,
 ) -> Result<String> {
-    let profile =
-        resolve_launch_profile(db, cfg, profile_name, inherited_profile_session_id)?;
+    let profile = resolve_launch_profile(db, cfg, profile_name, inherited_profile_session_id)?;
+    queue_session_with_resolved_profile_and_runner_program(
+        db,
+        cfg,
+        task,
+        agent_type,
+        use_worktree,
+        repo_root,
+        runner_program,
+        profile,
+        grouping,
+    )
+    .await
+}
+
+async fn queue_session_with_resolved_profile_and_runner_program(
+    db: &StateStore,
+    cfg: &Config,
+    task: &str,
+    agent_type: &str,
+    use_worktree: bool,
+    repo_root: &Path,
+    runner_program: &Path,
+    profile: Option<SessionAgentProfile>,
+    grouping: SessionGrouping,
+) -> Result<String> {
     let effective_agent_type = profile
         .as_ref()
         .and_then(|profile| profile.agent.as_deref())
@@ -2060,7 +2281,9 @@ fn resolve_launch_profile(
     inherited_profile_session_id: Option<&str>,
 ) -> Result<Option<SessionAgentProfile>> {
     let inherited_profile_name = match inherited_profile_session_id {
-        Some(session_id) => db.get_session_profile(session_id)?.map(|profile| profile.profile_name),
+        Some(session_id) => db
+            .get_session_profile(session_id)?
+            .map(|profile| profile.profile_name),
         None => None,
     };
     let profile_name = explicit_profile_name
@@ -2275,7 +2498,10 @@ fn build_agent_command(
             command.arg("--append-system-prompt").arg(prompt);
         }
     }
-    command.arg(task).current_dir(working_dir).stdin(Stdio::null());
+    command
+        .arg(task)
+        .current_dir(working_dir)
+        .stdin(Stdio::null());
     command
 }
 
@@ -2844,6 +3070,7 @@ mod tests {
             default_agent: "claude".to_string(),
             default_agent_profile: None,
             agent_profiles: Default::default(),
+            orchestration_templates: Default::default(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
@@ -3364,7 +3591,8 @@ mod tests {
     }
 
     #[tokio::test(flavor = "current_thread")]
-    async fn create_session_uses_default_agent_profile_and_persists_launch_settings() -> Result<()> {
+    async fn create_session_uses_default_agent_profile_and_persists_launch_settings() -> Result<()>
+    {
         let tempdir = TestDir::new("manager-default-agent-profile")?;
         let repo_root = tempdir.path().join("repo");
         init_git_repo(&repo_root)?;

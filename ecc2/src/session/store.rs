@@ -591,8 +591,8 @@ impl StateStore {
             .context("serialize allowed agent profile tools")?;
         let disallowed_tools_json = serde_json::to_string(&profile.disallowed_tools)
             .context("serialize disallowed agent profile tools")?;
-        let add_dirs_json = serde_json::to_string(&profile.add_dirs)
-            .context("serialize agent profile add_dirs")?;
+        let add_dirs_json =
+            serde_json::to_string(&profile.add_dirs).context("serialize agent profile add_dirs")?;
 
         self.conn.execute(
             "INSERT INTO session_profiles (
@@ -2683,7 +2683,10 @@ mod tests {
         assert_eq!(profile.allowed_tools, vec!["Read", "Edit"]);
         assert_eq!(profile.disallowed_tools, vec!["Bash"]);
         assert_eq!(profile.permission_mode.as_deref(), Some("plan"));
-        assert_eq!(profile.add_dirs, vec![PathBuf::from("docs"), PathBuf::from("specs")]);
+        assert_eq!(
+            profile.add_dirs,
+            vec![PathBuf::from("docs"), PathBuf::from("specs")]
+        );
         assert_eq!(profile.max_budget_usd, Some(1.5));
         assert_eq!(profile.token_budget, Some(1200));
         assert_eq!(

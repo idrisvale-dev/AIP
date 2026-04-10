@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -78,6 +79,50 @@ pub struct ResolvedAgentProfile {
     pub append_system_prompt: Option<String>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OrchestrationTemplateConfig {
+    pub description: Option<String>,
+    pub project: Option<String>,
+    pub task_group: Option<String>,
+    pub agent: Option<String>,
+    pub profile: Option<String>,
+    pub worktree: Option<bool>,
+    pub steps: Vec<OrchestrationTemplateStepConfig>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OrchestrationTemplateStepConfig {
+    pub name: Option<String>,
+    pub task: String,
+    pub agent: Option<String>,
+    pub profile: Option<String>,
+    pub worktree: Option<bool>,
+    pub project: Option<String>,
+    pub task_group: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResolvedOrchestrationTemplate {
+    pub template_name: String,
+    pub description: Option<String>,
+    pub project: Option<String>,
+    pub task_group: Option<String>,
+    pub steps: Vec<ResolvedOrchestrationTemplateStep>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResolvedOrchestrationTemplateStep {
+    pub name: String,
+    pub task: String,
+    pub agent: Option<String>,
+    pub profile: Option<String>,
+    pub worktree: bool,
+    pub project: Option<String>,
+    pub task_group: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -93,6 +138,7 @@ pub struct Config {
     pub default_agent: String,
     pub default_agent_profile: Option<String>,
     pub agent_profiles: BTreeMap<String, AgentProfileConfig>,
+    pub orchestration_templates: BTreeMap<String, OrchestrationTemplateConfig>,
     pub auto_dispatch_unread_handoffs: bool,
     pub auto_dispatch_limit_per_session: usize,
     pub auto_create_worktrees: bool,
@@ -156,6 +202,7 @@ impl Default for Config {
             default_agent: "claude".to_string(),
             default_agent_profile: None,
             agent_profiles: BTreeMap::new(),
+            orchestration_templates: BTreeMap::new(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
@@ -219,6 +266,80 @@ impl Config {
         self.resolve_agent_profile_inner(name, &mut chain)
     }
 
+    pub fn resolve_orchestration_template(
+        &self,
+        name: &str,
+        vars: &BTreeMap<String, String>,
+    ) -> Result<ResolvedOrchestrationTemplate> {
+        let template = self
+            .orchestration_templates
+            .get(name)
+            .ok_or_else(|| anyhow::anyhow!("Unknown orchestration template: {name}"))?;
+
+        if template.steps.is_empty() {
+            anyhow::bail!("orchestration template {name} has no steps");
+        }
+
+        let description = interpolate_optional_string(template.description.as_deref(), vars)?;
+        let project = interpolate_optional_string(template.project.as_deref(), vars)?;
+        let task_group = interpolate_optional_string(template.task_group.as_deref(), vars)?;
+        let default_agent = interpolate_optional_string(template.agent.as_deref(), vars)?;
+        let default_profile = interpolate_optional_string(template.profile.as_deref(), vars)?;
+        if let Some(profile_name) = default_profile.as_deref() {
+            self.resolve_agent_profile(profile_name)?;
+        }
+
+        let mut steps = Vec::with_capacity(template.steps.len());
+        for (index, step) in template.steps.iter().enumerate() {
+            let task = interpolate_required_string(&step.task, vars).with_context(|| {
+                format!(
+                    "resolve task for orchestration template {name} step {}",
+                    index + 1
+                )
+            })?;
+            let step_name = interpolate_optional_string(step.name.as_deref(), vars)?
+                .unwrap_or_else(|| format!("step {}", index + 1));
+            let agent = interpolate_optional_string(
+                step.agent.as_deref().or(default_agent.as_deref()),
+                vars,
+            )?;
+            let profile = interpolate_optional_string(
+                step.profile.as_deref().or(default_profile.as_deref()),
+                vars,
+            )?;
+            if let Some(profile_name) = profile.as_deref() {
+                self.resolve_agent_profile(profile_name)?;
+            }
+
+            steps.push(ResolvedOrchestrationTemplateStep {
+                name: step_name,
+                task,
+                agent,
+                profile,
+                worktree: step
+                    .worktree
+                    .or(template.worktree)
+                    .unwrap_or(self.auto_create_worktrees),
+                project: interpolate_optional_string(
+                    step.project.as_deref().or(project.as_deref()),
+                    vars,
+                )?,
+                task_group: interpolate_optional_string(
+                    step.task_group.as_deref().or(task_group.as_deref()),
+                    vars,
+                )?,
+            });
+        }
+
+        Ok(ResolvedOrchestrationTemplate {
+            template_name: name.to_string(),
+            description,
+            project,
+            task_group,
+            steps,
+        })
+    }
+
     fn resolve_agent_profile_inner(
         &self,
         name: &str,
@@ -226,10 +347,7 @@ impl Config {
     ) -> Result<ResolvedAgentProfile> {
         if chain.iter().any(|existing| existing == name) {
             chain.push(name.to_string());
-            anyhow::bail!(
-                "agent profile inheritance cycle: {}",
-                chain.join(" -> ")
-            );
+            anyhow::bail!("agent profile inheritance cycle: {}", chain.join(" -> "));
         }
 
         let profile = self
@@ -550,6 +668,55 @@ where
     }
 }
 
+fn interpolate_optional_string(
+    value: Option<&str>,
+    vars: &BTreeMap<String, String>,
+) -> Result<Option<String>> {
+    value
+        .map(|value| interpolate_required_string(value, vars))
+        .transpose()
+        .map(|value| {
+            value.and_then(|value| {
+                let trimmed = value.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
+            })
+        })
+}
+
+fn interpolate_required_string(value: &str, vars: &BTreeMap<String, String>) -> Result<String> {
+    let placeholder = Regex::new(r"\{\{\s*([A-Za-z0-9_-]+)\s*\}\}")
+        .expect("orchestration template placeholder regex");
+    let mut missing = Vec::new();
+    let rendered = placeholder.replace_all(value, |captures: &regex::Captures<'_>| {
+        let key = captures
+            .get(1)
+            .map(|capture| capture.as_str())
+            .unwrap_or_default();
+        match vars.get(key) {
+            Some(value) => value.to_string(),
+            None => {
+                missing.push(key.to_string());
+                String::new()
+            }
+        }
+    });
+
+    if !missing.is_empty() {
+        missing.sort();
+        missing.dedup();
+        anyhow::bail!(
+            "missing orchestration template variable(s): {}",
+            missing.join(", ")
+        );
+    }
+
+    Ok(rendered.into_owned())
+}
+
 impl BudgetAlertThresholds {
     pub fn sanitized(self) -> Self {
         let values = [self.advisory, self.warning, self.critical];
@@ -574,6 +741,7 @@ mod tests {
         PaneLayout,
     };
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use std::collections::BTreeMap;
     use std::path::PathBuf;
     use uuid::Uuid;
 
@@ -977,6 +1145,90 @@ inherits = "a"
         assert!(error
             .to_string()
             .contains("agent profile inheritance cycle"));
+    }
+
+    #[test]
+    fn orchestration_templates_resolve_steps_and_interpolate_variables() {
+        let config: Config = toml::from_str(
+            r#"
+default_agent = "claude"
+default_agent_profile = "reviewer"
+
+[agent_profiles.reviewer]
+model = "sonnet"
+
+[orchestration_templates.feature_development]
+description = "Ship {{task}}"
+project = "{{project}}"
+task_group = "{{task_group}}"
+profile = "reviewer"
+worktree = true
+
+[[orchestration_templates.feature_development.steps]]
+name = "planner"
+task = "Plan {{task}}"
+agent = "claude"
+
+[[orchestration_templates.feature_development.steps]]
+name = "reviewer"
+task = "Review {{task}} in {{component}}"
+profile = "reviewer"
+worktree = false
+"#,
+        )
+        .unwrap();
+
+        let vars = BTreeMap::from([
+            ("task".to_string(), "stabilize auth callback".to_string()),
+            ("project".to_string(), "ecc-core".to_string()),
+            ("task_group".to_string(), "auth callback".to_string()),
+            ("component".to_string(), "billing".to_string()),
+        ]);
+        let template = config
+            .resolve_orchestration_template("feature_development", &vars)
+            .unwrap();
+
+        assert_eq!(template.template_name, "feature_development");
+        assert_eq!(
+            template.description.as_deref(),
+            Some("Ship stabilize auth callback")
+        );
+        assert_eq!(template.project.as_deref(), Some("ecc-core"));
+        assert_eq!(template.task_group.as_deref(), Some("auth callback"));
+        assert_eq!(template.steps.len(), 2);
+        assert_eq!(template.steps[0].name, "planner");
+        assert_eq!(template.steps[0].task, "Plan stabilize auth callback");
+        assert_eq!(template.steps[0].agent.as_deref(), Some("claude"));
+        assert_eq!(template.steps[0].profile.as_deref(), Some("reviewer"));
+        assert!(template.steps[0].worktree);
+        assert_eq!(
+            template.steps[1].task,
+            "Review stabilize auth callback in billing"
+        );
+        assert!(!template.steps[1].worktree);
+    }
+
+    #[test]
+    fn orchestration_templates_fail_when_required_variables_are_missing() {
+        let config: Config = toml::from_str(
+            r#"
+[orchestration_templates.feature_development]
+[[orchestration_templates.feature_development.steps]]
+task = "Plan {{task}} for {{component}}"
+"#,
+        )
+        .unwrap();
+
+        let error = config
+            .resolve_orchestration_template(
+                "feature_development",
+                &BTreeMap::from([("task".to_string(), "fix retry".to_string())]),
+            )
+            .expect_err("missing template variables must fail");
+        let error_text = format!("{error:#}");
+        assert!(error_text
+            .contains("resolve task for orchestration template feature_development step 1"));
+        assert!(error_text.contains("missing orchestration template variable(s): component"));
     }
 
     #[test]

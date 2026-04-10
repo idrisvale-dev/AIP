@@ -8,7 +8,7 @@ use ratatui::{
     },
 };
 use regex::Regex;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::time::UNIX_EPOCH;
 use tokio::sync::broadcast;
 
@@ -273,16 +273,31 @@ struct TimelineEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct SpawnRequest {
-    requested_count: usize,
-    task: String,
+enum SpawnRequest {
+    AdHoc {
+        requested_count: usize,
+        task: String,
+    },
+    Template {
+        name: String,
+        task: Option<String>,
+        variables: BTreeMap<String, String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct SpawnPlan {
-    requested_count: usize,
-    spawn_count: usize,
-    task: String,
+enum SpawnPlan {
+    AdHoc {
+        requested_count: usize,
+        spawn_count: usize,
+        task: String,
+    },
+    Template {
+        name: String,
+        task: Option<String>,
+        variables: BTreeMap<String, String>,
+        step_count: usize,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1357,7 +1372,7 @@ impl Dashboard {
             "Keyboard Shortcuts:".to_string(),
             "".to_string(),
             "  n       New session".to_string(),
-            "  N       Natural-language multi-agent spawn prompt".to_string(),
+            "  N       Natural-language multi-agent or template spawn prompt".to_string(),
             "  a       Assign follow-up work from selected session".to_string(),
             "  b       Rebalance backed-up delegate handoff backlog for selected lead".to_string(),
             "  B       Rebalance backed-up delegate handoff backlog across lead teams".to_string(),
@@ -3062,7 +3077,7 @@ impl Dashboard {
 
         self.spawn_input = Some(self.spawn_prompt_seed());
         self.set_operator_note(
-            "spawn mode | try: give me 3 agents working on fix flaky tests".to_string(),
+            "spawn mode | try: give me 3 agents working on fix flaky tests | or: template feature_development for fix flaky tests".to_string(),
         );
     }
 
@@ -3419,64 +3434,96 @@ impl Dashboard {
         let agent = self.cfg.default_agent.clone();
         let mut created_ids = Vec::new();
 
-        for task in expand_spawn_tasks(&plan.task, plan.spawn_count) {
-            let session_id = match manager::create_session_with_grouping(
+        match &plan {
+            SpawnPlan::AdHoc {
+                requested_count: _,
+                spawn_count,
+                task,
+            } => {
+                for task in expand_spawn_tasks(task, *spawn_count) {
+                    let session_id = match manager::create_session_with_grouping(
+                        &self.db,
+                        &self.cfg,
+                        &task,
+                        &agent,
+                        self.cfg.auto_create_worktrees,
+                        source_grouping.clone(),
+                    )
+                    .await
+                    {
+                        Ok(session_id) => session_id,
+                        Err(error) => {
+                            let preferred_selection =
+                                post_spawn_selection_id(source_session_id.as_deref(), &created_ids);
+                            self.refresh_after_spawn(preferred_selection.as_deref());
+                            let mut summary = if created_ids.is_empty() {
+                                format!("spawn failed: {error}")
+                            } else {
+                                format!(
+                                    "spawn partially completed: {} of {} queued before failure: {error}",
+                                    created_ids.len(),
+                                    spawn_count
+                                )
+                            };
+                            if let Some(layout_note) =
+                                self.auto_split_layout_after_spawn(created_ids.len())
+                            {
+                                summary.push_str(" | ");
+                                summary.push_str(&layout_note);
+                            }
+                            self.set_operator_note(summary);
+                            return;
+                        }
+                    };
+
+                    if let (Some(source_id), Some(task), Some(context)) = (
+                        source_session_id.as_ref(),
+                        source_task.as_ref(),
+                        handoff_context.as_ref(),
+                    ) {
+                        if let Err(error) = comms::send(
+                            &self.db,
+                            source_id,
+                            &session_id,
+                            &comms::MessageType::TaskHandoff {
+                                task: task.clone(),
+                                context: context.clone(),
+                            },
+                        ) {
+                            tracing::warn!(
+                                "Failed to send handoff from session {} to {}: {error}",
+                                source_id,
+                                session_id
+                            );
+                        }
+                    }
+
+                    created_ids.push(session_id);
+                }
+            }
+            SpawnPlan::Template {
+                name,
+                task,
+                variables,
+                ..
+            } => match manager::launch_orchestration_template(
                 &self.db,
                 &self.cfg,
-                &task,
-                &agent,
-                self.cfg.auto_create_worktrees,
-                source_grouping.clone(),
+                name,
+                source_session_id.as_deref(),
+                task.as_deref(),
+                variables.clone(),
             )
             .await
             {
-                Ok(session_id) => session_id,
+                Ok(outcome) => {
+                    created_ids.extend(outcome.created.into_iter().map(|step| step.session_id));
+                }
                 Err(error) => {
-                    let preferred_selection =
-                        post_spawn_selection_id(source_session_id.as_deref(), &created_ids);
-                    self.refresh_after_spawn(preferred_selection.as_deref());
-                    let mut summary = if created_ids.is_empty() {
-                        format!("spawn failed: {error}")
-                    } else {
-                        format!(
-                            "spawn partially completed: {} of {} queued before failure: {error}",
-                            created_ids.len(),
-                            plan.spawn_count
-                        )
-                    };
-                    if let Some(layout_note) = self.auto_split_layout_after_spawn(created_ids.len())
-                    {
-                        summary.push_str(" | ");
-                        summary.push_str(&layout_note);
-                    }
-                    self.set_operator_note(summary);
+                    self.set_operator_note(format!("template launch failed: {error}"));
                     return;
                 }
-            };
-
-            if let (Some(source_id), Some(task), Some(context)) = (
-                source_session_id.as_ref(),
-                source_task.as_ref(),
-                handoff_context.as_ref(),
-            ) {
-                if let Err(error) = comms::send(
-                    &self.db,
-                    source_id,
-                    &session_id,
-                    &comms::MessageType::TaskHandoff {
-                        task: task.clone(),
-                        context: context.clone(),
-                    },
-                ) {
-                    tracing::warn!(
-                        "Failed to send handoff from session {} to {}: {error}",
-                        source_id,
-                        session_id
-                    );
-                }
-            }
-
-            created_ids.push(session_id);
+            },
         }
 
         let preferred_selection =
@@ -5392,11 +5439,7 @@ impl Dashboard {
     fn selected_session_metrics_text(&self) -> String {
         if let Some(session) = self.sessions.get(self.selected_session) {
             let metrics = &session.metrics;
-            let selected_profile = self
-                .db
-                .get_session_profile(&session.id)
-                .ok()
-                .flatten();
+            let selected_profile = self.db.get_session_profile(&session.id).ok().flatten();
             let group_peers = self
                 .sessions
                 .iter()
@@ -5433,10 +5476,8 @@ impl Dashboard {
                     ));
                 }
                 if let Some(max_budget_usd) = profile.max_budget_usd {
-                    profile_details.push(format!(
-                        "Profile cost {}",
-                        format_currency(max_budget_usd)
-                    ));
+                    profile_details
+                        .push(format!("Profile cost {}", format_currency(max_budget_usd)));
                 }
                 if !profile.allowed_tools.is_empty() {
                     profile_details.push(format!(
@@ -5958,18 +5999,58 @@ impl Dashboard {
             .max_parallel_sessions
             .saturating_sub(self.active_session_count());
 
-        if available_slots == 0 {
-            return Err(format!(
-                "cannot queue sessions: active session limit reached ({})",
-                self.cfg.max_parallel_sessions
-            ));
-        }
+        match request {
+            SpawnRequest::AdHoc {
+                requested_count,
+                task,
+            } => {
+                if available_slots == 0 {
+                    return Err(format!(
+                        "cannot queue sessions: active session limit reached ({})",
+                        self.cfg.max_parallel_sessions
+                    ));
+                }
 
-        Ok(SpawnPlan {
-            requested_count: request.requested_count,
-            spawn_count: request.requested_count.min(available_slots),
-            task: request.task,
-        })
+                Ok(SpawnPlan::AdHoc {
+                    requested_count,
+                    spawn_count: requested_count.min(available_slots),
+                    task,
+                })
+            }
+            SpawnRequest::Template {
+                name,
+                task,
+                variables,
+            } => {
+                let repo_root = std::env::current_dir().map_err(|error| {
+                    format!("failed to resolve cwd for template preview: {error}")
+                })?;
+                let source_session = self.sessions.get(self.selected_session);
+                let preview_vars = manager::build_template_variables(
+                    &repo_root,
+                    source_session,
+                    task.as_deref(),
+                    variables.clone(),
+                );
+                let template = self
+                    .cfg
+                    .resolve_orchestration_template(&name, &preview_vars)
+                    .map_err(|error| error.to_string())?;
+                if available_slots < template.steps.len() {
+                    return Err(format!(
+                        "template {name} requires {} session slots but only {available_slots} available",
+                        template.steps.len()
+                    ));
+                }
+
+                Ok(SpawnPlan::Template {
+                    name,
+                    task,
+                    variables,
+                    step_count: template.steps.len(),
+                })
+            }
+        }
     }
 
     fn pane_areas(&self, area: Rect) -> PaneAreas {
@@ -6289,6 +6370,10 @@ fn parse_spawn_request(input: &str) -> Result<SpawnRequest, String> {
         return Err("spawn request cannot be empty".to_string());
     }
 
+    if let Some(template_request) = parse_template_spawn_request(trimmed)? {
+        return Ok(template_request);
+    }
+
     let count = Regex::new(r"\b([1-9]\d*)\b")
         .expect("spawn count regex")
         .captures(trimmed)
@@ -6301,10 +6386,64 @@ fn parse_spawn_request(input: &str) -> Result<SpawnRequest, String> {
         return Err("spawn request must include a task description".to_string());
     }
 
-    Ok(SpawnRequest {
+    Ok(SpawnRequest::AdHoc {
         requested_count: count,
         task,
     })
+}
+
+fn parse_template_spawn_request(input: &str) -> Result<Option<SpawnRequest>, String> {
+    let captures = Regex::new(
+        r"(?is)^\s*template\s+(?P<name>[A-Za-z0-9_-]+)(?:\s+for\s+(?P<task>.*?))?(?:\s+with\s+(?P<vars>.+))?\s*$",
+    )
+    .expect("template spawn regex")
+    .captures(input);
+
+    let Some(captures) = captures else {
+        return Ok(None);
+    };
+
+    let name = captures
+        .name("name")
+        .map(|value| value.as_str().trim().to_string())
+        .ok_or_else(|| "template request must include a template name".to_string())?;
+    let task = captures
+        .name("task")
+        .map(|value| value.as_str().trim().to_string())
+        .filter(|value| !value.is_empty());
+    let variables = captures
+        .name("vars")
+        .map(|value| parse_template_request_variables(value.as_str()))
+        .transpose()?
+        .unwrap_or_default();
+
+    Ok(Some(SpawnRequest::Template {
+        name,
+        task,
+        variables,
+    }))
+}
+
+fn parse_template_request_variables(input: &str) -> Result<BTreeMap<String, String>, String> {
+    let mut variables = BTreeMap::new();
+    for entry in input
+        .split(',')
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+    {
+        let (key, value) = entry
+            .split_once('=')
+            .ok_or_else(|| format!("template vars must use key=value form: {entry}"))?;
+        let key = key.trim();
+        let value = value.trim();
+        if key.is_empty() || value.is_empty() {
+            return Err(format!(
+                "template vars must use non-empty key=value form: {entry}"
+            ));
+        }
+        variables.insert(key.to_string(), value.to_string());
+    }
+    Ok(variables)
 }
 
 fn extract_spawn_task(input: &str) -> String {
@@ -6344,14 +6483,33 @@ fn expand_spawn_tasks(task: &str, count: usize) -> Vec<String> {
 }
 
 fn build_spawn_note(plan: &SpawnPlan, created_count: usize, queued_count: usize) -> String {
-    let task = truncate_for_dashboard(&plan.task, 72);
-    let mut note = if plan.spawn_count < plan.requested_count {
-        format!(
-            "spawned {created_count} session(s) for {task} (requested {}, capped at {})",
-            plan.requested_count, plan.spawn_count
-        )
-    } else {
-        format!("spawned {created_count} session(s) for {task}")
+    let mut note = match plan {
+        SpawnPlan::AdHoc {
+            requested_count,
+            spawn_count,
+            task,
+        } => {
+            let task = truncate_for_dashboard(task, 72);
+            if spawn_count < requested_count {
+                format!(
+                    "spawned {created_count} session(s) for {task} (requested {requested_count}, capped at {spawn_count})"
+                )
+            } else {
+                format!("spawned {created_count} session(s) for {task}")
+            }
+        }
+        SpawnPlan::Template {
+            name,
+            task,
+            step_count,
+            ..
+        } => {
+            let scope = task
+                .as_ref()
+                .map(|task| format!(" for {}", truncate_for_dashboard(task, 72)))
+                .unwrap_or_default();
+            format!("launched template {name} ({created_count}/{step_count} step(s)){scope}")
+        }
     };
 
     if queued_count > 0 {
@@ -11053,7 +11211,7 @@ diff --git a/src/lib.rs b/src/lib.rs
 
         assert_eq!(
             request,
-            SpawnRequest {
+            SpawnRequest::AdHoc {
                 requested_count: 10,
                 task: "stabilize the queue".to_string(),
             }
@@ -11066,9 +11224,29 @@ diff --git a/src/lib.rs b/src/lib.rs
 
         assert_eq!(
             request,
-            SpawnRequest {
+            SpawnRequest::AdHoc {
                 requested_count: 1,
                 task: "stabilize the queue".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn parse_spawn_request_extracts_template_request() {
+        let request = parse_spawn_request(
+            "template feature_development for stabilize auth callback with component=billing, area=oauth",
+        )
+        .expect("template request should parse");
+
+        assert_eq!(
+            request,
+            SpawnRequest::Template {
+                name: "feature_development".to_string(),
+                task: Some("stabilize auth callback".to_string()),
+                variables: BTreeMap::from([
+                    ("area".to_string(), "oauth".to_string()),
+                    ("component".to_string(), "billing".to_string()),
+                ]),
             }
         );
     }
@@ -11090,12 +11268,151 @@ diff --git a/src/lib.rs b/src/lib.rs
 
         assert_eq!(
             plan,
-            SpawnPlan {
+            SpawnPlan::AdHoc {
                 requested_count: 9,
                 spawn_count: 5,
                 task: "ship release notes".to_string(),
             }
         );
+    }
+
+    #[test]
+    fn build_spawn_plan_resolves_template_steps() {
+        let mut dashboard = test_dashboard(Vec::new(), 0);
+        dashboard.cfg.orchestration_templates = BTreeMap::from([(
+            "feature_development".to_string(),
+            crate::config::OrchestrationTemplateConfig {
+                description: None,
+                project: None,
+                task_group: None,
+                agent: Some("claude".to_string()),
+                profile: None,
+                worktree: Some(true),
+                steps: vec![
+                    crate::config::OrchestrationTemplateStepConfig {
+                        name: Some("planner".to_string()),
+                        task: "Plan {{task}}".to_string(),
+                        project: None,
+                        task_group: None,
+                        agent: None,
+                        profile: None,
+                        worktree: None,
+                    },
+                    crate::config::OrchestrationTemplateStepConfig {
+                        name: Some("builder".to_string()),
+                        task: "Build {{task}} in {{component}}".to_string(),
+                        project: None,
+                        task_group: None,
+                        agent: None,
+                        profile: None,
+                        worktree: None,
+                    },
+                ],
+            },
+        )]);
+
+        let plan = dashboard
+            .build_spawn_plan(
+                "template feature_development for stabilize auth callback with component=billing",
+            )
+            .expect("template spawn plan");
+
+        assert_eq!(
+            plan,
+            SpawnPlan::Template {
+                name: "feature_development".to_string(),
+                task: Some("stabilize auth callback".to_string()),
+                variables: BTreeMap::from([("component".to_string(), "billing".to_string(),)]),
+                step_count: 2,
+            }
+        );
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn submit_spawn_prompt_launches_orchestration_template() -> Result<()> {
+        let tempdir = std::env::temp_dir().join(format!("dashboard-template-{}", Uuid::new_v4()));
+        let repo_root = tempdir.join("repo");
+        init_git_repo(&repo_root)?;
+
+        let original_dir = std::env::current_dir()?;
+        std::env::set_current_dir(&repo_root)?;
+
+        let mut cfg = build_config(&tempdir);
+        cfg.orchestration_templates = BTreeMap::from([(
+            "feature_development".to_string(),
+            crate::config::OrchestrationTemplateConfig {
+                description: None,
+                project: Some("ecc2-smoke".to_string()),
+                task_group: Some("{{task}}".to_string()),
+                agent: Some("claude".to_string()),
+                profile: None,
+                worktree: Some(false),
+                steps: vec![
+                    crate::config::OrchestrationTemplateStepConfig {
+                        name: Some("planner".to_string()),
+                        task: "Plan {{task}}".to_string(),
+                        project: None,
+                        task_group: None,
+                        agent: None,
+                        profile: None,
+                        worktree: None,
+                    },
+                    crate::config::OrchestrationTemplateStepConfig {
+                        name: Some("builder".to_string()),
+                        task: "Build {{task}} in {{component}}".to_string(),
+                        project: None,
+                        task_group: None,
+                        agent: None,
+                        profile: None,
+                        worktree: None,
+                    },
+                ],
+            },
+        )]);
+
+        let db = StateStore::open(&cfg.db_path)?;
+        let mut dashboard = Dashboard::new(db, cfg);
+        dashboard.spawn_input = Some(
+            "template feature_development for stabilize auth callback with component=billing"
+                .to_string(),
+        );
+
+        dashboard.submit_spawn_prompt().await;
+
+        let operator_note = dashboard
+            .operator_note
+            .clone()
+            .expect("template launch should set an operator note");
+        assert!(
+            operator_note
+                .contains("launched template feature_development (2/2 step(s)) for stabilize auth callback"),
+            "unexpected operator note: {operator_note}"
+        );
+        assert_eq!(dashboard.sessions.len(), 2);
+        assert!(dashboard
+            .sessions
+            .iter()
+            .all(|session| session.project == "ecc2-smoke"));
+        assert!(dashboard
+            .sessions
+            .iter()
+            .all(|session| session.task_group == "stabilize auth callback"));
+        let tasks = dashboard
+            .sessions
+            .iter()
+            .map(|session| session.task.as_str())
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(
+            tasks,
+            std::collections::BTreeSet::from([
+                "Build stabilize auth callback in billing",
+                "Plan stabilize auth callback",
+            ])
+        );
+
+        std::env::set_current_dir(original_dir)?;
+        let _ = std::fs::remove_dir_all(&tempdir);
+        Ok(())
     }
 
     #[test]
@@ -13074,6 +13391,7 @@ diff --git a/src/lib.rs b/src/lib.rs
             default_agent: "claude".to_string(),
             default_agent_profile: None,
             agent_profiles: Default::default(),
+            orchestration_templates: Default::default(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,

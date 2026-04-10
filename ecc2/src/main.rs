@@ -9,6 +9,7 @@ mod worktree;
 use anyhow::Result;
 use clap::Parser;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 
@@ -77,6 +78,20 @@ enum Commands {
         profile: Option<String>,
         #[command(flatten)]
         worktree: WorktreePolicyArgs,
+    },
+    /// Launch a named orchestration template
+    Template {
+        /// Template name defined in ecc2.toml
+        name: String,
+        /// Optional task injected into the template context
+        #[arg(short, long)]
+        task: Option<String>,
+        /// Source session to delegate the template from
+        #[arg(long)]
+        from_session: Option<String>,
+        /// Template variables in key=value form
+        #[arg(long = "var")]
+        vars: Vec<String>,
     },
     /// Route work to an existing delegate when possible, otherwise spawn a new one
     Assign {
@@ -458,26 +473,64 @@ async fn main() -> Result<()> {
                 )
             });
 
-            let session_id = session::manager::create_session_from_source_with_profile_and_grouping(
-                &db,
-                &cfg,
-                &task,
-                &agent,
-                use_worktree,
-                profile.as_deref(),
-                &source.id,
-                session::SessionGrouping {
-                    project: Some(source.project.clone()),
-                    task_group: Some(source.task_group.clone()),
-                },
-            )
-            .await?;
+            let session_id =
+                session::manager::create_session_from_source_with_profile_and_grouping(
+                    &db,
+                    &cfg,
+                    &task,
+                    &agent,
+                    use_worktree,
+                    profile.as_deref(),
+                    &source.id,
+                    session::SessionGrouping {
+                        project: Some(source.project.clone()),
+                        task_group: Some(source.task_group.clone()),
+                    },
+                )
+                .await?;
             send_handoff_message(&db, &source.id, &session_id)?;
             println!(
                 "Delegated session started: {} <- {}",
                 session_id,
                 short_session(&source.id)
             );
+        }
+        Some(Commands::Template {
+            name,
+            task,
+            from_session,
+            vars,
+        }) => {
+            let source_session_id = from_session
+                .as_deref()
+                .map(|session_id| resolve_session_id(&db, session_id))
+                .transpose()?;
+            let outcome = session::manager::launch_orchestration_template(
+                &db,
+                &cfg,
+                &name,
+                source_session_id.as_deref(),
+                task.as_deref(),
+                parse_template_vars(&vars)?,
+            )
+            .await?;
+            println!(
+                "Template launched: {} ({} step{})",
+                outcome.template_name,
+                outcome.created.len(),
+                if outcome.created.len() == 1 { "" } else { "s" }
+            );
+            if let Some(anchor_session_id) = outcome.anchor_session_id.as_deref() {
+                println!("Anchor session: {}", short_session(anchor_session_id));
+            }
+            for step in outcome.created {
+                println!(
+                    "- {} -> {} | {}",
+                    step.step_name,
+                    short_session(&step.session_id),
+                    step.task
+                );
+            }
         }
         Some(Commands::Assign {
             from_session,
@@ -2174,6 +2227,22 @@ fn send_handoff_message(db: &session::store::StateStore, from_id: &str, to_id: &
     )
 }
 
+fn parse_template_vars(values: &[String]) -> Result<BTreeMap<String, String>> {
+    let mut vars = BTreeMap::new();
+    for value in values {
+        let (key, raw_value) = value
+            .split_once('=')
+            .ok_or_else(|| anyhow::anyhow!("template vars must use key=value form: {value}"))?;
+        let key = key.trim();
+        let raw_value = raw_value.trim();
+        if key.is_empty() || raw_value.is_empty() {
+            anyhow::bail!("template vars must use non-empty key=value form: {value}");
+        }
+        vars.insert(key.to_string(), raw_value.to_string());
+    }
+    Ok(vars)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2422,6 +2491,70 @@ mod tests {
             }
             _ => panic!("expected delegate subcommand"),
         }
+    }
+
+    #[test]
+    fn cli_parses_template_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "template",
+            "feature_development",
+            "--task",
+            "stabilize auth callback",
+            "--from-session",
+            "lead",
+            "--var",
+            "component=billing",
+            "--var",
+            "area=oauth",
+        ])
+        .expect("template should parse");
+
+        match cli.command {
+            Some(Commands::Template {
+                name,
+                task,
+                from_session,
+                vars,
+            }) => {
+                assert_eq!(name, "feature_development");
+                assert_eq!(task.as_deref(), Some("stabilize auth callback"));
+                assert_eq!(from_session.as_deref(), Some("lead"));
+                assert_eq!(
+                    vars,
+                    vec!["component=billing".to_string(), "area=oauth".to_string(),]
+                );
+            }
+            _ => panic!("expected template subcommand"),
+        }
+    }
+
+    #[test]
+    fn parse_template_vars_builds_map() {
+        let vars =
+            parse_template_vars(&["component=billing".to_string(), "area=oauth".to_string()])
+                .expect("template vars");
+
+        assert_eq!(
+            vars,
+            BTreeMap::from([
+                ("area".to_string(), "oauth".to_string()),
+                ("component".to_string(), "billing".to_string()),
+            ])
+        );
+    }
+
+    #[test]
+    fn parse_template_vars_rejects_invalid_entries() {
+        let error = parse_template_vars(&["missing-delimiter".to_string()])
+            .expect_err("invalid template var should fail");
+
+        assert!(
+            error
+                .to_string()
+                .contains("template vars must use key=value form"),
+            "unexpected error: {error}"
+        );
     }
 
     #[test]
