@@ -374,6 +374,8 @@ enum MessageCommands {
         text: String,
         #[arg(long)]
         context: Option<String>,
+        #[arg(long, value_enum, default_value_t = TaskPriorityArg::Normal)]
+        priority: TaskPriorityArg,
         #[arg(long)]
         file: Vec<String>,
     },
@@ -597,6 +599,25 @@ enum MessageKindArg {
     Response,
     Completed,
     Conflict,
+}
+
+#[derive(clap::ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+enum TaskPriorityArg {
+    Low,
+    Normal,
+    High,
+    Critical,
+}
+
+impl From<TaskPriorityArg> for comms::TaskPriority {
+    fn from(value: TaskPriorityArg) -> Self {
+        match value {
+            TaskPriorityArg::Low => Self::Low,
+            TaskPriorityArg::Normal => Self::Normal,
+            TaskPriorityArg::High => Self::High,
+            TaskPriorityArg::Critical => Self::Critical,
+        }
+    }
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
@@ -1665,11 +1686,12 @@ async fn main() -> Result<()> {
                 kind,
                 text,
                 context,
+                priority,
                 file,
             } => {
                 let from = resolve_session_id(&db, &from)?;
                 let to = resolve_session_id(&db, &to)?;
-                let message = build_message(kind, text, context, file)?;
+                let message = build_message(kind, text, context, priority, file)?;
                 comms::send(&db, &from, &to, &message)?;
                 println!(
                     "Message sent: {} -> {}",
@@ -2701,12 +2723,14 @@ fn build_message(
     kind: MessageKindArg,
     text: String,
     context: Option<String>,
+    priority: TaskPriorityArg,
     files: Vec<String>,
 ) -> Result<comms::MessageType> {
     Ok(match kind {
         MessageKindArg::Handoff => comms::MessageType::TaskHandoff {
             task: text,
             context: context.unwrap_or_default(),
+            priority: priority.into(),
         },
         MessageKindArg::Query => comms::MessageType::Query { question: text },
         MessageKindArg::Response => comms::MessageType::Response { answer: text },
@@ -4168,6 +4192,7 @@ fn send_handoff_message(db: &session::store::StateStore, from_id: &str, to_id: &
         &comms::MessageType::TaskHandoff {
             task: from_session.task,
             context,
+            priority: comms::TaskPriority::Normal,
         },
     )
 }
@@ -4345,6 +4370,7 @@ mod tests {
                         to,
                         kind,
                         text,
+                        priority,
                         ..
                     },
             }) => {
@@ -4352,6 +4378,7 @@ mod tests {
                 assert_eq!(to, "worker");
                 assert!(matches!(kind, MessageKindArg::Query));
                 assert_eq!(text, "Need context");
+                assert_eq!(priority, TaskPriorityArg::Normal);
             }
             _ => panic!("expected messages send subcommand"),
         }

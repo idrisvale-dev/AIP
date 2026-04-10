@@ -2484,6 +2484,7 @@ fn send_task_handoff(
         &crate::comms::MessageType::TaskHandoff {
             task: task.to_string(),
             context,
+            priority: crate::comms::TaskPriority::Normal,
         },
     )
 }
@@ -5844,6 +5845,62 @@ mod tests {
     }
 
     #[tokio::test(flavor = "current_thread")]
+    async fn drain_inbox_routes_high_priority_handoff_first() -> Result<()> {
+        let tempdir = TestDir::new("manager-drain-inbox-priority")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "lead".to_string(),
+            task: "lead task".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: repo_root.clone(),
+            state: SessionState::Running,
+            pid: Some(42),
+            worktree: None,
+            created_at: now - Duration::minutes(3),
+            updated_at: now - Duration::minutes(3),
+            last_heartbeat_at: now - Duration::minutes(3),
+            metrics: SessionMetrics::default(),
+        })?;
+
+        db.send_message(
+            "planner",
+            "lead",
+            "{\"task\":\"Document cleanup\",\"context\":\"Inbound request\",\"priority\":\"low\"}",
+            "task_handoff",
+        )?;
+        db.send_message(
+            "planner",
+            "lead",
+            "{\"task\":\"Critical auth outage\",\"context\":\"Inbound request\",\"priority\":\"critical\"}",
+            "task_handoff",
+        )?;
+
+        let outcomes = drain_inbox(&db, &cfg, "lead", "claude", true, 1).await?;
+        assert_eq!(outcomes.len(), 1);
+        assert_eq!(outcomes[0].task, "Critical auth outage");
+        assert_eq!(outcomes[0].action, AssignmentAction::Spawned);
+
+        let unread = db.unread_task_handoffs_for_session("lead", 10)?;
+        assert_eq!(unread.len(), 1);
+        assert!(unread[0].content.contains("Document cleanup"));
+
+        let messages = db.list_messages_for_session(&outcomes[0].session_id, 10)?;
+        assert!(messages.iter().any(|message| {
+            message.msg_type == "task_handoff" && message.content.contains("Critical auth outage")
+        }));
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
     async fn auto_dispatch_backlog_routes_multiple_lead_inboxes() -> Result<()> {
         let tempdir = TestDir::new("manager-auto-dispatch")?;
         let repo_root = tempdir.path().join("repo");
@@ -6307,6 +6364,7 @@ mod tests {
             &crate::comms::MessageType::TaskHandoff {
                 task: "Review src/lib.rs".to_string(),
                 context: "Lead delegated follow-up".to_string(),
+                priority: crate::comms::TaskPriority::Normal,
             },
         )?;
 

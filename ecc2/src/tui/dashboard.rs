@@ -2174,6 +2174,7 @@ impl Dashboard {
                 &comms::MessageType::TaskHandoff {
                     task: source_session.task.clone(),
                     context,
+                    priority: comms::TaskPriority::Normal,
                 },
             ) {
                 tracing::warn!(
@@ -3655,6 +3656,7 @@ impl Dashboard {
                             &comms::MessageType::TaskHandoff {
                                 task: task.clone(),
                                 context: context.clone(),
+                                priority: comms::TaskPriority::Normal,
                             },
                         ) {
                             tracing::warn!(
