@@ -14,9 +14,9 @@ use crate::observability::{ToolCallEvent, ToolLogEntry, ToolLogPage};
 use super::output::{OutputLine, OutputStream, OUTPUT_BUFFER_LIMIT};
 use super::{
     default_project_label, default_task_group_label, normalize_group_label, ContextGraphEntity,
-    ContextGraphEntityDetail, ContextGraphRelation, ContextGraphSyncStats, DecisionLogEntry,
-    FileActivityAction, FileActivityEntry, Session, SessionAgentProfile, SessionMessage,
-    SessionMetrics, SessionState, WorktreeInfo,
+    ContextGraphEntityDetail, ContextGraphRecallEntry, ContextGraphRelation, ContextGraphSyncStats,
+    DecisionLogEntry, FileActivityAction, FileActivityEntry, Session, SessionAgentProfile,
+    SessionMessage, SessionMetrics, SessionState, WorktreeInfo,
 };
 
 pub struct StateStore {
@@ -2024,6 +2024,82 @@ impl StateStore {
         Ok(entries)
     }
 
+    pub fn recall_context_entities(
+        &self,
+        session_id: Option<&str>,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<ContextGraphRecallEntry>> {
+        if limit == 0 {
+            return Ok(Vec::new());
+        }
+
+        let terms = context_graph_recall_terms(query);
+        if terms.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let candidate_limit = (limit.saturating_mul(12)).clamp(24, 512);
+        let mut stmt = self.conn.prepare(
+            "SELECT e.id, e.session_id, e.entity_type, e.name, e.path, e.summary, e.metadata_json,
+                    e.created_at, e.updated_at,
+                    (
+                        SELECT COUNT(*)
+                        FROM context_graph_relations r
+                        WHERE r.from_entity_id = e.id OR r.to_entity_id = e.id
+                    ) AS relation_count
+             FROM context_graph_entities e
+             WHERE (?1 IS NULL OR e.session_id = ?1)
+             ORDER BY e.updated_at DESC, e.id DESC
+             LIMIT ?2",
+        )?;
+
+        let candidates = stmt
+            .query_map(
+                rusqlite::params![session_id, candidate_limit as i64],
+                |row| {
+                    let entity = map_context_graph_entity(row)?;
+                    let relation_count = row.get::<_, i64>(9)?.max(0) as usize;
+                    Ok((entity, relation_count))
+                },
+            )?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let now = chrono::Utc::now();
+        let mut entries = candidates
+            .into_iter()
+            .filter_map(|(entity, relation_count)| {
+                let matched_terms = context_graph_matched_terms(&entity, &terms);
+                if matched_terms.is_empty() {
+                    return None;
+                }
+
+                Some(ContextGraphRecallEntry {
+                    score: context_graph_recall_score(
+                        matched_terms.len(),
+                        relation_count,
+                        entity.updated_at,
+                        now,
+                    ),
+                    entity,
+                    matched_terms,
+                    relation_count,
+                })
+            })
+            .collect::<Vec<_>>();
+
+        entries.sort_by(|left, right| {
+            right
+                .score
+                .cmp(&left.score)
+                .then_with(|| right.entity.updated_at.cmp(&left.entity.updated_at))
+                .then_with(|| right.entity.id.cmp(&left.entity.id))
+        });
+        entries.truncate(limit);
+
+        Ok(entries)
+    }
+
     pub fn get_context_entity_detail(
         &self,
         entity_id: i64,
@@ -3071,6 +3147,65 @@ fn map_context_graph_relation(row: &rusqlite::Row<'_>) -> rusqlite::Result<Conte
     })
 }
 
+fn context_graph_recall_terms(query: &str) -> Vec<String> {
+    let mut terms = Vec::new();
+    for raw_term in
+        query.split(|c: char| !(c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.' | '/')))
+    {
+        let term = raw_term.trim().to_ascii_lowercase();
+        if term.len() < 3 || terms.iter().any(|existing| existing == &term) {
+            continue;
+        }
+        terms.push(term);
+    }
+    terms
+}
+
+fn context_graph_matched_terms(entity: &ContextGraphEntity, terms: &[String]) -> Vec<String> {
+    let mut haystacks = vec![
+        entity.entity_type.to_ascii_lowercase(),
+        entity.name.to_ascii_lowercase(),
+        entity.summary.to_ascii_lowercase(),
+    ];
+    if let Some(path) = entity.path.as_ref() {
+        haystacks.push(path.to_ascii_lowercase());
+    }
+    for (key, value) in &entity.metadata {
+        haystacks.push(key.to_ascii_lowercase());
+        haystacks.push(value.to_ascii_lowercase());
+    }
+
+    let mut matched = Vec::new();
+    for term in terms {
+        if haystacks.iter().any(|value| value.contains(term)) {
+            matched.push(term.clone());
+        }
+    }
+    matched
+}
+
+fn context_graph_recall_score(
+    matched_term_count: usize,
+    relation_count: usize,
+    updated_at: chrono::DateTime<chrono::Utc>,
+    now: chrono::DateTime<chrono::Utc>,
+) -> u64 {
+    let recency_bonus = {
+        let age = now.signed_duration_since(updated_at);
+        if age <= chrono::Duration::hours(1) {
+            9
+        } else if age <= chrono::Duration::hours(24) {
+            6
+        } else if age <= chrono::Duration::days(7) {
+            3
+        } else {
+            0
+        }
+    };
+
+    (matched_term_count as u64 * 100) + (relation_count.min(9) as u64 * 10) + recency_bonus
+}
+
 fn parse_store_timestamp(
     raw: String,
     column: usize,
@@ -3856,6 +3991,89 @@ mod tests {
     }
 
     #[test]
+    fn recall_context_entities_ranks_matching_entities() -> Result<()> {
+        let tempdir = TestDir::new("store-context-recall")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "Investigate auth callback recovery".to_string(),
+            project: "ecc-tools".to_string(),
+            task_group: "incident".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let callback = db.upsert_context_entity(
+            Some("session-1"),
+            "file",
+            "callback.ts",
+            Some("src/routes/auth/callback.ts"),
+            "Handles auth callback recovery and billing portal fallback",
+            &BTreeMap::from([("area".to_string(), "auth".to_string())]),
+        )?;
+        let recovery = db.upsert_context_entity(
+            Some("session-1"),
+            "decision",
+            "Use recovery-first callback routing",
+            None,
+            "Auth callback recovery should prefer the billing portal",
+            &BTreeMap::new(),
+        )?;
+        let unrelated = db.upsert_context_entity(
+            Some("session-1"),
+            "file",
+            "dashboard.rs",
+            Some("ecc2/src/tui/dashboard.rs"),
+            "Renders the TUI dashboard",
+            &BTreeMap::new(),
+        )?;
+
+        db.upsert_context_relation(
+            Some("session-1"),
+            callback.id,
+            recovery.id,
+            "supports",
+            "Callback route supports recovery-first routing",
+        )?;
+        db.upsert_context_relation(
+            Some("session-1"),
+            callback.id,
+            unrelated.id,
+            "references",
+            "Callback route references the dashboard summary",
+        )?;
+
+        let results =
+            db.recall_context_entities(Some("session-1"), "Investigate auth callback recovery", 3)?;
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].entity.id, callback.id);
+        assert!(results[0].matched_terms.iter().any(|term| term == "auth"));
+        assert!(results[0]
+            .matched_terms
+            .iter()
+            .any(|term| term == "callback"));
+        assert!(results[0]
+            .matched_terms
+            .iter()
+            .any(|term| term == "recovery"));
+        assert_eq!(results[0].relation_count, 2);
+        assert_eq!(results[1].entity.id, recovery.id);
+        assert!(!results.iter().any(|entry| entry.entity.id == unrelated.id));
+
+        Ok(())
+    }
+
+    #[test]
     fn context_graph_detail_includes_incoming_and_outgoing_relations() -> Result<()> {
         let tempdir = TestDir::new("store-context-relations")?;
         let db = StateStore::open(&tempdir.path().join("state.db"))?;
@@ -4139,8 +4357,12 @@ mod tests {
             .expect("session entity should exist");
         let relations = db.list_context_relations(Some(session_entity.id), 10)?;
         assert_eq!(relations.len(), 3);
-        assert!(relations.iter().any(|relation| relation.relation_type == "decided"));
-        assert!(relations.iter().any(|relation| relation.relation_type == "modify"));
+        assert!(relations
+            .iter()
+            .any(|relation| relation.relation_type == "decided"));
+        assert!(relations
+            .iter()
+            .any(|relation| relation.relation_type == "modify"));
         assert!(relations
             .iter()
             .any(|relation| relation.relation_type == "delegates_to"));

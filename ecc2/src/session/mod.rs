@@ -190,6 +190,14 @@ pub struct ContextGraphEntityDetail {
     pub incoming: Vec<ContextGraphRelation>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ContextGraphRecallEntry {
+    pub entity: ContextGraphEntity,
+    pub score: u64,
+    pub matched_terms: Vec<String>,
+    pub relation_count: usize,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ContextGraphSyncStats {
     pub sessions_scanned: usize,

@@ -844,7 +844,8 @@ impl Dashboard {
                         self.render_searchable_graph(&lines)
                     } else {
                         Text::from(
-                            lines.into_iter()
+                            lines
+                                .into_iter()
                                 .map(|line| Line::from(line.text))
                                 .collect::<Vec<_>>(),
                         )
@@ -1228,7 +1229,7 @@ impl Dashboard {
                         self.theme_palette(),
                     )
                 })
-            .collect::<Vec<_>>(),
+                .collect::<Vec<_>>(),
         )
     }
 
@@ -3296,7 +3297,10 @@ impl Dashboard {
             return;
         }
 
-        if !matches!(self.output_mode, OutputMode::SessionOutput | OutputMode::ContextGraph) {
+        if !matches!(
+            self.output_mode,
+            OutputMode::SessionOutput | OutputMode::ContextGraph
+        ) {
             self.set_operator_note(
                 "search is only available in session output or graph view".to_string(),
             );
@@ -4914,8 +4918,12 @@ impl Dashboard {
                     .selected_agent_type()
                     .unwrap_or(self.cfg.default_agent.as_str())
                     .to_string();
-                self.selected_route_preview =
-                    self.build_route_preview(&session_id, &selected_agent_type, team.total, &route_candidates);
+                self.selected_route_preview = self.build_route_preview(
+                    &session_id,
+                    &selected_agent_type,
+                    team.total,
+                    &route_candidates,
+                );
                 delegated.sort_by_key(|delegate| {
                     (
                         delegate_attention_priority(delegate),
@@ -5027,8 +5035,7 @@ impl Dashboard {
                 if message.to_session != session_id || message.msg_type != "task_handoff" {
                     return None;
                 }
-                manager::parse_task_handoff_task(&message.content)
-                    .or_else(|| Some(message.content))
+                manager::parse_task_handoff_task(&message.content).or_else(|| Some(message.content))
             })
     }
 
@@ -5284,6 +5291,60 @@ impl Dashboard {
                 relation.from_entity_type,
                 truncate_for_dashboard(&relation.from_entity_name, 72)
             ));
+        }
+
+        lines
+    }
+
+    fn session_graph_recall_lines(&self, session: &Session) -> Vec<String> {
+        let query = session.task.trim();
+        if query.is_empty() {
+            return Vec::new();
+        }
+
+        let Ok(entries) = self.db.recall_context_entities(None, query, 4) else {
+            return Vec::new();
+        };
+
+        let entries = entries
+            .into_iter()
+            .filter(|entry| {
+                !(entry.entity.entity_type == "session" && entry.entity.name == session.id)
+            })
+            .take(3)
+            .collect::<Vec<_>>();
+        if entries.is_empty() {
+            return Vec::new();
+        }
+
+        let mut lines = vec!["Relevant memory".to_string()];
+        for entry in entries {
+            let mut line = format!(
+                "- #{} [{}] {} | score {} | relations {}",
+                entry.entity.id,
+                entry.entity.entity_type,
+                truncate_for_dashboard(&entry.entity.name, 60),
+                entry.score,
+                entry.relation_count
+            );
+            if let Some(session_id) = entry.entity.session_id.as_deref() {
+                if session_id != session.id {
+                    line.push_str(&format!(" | {}", format_session_id(session_id)));
+                }
+            }
+            lines.push(line);
+            if !entry.matched_terms.is_empty() {
+                lines.push(format!("  matches {}", entry.matched_terms.join(", ")));
+            }
+            if let Some(path) = entry.entity.path.as_deref() {
+                lines.push(format!("  path {}", truncate_for_dashboard(path, 72)));
+            }
+            if !entry.entity.summary.is_empty() {
+                lines.push(format!(
+                    "  summary {}",
+                    truncate_for_dashboard(&entry.entity.summary, 72)
+                ));
+            }
         }
 
         lines
@@ -6254,6 +6315,7 @@ impl Dashboard {
                     }
                 }
             }
+            lines.extend(self.session_graph_recall_lines(session));
             lines.extend(self.session_graph_metrics_lines(&session.id));
             let file_overlaps = self
                 .db
@@ -10213,8 +10275,12 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
         let mut dashboard = test_dashboard(vec![focus.clone(), review.clone()], 0);
         dashboard.db.insert_session(&focus)?;
         dashboard.db.insert_session(&review)?;
-        dashboard.db.insert_decision(&focus.id, "Alpha graph path", &[], "planner path")?;
-        dashboard.db.insert_decision(&review.id, "Beta graph path", &[], "review path")?;
+        dashboard
+            .db
+            .insert_decision(&focus.id, "Alpha graph path", &[], "planner path")?;
+        dashboard
+            .db
+            .insert_decision(&review.id, "Beta graph path", &[], "review path")?;
 
         dashboard.toggle_context_graph_mode();
         dashboard.toggle_search_scope();
@@ -10254,8 +10320,12 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
         let mut dashboard = test_dashboard(vec![focus.clone(), review.clone()], 0);
         dashboard.db.insert_session(&focus)?;
         dashboard.db.insert_session(&review)?;
-        dashboard.db.insert_decision(&focus.id, "alpha local graph", &[], "planner path")?;
-        dashboard.db.insert_decision(&review.id, "alpha remote graph", &[], "review path")?;
+        dashboard
+            .db
+            .insert_decision(&focus.id, "alpha local graph", &[], "planner path")?;
+        dashboard
+            .db
+            .insert_decision(&review.id, "alpha remote graph", &[], "review path")?;
 
         dashboard.toggle_context_graph_mode();
         dashboard.toggle_search_scope();
@@ -10274,7 +10344,10 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
             dashboard.operator_note.as_deref(),
             Some("graph search /alpha.* match 2/2 | all sessions")
         );
-        assert_ne!(dashboard.selected_session_id().map(str::to_string), first_session);
+        assert_ne!(
+            dashboard.selected_session_id().map(str::to_string),
+            first_session
+        );
         Ok(())
     }
 
@@ -10322,14 +10395,7 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
             1,
             1,
         );
-        let delegate = sample_session(
-            "delegate-87654321",
-            "coder",
-            SessionState::Idle,
-            None,
-            1,
-            1,
-        );
+        let delegate = sample_session("delegate-87654321", "coder", SessionState::Idle, None, 1, 1);
         let dashboard = test_dashboard(vec![focus.clone(), delegate.clone()], 0);
         dashboard.db.insert_session(&focus)?;
         dashboard.db.insert_session(&delegate)?;
@@ -10351,6 +10417,38 @@ diff --git a/src/lib.rs b/src/lib.rs\n\
         assert!(text.contains("outgoing 2 | incoming 0"));
         assert!(text.contains("-> decided decision:Use sqlite graph sync"));
         assert!(text.contains("-> delegates_to session:delegate-87654321"));
+        Ok(())
+    }
+
+    #[test]
+    fn selected_session_metrics_text_includes_relevant_memory() -> Result<()> {
+        let mut focus = sample_session(
+            "focus-12345678",
+            "planner",
+            SessionState::Running,
+            None,
+            1,
+            1,
+        );
+        focus.task = "Investigate auth callback recovery".to_string();
+        let mut memory = sample_session("memory-87654321", "coder", SessionState::Idle, None, 1, 1);
+        memory.task = "Auth callback recovery notes".to_string();
+        let dashboard = test_dashboard(vec![focus.clone(), memory.clone()], 0);
+        dashboard.db.insert_session(&focus)?;
+        dashboard.db.insert_session(&memory)?;
+        dashboard.db.upsert_context_entity(
+            Some(&memory.id),
+            "file",
+            "callback.ts",
+            Some("src/routes/auth/callback.ts"),
+            "Handles auth callback recovery and billing fallback",
+            &BTreeMap::from([("area".to_string(), "auth".to_string())]),
+        )?;
+
+        let text = dashboard.selected_session_metrics_text();
+        assert!(text.contains("Relevant memory"));
+        assert!(text.contains("[file] callback.ts"));
+        assert!(text.contains("matches auth, callback, recovery"));
         Ok(())
     }
 
@@ -11178,8 +11276,10 @@ diff --git a/src/lib.rs b/src/lib.rs
             24,
         );
 
-        let mut dashboard =
-            test_dashboard(vec![lead.clone(), older_worker.clone(), auth_worker.clone()], 0);
+        let mut dashboard = test_dashboard(
+            vec![lead.clone(), older_worker.clone(), auth_worker.clone()],
+            0,
+        );
         dashboard.db.insert_session(&lead).unwrap();
         dashboard.db.insert_session(&older_worker).unwrap();
         dashboard.db.insert_session(&auth_worker).unwrap();

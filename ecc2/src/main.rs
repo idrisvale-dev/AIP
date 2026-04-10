@@ -457,6 +457,20 @@ enum GraphCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Recall relevant context graph entities for a query
+    Recall {
+        /// Filter by source session ID or alias
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Natural-language query used for recall scoring
+        query: String,
+        /// Maximum entities to return
+        #[arg(long, default_value_t = 8)]
+        limit: usize,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
     /// Show one entity plus its incoming and outgoing relations
     Show {
         /// Entity ID
@@ -1227,6 +1241,27 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&relations)?);
                 } else {
                     println!("{}", format_graph_relations_human(&relations));
+                }
+            }
+            GraphCommands::Recall {
+                session_id,
+                query,
+                limit,
+                json,
+            } => {
+                let resolved_session_id = session_id
+                    .as_deref()
+                    .map(|value| resolve_session_id(&db, value))
+                    .transpose()?;
+                let entries =
+                    db.recall_context_entities(resolved_session_id.as_deref(), &query, limit)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&entries)?);
+                } else {
+                    println!(
+                        "{}",
+                        format_graph_recall_human(&entries, resolved_session_id.as_deref(), &query)
+                    );
                 }
             }
             GraphCommands::Show {
@@ -2209,6 +2244,49 @@ fn format_graph_relations_human(relations: &[session::ContextGraphRelation]) -> 
         ));
         if !relation.summary.is_empty() {
             lines.push(format!("  summary {}", relation.summary));
+        }
+    }
+    lines.join("\n")
+}
+
+fn format_graph_recall_human(
+    entries: &[session::ContextGraphRecallEntry],
+    session_id: Option<&str>,
+    query: &str,
+) -> String {
+    if entries.is_empty() {
+        return format!("No relevant context graph entities found for query: {query}");
+    }
+
+    let scope = session_id
+        .map(short_session)
+        .unwrap_or_else(|| "all sessions".to_string());
+    let mut lines = vec![format!(
+        "Relevant memory: {} entries for \"{}\" ({scope})",
+        entries.len(),
+        query
+    )];
+    for entry in entries {
+        let mut line = format!(
+            "- #{} [{}] {} | score {} | relations {}",
+            entry.entity.id,
+            entry.entity.entity_type,
+            entry.entity.name,
+            entry.score,
+            entry.relation_count
+        );
+        if let Some(session_id) = entry.entity.session_id.as_deref() {
+            line.push_str(&format!(" | {}", short_session(session_id)));
+        }
+        lines.push(line);
+        if !entry.matched_terms.is_empty() {
+            lines.push(format!("  matches {}", entry.matched_terms.join(", ")));
+        }
+        if let Some(path) = entry.entity.path.as_deref() {
+            lines.push(format!("  path {path}"));
+        }
+        if !entry.entity.summary.is_empty() {
+            lines.push(format!("  summary {}", entry.entity.summary));
         }
     }
     lines.join("\n")
@@ -4115,6 +4193,40 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_graph_recall_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "graph",
+            "recall",
+            "--session-id",
+            "latest",
+            "--limit",
+            "4",
+            "--json",
+            "auth callback recovery",
+        ])
+        .expect("graph recall should parse");
+
+        match cli.command {
+            Some(Commands::Graph {
+                command:
+                    GraphCommands::Recall {
+                        session_id,
+                        query,
+                        limit,
+                        json,
+                    },
+            }) => {
+                assert_eq!(session_id.as_deref(), Some("latest"));
+                assert_eq!(query, "auth callback recovery");
+                assert_eq!(limit, 4);
+                assert!(json);
+            }
+            _ => panic!("expected graph recall subcommand"),
+        }
+    }
+
+    #[test]
     fn format_decisions_human_renders_details() {
         let text = format_decisions_human(
             &[session::DecisionLogEntry {
@@ -4194,6 +4306,43 @@ mod tests {
         assert!(text.contains("[returns] render_metrics -> #10 MetricsSnapshot"));
         assert!(text.contains("Incoming relations: 1"));
         assert!(text.contains("[contains] #6 dashboard.rs -> render_metrics"));
+    }
+
+    #[test]
+    fn format_graph_recall_human_renders_scores_and_matches() {
+        let text = format_graph_recall_human(
+            &[session::ContextGraphRecallEntry {
+                entity: session::ContextGraphEntity {
+                    id: 11,
+                    session_id: Some("sess-12345678".to_string()),
+                    entity_type: "file".to_string(),
+                    name: "callback.ts".to_string(),
+                    path: Some("src/routes/auth/callback.ts".to_string()),
+                    summary: "Handles auth callback recovery".to_string(),
+                    metadata: BTreeMap::new(),
+                    created_at: chrono::DateTime::parse_from_rfc3339("2026-04-10T01:02:03Z")
+                        .unwrap()
+                        .with_timezone(&chrono::Utc),
+                    updated_at: chrono::DateTime::parse_from_rfc3339("2026-04-10T01:02:03Z")
+                        .unwrap()
+                        .with_timezone(&chrono::Utc),
+                },
+                score: 319,
+                matched_terms: vec![
+                    "auth".to_string(),
+                    "callback".to_string(),
+                    "recovery".to_string(),
+                ],
+                relation_count: 2,
+            }],
+            Some("sess-12345678"),
+            "auth callback recovery",
+        );
+
+        assert!(text.contains("Relevant memory: 1 entries"));
+        assert!(text.contains("[file] callback.ts | score 319 | relations 2"));
+        assert!(text.contains("matches auth, callback, recovery"));
+        assert!(text.contains("path src/routes/auth/callback.ts"));
     }
 
     #[test]
