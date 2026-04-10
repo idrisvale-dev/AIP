@@ -490,6 +490,18 @@ enum GraphCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Compact stored observations in the shared context graph
+    Compact {
+        /// Filter by source session ID or alias
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Maximum observations to retain per entity after compaction
+        #[arg(long, default_value_t = 12)]
+        keep_observations_per_entity: usize,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
     /// Recall relevant context graph entities for a query
     Recall {
         /// Filter by source session ID or alias
@@ -1312,6 +1324,32 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&observations)?);
                 } else {
                     println!("{}", format_graph_observations_human(&observations));
+                }
+            }
+            GraphCommands::Compact {
+                session_id,
+                keep_observations_per_entity,
+                json,
+            } => {
+                let resolved_session_id = session_id
+                    .as_deref()
+                    .map(|value| resolve_session_id(&db, value))
+                    .transpose()?;
+                let stats = db.compact_context_graph(
+                    resolved_session_id.as_deref(),
+                    keep_observations_per_entity,
+                )?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&stats)?);
+                } else {
+                    println!(
+                        "{}",
+                        format_graph_compaction_stats_human(
+                            &stats,
+                            resolved_session_id.as_deref(),
+                            keep_observations_per_entity,
+                        )
+                    );
                 }
             }
             GraphCommands::Recall {
@@ -2414,6 +2452,32 @@ fn format_graph_recall_human(
         }
     }
     lines.join("\n")
+}
+
+fn format_graph_compaction_stats_human(
+    stats: &session::ContextGraphCompactionStats,
+    session_id: Option<&str>,
+    keep_observations_per_entity: usize,
+) -> String {
+    let scope = session_id
+        .map(short_session)
+        .unwrap_or_else(|| "all sessions".to_string());
+    [
+        format!(
+            "Context graph compaction complete for {scope} (keep {keep_observations_per_entity} observations per entity)"
+        ),
+        format!("- entities scanned {}", stats.entities_scanned),
+        format!(
+            "- duplicate observations deleted {}",
+            stats.duplicate_observations_deleted
+        ),
+        format!(
+            "- overflow observations deleted {}",
+            stats.overflow_observations_deleted
+        ),
+        format!("- observations retained {}", stats.observations_retained),
+    ]
+    .join("\n")
 }
 
 fn format_graph_entity_detail_human(detail: &session::ContextGraphEntityDetail) -> String {
@@ -4394,6 +4458,37 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_graph_compact_command() {
+        let cli = Cli::try_parse_from([
+            "ecc",
+            "graph",
+            "compact",
+            "--session-id",
+            "latest",
+            "--keep-observations-per-entity",
+            "6",
+            "--json",
+        ])
+        .expect("graph compact should parse");
+
+        match cli.command {
+            Some(Commands::Graph {
+                command:
+                    GraphCommands::Compact {
+                        session_id,
+                        keep_observations_per_entity,
+                        json,
+                    },
+            }) => {
+                assert_eq!(session_id.as_deref(), Some("latest"));
+                assert_eq!(keep_observations_per_entity, 6);
+                assert!(json);
+            }
+            _ => panic!("expected graph compact subcommand"),
+        }
+    }
+
+    #[test]
     fn format_decisions_human_renders_details() {
         let text = format_decisions_human(
             &[session::DecisionLogEntry {
@@ -4532,6 +4627,27 @@ mod tests {
         assert!(text.contains("Context graph observations: 1"));
         assert!(text.contains("[completion_summary] sess-12345678"));
         assert!(text.contains("summary Finished auth callback recovery with 2 tests"));
+    }
+
+    #[test]
+    fn format_graph_compaction_stats_human_renders_counts() {
+        let text = format_graph_compaction_stats_human(
+            &session::ContextGraphCompactionStats {
+                entities_scanned: 3,
+                duplicate_observations_deleted: 2,
+                overflow_observations_deleted: 4,
+                observations_retained: 9,
+            },
+            Some("sess-12345678"),
+            6,
+        );
+
+        assert!(text.contains("Context graph compaction complete for sess-123"));
+        assert!(text.contains("keep 6 observations per entity"));
+        assert!(text.contains("- entities scanned 3"));
+        assert!(text.contains("- duplicate observations deleted 2"));
+        assert!(text.contains("- overflow observations deleted 4"));
+        assert!(text.contains("- observations retained 9"));
     }
 
     #[test]

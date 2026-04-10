@@ -220,6 +220,14 @@ pub struct ContextGraphSyncStats {
     pub messages_processed: usize,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ContextGraphCompactionStats {
+    pub entities_scanned: usize,
+    pub duplicate_observations_deleted: usize,
+    pub overflow_observations_deleted: usize,
+    pub observations_retained: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum FileActivityAction {
