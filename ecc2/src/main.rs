@@ -53,6 +53,9 @@ enum Commands {
         /// Agent type (claude, codex, custom)
         #[arg(short, long, default_value = "claude")]
         agent: String,
+        /// Agent profile defined in ecc2.toml
+        #[arg(long)]
+        profile: Option<String>,
         #[command(flatten)]
         worktree: WorktreePolicyArgs,
         /// Source session to delegate from
@@ -69,6 +72,9 @@ enum Commands {
         /// Agent type (claude, codex, custom)
         #[arg(short, long, default_value = "claude")]
         agent: String,
+        /// Agent profile defined in ecc2.toml
+        #[arg(long)]
+        profile: Option<String>,
         #[command(flatten)]
         worktree: WorktreePolicyArgs,
     },
@@ -82,6 +88,9 @@ enum Commands {
         /// Agent type (claude, codex, custom)
         #[arg(short, long, default_value = "claude")]
         agent: String,
+        /// Agent profile defined in ecc2.toml
+        #[arg(long)]
+        profile: Option<String>,
         #[command(flatten)]
         worktree: WorktreePolicyArgs,
     },
@@ -381,6 +390,7 @@ async fn main() -> Result<()> {
         Some(Commands::Start {
             task,
             agent,
+            profile,
             worktree,
             from_session,
         }) => {
@@ -394,18 +404,34 @@ async fn main() -> Result<()> {
             } else {
                 None
             };
-            let session_id = session::manager::create_session_with_grouping(
-                &db,
-                &cfg,
-                &task,
-                &agent,
-                use_worktree,
-                session::SessionGrouping {
-                    project: source.as_ref().map(|session| session.project.clone()),
-                    task_group: source.as_ref().map(|session| session.task_group.clone()),
-                },
-            )
-            .await?;
+            let grouping = session::SessionGrouping {
+                project: source.as_ref().map(|session| session.project.clone()),
+                task_group: source.as_ref().map(|session| session.task_group.clone()),
+            };
+            let session_id = if let Some(source) = source.as_ref() {
+                session::manager::create_session_from_source_with_profile_and_grouping(
+                    &db,
+                    &cfg,
+                    &task,
+                    &agent,
+                    use_worktree,
+                    profile.as_deref(),
+                    &source.id,
+                    grouping,
+                )
+                .await?
+            } else {
+                session::manager::create_session_with_profile_and_grouping(
+                    &db,
+                    &cfg,
+                    &task,
+                    &agent,
+                    use_worktree,
+                    profile.as_deref(),
+                    grouping,
+                )
+                .await?
+            };
             if let Some(source) = source {
                 let from_id = source.id;
                 send_handoff_message(&db, &from_id, &session_id)?;
@@ -416,6 +442,7 @@ async fn main() -> Result<()> {
             from_session,
             task,
             agent,
+            profile,
             worktree,
         }) => {
             let use_worktree = worktree.resolve(&cfg);
@@ -431,12 +458,14 @@ async fn main() -> Result<()> {
                 )
             });
 
-            let session_id = session::manager::create_session_with_grouping(
+            let session_id = session::manager::create_session_from_source_with_profile_and_grouping(
                 &db,
                 &cfg,
                 &task,
                 &agent,
                 use_worktree,
+                profile.as_deref(),
+                &source.id,
                 session::SessionGrouping {
                     project: Some(source.project.clone()),
                     task_group: Some(source.task_group.clone()),
@@ -454,13 +483,22 @@ async fn main() -> Result<()> {
             from_session,
             task,
             agent,
+            profile,
             worktree,
         }) => {
             let use_worktree = worktree.resolve(&cfg);
             let lead_id = resolve_session_id(&db, &from_session)?;
-            let outcome =
-                session::manager::assign_session(&db, &cfg, &lead_id, &task, &agent, use_worktree)
-                    .await?;
+            let outcome = session::manager::assign_session_with_profile_and_grouping(
+                &db,
+                &cfg,
+                &lead_id,
+                &task,
+                &agent,
+                use_worktree,
+                profile.as_deref(),
+                session::SessionGrouping::default(),
+            )
+            .await?;
             if session::manager::assignment_action_routes_work(outcome.action) {
                 println!(
                     "Assignment routed: {} -> {} ({})",

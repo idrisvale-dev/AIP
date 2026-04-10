@@ -5392,6 +5392,11 @@ impl Dashboard {
     fn selected_session_metrics_text(&self) -> String {
         if let Some(session) = self.sessions.get(self.selected_session) {
             let metrics = &session.metrics;
+            let selected_profile = self
+                .db
+                .get_session_profile(&session.id)
+                .ok()
+                .flatten();
             let group_peers = self
                 .sessions
                 .iter()
@@ -5412,6 +5417,57 @@ impl Dashboard {
                     session.project, session.task_group, group_peers
                 ),
             ];
+
+            if let Some(profile) = selected_profile.as_ref() {
+                let model = profile.model.as_deref().unwrap_or("default");
+                let permission_mode = profile.permission_mode.as_deref().unwrap_or("default");
+                lines.push(format!(
+                    "Profile {} | Model {} | Permissions {}",
+                    profile.profile_name, model, permission_mode
+                ));
+                let mut profile_details = Vec::new();
+                if let Some(token_budget) = profile.token_budget {
+                    profile_details.push(format!(
+                        "Profile tokens {}",
+                        format_token_count(token_budget)
+                    ));
+                }
+                if let Some(max_budget_usd) = profile.max_budget_usd {
+                    profile_details.push(format!(
+                        "Profile cost {}",
+                        format_currency(max_budget_usd)
+                    ));
+                }
+                if !profile.allowed_tools.is_empty() {
+                    profile_details.push(format!(
+                        "Allow {}",
+                        truncate_for_dashboard(&profile.allowed_tools.join(", "), 36)
+                    ));
+                }
+                if !profile.disallowed_tools.is_empty() {
+                    profile_details.push(format!(
+                        "Deny {}",
+                        truncate_for_dashboard(&profile.disallowed_tools.join(", "), 36)
+                    ));
+                }
+                if !profile.add_dirs.is_empty() {
+                    profile_details.push(format!(
+                        "Dirs {}",
+                        truncate_for_dashboard(
+                            &profile
+                                .add_dirs
+                                .iter()
+                                .map(|path| path.display().to_string())
+                                .collect::<Vec<_>>()
+                                .join(", "),
+                            36
+                        )
+                    ));
+                }
+                if !profile_details.is_empty() {
+                    lines.push(profile_details.join(" | "));
+                }
+            }
 
             if let Some(parent) = self.selected_parent_session.as_ref() {
                 lines.push(format!("Delegated from {}", format_session_id(parent)));
@@ -7878,11 +7934,16 @@ fn heartbeat_enforcement_note(outcome: &manager::HeartbeatEnforcementOutcome) ->
 }
 
 fn budget_auto_pause_note(outcome: &manager::BudgetEnforcementOutcome) -> String {
-    let cause = match (outcome.token_budget_exceeded, outcome.cost_budget_exceeded) {
-        (true, true) => "token and cost budgets exceeded",
-        (true, false) => "token budget exceeded",
-        (false, true) => "cost budget exceeded",
-        (false, false) => "budget exceeded",
+    let cause = match (
+        outcome.token_budget_exceeded,
+        outcome.cost_budget_exceeded,
+        outcome.profile_token_budget_exceeded,
+    ) {
+        (true, true, _) => "token and cost budgets exceeded",
+        (true, false, _) => "token budget exceeded",
+        (false, true, _) => "cost budget exceeded",
+        (false, false, true) => "profile token budget exceeded",
+        (false, false, false) => "budget exceeded",
     };
 
     format!(
@@ -13011,6 +13072,8 @@ diff --git a/src/lib.rs b/src/lib.rs
             heartbeat_interval_secs: 5,
             auto_terminate_stale_sessions: false,
             default_agent: "claude".to_string(),
+            default_agent_profile: None,
+            agent_profiles: Default::default(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,

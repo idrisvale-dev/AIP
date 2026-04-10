@@ -10,6 +10,8 @@ use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
 
+pub type SessionAgentProfile = crate::config::ResolvedAgentProfile;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
     pub id: String,

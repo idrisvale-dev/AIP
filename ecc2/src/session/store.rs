@@ -14,8 +14,8 @@ use crate::observability::{ToolCallEvent, ToolLogEntry, ToolLogPage};
 use super::output::{OutputLine, OutputStream, OUTPUT_BUFFER_LIMIT};
 use super::{
     default_project_label, default_task_group_label, normalize_group_label, DecisionLogEntry,
-    FileActivityAction, FileActivityEntry, Session, SessionMessage, SessionMetrics, SessionState,
-    WorktreeInfo,
+    FileActivityAction, FileActivityEntry, Session, SessionAgentProfile, SessionMessage,
+    SessionMetrics, SessionState, WorktreeInfo,
 };
 
 pub struct StateStore {
@@ -192,6 +192,19 @@ impl StateStore {
                 timestamp TEXT NOT NULL,
                 file_paths_json TEXT NOT NULL DEFAULT '[]',
                 file_events_json TEXT NOT NULL DEFAULT '[]'
+            );
+
+            CREATE TABLE IF NOT EXISTS session_profiles (
+                session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+                profile_name TEXT NOT NULL,
+                model TEXT,
+                allowed_tools_json TEXT NOT NULL DEFAULT '[]',
+                disallowed_tools_json TEXT NOT NULL DEFAULT '[]',
+                permission_mode TEXT,
+                add_dirs_json TEXT NOT NULL DEFAULT '[]',
+                max_budget_usd REAL,
+                token_budget INTEGER,
+                append_system_prompt TEXT
             );
 
             CREATE TABLE IF NOT EXISTS messages (
@@ -567,6 +580,98 @@ impl StateStore {
             ],
         )?;
         Ok(())
+    }
+
+    pub fn upsert_session_profile(
+        &self,
+        session_id: &str,
+        profile: &SessionAgentProfile,
+    ) -> Result<()> {
+        let allowed_tools_json = serde_json::to_string(&profile.allowed_tools)
+            .context("serialize allowed agent profile tools")?;
+        let disallowed_tools_json = serde_json::to_string(&profile.disallowed_tools)
+            .context("serialize disallowed agent profile tools")?;
+        let add_dirs_json = serde_json::to_string(&profile.add_dirs)
+            .context("serialize agent profile add_dirs")?;
+
+        self.conn.execute(
+            "INSERT INTO session_profiles (
+                session_id,
+                profile_name,
+                model,
+                allowed_tools_json,
+                disallowed_tools_json,
+                permission_mode,
+                add_dirs_json,
+                max_budget_usd,
+                token_budget,
+                append_system_prompt
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             ON CONFLICT(session_id) DO UPDATE SET
+                profile_name = excluded.profile_name,
+                model = excluded.model,
+                allowed_tools_json = excluded.allowed_tools_json,
+                disallowed_tools_json = excluded.disallowed_tools_json,
+                permission_mode = excluded.permission_mode,
+                add_dirs_json = excluded.add_dirs_json,
+                max_budget_usd = excluded.max_budget_usd,
+                token_budget = excluded.token_budget,
+                append_system_prompt = excluded.append_system_prompt",
+            rusqlite::params![
+                session_id,
+                profile.profile_name,
+                profile.model,
+                allowed_tools_json,
+                disallowed_tools_json,
+                profile.permission_mode,
+                add_dirs_json,
+                profile.max_budget_usd,
+                profile.token_budget,
+                profile.append_system_prompt,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_session_profile(&self, session_id: &str) -> Result<Option<SessionAgentProfile>> {
+        self.conn
+            .query_row(
+                "SELECT
+                    profile_name,
+                    model,
+                    allowed_tools_json,
+                    disallowed_tools_json,
+                    permission_mode,
+                    add_dirs_json,
+                    max_budget_usd,
+                    token_budget,
+                    append_system_prompt
+                 FROM session_profiles
+                 WHERE session_id = ?1",
+                [session_id],
+                |row| {
+                    let allowed_tools_json: String = row.get(2)?;
+                    let disallowed_tools_json: String = row.get(3)?;
+                    let add_dirs_json: String = row.get(5)?;
+                    Ok(SessionAgentProfile {
+                        profile_name: row.get(0)?,
+                        model: row.get(1)?,
+                        allowed_tools: serde_json::from_str(&allowed_tools_json)
+                            .unwrap_or_default(),
+                        disallowed_tools: serde_json::from_str(&disallowed_tools_json)
+                            .unwrap_or_default(),
+                        permission_mode: row.get(4)?,
+                        add_dirs: serde_json::from_str(&add_dirs_json).unwrap_or_default(),
+                        max_budget_usd: row.get(6)?,
+                        token_budget: row.get(7)?,
+                        append_system_prompt: row.get(8)?,
+                        agent: None,
+                    })
+                },
+            )
+            .optional()
+            .map_err(Into::into)
     }
 
     pub fn update_state_and_pid(
@@ -2529,6 +2634,63 @@ mod tests {
         assert!(column_names
             .iter()
             .any(|column| column == "last_heartbeat_at"));
+        Ok(())
+    }
+
+    #[test]
+    fn session_profile_round_trips_with_launch_settings() -> Result<()> {
+        let tempdir = TestDir::new("store-session-profile")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "review work".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Pending,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        db.upsert_session_profile(
+            "session-1",
+            &crate::session::SessionAgentProfile {
+                agent: None,
+                profile_name: "reviewer".to_string(),
+                model: Some("sonnet".to_string()),
+                allowed_tools: vec!["Read".to_string(), "Edit".to_string()],
+                disallowed_tools: vec!["Bash".to_string()],
+                permission_mode: Some("plan".to_string()),
+                add_dirs: vec![PathBuf::from("docs"), PathBuf::from("specs")],
+                max_budget_usd: Some(1.5),
+                token_budget: Some(1200),
+                append_system_prompt: Some("Review thoroughly.".to_string()),
+            },
+        )?;
+
+        let profile = db
+            .get_session_profile("session-1")?
+            .expect("profile should be stored");
+        assert_eq!(profile.profile_name, "reviewer");
+        assert_eq!(profile.model.as_deref(), Some("sonnet"));
+        assert_eq!(profile.allowed_tools, vec!["Read", "Edit"]);
+        assert_eq!(profile.disallowed_tools, vec!["Bash"]);
+        assert_eq!(profile.permission_mode.as_deref(), Some("plan"));
+        assert_eq!(profile.add_dirs, vec![PathBuf::from("docs"), PathBuf::from("specs")]);
+        assert_eq!(profile.max_budget_usd, Some(1.5));
+        assert_eq!(profile.token_budget, Some(1200));
+        assert_eq!(
+            profile.append_system_prompt.as_deref(),
+            Some("Review thoroughly.")
+        );
+
         Ok(())
     }
 

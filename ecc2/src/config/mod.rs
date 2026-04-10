@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use crate::notifications::{
@@ -48,6 +49,35 @@ pub struct ConflictResolutionConfig {
     pub notify_lead: bool,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AgentProfileConfig {
+    pub inherits: Option<String>,
+    pub agent: Option<String>,
+    pub model: Option<String>,
+    pub allowed_tools: Vec<String>,
+    pub disallowed_tools: Vec<String>,
+    pub permission_mode: Option<String>,
+    pub add_dirs: Vec<PathBuf>,
+    pub max_budget_usd: Option<f64>,
+    pub token_budget: Option<u64>,
+    pub append_system_prompt: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ResolvedAgentProfile {
+    pub profile_name: String,
+    pub agent: Option<String>,
+    pub model: Option<String>,
+    pub allowed_tools: Vec<String>,
+    pub disallowed_tools: Vec<String>,
+    pub permission_mode: Option<String>,
+    pub add_dirs: Vec<PathBuf>,
+    pub max_budget_usd: Option<f64>,
+    pub token_budget: Option<u64>,
+    pub append_system_prompt: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -61,6 +91,8 @@ pub struct Config {
     pub heartbeat_interval_secs: u64,
     pub auto_terminate_stale_sessions: bool,
     pub default_agent: String,
+    pub default_agent_profile: Option<String>,
+    pub agent_profiles: BTreeMap<String, AgentProfileConfig>,
     pub auto_dispatch_unread_handoffs: bool,
     pub auto_dispatch_limit_per_session: usize,
     pub auto_create_worktrees: bool,
@@ -122,6 +154,8 @@ impl Default for Config {
             heartbeat_interval_secs: 30,
             auto_terminate_stale_sessions: false,
             default_agent: "claude".to_string(),
+            default_agent_profile: None,
+            agent_profiles: BTreeMap::new(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
@@ -178,6 +212,41 @@ impl Config {
 
     pub fn effective_budget_alert_thresholds(&self) -> BudgetAlertThresholds {
         self.budget_alert_thresholds.sanitized()
+    }
+
+    pub fn resolve_agent_profile(&self, name: &str) -> Result<ResolvedAgentProfile> {
+        let mut chain = Vec::new();
+        self.resolve_agent_profile_inner(name, &mut chain)
+    }
+
+    fn resolve_agent_profile_inner(
+        &self,
+        name: &str,
+        chain: &mut Vec<String>,
+    ) -> Result<ResolvedAgentProfile> {
+        if chain.iter().any(|existing| existing == name) {
+            chain.push(name.to_string());
+            anyhow::bail!(
+                "agent profile inheritance cycle: {}",
+                chain.join(" -> ")
+            );
+        }
+
+        let profile = self
+            .agent_profiles
+            .get(name)
+            .ok_or_else(|| anyhow::anyhow!("Unknown agent profile: {name}"))?;
+
+        chain.push(name.to_string());
+        let mut resolved = if let Some(parent) = profile.inherits.as_deref() {
+            self.resolve_agent_profile_inner(parent, chain)?
+        } else {
+            ResolvedAgentProfile::default()
+        };
+        chain.pop();
+
+        resolved.apply(name, profile);
+        Ok(resolved)
     }
 
     pub fn load() -> Result<Self> {
@@ -437,6 +506,50 @@ impl Default for ConflictResolutionConfig {
     }
 }
 
+impl ResolvedAgentProfile {
+    fn apply(&mut self, profile_name: &str, config: &AgentProfileConfig) {
+        self.profile_name = profile_name.to_string();
+        if let Some(agent) = config.agent.as_ref() {
+            self.agent = Some(agent.clone());
+        }
+        if let Some(model) = config.model.as_ref() {
+            self.model = Some(model.clone());
+        }
+        merge_unique(&mut self.allowed_tools, &config.allowed_tools);
+        merge_unique(&mut self.disallowed_tools, &config.disallowed_tools);
+        if let Some(permission_mode) = config.permission_mode.as_ref() {
+            self.permission_mode = Some(permission_mode.clone());
+        }
+        merge_unique(&mut self.add_dirs, &config.add_dirs);
+        if let Some(max_budget_usd) = config.max_budget_usd {
+            self.max_budget_usd = Some(max_budget_usd);
+        }
+        if let Some(token_budget) = config.token_budget {
+            self.token_budget = Some(token_budget);
+        }
+        self.append_system_prompt = match (
+            self.append_system_prompt.take(),
+            config.append_system_prompt.as_ref(),
+        ) {
+            (Some(parent), Some(child)) => Some(format!("{parent}\n\n{child}")),
+            (Some(parent), None) => Some(parent),
+            (None, Some(child)) => Some(child.clone()),
+            (None, None) => None,
+        };
+    }
+}
+
+fn merge_unique<T>(base: &mut Vec<T>, additions: &[T])
+where
+    T: Clone + PartialEq,
+{
+    for value in additions {
+        if !base.contains(value) {
+            base.push(value.clone());
+        }
+    }
+}
+
 impl BudgetAlertThresholds {
     pub fn sanitized(self) -> Self {
         let values = [self.advisory, self.warning, self.critical];
@@ -461,6 +574,7 @@ mod tests {
         PaneLayout,
     };
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use std::path::PathBuf;
     use uuid::Uuid;
 
     #[test]
@@ -804,6 +918,65 @@ notify_lead = false
                 notify_lead: false,
             }
         );
+    }
+
+    #[test]
+    fn agent_profiles_resolve_inheritance_and_defaults() {
+        let config: Config = toml::from_str(
+            r#"
+default_agent_profile = "reviewer"
+
+[agent_profiles.base]
+model = "sonnet"
+allowed_tools = ["Read"]
+permission_mode = "plan"
+add_dirs = ["docs"]
+append_system_prompt = "Be careful."
+
+[agent_profiles.reviewer]
+inherits = "base"
+allowed_tools = ["Edit"]
+disallowed_tools = ["Bash"]
+token_budget = 1200
+append_system_prompt = "Review thoroughly."
+"#,
+        )
+        .unwrap();
+
+        let profile = config.resolve_agent_profile("reviewer").unwrap();
+        assert_eq!(config.default_agent_profile.as_deref(), Some("reviewer"));
+        assert_eq!(profile.profile_name, "reviewer");
+        assert_eq!(profile.model.as_deref(), Some("sonnet"));
+        assert_eq!(profile.allowed_tools, vec!["Read", "Edit"]);
+        assert_eq!(profile.disallowed_tools, vec!["Bash"]);
+        assert_eq!(profile.permission_mode.as_deref(), Some("plan"));
+        assert_eq!(profile.add_dirs, vec![PathBuf::from("docs")]);
+        assert_eq!(profile.token_budget, Some(1200));
+        assert_eq!(
+            profile.append_system_prompt.as_deref(),
+            Some("Be careful.\n\nReview thoroughly.")
+        );
+    }
+
+    #[test]
+    fn agent_profile_resolution_rejects_inheritance_cycles() {
+        let config: Config = toml::from_str(
+            r#"
+[agent_profiles.a]
+inherits = "b"
+
+[agent_profiles.b]
+inherits = "a"
+"#,
+        )
+        .unwrap();
+
+        let error = config
+            .resolve_agent_profile("a")
+            .expect_err("profile inheritance cycles must fail");
+        assert!(error
+            .to_string()
+            .contains("agent profile inheritance cycle"));
     }
 
     #[test]

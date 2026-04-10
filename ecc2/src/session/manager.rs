@@ -11,7 +11,7 @@ use super::runtime::capture_command_output;
 use super::store::StateStore;
 use super::{
     default_project_label, default_task_group_label, normalize_group_label, Session,
-    SessionGrouping, SessionMetrics, SessionState,
+    SessionAgentProfile, SessionGrouping, SessionMetrics, SessionState,
 };
 use crate::comms::{self, MessageType};
 use crate::config::Config;
@@ -25,12 +25,13 @@ pub async fn create_session(
     agent_type: &str,
     use_worktree: bool,
 ) -> Result<String> {
-    create_session_with_grouping(
+    create_session_with_profile_and_grouping(
         db,
         cfg,
         task,
         agent_type,
         use_worktree,
+        None,
         SessionGrouping::default(),
     )
     .await
@@ -44,6 +45,27 @@ pub async fn create_session_with_grouping(
     use_worktree: bool,
     grouping: SessionGrouping,
 ) -> Result<String> {
+    create_session_with_profile_and_grouping(
+        db,
+        cfg,
+        task,
+        agent_type,
+        use_worktree,
+        None,
+        grouping,
+    )
+    .await
+}
+
+pub async fn create_session_with_profile_and_grouping(
+    db: &StateStore,
+    cfg: &Config,
+    task: &str,
+    agent_type: &str,
+    use_worktree: bool,
+    profile_name: Option<&str>,
+    grouping: SessionGrouping,
+) -> Result<String> {
     let repo_root =
         std::env::current_dir().context("Failed to resolve current working directory")?;
     queue_session_in_dir(
@@ -53,6 +75,34 @@ pub async fn create_session_with_grouping(
         agent_type,
         use_worktree,
         &repo_root,
+        profile_name,
+        None,
+        grouping,
+    )
+    .await
+}
+
+pub async fn create_session_from_source_with_profile_and_grouping(
+    db: &StateStore,
+    cfg: &Config,
+    task: &str,
+    agent_type: &str,
+    use_worktree: bool,
+    profile_name: Option<&str>,
+    source_session_id: &str,
+    grouping: SessionGrouping,
+) -> Result<String> {
+    let repo_root =
+        std::env::current_dir().context("Failed to resolve current working directory")?;
+    queue_session_in_dir(
+        db,
+        cfg,
+        task,
+        agent_type,
+        use_worktree,
+        &repo_root,
+        profile_name,
+        Some(source_session_id),
         grouping,
     )
     .await
@@ -66,6 +116,7 @@ pub fn get_status(db: &StateStore, id: &str) -> Result<SessionStatus> {
     let session = resolve_session(db, id)?;
     let session_id = session.id.clone();
     Ok(SessionStatus {
+        profile: db.get_session_profile(&session_id)?,
         session,
         parent_session: db.latest_task_handoff_source(&session_id)?,
         delegated_children: db.delegated_children(&session_id, 5)?,
@@ -159,13 +210,14 @@ pub async fn assign_session(
     agent_type: &str,
     use_worktree: bool,
 ) -> Result<AssignmentOutcome> {
-    assign_session_with_grouping(
+    assign_session_with_profile_and_grouping(
         db,
         cfg,
         lead_id,
         task,
         agent_type,
         use_worktree,
+        None,
         SessionGrouping::default(),
     )
     .await
@@ -180,6 +232,29 @@ pub async fn assign_session_with_grouping(
     use_worktree: bool,
     grouping: SessionGrouping,
 ) -> Result<AssignmentOutcome> {
+    assign_session_with_profile_and_grouping(
+        db,
+        cfg,
+        lead_id,
+        task,
+        agent_type,
+        use_worktree,
+        None,
+        grouping,
+    )
+    .await
+}
+
+pub async fn assign_session_with_profile_and_grouping(
+    db: &StateStore,
+    cfg: &Config,
+    lead_id: &str,
+    task: &str,
+    agent_type: &str,
+    use_worktree: bool,
+    profile_name: Option<&str>,
+    grouping: SessionGrouping,
+) -> Result<AssignmentOutcome> {
     let repo_root =
         std::env::current_dir().context("Failed to resolve current working directory")?;
     assign_session_in_dir_with_runner_program(
@@ -191,6 +266,7 @@ pub async fn assign_session_with_grouping(
         use_worktree,
         &repo_root,
         &std::env::current_exe().context("Failed to resolve ECC executable path")?,
+        profile_name,
         grouping,
     )
     .await
@@ -228,6 +304,7 @@ pub async fn drain_inbox(
             use_worktree,
             &repo_root,
             &runner_program,
+            None,
             SessionGrouping::default(),
         )
         .await?;
@@ -434,6 +511,7 @@ pub async fn rebalance_team_backlog(
                 use_worktree,
                 &repo_root,
                 &runner_program,
+                None,
                 SessionGrouping::default(),
             )
             .await?;
@@ -464,12 +542,15 @@ pub async fn stop_session(db: &StateStore, id: &str) -> Result<()> {
 pub struct BudgetEnforcementOutcome {
     pub token_budget_exceeded: bool,
     pub cost_budget_exceeded: bool,
+    pub profile_token_budget_exceeded: bool,
     pub paused_sessions: Vec<String>,
 }
 
 impl BudgetEnforcementOutcome {
     pub fn hard_limit_exceeded(&self) -> bool {
-        self.token_budget_exceeded || self.cost_budget_exceeded
+        self.token_budget_exceeded
+            || self.cost_budget_exceeded
+            || self.profile_token_budget_exceeded
     }
 }
 
@@ -490,18 +571,51 @@ pub fn enforce_budget_hard_limits(
     let mut outcome = BudgetEnforcementOutcome {
         token_budget_exceeded: cfg.token_budget > 0 && total_tokens >= cfg.token_budget,
         cost_budget_exceeded: cfg.cost_budget_usd > 0.0 && total_cost >= cfg.cost_budget_usd,
+        profile_token_budget_exceeded: false,
         paused_sessions: Vec::new(),
     };
+
+    let mut sessions_to_pause = HashSet::new();
+
+    if outcome.token_budget_exceeded || outcome.cost_budget_exceeded {
+        for session in sessions.iter().filter(|session| {
+            matches!(
+                session.state,
+                SessionState::Pending | SessionState::Running | SessionState::Idle
+            )
+        }) {
+            sessions_to_pause.insert(session.id.clone());
+        }
+    }
+
+    for session in sessions.iter().filter(|session| {
+        matches!(
+            session.state,
+            SessionState::Pending | SessionState::Running | SessionState::Idle
+        )
+    }) {
+        let Some(profile) = db.get_session_profile(&session.id)? else {
+            continue;
+        };
+        let Some(token_budget) = profile.token_budget else {
+            continue;
+        };
+        if token_budget > 0 && session.metrics.tokens_used >= token_budget {
+            outcome.profile_token_budget_exceeded = true;
+            sessions_to_pause.insert(session.id.clone());
+        }
+    }
 
     if !outcome.hard_limit_exceeded() {
         return Ok(outcome);
     }
 
     for session in sessions.into_iter().filter(|session| {
-        matches!(
-            session.state,
-            SessionState::Pending | SessionState::Running | SessionState::Idle
-        )
+        sessions_to_pause.contains(&session.id)
+            && matches!(
+                session.state,
+                SessionState::Pending | SessionState::Running | SessionState::Idle
+            )
     }) {
         stop_session_recorded(db, &session, false)?;
         outcome.paused_sessions.push(session.id);
@@ -820,6 +934,7 @@ async fn assign_session_in_dir_with_runner_program(
     use_worktree: bool,
     repo_root: &Path,
     runner_program: &Path,
+    profile_name: Option<&str>,
     grouping: SessionGrouping,
 ) -> Result<AssignmentOutcome> {
     let lead = resolve_session(db, lead_id)?;
@@ -868,6 +983,8 @@ async fn assign_session_in_dir_with_runner_program(
             use_worktree,
             repo_root,
             runner_program,
+            profile_name,
+            Some(&lead.id),
             inherited_grouping.clone(),
         )
         .await?;
@@ -943,6 +1060,8 @@ async fn assign_session_in_dir_with_runner_program(
         use_worktree,
         repo_root,
         runner_program,
+        profile_name,
+        Some(&lead.id),
         inherited_grouping,
     )
     .await?;
@@ -1623,7 +1742,8 @@ pub async fn run_session(
     }
 
     let agent_program = agent_program(agent_type)?;
-    let command = build_agent_command(&agent_program, task, session_id, working_dir);
+    let profile = db.get_session_profile(session_id)?;
+    let command = build_agent_command(&agent_program, task, session_id, working_dir, profile.as_ref());
     capture_command_output(
         cfg.db_path.clone(),
         session_id.to_string(),
@@ -1750,6 +1870,8 @@ async fn queue_session_in_dir(
     agent_type: &str,
     use_worktree: bool,
     repo_root: &Path,
+    profile_name: Option<&str>,
+    inherited_profile_session_id: Option<&str>,
     grouping: SessionGrouping,
 ) -> Result<String> {
     queue_session_in_dir_with_runner_program(
@@ -1760,6 +1882,8 @@ async fn queue_session_in_dir(
         use_worktree,
         repo_root,
         &std::env::current_exe().context("Failed to resolve ECC executable path")?,
+        profile_name,
+        inherited_profile_session_id,
         grouping,
     )
     .await
@@ -1773,11 +1897,29 @@ async fn queue_session_in_dir_with_runner_program(
     use_worktree: bool,
     repo_root: &Path,
     runner_program: &Path,
+    profile_name: Option<&str>,
+    inherited_profile_session_id: Option<&str>,
     grouping: SessionGrouping,
 ) -> Result<String> {
-    let session =
-        build_session_record(db, task, agent_type, use_worktree, cfg, repo_root, grouping)?;
+    let profile =
+        resolve_launch_profile(db, cfg, profile_name, inherited_profile_session_id)?;
+    let effective_agent_type = profile
+        .as_ref()
+        .and_then(|profile| profile.agent.as_deref())
+        .unwrap_or(agent_type);
+    let session = build_session_record(
+        db,
+        task,
+        effective_agent_type,
+        use_worktree,
+        cfg,
+        repo_root,
+        grouping,
+    )?;
     db.insert_session(&session)?;
+    if let Some(profile) = profile.as_ref() {
+        db.upsert_session_profile(&session.id, profile)?;
+    }
 
     if use_worktree && session.worktree.is_none() {
         db.enqueue_pending_worktree(&session.id, repo_root)?;
@@ -1793,7 +1935,7 @@ async fn queue_session_in_dir_with_runner_program(
     match spawn_session_runner_for_program(
         task,
         &session.id,
-        agent_type,
+        &session.agent_type,
         working_dir,
         runner_program,
     )
@@ -1909,6 +2051,27 @@ async fn create_session_in_dir(
             Err(error.context(format!("Failed to start session {}", session.id)))
         }
     }
+}
+
+fn resolve_launch_profile(
+    db: &StateStore,
+    cfg: &Config,
+    explicit_profile_name: Option<&str>,
+    inherited_profile_session_id: Option<&str>,
+) -> Result<Option<SessionAgentProfile>> {
+    let inherited_profile_name = match inherited_profile_session_id {
+        Some(session_id) => db.get_session_profile(session_id)?.map(|profile| profile.profile_name),
+        None => None,
+    };
+    let profile_name = explicit_profile_name
+        .map(ToOwned::to_owned)
+        .or(inherited_profile_name)
+        .or_else(|| cfg.default_agent_profile.clone());
+
+    profile_name
+        .as_deref()
+        .map(|name| cfg.resolve_agent_profile(name))
+        .transpose()
 }
 
 fn attached_worktree_count(db: &StateStore) -> Result<usize> {
@@ -2075,16 +2238,44 @@ fn build_agent_command(
     task: &str,
     session_id: &str,
     working_dir: &Path,
+    profile: Option<&SessionAgentProfile>,
 ) -> Command {
     let mut command = Command::new(agent_program);
+    command.env("ECC_SESSION_ID", session_id);
     command
-        .env("ECC_SESSION_ID", session_id)
         .arg("--print")
         .arg("--name")
-        .arg(format!("ecc-{session_id}"))
-        .arg(task)
-        .current_dir(working_dir)
-        .stdin(Stdio::null());
+        .arg(format!("ecc-{session_id}"));
+    if let Some(profile) = profile {
+        if let Some(model) = profile.model.as_ref() {
+            command.arg("--model").arg(model);
+        }
+        if !profile.allowed_tools.is_empty() {
+            command
+                .arg("--allowed-tools")
+                .arg(profile.allowed_tools.join(","));
+        }
+        if !profile.disallowed_tools.is_empty() {
+            command
+                .arg("--disallowed-tools")
+                .arg(profile.disallowed_tools.join(","));
+        }
+        if let Some(permission_mode) = profile.permission_mode.as_ref() {
+            command.arg("--permission-mode").arg(permission_mode);
+        }
+        for dir in &profile.add_dirs {
+            command.arg("--add-dir").arg(dir);
+        }
+        if let Some(max_budget_usd) = profile.max_budget_usd {
+            command
+                .arg("--max-budget-usd")
+                .arg(max_budget_usd.to_string());
+        }
+        if let Some(prompt) = profile.append_system_prompt.as_ref() {
+            command.arg("--append-system-prompt").arg(prompt);
+        }
+    }
+    command.arg(task).current_dir(working_dir).stdin(Stdio::null());
     command
 }
 
@@ -2094,7 +2285,7 @@ async fn spawn_claude_code(
     session_id: &str,
     working_dir: &Path,
 ) -> Result<u32> {
-    let mut command = build_agent_command(agent_program, task, session_id, working_dir);
+    let mut command = build_agent_command(agent_program, task, session_id, working_dir, None);
     let child = command
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -2194,6 +2385,7 @@ async fn kill_process(pid: u32) -> Result<()> {
 }
 
 pub struct SessionStatus {
+    profile: Option<SessionAgentProfile>,
     session: Session,
     parent_session: Option<String>,
     delegated_children: Vec<String>,
@@ -2363,6 +2555,21 @@ impl fmt::Display for SessionStatus {
         writeln!(f, "Task:    {}", s.task)?;
         writeln!(f, "Agent:   {}", s.agent_type)?;
         writeln!(f, "State:   {}", s.state)?;
+        if let Some(profile) = self.profile.as_ref() {
+            writeln!(f, "Profile: {}", profile.profile_name)?;
+            if let Some(model) = profile.model.as_ref() {
+                writeln!(f, "Model:   {}", model)?;
+            }
+            if let Some(permission_mode) = profile.permission_mode.as_ref() {
+                writeln!(f, "Perms:   {}", permission_mode)?;
+            }
+            if let Some(token_budget) = profile.token_budget {
+                writeln!(f, "Profile tokens: {}", token_budget)?;
+            }
+            if let Some(max_budget_usd) = profile.max_budget_usd {
+                writeln!(f, "Profile cost: ${max_budget_usd:.4}")?;
+            }
+        }
         if let Some(parent) = self.parent_session.as_ref() {
             writeln!(f, "Parent:  {}", parent)?;
         }
@@ -2590,7 +2797,7 @@ fn session_state_label(state: &SessionState) -> &'static str {
 mod tests {
     use super::*;
     use crate::config::{Config, PaneLayout, Theme};
-    use crate::session::{Session, SessionMetrics, SessionState};
+    use crate::session::{Session, SessionAgentProfile, SessionMetrics, SessionState};
     use anyhow::{Context, Result};
     use chrono::{Duration, Utc};
     use std::fs;
@@ -2635,6 +2842,8 @@ mod tests {
             heartbeat_interval_secs: 5,
             auto_terminate_stale_sessions: false,
             default_agent: "claude".to_string(),
+            default_agent_profile: None,
+            agent_profiles: Default::default(),
             auto_dispatch_unread_handoffs: false,
             auto_dispatch_limit_per_session: 5,
             auto_create_worktrees: true,
@@ -2672,6 +2881,61 @@ mod tests {
             last_heartbeat_at: updated_at,
             metrics: SessionMetrics::default(),
         }
+    }
+
+    #[test]
+    fn build_agent_command_applies_profile_runner_flags() {
+        let profile = SessionAgentProfile {
+            profile_name: "reviewer".to_string(),
+            agent: None,
+            model: Some("sonnet".to_string()),
+            allowed_tools: vec!["Read".to_string(), "Edit".to_string()],
+            disallowed_tools: vec!["Bash".to_string()],
+            permission_mode: Some("plan".to_string()),
+            add_dirs: vec![PathBuf::from("docs"), PathBuf::from("specs")],
+            max_budget_usd: Some(1.25),
+            token_budget: Some(750),
+            append_system_prompt: Some("Review thoroughly.".to_string()),
+        };
+
+        let command = build_agent_command(
+            Path::new("claude"),
+            "review this change",
+            "sess-1234",
+            Path::new("/tmp/repo"),
+            Some(&profile),
+        );
+        let args = command
+            .as_std()
+            .get_args()
+            .map(|value| value.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            args,
+            vec![
+                "--print",
+                "--name",
+                "ecc-sess-1234",
+                "--model",
+                "sonnet",
+                "--allowed-tools",
+                "Read,Edit",
+                "--disallowed-tools",
+                "Bash",
+                "--permission-mode",
+                "plan",
+                "--add-dir",
+                "docs",
+                "--add-dir",
+                "specs",
+                "--max-budget-usd",
+                "1.25",
+                "--append-system-prompt",
+                "Review thoroughly.",
+                "review this change",
+            ]
+        );
     }
 
     #[test]
@@ -3099,6 +3363,62 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test(flavor = "current_thread")]
+    async fn create_session_uses_default_agent_profile_and_persists_launch_settings() -> Result<()> {
+        let tempdir = TestDir::new("manager-default-agent-profile")?;
+        let repo_root = tempdir.path().join("repo");
+        init_git_repo(&repo_root)?;
+
+        let mut cfg = build_config(tempdir.path());
+        cfg.default_agent_profile = Some("reviewer".to_string());
+        cfg.agent_profiles.insert(
+            "reviewer".to_string(),
+            crate::config::AgentProfileConfig {
+                model: Some("sonnet".to_string()),
+                allowed_tools: vec!["Read".to_string(), "Edit".to_string()],
+                disallowed_tools: vec!["Bash".to_string()],
+                permission_mode: Some("plan".to_string()),
+                add_dirs: vec![PathBuf::from("docs")],
+                token_budget: Some(800),
+                append_system_prompt: Some("Review thoroughly.".to_string()),
+                ..Default::default()
+            },
+        );
+        let db = StateStore::open(&cfg.db_path)?;
+        let (fake_runner, _) = write_fake_claude(tempdir.path())?;
+
+        let session_id = queue_session_in_dir_with_runner_program(
+            &db,
+            &cfg,
+            "review work",
+            "claude",
+            false,
+            &repo_root,
+            &fake_runner,
+            None,
+            None,
+            SessionGrouping::default(),
+        )
+        .await?;
+
+        let profile = db
+            .get_session_profile(&session_id)?
+            .context("session profile should be persisted")?;
+        assert_eq!(profile.profile_name, "reviewer");
+        assert_eq!(profile.model.as_deref(), Some("sonnet"));
+        assert_eq!(profile.allowed_tools, vec!["Read", "Edit"]);
+        assert_eq!(profile.disallowed_tools, vec!["Bash"]);
+        assert_eq!(profile.permission_mode.as_deref(), Some("plan"));
+        assert_eq!(profile.add_dirs, vec![PathBuf::from("docs")]);
+        assert_eq!(profile.token_budget, Some(800));
+        assert_eq!(
+            profile.append_system_prompt.as_deref(),
+            Some("Review thoroughly.")
+        );
+
+        Ok(())
+    }
+
     #[test]
     fn enforce_budget_hard_limits_stops_active_sessions_without_cleaning_worktrees() -> Result<()> {
         let tempdir = TestDir::new("manager-budget-pause")?;
@@ -3210,6 +3530,73 @@ mod tests {
             .get_session("completed-over-budget")?
             .context("completed session should still exist")?;
         assert_eq!(session.state, SessionState::Completed);
+
+        Ok(())
+    }
+
+    #[test]
+    fn enforce_budget_hard_limits_pauses_sessions_over_profile_token_budget() -> Result<()> {
+        let tempdir = TestDir::new("manager-profile-token-budget")?;
+        let cfg = build_config(tempdir.path());
+        let db = StateStore::open(&cfg.db_path)?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "profile-over-budget".to_string(),
+            task: "review work".to_string(),
+            project: "workspace".to_string(),
+            task_group: "general".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: tempdir.path().to_path_buf(),
+            state: SessionState::Running,
+            pid: Some(999_998),
+            worktree: None,
+            created_at: now - Duration::minutes(1),
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+        db.upsert_session_profile(
+            "profile-over-budget",
+            &SessionAgentProfile {
+                profile_name: "reviewer".to_string(),
+                agent: None,
+                model: Some("sonnet".to_string()),
+                allowed_tools: vec!["Read".to_string()],
+                disallowed_tools: Vec::new(),
+                permission_mode: Some("plan".to_string()),
+                add_dirs: Vec::new(),
+                max_budget_usd: None,
+                token_budget: Some(75),
+                append_system_prompt: None,
+            },
+        )?;
+        db.update_metrics(
+            "profile-over-budget",
+            &SessionMetrics {
+                input_tokens: 60,
+                output_tokens: 30,
+                tokens_used: 90,
+                tool_calls: 0,
+                files_changed: 0,
+                duration_secs: 60,
+                cost_usd: 0.0,
+            },
+        )?;
+
+        let outcome = enforce_budget_hard_limits(&db, &cfg)?;
+        assert!(!outcome.token_budget_exceeded);
+        assert!(!outcome.cost_budget_exceeded);
+        assert!(outcome.profile_token_budget_exceeded);
+        assert_eq!(
+            outcome.paused_sessions,
+            vec!["profile-over-budget".to_string()]
+        );
+
+        let session = db
+            .get_session("profile-over-budget")?
+            .context("session should still exist")?;
+        assert_eq!(session.state, SessionState::Stopped);
 
         Ok(())
     }
@@ -4108,6 +4495,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
+            None,
             SessionGrouping::default(),
         )
         .await?;
@@ -4181,6 +4569,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
+            None,
             SessionGrouping::default(),
         )
         .await?;
@@ -4266,6 +4655,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
+            None,
             SessionGrouping::default(),
         )
         .await?;
@@ -4338,6 +4728,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
+            None,
             SessionGrouping::default(),
         )
         .await?;
@@ -4394,6 +4785,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
+            None,
             SessionGrouping::default(),
         )
         .await?;
@@ -4467,6 +4859,7 @@ mod tests {
             true,
             &repo_root,
             &fake_runner,
+            None,
             SessionGrouping::default(),
         )
         .await?;
