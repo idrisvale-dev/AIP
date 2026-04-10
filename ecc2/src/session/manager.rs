@@ -1901,6 +1901,7 @@ fn agent_program(agent_type: &str) -> Result<PathBuf> {
         HarnessKind::Claude => Ok(PathBuf::from("claude")),
         HarnessKind::Codex => Ok(PathBuf::from("codex")),
         HarnessKind::OpenCode => Ok(PathBuf::from("opencode")),
+        HarnessKind::Gemini => Ok(PathBuf::from("gemini")),
         other => anyhow::bail!("Unsupported agent type: {other}"),
     }
 }
@@ -2603,6 +2604,23 @@ fn build_agent_command(
                 }
             }
         }
+        HarnessKind::Gemini => {
+            command.arg("-p");
+            if let Some(profile) = profile {
+                if let Some(model) = profile.model.as_ref() {
+                    command.arg("-m").arg(model);
+                }
+                if !profile.add_dirs.is_empty() {
+                    let include_dirs = profile
+                        .add_dirs
+                        .iter()
+                        .map(|dir| dir.to_string_lossy().to_string())
+                        .collect::<Vec<_>>()
+                        .join(",");
+                    command.arg("--include-directories").arg(include_dirs);
+                }
+            }
+        }
         _ => {}
     }
     command
@@ -2624,7 +2642,7 @@ fn normalize_task_for_harness(
 
     match harness {
         HarnessKind::Claude => task.to_string(),
-        HarnessKind::Codex | HarnessKind::OpenCode => {
+        HarnessKind::Codex | HarnessKind::OpenCode | HarnessKind::Gemini => {
             format!("System instructions:\n{system_prompt}\n\nTask:\n{task}")
         }
         _ => task.to_string(),
@@ -3511,6 +3529,48 @@ mod tests {
                 "--model",
                 "anthropic/claude-sonnet-4",
                 "System instructions:\nBuild carefully.\n\nTask:\nstabilize callback flow",
+            ]
+        );
+    }
+
+    #[test]
+    fn build_agent_command_normalizes_runner_flags_for_gemini() {
+        let profile = SessionAgentProfile {
+            profile_name: "investigator".to_string(),
+            agent: None,
+            model: Some("gemini-2.5-pro".to_string()),
+            allowed_tools: vec!["Read".to_string()],
+            disallowed_tools: vec!["Bash".to_string()],
+            permission_mode: Some("plan".to_string()),
+            add_dirs: vec![PathBuf::from("docs"), PathBuf::from("../shared")],
+            max_budget_usd: Some(1.0),
+            token_budget: Some(500),
+            append_system_prompt: Some("Use repo context carefully.".to_string()),
+        };
+
+        let command = build_agent_command(
+            "gemini",
+            Path::new("gemini"),
+            "investigate auth regression",
+            "sess-gem1",
+            Path::new("/tmp/repo"),
+            Some(&profile),
+        );
+        let args = command
+            .as_std()
+            .get_args()
+            .map(|value| value.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            args,
+            vec![
+                "-p",
+                "-m",
+                "gemini-2.5-pro",
+                "--include-directories",
+                "docs,../shared",
+                "System instructions:\nUse repo context carefully.\n\nTask:\ninvestigate auth regression",
             ]
         );
     }
