@@ -468,6 +468,20 @@ enum GraphCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Backfill the context graph from existing decisions and file activity
+    Sync {
+        /// Source session ID or alias. Omit to backfill the latest session.
+        session_id: Option<String>,
+        /// Backfill across all sessions
+        #[arg(long)]
+        all: bool,
+        /// Maximum decisions and file events to scan per session
+        #[arg(long, default_value_t = 64)]
+        limit: usize,
+        /// Emit machine-readable JSON instead of the human summary
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
@@ -1229,6 +1243,36 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&detail)?);
                 } else {
                     println!("{}", format_graph_entity_detail_human(&detail));
+                }
+            }
+            GraphCommands::Sync {
+                session_id,
+                all,
+                limit,
+                json,
+            } => {
+                if all && session_id.is_some() {
+                    return Err(anyhow::anyhow!(
+                        "graph sync does not accept a session ID when --all is set"
+                    ));
+                }
+                sync_runtime_session_metrics(&db, &cfg)?;
+                let resolved_session_id = if all {
+                    None
+                } else {
+                    Some(resolve_session_id(
+                        &db,
+                        session_id.as_deref().unwrap_or("latest"),
+                    )?)
+                };
+                let stats = db.sync_context_graph_history(resolved_session_id.as_deref(), limit)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&stats)?);
+                } else {
+                    println!(
+                        "{}",
+                        format_graph_sync_stats_human(&stats, resolved_session_id.as_deref())
+                    );
                 }
             }
         },
@@ -2208,6 +2252,22 @@ fn format_graph_entity_detail_human(detail: &session::ContextGraphEntityDetail) 
         }
     }
     lines.join("\n")
+}
+
+fn format_graph_sync_stats_human(
+    stats: &session::ContextGraphSyncStats,
+    session_id: Option<&str>,
+) -> String {
+    let scope = session_id
+        .map(short_session)
+        .unwrap_or_else(|| "all sessions".to_string());
+    vec![
+        format!("Context graph sync complete for {scope}"),
+        format!("- sessions scanned {}", stats.sessions_scanned),
+        format!("- decisions processed {}", stats.decisions_processed),
+        format!("- file events processed {}", stats.file_events_processed),
+    ]
+    .join("\n")
 }
 
 fn format_merge_queue_human(report: &session::manager::MergeQueueReport) -> String {
@@ -4030,6 +4090,30 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_graph_sync_command() {
+        let cli = Cli::try_parse_from(["ecc", "graph", "sync", "--all", "--limit", "12", "--json"])
+            .expect("graph sync should parse");
+
+        match cli.command {
+            Some(Commands::Graph {
+                command:
+                    GraphCommands::Sync {
+                        session_id,
+                        all,
+                        limit,
+                        json,
+                    },
+            }) => {
+                assert!(session_id.is_none());
+                assert!(all);
+                assert_eq!(limit, 12);
+                assert!(json);
+            }
+            _ => panic!("expected graph sync subcommand"),
+        }
+    }
+
+    #[test]
     fn format_decisions_human_renders_details() {
         let text = format_decisions_human(
             &[session::DecisionLogEntry {
@@ -4109,6 +4193,23 @@ mod tests {
         assert!(text.contains("[returns] render_metrics -> #10 MetricsSnapshot"));
         assert!(text.contains("Incoming relations: 1"));
         assert!(text.contains("[contains] #6 dashboard.rs -> render_metrics"));
+    }
+
+    #[test]
+    fn format_graph_sync_stats_human_renders_counts() {
+        let text = format_graph_sync_stats_human(
+            &session::ContextGraphSyncStats {
+                sessions_scanned: 2,
+                decisions_processed: 3,
+                file_events_processed: 5,
+            },
+            Some("sess-12345678"),
+        );
+
+        assert!(text.contains("Context graph sync complete for sess-123"));
+        assert!(text.contains("- sessions scanned 2"));
+        assert!(text.contains("- decisions processed 3"));
+        assert!(text.contains("- file events processed 5"));
     }
 
     #[test]

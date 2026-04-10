@@ -14,9 +14,9 @@ use crate::observability::{ToolCallEvent, ToolLogEntry, ToolLogPage};
 use super::output::{OutputLine, OutputStream, OUTPUT_BUFFER_LIMIT};
 use super::{
     default_project_label, default_task_group_label, normalize_group_label, ContextGraphEntity,
-    ContextGraphEntityDetail, ContextGraphRelation, DecisionLogEntry, FileActivityAction,
-    FileActivityEntry, Session, SessionAgentProfile, SessionMessage, SessionMetrics, SessionState,
-    WorktreeInfo,
+    ContextGraphEntityDetail, ContextGraphRelation, ContextGraphSyncStats, DecisionLogEntry,
+    FileActivityAction, FileActivityEntry, Session, SessionAgentProfile, SessionMessage,
+    SessionMetrics, SessionState, WorktreeInfo,
 };
 
 pub struct StateStore {
@@ -1237,6 +1237,9 @@ impl StateStore {
             for file_path in file_paths {
                 aggregate.file_paths.insert(file_path);
             }
+            for event in &file_events {
+                self.sync_context_graph_file_event(&row.session_id, &row.tool_name, event)?;
+            }
         }
 
         for session in self.list_sessions()? {
@@ -1249,6 +1252,67 @@ impl StateStore {
             self.update_metrics(&session.id, &metrics)?;
         }
 
+        Ok(())
+    }
+
+    fn sync_context_graph_decision(
+        &self,
+        session_id: &str,
+        decision: &str,
+        alternatives: &[String],
+        reasoning: &str,
+    ) -> Result<()> {
+        let mut metadata = BTreeMap::new();
+        metadata.insert(
+            "alternatives_count".to_string(),
+            alternatives.len().to_string(),
+        );
+        if !alternatives.is_empty() {
+            metadata.insert("alternatives".to_string(), alternatives.join(" | "));
+        }
+        self.upsert_context_entity(
+            Some(session_id),
+            "decision",
+            decision,
+            None,
+            reasoning,
+            &metadata,
+        )?;
+        Ok(())
+    }
+
+    fn sync_context_graph_file_event(
+        &self,
+        session_id: &str,
+        tool_name: &str,
+        event: &PersistedFileEvent,
+    ) -> Result<()> {
+        let mut metadata = BTreeMap::new();
+        metadata.insert(
+            "last_action".to_string(),
+            file_activity_action_value(&event.action).to_string(),
+        );
+        metadata.insert("last_tool".to_string(), tool_name.trim().to_string());
+        if let Some(diff_preview) = &event.diff_preview {
+            metadata.insert("diff_preview".to_string(), diff_preview.clone());
+        }
+
+        let action = file_activity_action_value(&event.action);
+        let tool_name = tool_name.trim();
+        let summary = if let Some(diff_preview) = &event.diff_preview {
+            format!("Last activity: {action} via {tool_name} | {diff_preview}")
+        } else {
+            format!("Last activity: {action} via {tool_name}")
+        };
+        let name = context_graph_file_name(&event.path);
+        self.upsert_context_entity(
+            Some(session_id),
+            "file",
+            &name,
+            Some(&event.path),
+            &summary,
+            &metadata,
+        )?;
         Ok(())
     }
 
@@ -1628,6 +1692,8 @@ impl StateStore {
             ],
         )?;
 
+        self.sync_context_graph_decision(session_id, decision, alternatives, reasoning)?;
+
         Ok(DecisionLogEntry {
             id: self.conn.last_insert_rowid(),
             session_id: session_id.to_string(),
@@ -1681,6 +1747,49 @@ impl StateStore {
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(entries)
+    }
+
+    pub fn sync_context_graph_history(
+        &self,
+        session_id: Option<&str>,
+        per_session_limit: usize,
+    ) -> Result<ContextGraphSyncStats> {
+        let sessions = if let Some(session_id) = session_id {
+            let session = self
+                .get_session(session_id)?
+                .ok_or_else(|| anyhow::anyhow!("Session not found: {session_id}"))?;
+            vec![session]
+        } else {
+            self.list_sessions()?
+        };
+
+        let mut stats = ContextGraphSyncStats::default();
+        for session in sessions {
+            stats.sessions_scanned = stats.sessions_scanned.saturating_add(1);
+
+            for entry in self.list_decisions_for_session(&session.id, per_session_limit)? {
+                self.sync_context_graph_decision(
+                    &session.id,
+                    &entry.decision,
+                    &entry.alternatives,
+                    &entry.reasoning,
+                )?;
+                stats.decisions_processed = stats.decisions_processed.saturating_add(1);
+            }
+
+            for entry in self.list_file_activity(&session.id, per_session_limit)? {
+                let persisted = PersistedFileEvent {
+                    path: entry.path.clone(),
+                    action: entry.action.clone(),
+                    diff_preview: entry.diff_preview.clone(),
+                    patch_preview: entry.patch_preview.clone(),
+                };
+                self.sync_context_graph_file_event(&session.id, "history", &persisted)?;
+                stats.file_events_processed = stats.file_events_processed.saturating_add(1);
+            }
+        }
+
+        Ok(stats)
     }
 
     pub fn upsert_context_entity(
@@ -2840,6 +2949,14 @@ fn context_graph_entity_key(entity_type: &str, name: &str, path: Option<&str>) -
     )
 }
 
+fn context_graph_file_name(path: &str) -> String {
+    Path::new(path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| path.to_string())
+}
+
 fn file_overlap_is_relevant(current: &FileActivityEntry, other: &FileActivityEntry) -> bool {
     current.path == other.path
         && !(matches!(current.action, FileActivityAction::Read)
@@ -3671,6 +3788,171 @@ mod tests {
 
         let filtered_relations = db.list_context_relations(Some(function.id), 10)?;
         assert_eq!(filtered_relations.len(), 2);
+
+        Ok(())
+    }
+
+    #[test]
+    fn insert_decision_automatically_upserts_context_graph_entity() -> Result<()> {
+        let tempdir = TestDir::new("store-context-decision-auto")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "context graph".to_string(),
+            project: "workspace".to_string(),
+            task_group: "knowledge".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        db.insert_decision(
+            "session-1",
+            "Use sqlite for shared context",
+            &["json files".to_string(), "memory only".to_string()],
+            "SQLite keeps the graph queryable from CLI and TUI",
+        )?;
+
+        let entities = db.list_context_entities(Some("session-1"), Some("decision"), 10)?;
+        assert_eq!(entities.len(), 1);
+        assert_eq!(entities[0].name, "Use sqlite for shared context");
+        assert_eq!(
+            entities[0].metadata.get("alternatives_count"),
+            Some(&"2".to_string())
+        );
+        assert!(entities[0]
+            .summary
+            .contains("SQLite keeps the graph queryable"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn sync_tool_activity_metrics_automatically_upserts_file_entities() -> Result<()> {
+        let tempdir = TestDir::new("store-context-file-auto")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "context graph".to_string(),
+            project: "workspace".to_string(),
+            task_group: "knowledge".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        let metrics_dir = tempdir.path().join(".claude/metrics");
+        std::fs::create_dir_all(&metrics_dir)?;
+        let metrics_path = metrics_dir.join("tool-usage.jsonl");
+        std::fs::write(
+            &metrics_path,
+            "{\"id\":\"evt-1\",\"session_id\":\"session-1\",\"tool_name\":\"Edit\",\"input_summary\":\"Edit src/config.ts\",\"output_summary\":\"updated config\",\"file_events\":[{\"path\":\"src/config.ts\",\"action\":\"modify\",\"diff_preview\":\"old -> new\"}],\"timestamp\":\"2026-04-10T00:00:00Z\"}\n",
+        )?;
+
+        db.sync_tool_activity_metrics(&metrics_path)?;
+
+        let entities = db.list_context_entities(Some("session-1"), Some("file"), 10)?;
+        assert_eq!(entities.len(), 1);
+        assert_eq!(entities[0].name, "config.ts");
+        assert_eq!(entities[0].path.as_deref(), Some("src/config.ts"));
+        assert_eq!(
+            entities[0].metadata.get("last_action"),
+            Some(&"modify".to_string())
+        );
+        assert_eq!(
+            entities[0].metadata.get("last_tool"),
+            Some(&"Edit".to_string())
+        );
+        assert!(entities[0]
+            .summary
+            .contains("Last activity: modify via Edit"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn sync_context_graph_history_backfills_existing_activity() -> Result<()> {
+        let tempdir = TestDir::new("store-context-backfill")?;
+        let db = StateStore::open(&tempdir.path().join("state.db"))?;
+        let now = Utc::now();
+
+        db.insert_session(&Session {
+            id: "session-1".to_string(),
+            task: "context graph".to_string(),
+            project: "workspace".to_string(),
+            task_group: "knowledge".to_string(),
+            agent_type: "claude".to_string(),
+            working_dir: PathBuf::from("/tmp"),
+            state: SessionState::Running,
+            pid: None,
+            worktree: None,
+            created_at: now,
+            updated_at: now,
+            last_heartbeat_at: now,
+            metrics: SessionMetrics::default(),
+        })?;
+
+        db.conn.execute(
+            "INSERT INTO decision_log (session_id, decision, alternatives_json, reasoning, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![
+                "session-1",
+                "Backfill historical decision",
+                "[]",
+                "Historical reasoning",
+                "2026-04-10T00:00:00Z",
+            ],
+        )?;
+        db.conn.execute(
+            "INSERT INTO tool_log (
+                hook_event_id, session_id, tool_name, input_summary, input_params_json, output_summary,
+                trigger_summary, duration_ms, risk_score, timestamp, file_paths_json, file_events_json
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            rusqlite::params![
+                "evt-backfill",
+                "session-1",
+                "Write",
+                "Write src/backfill.rs",
+                "{}",
+                "updated file",
+                "context graph",
+                0u64,
+                0.0f64,
+                "2026-04-10T00:01:00Z",
+                "[\"src/backfill.rs\"]",
+                "[{\"path\":\"src/backfill.rs\",\"action\":\"modify\"}]",
+            ],
+        )?;
+
+        let stats = db.sync_context_graph_history(Some("session-1"), 10)?;
+        assert_eq!(stats.sessions_scanned, 1);
+        assert_eq!(stats.decisions_processed, 1);
+        assert_eq!(stats.file_events_processed, 1);
+
+        let entities = db.list_context_entities(Some("session-1"), None, 10)?;
+        assert!(entities
+            .iter()
+            .any(|entity| entity.entity_type == "decision"
+                && entity.name == "Backfill historical decision"));
+        assert!(entities.iter().any(|entity| entity.entity_type == "file"
+            && entity.path.as_deref() == Some("src/backfill.rs")));
 
         Ok(())
     }

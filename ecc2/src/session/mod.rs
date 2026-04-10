@@ -190,6 +190,13 @@ pub struct ContextGraphEntityDetail {
     pub incoming: Vec<ContextGraphRelation>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ContextGraphSyncStats {
+    pub sessions_scanned: usize,
+    pub decisions_processed: usize,
+    pub file_events_processed: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum FileActivityAction {
