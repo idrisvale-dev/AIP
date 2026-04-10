@@ -108,6 +108,7 @@ pub struct OrchestrationTemplateStepConfig {
 pub enum MemoryConnectorConfig {
     JsonlFile(MemoryConnectorJsonlFileConfig),
     JsonlDirectory(MemoryConnectorJsonlDirectoryConfig),
+    MarkdownFile(MemoryConnectorMarkdownFileConfig),
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -124,6 +125,15 @@ pub struct MemoryConnectorJsonlFileConfig {
 pub struct MemoryConnectorJsonlDirectoryConfig {
     pub path: PathBuf,
     pub recurse: bool,
+    pub session_id: Option<String>,
+    pub default_entity_type: Option<String>,
+    pub default_observation_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MemoryConnectorMarkdownFileConfig {
+    pub path: PathBuf,
     pub session_id: Option<String>,
     pub default_entity_type: Option<String>,
     pub default_observation_type: Option<String>,
@@ -1320,6 +1330,41 @@ default_observation_type = "external_note"
                 );
             }
             _ => panic!("expected jsonl_directory connector"),
+        }
+    }
+
+    #[test]
+    fn memory_markdown_file_connectors_deserialize_from_toml() {
+        let config: Config = toml::from_str(
+            r#"
+[memory_connectors.workspace_note]
+kind = "markdown_file"
+path = "/tmp/hermes-memory.md"
+session_id = "latest"
+default_entity_type = "note_section"
+default_observation_type = "external_note"
+"#,
+        )
+        .unwrap();
+
+        let connector = config
+            .memory_connectors
+            .get("workspace_note")
+            .expect("connector should deserialize");
+        match connector {
+            crate::config::MemoryConnectorConfig::MarkdownFile(settings) => {
+                assert_eq!(settings.path, PathBuf::from("/tmp/hermes-memory.md"));
+                assert_eq!(settings.session_id.as_deref(), Some("latest"));
+                assert_eq!(
+                    settings.default_entity_type.as_deref(),
+                    Some("note_section")
+                );
+                assert_eq!(
+                    settings.default_observation_type.as_deref(),
+                    Some("external_note")
+                );
+            }
+            _ => panic!("expected markdown_file connector"),
         }
     }
 
