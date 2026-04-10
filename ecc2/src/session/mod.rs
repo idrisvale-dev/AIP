@@ -111,9 +111,34 @@ pub struct SessionHarnessInfo {
     pub primary: HarnessKind,
     pub primary_label: String,
     pub detected: Vec<HarnessKind>,
+    pub detected_labels: Vec<String>,
 }
 
 impl SessionHarnessInfo {
+    fn detected_labels_for(detected: &[HarnessKind]) -> Vec<String> {
+        detected.iter().map(|harness| harness.to_string()).collect()
+    }
+
+    fn configured_detected_labels(cfg: &crate::config::Config, working_dir: &Path) -> Vec<String> {
+        let mut labels = Vec::new();
+        for (name, runner) in &cfg.harness_runners {
+            if runner.project_markers.is_empty() {
+                continue;
+            }
+            if runner
+                .project_markers
+                .iter()
+                .any(|marker| working_dir.join(marker).exists())
+            {
+                let label = Self::runner_key(name);
+                if !label.is_empty() && !labels.contains(&label) {
+                    labels.push(label);
+                }
+            }
+        }
+        labels
+    }
+
     pub fn runner_key(agent_type: &str) -> String {
         let canonical = HarnessKind::canonical_agent_type(agent_type);
         match HarnessKind::from_agent_type(&canonical) {
@@ -167,10 +192,12 @@ impl SessionHarnessInfo {
             harness => harness,
         };
 
+        let detected_labels = Self::detected_labels_for(&detected);
         Self {
             primary,
             primary_label: Self::primary_label_for(agent_type, primary),
             detected,
+            detected_labels,
         }
     }
 
@@ -187,6 +214,7 @@ impl SessionHarnessInfo {
         }
 
         let normalized_label = harness_label.trim().to_ascii_lowercase();
+        let detected_labels = Self::detected_labels_for(&detected);
         Self {
             primary,
             primary_label: if normalized_label.is_empty() {
@@ -195,18 +223,36 @@ impl SessionHarnessInfo {
                 normalized_label
             },
             detected,
+            detected_labels,
         }
     }
 
+    pub fn with_config_detection(
+        mut self,
+        cfg: &crate::config::Config,
+        working_dir: &Path,
+    ) -> Self {
+        for label in Self::configured_detected_labels(cfg, working_dir) {
+            if !self.detected_labels.contains(&label) {
+                self.detected_labels.push(label);
+            }
+        }
+
+        if self.primary == HarnessKind::Unknown
+            && self.primary_label == HarnessKind::Unknown.as_str()
+            && !self.detected_labels.is_empty()
+        {
+            self.primary_label = self.detected_labels[0].clone();
+        }
+
+        self
+    }
+
     pub fn detected_summary(&self) -> String {
-        if self.detected.is_empty() {
+        if self.detected_labels.is_empty() {
             "none detected".to_string()
         } else {
-            self.detected
-                .iter()
-                .map(|harness| harness.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
+            self.detected_labels.join(", ")
         }
     }
 }
@@ -573,6 +619,7 @@ mod tests {
             harness.detected,
             vec![HarnessKind::Claude, HarnessKind::Codex]
         );
+        assert_eq!(harness.detected_labels, vec!["claude", "codex"]);
         assert_eq!(harness.detected_summary(), "claude, codex");
         Ok(())
     }
@@ -587,6 +634,7 @@ mod tests {
         assert_eq!(harness.primary, HarnessKind::Gemini);
         assert_eq!(harness.primary_label, "gemini");
         assert_eq!(harness.detected, vec![HarnessKind::Gemini]);
+        assert_eq!(harness.detected_labels, vec!["gemini"]);
         Ok(())
     }
 
@@ -610,6 +658,7 @@ mod tests {
         assert_eq!(harness.primary, HarnessKind::Unknown);
         assert_eq!(harness.primary_label, "custom-runner");
         assert!(harness.detected.is_empty());
+        assert!(harness.detected_labels.is_empty());
     }
 
     #[test]
@@ -626,6 +675,54 @@ mod tests {
             harness.detected,
             vec![HarnessKind::Claude, HarnessKind::Codex]
         );
+        assert_eq!(harness.detected_labels, vec!["claude", "codex"]);
+        Ok(())
+    }
+
+    #[test]
+    fn config_detection_adds_custom_markers_to_detected_summary(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let repo = TestDir::new("session-harness-custom-config")?;
+        fs::create_dir_all(repo.path().join(".acme"))?;
+        let mut cfg = crate::config::Config::default();
+        cfg.harness_runners.insert(
+            "acme-runner".to_string(),
+            crate::config::HarnessRunnerConfig {
+                project_markers: vec![PathBuf::from(".acme")],
+                ..Default::default()
+            },
+        );
+
+        let harness =
+            SessionHarnessInfo::detect("", repo.path()).with_config_detection(&cfg, repo.path());
+        assert_eq!(harness.primary, HarnessKind::Unknown);
+        assert_eq!(harness.primary_label, "acme-runner");
+        assert_eq!(harness.detected_labels, vec!["acme-runner"]);
+        assert_eq!(harness.detected_summary(), "acme-runner");
+        Ok(())
+    }
+
+    #[test]
+    fn config_detection_preserves_custom_primary_label_and_appends_marker_matches(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let repo = TestDir::new("session-harness-config-append")?;
+        fs::create_dir_all(repo.path().join(".acme"))?;
+        fs::create_dir_all(repo.path().join(".codex"))?;
+        let mut cfg = crate::config::Config::default();
+        cfg.harness_runners.insert(
+            "acme-runner".to_string(),
+            crate::config::HarnessRunnerConfig {
+                project_markers: vec![PathBuf::from(".acme")],
+                ..Default::default()
+            },
+        );
+
+        let harness = SessionHarnessInfo::detect("acme-runner", repo.path())
+            .with_config_detection(&cfg, repo.path());
+        assert_eq!(harness.primary, HarnessKind::Unknown);
+        assert_eq!(harness.primary_label, "acme-runner");
+        assert_eq!(harness.detected_labels, vec!["codex", "acme-runner"]);
+        assert_eq!(harness.detected_summary(), "codex, acme-runner");
         Ok(())
     }
 

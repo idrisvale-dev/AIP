@@ -84,6 +84,7 @@ pub struct ResolvedAgentProfile {
 pub struct HarnessRunnerConfig {
     pub program: String,
     pub base_args: Vec<String>,
+    pub project_markers: Vec<PathBuf>,
     pub cwd_flag: Option<String>,
     pub session_name_flag: Option<String>,
     pub task_flag: Option<String>,
@@ -752,6 +753,7 @@ impl Default for HarnessRunnerConfig {
         Self {
             program: String::new(),
             base_args: Vec::new(),
+            project_markers: Vec::new(),
             cwd_flag: None,
             session_name_flag: None,
             task_flag: None,
@@ -1266,6 +1268,7 @@ inherits = "a"
 [harness_runners.cursor]
 program = "cursor-agent"
 base_args = ["run"]
+project_markers = [".cursor", ".cursor/rules"]
 cwd_flag = "--cwd"
 session_name_flag = "--name"
 task_flag = "--task"
@@ -1282,6 +1285,10 @@ ECC_HARNESS = "cursor"
         let runner = config.harness_runner("cursor").expect("cursor runner");
         assert_eq!(runner.program, "cursor-agent");
         assert_eq!(runner.base_args, vec!["run"]);
+        assert_eq!(
+            runner.project_markers,
+            vec![PathBuf::from(".cursor"), PathBuf::from(".cursor/rules")]
+        );
         assert_eq!(runner.cwd_flag.as_deref(), Some("--cwd"));
         assert_eq!(runner.session_name_flag.as_deref(), Some("--name"));
         assert_eq!(runner.task_flag.as_deref(), Some("--task"));

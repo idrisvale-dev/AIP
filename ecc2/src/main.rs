@@ -1230,15 +1230,19 @@ async fn main() -> Result<()> {
             for s in sessions {
                 let harness = harnesses
                     .get(&s.id)
-                    .map(|info| info.primary_label.clone())
-                    .unwrap_or_else(|| session::SessionHarnessInfo::runner_key(&s.agent_type));
+                    .cloned()
+                    .unwrap_or_else(|| {
+                        session::SessionHarnessInfo::detect(&s.agent_type, &s.working_dir)
+                    })
+                    .with_config_detection(&cfg, &s.working_dir)
+                    .primary_label;
                 println!("{} [{}] [{}] {}", s.id, s.state, harness, s.task);
             }
         }
         Some(Commands::Status { session_id }) => {
             sync_runtime_session_metrics(&db, &cfg)?;
             let id = session_id.unwrap_or_else(|| "latest".to_string());
-            let status = session::manager::get_status(&db, &id)?;
+            let status = session::manager::get_status(&db, &cfg, &id)?;
             println!("{status}");
         }
         Some(Commands::Team { session_id, depth }) => {

@@ -158,7 +158,7 @@ pub fn list_sessions(db: &StateStore) -> Result<Vec<Session>> {
     db.list_sessions()
 }
 
-pub fn get_status(db: &StateStore, id: &str) -> Result<SessionStatus> {
+pub fn get_status(db: &StateStore, cfg: &Config, id: &str) -> Result<SessionStatus> {
     let session = resolve_session(db, id)?;
     let session_id = session.id.clone();
     Ok(SessionStatus {
@@ -166,7 +166,8 @@ pub fn get_status(db: &StateStore, id: &str) -> Result<SessionStatus> {
             .get_session_harness_info(&session_id)?
             .unwrap_or_else(|| {
                 SessionHarnessInfo::detect(&session.agent_type, &session.working_dir)
-            }),
+            })
+            .with_config_detection(cfg, &session.working_dir),
         profile: db.get_session_profile(&session_id)?,
         session,
         parent_session: db.latest_task_handoff_source(&session_id)?,
@@ -5500,8 +5501,34 @@ mod tests {
         db.insert_session(&build_session("older", SessionState::Running, older))?;
         db.insert_session(&build_session("newer", SessionState::Idle, newer))?;
 
-        let status = get_status(&db, "latest")?;
+        let status = get_status(&db, &cfg, "latest")?;
         assert_eq!(status.session.id, "newer");
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_status_uses_configured_custom_harness_markers() -> Result<()> {
+        let tempdir = TestDir::new("manager-custom-harness-status")?;
+        fs::create_dir_all(tempdir.path().join(".acme"))?;
+        let mut cfg = build_config(tempdir.path());
+        cfg.harness_runners.insert(
+            "acme-runner".to_string(),
+            crate::config::HarnessRunnerConfig {
+                project_markers: vec![PathBuf::from(".acme")],
+                ..Default::default()
+            },
+        );
+        let db = StateStore::open(&cfg.db_path)?;
+        let mut session = build_session("custom", SessionState::Pending, Utc::now());
+        session.agent_type = "".to_string();
+        session.working_dir = tempdir.path().to_path_buf();
+        db.insert_session(&session)?;
+
+        let status = get_status(&db, &cfg, "custom")?;
+        assert_eq!(status.harness.primary, HarnessKind::Unknown);
+        assert_eq!(status.harness.primary_label, "acme-runner");
+        assert_eq!(status.harness.detected_summary(), "acme-runner");
 
         Ok(())
     }
@@ -5538,14 +5565,14 @@ mod tests {
             "task_handoff",
         )?;
 
-        let status = get_status(&db, "parent")?;
+        let status = get_status(&db, &cfg, "parent")?;
         let rendered = status.to_string();
 
         assert!(rendered.contains("Children:"));
         assert!(rendered.contains("child"));
         assert!(rendered.contains("sibling"));
 
-        let child_status = get_status(&db, "child")?;
+        let child_status = get_status(&db, &cfg, "child")?;
         assert_eq!(child_status.parent_session.as_deref(), Some("parent"));
 
         Ok(())

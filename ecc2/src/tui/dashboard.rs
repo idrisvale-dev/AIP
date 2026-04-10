@@ -476,6 +476,29 @@ impl SessionCompletionSummary {
     }
 }
 
+fn load_session_harnesses(
+    db: &StateStore,
+    cfg: &Config,
+    sessions: &[Session],
+) -> HashMap<String, SessionHarnessInfo> {
+    let working_dirs = sessions
+        .iter()
+        .map(|session| (session.id.as_str(), session.working_dir.as_path()))
+        .collect::<HashMap<_, _>>();
+    db.list_session_harnesses()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(session_id, info)| {
+            let info = if let Some(working_dir) = working_dirs.get(session_id.as_str()) {
+                info.with_config_detection(cfg, working_dir)
+            } else {
+                info
+            };
+            (session_id, info)
+        })
+        .collect()
+}
+
 impl Dashboard {
     pub fn new(db: StateStore, cfg: Config) -> Self {
         Self::with_output_store(db, cfg, SessionOutputStore::default())
@@ -498,7 +521,7 @@ impl Dashboard {
             let _ = db.sync_tool_activity_metrics(&cfg.tool_activity_metrics_path());
         }
         let sessions = db.list_sessions().unwrap_or_default();
-        let session_harnesses = db.list_session_harnesses().unwrap_or_default();
+        let session_harnesses = load_session_harnesses(&db, &cfg, &sessions);
         let initial_session_states = sessions
             .iter()
             .map(|session| (session.id.clone(), session.state.clone()))
@@ -4040,13 +4063,7 @@ impl Dashboard {
                 Vec::new()
             }
         };
-        self.session_harnesses = match self.db.list_session_harnesses() {
-            Ok(harnesses) => harnesses,
-            Err(error) => {
-                tracing::warn!("Failed to refresh session harnesses: {error}");
-                HashMap::new()
-            }
-        };
+        self.session_harnesses = load_session_harnesses(&self.db, &self.cfg, &self.sessions);
         self.unread_message_counts = match self.db.unread_message_counts() {
             Ok(counts) => counts,
             Err(error) => {
@@ -14488,7 +14505,8 @@ diff --git a/src/lib.rs b/src/lib.rs
             .map(|session| {
                 (
                     session.id.clone(),
-                    SessionHarnessInfo::detect(&session.agent_type, &session.working_dir),
+                    SessionHarnessInfo::detect(&session.agent_type, &session.working_dir)
+                        .with_config_detection(&cfg, &session.working_dir),
                 )
             })
             .collect();
