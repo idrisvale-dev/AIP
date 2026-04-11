@@ -9,7 +9,7 @@ origin: ECC
 
 This skill ensures that digital interfaces are Perceivable, Operable, Understandable, and Robust (POUR) for all users, including those using screen readers, switch controls, or keyboard navigation. It focuses on the technical implementation of WCAG 2.2 success criteria.
 
-## When to Activate
+## When to Use
 
 - Defining UI component specifications for Web, iOS, or Android.
 - Auditing existing code for accessibility barriers or compliance gaps.
@@ -76,7 +76,7 @@ flowchart TD
 | **Action Role**    | `role="button"`          | `.accessibilityAddTraits(.isButton)` | `Modifier.semantics { role = Role.Button }`                 |
 | **Live Updates**   | `aria-live="polite"`     | `.accessibilityLiveRegion(.polite)`  | `Modifier.semantics { liveRegion = LiveRegionMode.Polite }` |
 
-## Implementation Examples
+## Examples
 
 ### Web: Accessible Search
 
@@ -133,7 +133,8 @@ Switch(
 
 - [WCAG 2.2 Guidelines](https://www.w3.org/TR/WCAG22/)
 - [WAI-ARIA Authoring Practices](https://www.w3.org/TR/wai-aria-practices/)
-- [iOS Accessibility Programming Guide](https://developer.apple.com/library/archive/documentation/UserExperience/Conceptual/iPhoneAccessibility/Introduction/Introduction.html)
+- [iOS Accessibility Programming Guide](https://developer.apple.com/documentation/accessibility)
+- [iOS Human Interface Guidelines - Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility)
 - [Android Accessibility Developer Guide](https://developer.android.com/guide/topics/ui/accessibility)
 
 ## Related Skills
