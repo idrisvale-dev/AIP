@@ -135,3 +135,10 @@ Switch(
 - [WAI-ARIA Authoring Practices](https://www.w3.org/TR/wai-aria-practices/)
 - [iOS Accessibility Programming Guide](https://developer.apple.com/library/archive/documentation/UserExperience/Conceptual/iPhoneAccessibility/Introduction/Introduction.html)
 - [Android Accessibility Developer Guide](https://developer.android.com/guide/topics/ui/accessibility)
+
+## Related Skills
+
+- `frontend-patterns`
+- `frontend-design`
+- `liquid-glass-design`
+- `swiftui-patterns`
