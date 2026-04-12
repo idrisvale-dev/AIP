@@ -28,15 +28,9 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "pytest-cov>=4.1",
+    "pytest-mock>=3.12",
     "ruff>=0.4",
     "mypy>=1.10",
-    "ruff>=0.4",
-]
-test = [
-    "pytest>=8.0",
-    "pytest-asyncio>=0.23",
-    "pytest-cov>=4.1",
-    "pytest-mock>=3.12",
 ]
 
 [project.urls]

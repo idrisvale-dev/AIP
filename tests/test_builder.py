@@ -1,6 +1,7 @@
 import pytest
 from llm.core.types import LLMInput, Message, Role, ToolDefinition
 from llm.prompt import PromptBuilder, adapt_messages_for_provider
+from llm.prompt.builder import PromptConfig
 
 
 class TestPromptBuilder:
@@ -31,6 +32,13 @@ class TestPromptBuilder:
         assert len(result) == 2
         assert "pirate" in result[0].content
 
+    def test_build_adds_system_from_config(self):
+        messages = [Message(role=Role.USER, content="Hello")]
+        builder = PromptBuilder(config=PromptConfig(system_template="You are a pirate."))
+        result = builder.build(messages)
+
+        assert len(result) == 2
+        assert "pirate" in result[0].content
     def test_build_with_tools(self):
         messages = [Message(role=Role.USER, content="Search for something")]
         tools = [

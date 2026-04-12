@@ -28,6 +28,6 @@ __all__ = [
 
 
 def gui() -> None:
-    from llm.gui.selector import main
+    from llm.cli.selector import main
     main()
 

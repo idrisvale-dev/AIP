@@ -39,6 +39,7 @@ class PromptBuilder:
 
         if messages[0].role == Role.SYSTEM:
             system_parts.insert(0, messages[0].content)
+            result.insert(0, Message(role=Role.SYSTEM, content="\n\n".join(system_parts)))
             result.extend(messages[1:])
         else:
             if system_parts:

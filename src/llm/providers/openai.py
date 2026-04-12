@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -77,7 +78,7 @@ class OpenAIProvider(LLMProvider):
                     ToolCall(
                         id=tc.id or "",
                         name=tc.function.name,
-                        arguments={} if tc.function.arguments == "" else tc.function.arguments,
+                        arguments={} if not tc.function.arguments else json.loads(tc.function.arguments),
                     )
                     for tc in choice.message.tool_calls
                 ]
