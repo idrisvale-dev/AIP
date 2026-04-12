@@ -57,6 +57,8 @@ class ClaudeProvider(LLMProvider):
             }
             if input.max_tokens:
                 params["max_tokens"] = input.max_tokens
+            else:
+                params["max_tokens"] = 8192  # required by Anthropic API
             if input.tools:
                 params["tools"] = [tool.to_dict() for tool in input.tools]
 
