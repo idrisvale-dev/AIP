@@ -18,8 +18,8 @@ tokio = { version = "1", features = ["full"] }
 # State store
 rusqlite = { version = "0.32", features = ["bundled"] }
 
-# Git integration
-git2 = "0.20"
+# Git integration - use vendored openssl to avoid system dependency
+git2 = { version = "0.20", features = ["ssh", "vendored-openssl"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
