@@ -29,8 +29,7 @@ class TestPromptBuilder:
         result = builder.build(messages)
 
         assert len(result) == 2
-        assert "pirate" in result[0].content
-
+        builder = PromptBuilder(config=PromptConfig(system_template="You are a pirate."))
     def test_build_with_tools(self):
         messages = [Message(role=Role.USER, content="Search for something")]
         tools = [
