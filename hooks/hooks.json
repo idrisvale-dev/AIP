@@ -132,7 +132,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/gateguard-fact-force.js\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"pre:edit-write:gateguard-fact-force\" \"scripts/hooks/gateguard-fact-force.js\" \"standard,strict\"",
             "timeout": 5
           }
         ],
@@ -144,7 +144,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/gateguard-fact-force.js\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"pre:bash:gateguard-fact-force\" \"scripts/hooks/gateguard-fact-force.js\" \"standard,strict\"",
             "timeout": 5
           }
         ],

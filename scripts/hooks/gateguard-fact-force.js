@@ -13,10 +13,7 @@
  *   - Bash (destructive): list targets, rollback plan, quote instruction
  *   - Bash (routine): quote current instruction (once per session)
  *
- * Exit codes:
- *   0 - Allow (gate already passed for this target)
- *   2 - Block (force investigation first)
- *
+ * Compatible with run-with-flags.js via module.exports.run().
  * Cross-platform (Windows, macOS, Linux).
  *
  * Full package with config support: pip install gateguard-ai
@@ -28,27 +25,35 @@
 const fs = require('fs');
 const path = require('path');
 
-const MAX_STDIN = 1024 * 1024;
-
 // Session state file for tracking which files have been gated
 const STATE_DIR = path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard');
 const STATE_FILE = path.join(STATE_DIR, '.session_state.json');
 
+// State expires after 30 minutes of inactivity (= new session)
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+
 const DESTRUCTIVE_BASH = /\b(rm\s+-rf|git\s+reset\s+--hard|git\s+checkout\s+--|git\s+clean\s+-f|drop\s+table|delete\s+from|truncate|git\s+push\s+--force|dd\s+if=)\b/i;
 
-// --- State management ---
+// --- State management (with session timeout) ---
 
 function loadState() {
   try {
     if (fs.existsSync(STATE_FILE)) {
-      return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+      const state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+      const lastActive = state.last_active || 0;
+      if (Date.now() - lastActive > SESSION_TIMEOUT_MS) {
+        // Session expired — start fresh
+        return { checked: [], last_active: Date.now() };
+      }
+      return state;
     }
   } catch (_) { /* ignore */ }
-  return { checked: [], read_files: [] };
+  return { checked: [], last_active: Date.now() };
 }
 
 function saveState(state) {
   try {
+    state.last_active = Date.now();
     fs.mkdirSync(STATE_DIR, { recursive: true });
     fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
   } catch (_) { /* ignore */ }
@@ -64,6 +69,8 @@ function markChecked(key) {
 
 function isChecked(key) {
   const state = loadState();
+  // Touch last_active on every check
+  saveState(state);
   return state.checked.includes(key);
 }
 
@@ -130,42 +137,29 @@ function routineBashMsg() {
   ].join('\n');
 }
 
-// --- Output helpers ---
+// --- Deny helper ---
 
-function deny(reason) {
-  const output = {
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason: reason
-    }
+function denyResult(reason) {
+  return {
+    stdout: JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: reason
+      }
+    }),
+    exitCode: 0
   };
-  process.stdout.write(JSON.stringify(output));
-  process.exit(0);
 }
 
-function allow() {
-  // Output nothing = allow
-  process.exit(0);
-}
+// --- Core logic (exported for run-with-flags.js) ---
 
-// --- Main ---
-
-function main() {
-  let raw = '';
-  try {
-    raw = fs.readFileSync(0, 'utf8').slice(0, MAX_STDIN);
-  } catch (_) {
-    allow();
-    return;
-  }
-
+function run(rawInput) {
   let data;
   try {
-    data = JSON.parse(raw);
+    data = typeof rawInput === 'string' ? JSON.parse(rawInput) : rawInput;
   } catch (_) {
-    allow();
-    return;
+    return rawInput; // allow on parse error
   }
 
   const toolName = data.tool_name || '';
@@ -174,43 +168,34 @@ function main() {
   if (toolName === 'Edit' || toolName === 'Write') {
     const filePath = toolInput.file_path || '';
     if (!filePath) {
-      allow();
-      return;
+      return rawInput; // allow
     }
 
-    // Gate: first action per file
     if (!isChecked(filePath)) {
       markChecked(filePath);
       const msg = toolName === 'Edit' ? editGateMsg(filePath) : writeGateMsg(filePath);
-      deny(msg);
-      return;
+      return denyResult(msg);
     }
 
-    allow();
-    return;
+    return rawInput; // allow
   }
 
   if (toolName === 'Bash') {
     const command = toolInput.command || '';
 
-    // Destructive commands: always gate
     if (DESTRUCTIVE_BASH.test(command)) {
-      deny(destructiveBashMsg());
-      return;
+      return denyResult(destructiveBashMsg());
     }
 
-    // Routine bash: once per session
     if (!isChecked('__bash_session__')) {
       markChecked('__bash_session__');
-      deny(routineBashMsg());
-      return;
+      return denyResult(routineBashMsg());
     }
 
-    allow();
-    return;
+    return rawInput; // allow
   }
 
-  allow();
+  return rawInput; // allow
 }
 
-main();
+module.exports = { run };
