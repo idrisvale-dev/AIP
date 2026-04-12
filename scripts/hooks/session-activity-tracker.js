@@ -55,7 +55,7 @@ function sanitizeParamValue(value, depth = 0) {
     return '[Truncated]';
   }
 
-  if (value == null) {
+  if (value === null || value === undefined) {
     return value;
   }
 
@@ -502,7 +502,7 @@ function summarizeInput(toolName, toolInput, filePaths) {
   if (toolInput && typeof toolInput === 'object') {
     const shallow = {};
     for (const [key, value] of Object.entries(toolInput)) {
-      if (value == null) {
+      if (value === null || value === undefined) {
         continue;
       }
       if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
@@ -517,7 +517,7 @@ function summarizeInput(toolName, toolInput, filePaths) {
 }
 
 function summarizeOutput(toolOutput) {
-  if (toolOutput == null) {
+  if (toolOutput === null || toolOutput === undefined) {
     return '';
   }
 
