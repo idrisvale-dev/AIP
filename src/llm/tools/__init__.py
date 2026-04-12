@@ -2,8 +2,8 @@
 
 from llm.tools.executor import ReActAgent, ToolExecutor, ToolRegistry
 
-__all__ = [
-    "ToolRegistry",
-    "ToolExecutor",
+__all__ = (
     "ReActAgent",
-]
+    "ToolExecutor",
+    "ToolRegistry",
+)

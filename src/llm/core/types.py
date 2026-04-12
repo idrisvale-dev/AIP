@@ -26,6 +26,7 @@ class Message:
     content: str
     name: str | None = None
     tool_call_id: str | None = None
+    tool_calls: list[ToolCall] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"role": self.role.value, "content": self.content}
@@ -33,6 +34,11 @@ class Message:
             result["name"] = self.name
         if self.tool_call_id:
             result["tool_call_id"] = self.tool_call_id
+        if self.tool_calls:
+            result["tool_calls"] = [
+                {"id": tc.id, "function": {"name": tc.name, "arguments": tc.arguments}}
+                for tc in self.tool_calls
+            ]
         return result
 
 

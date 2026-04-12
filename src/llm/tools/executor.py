@@ -91,6 +91,14 @@ class ReActAgent:
             if not output.has_tool_calls:
                 return output
 
+            messages.append(
+                Message(
+                    role=Role.ASSISTANT,
+                    content=output.content or "",
+                    tool_calls=output.tool_calls,
+                )
+            )
+
             results = self.executor.execute_all(output.tool_calls)
 
             for result in results:
