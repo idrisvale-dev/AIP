@@ -117,14 +117,15 @@ Switch(
 
 - **Div-Buttons**: Using a `<div>` or `<span>` for a click event without adding a role and keyboard support.
 - **Color-Only Meaning**: Indicating an error or status _only_ with a color change (e.g., turning a border red).
-- **Infinite Tab Loops**: Modals that don't trap focus, allowing users to "escape" into the background content while the modal is open.
+- **Uncontained Modal Focus**: Modals that don't trap focus, allowing keyboard users to navigate background content while the modal is open. Focus must be contained _and_ escapable via the `Escape` key or an explicit close button (WCAG SC 2.1.2).
 - **Redundant Alt Text**: Using "Image of..." or "Picture of..." in alt text (screen readers already announce the role "Image").
 
 ## Best Practices Checklist
 
 - [ ] Interactive elements meet the **24x24px** (Web) or **44x44pt** (Native) target size.
 - [ ] Focus indicators are clearly visible and high-contrast.
-- [ ] No "Keyboard Traps" exist in complex components (modals, dropdowns).
+- [ ] Modals **contain focus** while open, and release it cleanly on close (`Escape` key or close button).
+- [ ] Dropdowns and menus restore focus to the trigger element on close.
 - [ ] Forms provide text-based error suggestions.
 - [ ] All icon-only buttons have a descriptive text label.
 - [ ] Content reflows properly when text is scaled.

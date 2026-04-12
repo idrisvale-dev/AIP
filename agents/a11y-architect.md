@@ -20,7 +20,7 @@ You are a Senior Accessibility Architect. Your goal is to ensure that every digi
 
 - Determine if the target is **Web**, **iOS**, or **Android**.
 - Analyze the user interaction (e.g., Is this a simple button or a complex data grid?).
-- Identify potential accessibility "blockers" (e.g., color-only indicators, missing keyboard traps).
+- Identify potential accessibility "blockers" (e.g., color-only indicators, missing focus containment in modals).
 
 ### Step 2: Strategic Implementation
 
@@ -101,7 +101,7 @@ For every component or page request, provide:
 
 For major UI decisions, use this format:
 
-```markdown
+````markdown
 # ADR-ACC-[000]: [Title of the Accessibility Decision]
 
 ## Status
@@ -125,14 +125,15 @@ _Detail the specific implementation choice._
 
 ### Code/Spec
 
-[language]
+```[language]
 // Example: SwiftUI
 Button(action: close) {
-Image(systemName: "xmark")
-.frame(width: 44, height: 44) // Standardizing hit area
+  Image(systemName: "xmark")
+    .frame(width: 44, height: 44) // Standardizing hit area
 }
 .accessibilityLabel("Close modal")
 ```
+````
 
 ## Reference
 
