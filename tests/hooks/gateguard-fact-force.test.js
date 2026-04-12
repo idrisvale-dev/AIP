@@ -166,20 +166,34 @@ function runTests() {
     assert.ok(output.hookSpecificOutput.permissionDecisionReason.includes('call this new file'));
   })) passed++; else failed++;
 
-  // --- Test 4: denies destructive Bash ---
+  // --- Test 4: denies destructive Bash, allows retry ---
   clearState();
-  if (test('denies destructive Bash commands', () => {
+  if (test('denies destructive Bash commands, allows retry after facts presented', () => {
     const input = {
       tool_name: 'Bash',
       tool_input: { command: 'rm -rf /important/data' }
     };
-    const result = runBashHook(input);
-    assert.strictEqual(result.code, 0, 'exit code should be 0');
-    const output = parseOutput(result.stdout);
-    assert.ok(output, 'should produce JSON output');
-    assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
-    assert.ok(output.hookSpecificOutput.permissionDecisionReason.includes('Destructive'));
-    assert.ok(output.hookSpecificOutput.permissionDecisionReason.includes('rollback'));
+
+    // First call: should deny
+    const result1 = runBashHook(input);
+    assert.strictEqual(result1.code, 0, 'first call exit code should be 0');
+    const output1 = parseOutput(result1.stdout);
+    assert.ok(output1, 'first call should produce JSON output');
+    assert.strictEqual(output1.hookSpecificOutput.permissionDecision, 'deny');
+    assert.ok(output1.hookSpecificOutput.permissionDecisionReason.includes('Destructive'));
+    assert.ok(output1.hookSpecificOutput.permissionDecisionReason.includes('rollback'));
+
+    // Second call (retry after facts presented): should allow
+    const result2 = runBashHook(input);
+    assert.strictEqual(result2.code, 0, 'second call exit code should be 0');
+    const output2 = parseOutput(result2.stdout);
+    assert.ok(output2, 'second call should produce valid JSON output');
+    if (output2.hookSpecificOutput) {
+      assert.notStrictEqual(output2.hookSpecificOutput.permissionDecision, 'deny',
+        'should not deny destructive bash retry after facts presented');
+    } else {
+      assert.strictEqual(output2.tool_name, 'Bash', 'pass-through should preserve input');
+    }
   })) passed++; else failed++;
 
   // --- Test 5: denies first routine Bash, allows second ---

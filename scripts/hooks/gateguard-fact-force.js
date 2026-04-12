@@ -184,7 +184,13 @@ function run(rawInput) {
     const command = toolInput.command || '';
 
     if (DESTRUCTIVE_BASH.test(command)) {
-      return denyResult(destructiveBashMsg());
+      // Gate destructive commands on first attempt; allow retry after facts presented
+      const key = '__destructive__' + command.slice(0, 200);
+      if (!isChecked(key)) {
+        markChecked(key);
+        return denyResult(destructiveBashMsg());
+      }
+      return rawInput; // allow retry after facts presented
     }
 
     if (!isChecked('__bash_session__')) {
