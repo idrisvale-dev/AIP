@@ -8,7 +8,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const runner = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'run-with-flags.js');
-const stateDir = path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard');
+const stateDir = process.env.GATEGUARD_STATE_DIR || path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard-test-' + process.pid);
 const stateFile = path.join(stateDir, '.session_state.json');
 
 function test(name, fn) {
@@ -28,7 +28,9 @@ function clearState() {
     if (fs.existsSync(stateFile)) {
       fs.unlinkSync(stateFile);
     }
-  } catch (_) { /* ignore */ }
+  } catch (err) {
+    console.error(`  [clearState] failed to remove ${stateFile}: ${err.message}`);
+  }
 }
 
 function writeExpiredState() {
@@ -55,6 +57,7 @@ function runHook(input, env = {}) {
     env: {
       ...process.env,
       ECC_HOOK_PROFILE: 'standard',
+      GATEGUARD_STATE_DIR: stateDir,
       ...env
     },
     timeout: 15000,
@@ -81,6 +84,7 @@ function runBashHook(input, env = {}) {
     env: {
       ...process.env,
       ECC_HOOK_PROFILE: 'standard',
+      GATEGUARD_STATE_DIR: stateDir,
       ...env
     },
     timeout: 15000,
@@ -116,6 +120,7 @@ function runTests() {
       tool_input: { file_path: '/src/app.js', old_string: 'foo', new_string: 'bar' }
     };
     const result = runHook(input);
+    assert.strictEqual(result.code, 0, 'exit code should be 0');
     const output = parseOutput(result.stdout);
     assert.ok(output, 'should produce JSON output');
     assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
@@ -131,10 +136,17 @@ function runTests() {
       tool_input: { file_path: '/src/app.js', old_string: 'foo', new_string: 'bar' }
     };
     const result = runHook(input);
+    assert.strictEqual(result.code, 0, 'exit code should be 0');
     const output = parseOutput(result.stdout);
-    if (output && output.hookSpecificOutput) {
+    assert.ok(output, 'should produce valid JSON output');
+    // When allowed, the hook passes through the raw input (no hookSpecificOutput)
+    // OR if hookSpecificOutput exists, it must not be deny
+    if (output.hookSpecificOutput) {
       assert.notStrictEqual(output.hookSpecificOutput.permissionDecision, 'deny',
         'should not deny second edit on same file');
+    } else {
+      // Pass-through: output matches original input (allow)
+      assert.strictEqual(output.tool_name, 'Edit', 'pass-through should preserve input');
     }
   })) passed++; else failed++;
 
@@ -146,6 +158,7 @@ function runTests() {
       tool_input: { file_path: '/src/new-file.js', content: 'console.log("hello")' }
     };
     const result = runHook(input);
+    assert.strictEqual(result.code, 0, 'exit code should be 0');
     const output = parseOutput(result.stdout);
     assert.ok(output, 'should produce JSON output');
     assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
@@ -161,6 +174,7 @@ function runTests() {
       tool_input: { command: 'rm -rf /important/data' }
     };
     const result = runBashHook(input);
+    assert.strictEqual(result.code, 0, 'exit code should be 0');
     const output = parseOutput(result.stdout);
     assert.ok(output, 'should produce JSON output');
     assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
@@ -178,15 +192,21 @@ function runTests() {
 
     // First call: should deny
     const result1 = runBashHook(input);
+    assert.strictEqual(result1.code, 0, 'first call exit code should be 0');
     const output1 = parseOutput(result1.stdout);
     assert.ok(output1, 'first call should produce JSON output');
     assert.strictEqual(output1.hookSpecificOutput.permissionDecision, 'deny');
 
     // Second call: should allow
     const result2 = runBashHook(input);
+    assert.strictEqual(result2.code, 0, 'second call exit code should be 0');
     const output2 = parseOutput(result2.stdout);
-    if (output2 && output2.hookSpecificOutput) {
-      assert.notStrictEqual(output2.hookSpecificOutput.permissionDecision, 'deny');
+    assert.ok(output2, 'second call should produce valid JSON output');
+    if (output2.hookSpecificOutput) {
+      assert.notStrictEqual(output2.hookSpecificOutput.permissionDecision, 'deny',
+        'should not deny second routine bash');
+    } else {
+      assert.strictEqual(output2.tool_name, 'Bash', 'pass-through should preserve input');
     }
   })) passed++; else failed++;
 
@@ -198,6 +218,7 @@ function runTests() {
       tool_input: { file_path: 'some_file.js', old_string: 'a', new_string: 'b' }
     };
     const result = runHook(input);
+    assert.strictEqual(result.code, 0, 'exit code should be 0');
     const output = parseOutput(result.stdout);
     assert.ok(output, 'should produce JSON output after expired state');
     assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny',
@@ -212,9 +233,14 @@ function runTests() {
       tool_input: { file_path: '/src/app.js' }
     };
     const result = runHook(input);
+    assert.strictEqual(result.code, 0, 'exit code should be 0');
     const output = parseOutput(result.stdout);
-    if (output && output.hookSpecificOutput) {
-      assert.notStrictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
+    assert.ok(output, 'should produce valid JSON output');
+    if (output.hookSpecificOutput) {
+      assert.notStrictEqual(output.hookSpecificOutput.permissionDecision, 'deny',
+        'should not deny unknown tool');
+    } else {
+      assert.strictEqual(output.tool_name, 'Read', 'pass-through should preserve input');
     }
   })) passed++; else failed++;
 
@@ -226,11 +252,18 @@ function runTests() {
       tool_input: { file_path: '/src/app.js\ninjected content', old_string: 'a', new_string: 'b' }
     };
     const result = runHook(input);
+    assert.strictEqual(result.code, 0, 'exit code should be 0');
     const output = parseOutput(result.stdout);
     assert.ok(output, 'should produce JSON output');
     assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
     const reason = output.hookSpecificOutput.permissionDecisionReason;
-    assert.ok(!reason.includes('injected content\n'), 'newline injection should be sanitized');
+    // The file path portion of the reason must not contain any raw newlines
+    // (sanitizePath replaces \n and \r with spaces)
+    const pathLine = reason.split('\n').find(l => l.includes('/src/app.js'));
+    assert.ok(pathLine, 'reason should mention the file path');
+    assert.ok(!pathLine.includes('\n'), 'file path line must not contain raw newlines');
+    assert.ok(!reason.includes('/src/app.js\n'), 'newline after file path should be sanitized');
+    assert.ok(!reason.includes('\ninjected'), 'injected content must not appear on its own line');
   })) passed++; else failed++;
 
   // --- Test 9: respects ECC_DISABLED_HOOKS ---
@@ -244,15 +277,27 @@ function runTests() {
       ECC_DISABLED_HOOKS: 'pre:edit-write:gateguard-fact-force'
     });
 
+    assert.strictEqual(result.code, 0, 'exit code should be 0');
     const output = parseOutput(result.stdout);
-    if (output && output.hookSpecificOutput) {
+    assert.ok(output, 'should produce valid JSON output');
+    if (output.hookSpecificOutput) {
       assert.notStrictEqual(output.hookSpecificOutput.permissionDecision, 'deny',
         'should not deny when hook is disabled');
+    } else {
+      // When disabled, hook passes through raw input
+      assert.strictEqual(output.tool_name, 'Edit', 'pass-through should preserve input');
     }
   })) passed++; else failed++;
 
-  // Cleanup
+  // Cleanup: remove test-isolated state directory
   clearState();
+  try {
+    if (fs.existsSync(stateDir)) {
+      fs.rmdirSync(stateDir);
+    }
+  } catch (err) {
+    console.error(`  [cleanup] failed to remove ${stateDir}: ${err.message}`);
+  }
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
   process.exit(failed > 0 ? 1 : 0);

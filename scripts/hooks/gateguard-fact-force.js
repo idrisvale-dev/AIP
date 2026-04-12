@@ -26,7 +26,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Session state file for tracking which files have been gated
-const STATE_DIR = path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard');
+const STATE_DIR = process.env.GATEGUARD_STATE_DIR || path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard');
 const STATE_FILE = path.join(STATE_DIR, '.session_state.json');
 
 // State expires after 30 minutes of inactivity (= new session)
