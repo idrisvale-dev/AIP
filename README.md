@@ -518,6 +518,12 @@ everything-claude-code/
 |-- mcp-configs/      # MCP server configurations
 |   |-- mcp-servers.json    # GitHub, Supabase, Vercel, Railway, etc.
 |
+|-- ecc_dashboard.py  # Desktop GUI dashboard (Tkinter)
+|
+|-- assets/           # Assets for dashboard
+|   |-- images/
+|       |-- ecc-logo.png
+|
 |-- marketplace.json  # Self-hosted marketplace config (for /plugin marketplace add)
 ```
 
