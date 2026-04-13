@@ -90,14 +90,16 @@ function runTests() {
     assert.strictEqual(plan.targetRoot, path.join(projectRoot, '.cursor'));
     assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.cursor', 'ecc-install-state.json'));
 
-    const flattened = plan.operations.find(operation => operation.sourceRelativePath === '.cursor');
+    const hooksJson = plan.operations.find(operation => (
+      normalizedRelativePath(operation.sourceRelativePath) === '.cursor/hooks.json'
+    ));
     const preserved = plan.operations.find(operation => (
       normalizedRelativePath(operation.sourceRelativePath) === 'rules/common/coding-style.md'
     ));
 
-    assert.ok(flattened, 'Should include .cursor scaffold operation');
-    assert.strictEqual(flattened.strategy, 'sync-root-children');
-    assert.strictEqual(flattened.destinationPath, path.join(projectRoot, '.cursor'));
+    assert.ok(hooksJson, 'Should preserve non-rule Cursor platform config files');
+    assert.strictEqual(hooksJson.strategy, 'preserve-relative-path');
+    assert.strictEqual(hooksJson.destinationPath, path.join(projectRoot, '.cursor', 'hooks.json'));
 
     assert.ok(preserved, 'Should include flattened rules scaffold operations');
     assert.strictEqual(preserved.strategy, 'flatten-copy');
@@ -148,6 +150,62 @@ function runTests() {
         operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'common-coding-style.md')
       )),
       'Should not emit .md Cursor rule files'
+    );
+    assert.ok(
+      !plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === 'rules/README.md'
+      )),
+      'Should not install Cursor README docs as runtime rule files'
+    );
+    assert.ok(
+      !plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === 'rules/zh/README.md'
+      )),
+      'Should not flatten localized README docs into Cursor rule files'
+    );
+  })) passed++; else failed++;
+
+  if (test('plans cursor platform rule files as .mdc and excludes rule README docs', () => {
+    const repoRoot = path.join(__dirname, '..', '..');
+    const projectRoot = '/workspace/app';
+
+    const plan = planInstallTargetScaffold({
+      target: 'cursor',
+      repoRoot,
+      projectRoot,
+      modules: [
+        {
+          id: 'platform-configs',
+          paths: ['.cursor'],
+        },
+      ],
+    });
+
+    assert.ok(
+      plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === '.cursor/rules/common-agents.md'
+        && operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'common-agents.mdc')
+      )),
+      'Should rename Cursor platform rule files to .mdc'
+    );
+    assert.ok(
+      !plan.operations.some(operation => (
+        operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'common-agents.md')
+      )),
+      'Should not preserve .md Cursor platform rule files'
+    );
+    assert.ok(
+      plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === '.cursor/hooks.json'
+        && operation.destinationPath === path.join(projectRoot, '.cursor', 'hooks.json')
+      )),
+      'Should preserve non-rule Cursor platform config files'
+    );
+    assert.ok(
+      !plan.operations.some(operation => (
+        operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'README.mdc')
+      )),
+      'Should not emit Cursor rule README docs as .mdc files'
     );
   })) passed++; else failed++;
 

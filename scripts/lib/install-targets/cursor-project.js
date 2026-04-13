@@ -1,10 +1,22 @@
+const fs = require('fs');
 const path = require('path');
 
 const {
   createFlatRuleOperations,
   createInstallTargetAdapter,
+  createManagedOperation,
   isForeignPlatformPath,
 } = require('./helpers');
+
+function toCursorRuleFileName(fileName, sourceRelativeFile) {
+  if (path.basename(sourceRelativeFile).toLowerCase() === 'readme.md') {
+    return null;
+  }
+
+  return fileName.endsWith('.md')
+    ? `${fileName.slice(0, -3)}.mdc`
+    : fileName;
+}
 
 module.exports = createInstallTargetAdapter({
   id: 'cursor-project',
@@ -40,12 +52,35 @@ module.exports = createInstallTargetAdapter({
               repoRoot,
               sourceRelativePath,
               destinationDir: path.join(targetRoot, 'rules'),
-              destinationNameTransform(fileName) {
-                return fileName.endsWith('.md')
-                  ? `${fileName.slice(0, -3)}.mdc`
-                  : fileName;
-              },
+              destinationNameTransform: toCursorRuleFileName,
             });
+          }
+
+          if (sourceRelativePath === '.cursor') {
+            const cursorRoot = path.join(repoRoot, '.cursor');
+            if (!fs.existsSync(cursorRoot) || !fs.statSync(cursorRoot).isDirectory()) {
+              return [];
+            }
+
+            const childOperations = fs.readdirSync(cursorRoot, { withFileTypes: true })
+              .sort((left, right) => left.name.localeCompare(right.name))
+              .filter(entry => entry.name !== 'rules')
+              .map(entry => createManagedOperation({
+                moduleId: module.id,
+                sourceRelativePath: path.join('.cursor', entry.name),
+                destinationPath: path.join(targetRoot, entry.name),
+                strategy: 'preserve-relative-path',
+              }));
+
+            const ruleOperations = createFlatRuleOperations({
+              moduleId: module.id,
+              repoRoot,
+              sourceRelativePath: '.cursor/rules',
+              destinationDir: path.join(targetRoot, 'rules'),
+              destinationNameTransform: toCursorRuleFileName,
+            });
+
+            return [...childOperations, ...ruleOperations];
           }
 
           return [adapter.createScaffoldOperation(module.id, sourceRelativePath, planningInput)];

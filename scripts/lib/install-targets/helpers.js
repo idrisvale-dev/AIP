@@ -208,23 +208,31 @@ function createFlatRuleOperations({
       const relativeFiles = listRelativeFiles(entryPath);
       for (const relativeFile of relativeFiles) {
         const defaultFileName = `${namespace}-${normalizeRelativePath(relativeFile).replace(/\//g, '-')}`;
+        const sourceRelativeFile = path.join(normalizedSourcePath, namespace, relativeFile);
         const flattenedFileName = typeof destinationNameTransform === 'function'
-          ? destinationNameTransform(defaultFileName)
+          ? destinationNameTransform(defaultFileName, sourceRelativeFile)
           : defaultFileName;
+        if (!flattenedFileName) {
+          continue;
+        }
         operations.push(createManagedOperation({
           moduleId,
-          sourceRelativePath: path.join(normalizedSourcePath, namespace, relativeFile),
+          sourceRelativePath: sourceRelativeFile,
           destinationPath: path.join(destinationDir, flattenedFileName),
           strategy: 'flatten-copy',
         }));
       }
     } else if (entry.isFile()) {
+      const sourceRelativeFile = path.join(normalizedSourcePath, entry.name);
       const destinationFileName = typeof destinationNameTransform === 'function'
-        ? destinationNameTransform(entry.name)
+        ? destinationNameTransform(entry.name, sourceRelativeFile)
         : entry.name;
+      if (!destinationFileName) {
+        continue;
+      }
       operations.push(createManagedOperation({
         moduleId,
-        sourceRelativePath: path.join(normalizedSourcePath, entry.name),
+        sourceRelativePath: sourceRelativeFile,
         destinationPath: path.join(destinationDir, destinationFileName),
         strategy: 'flatten-copy',
       }));
