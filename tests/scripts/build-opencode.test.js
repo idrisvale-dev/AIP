@@ -49,8 +49,9 @@ function main() {
       const result = spawnSync("npm", ["pack", "--dry-run", "--json"], {
         cwd: repoRoot,
         encoding: "utf8",
+        shell: process.platform === "win32",
       })
-      assert.strictEqual(result.status, 0, result.stderr)
+      assert.strictEqual(result.status, 0, result.error?.message || result.stderr)
 
       const packOutput = JSON.parse(result.stdout)
       const packagedPaths = new Set(packOutput[0]?.files?.map((file) => file.path) ?? [])
