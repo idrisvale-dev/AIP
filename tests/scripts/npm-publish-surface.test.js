@@ -62,6 +62,7 @@ function buildExpectedPublishPaths(repoRoot) {
     ".mcp.json",
     "install.sh",
     "install.ps1",
+    "schemas",
     "agent.yaml",
     "VERSION",
   ]
@@ -109,6 +110,7 @@ function main() {
         ".gemini/GEMINI.md",
         ".claude-plugin/plugin.json",
         ".codex-plugin/plugin.json",
+        "schemas/install-state.schema.json",
         "skills/backend-patterns/SKILL.md",
       ]) {
         assert.ok(
@@ -121,7 +123,6 @@ function main() {
         "contexts/dev.md",
         "examples/CLAUDE.md",
         "plugins/README.md",
-        "schemas/hooks.schema.json",
         "scripts/ci/catalog.js",
         "skills/skill-comply/SKILL.md",
       ]) {

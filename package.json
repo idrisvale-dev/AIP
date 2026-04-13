@@ -57,6 +57,7 @@
     "manifests/",
     "mcp-configs/",
     "rules/",
+    "schemas/",
     "scripts/catalog.js",
     "scripts/claw.js",
     "scripts/codex/merge-codex-config.js",
