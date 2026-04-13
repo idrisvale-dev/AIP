@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"pre:bash:block-no-verify\" \"scripts/hooks/block-no-verify.js\" \"standard,strict\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"pre:bash:block-no-verify\" \"scripts/hooks/block-no-verify.js\" \"minimal,standard,strict\""
           }
         ],
         "description": "Block git hook-bypass flag to protect pre-commit, commit-msg, and pre-push hooks from being skipped",
