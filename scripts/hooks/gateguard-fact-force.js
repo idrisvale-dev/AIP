@@ -22,6 +22,7 @@
 
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -109,7 +110,8 @@ function isChecked(key) {
 // --- Sanitize file path against injection ---
 
 function sanitizePath(filePath) {
-  return filePath.replace(/[\n\r]/g, ' ').trim().slice(0, 500);
+  // Strip control chars (including null), bidi overrides, and newlines
+  return filePath.replace(/[\x00-\x1f\x7f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').trim().slice(0, 500);
 }
 
 // --- Gate messages ---
@@ -123,7 +125,7 @@ function editGateMsg(filePath) {
     '',
     '1. List ALL files that import/require this file (use Grep)',
     '2. List the public functions/classes affected by this change',
-    '3. If this file reads/writes data files, cat one real record and show actual field names, structure, and date format',
+    '3. If this file reads/writes data files, show field names, structure, and date format (use redacted or synthetic values, not raw production data)',
     '4. Quote the user\'s current instruction verbatim',
     '',
     'Present the facts, then retry the same operation.'
@@ -139,7 +141,7 @@ function writeGateMsg(filePath) {
     '',
     '1. Name the file(s) and line(s) that will call this new file',
     '2. Confirm no existing file serves the same purpose (use Glob)',
-    '3. If this file reads/writes data files, cat one real record and show actual field names, structure, and date format',
+    '3. If this file reads/writes data files, show field names, structure, and date format (use redacted or synthetic values, not raw production data)',
     '4. Quote the user\'s current instruction verbatim',
     '',
     'Present the facts, then retry the same operation.'
@@ -194,8 +196,11 @@ function run(rawInput) {
     return rawInput; // allow on parse error
   }
 
-  const toolName = data.tool_name || '';
+  const rawToolName = data.tool_name || '';
   const toolInput = data.tool_input || {};
+  // Normalize: case-insensitive matching via lookup map
+  const TOOL_MAP = { 'edit': 'Edit', 'write': 'Write', 'multiedit': 'MultiEdit', 'bash': 'Bash' };
+  const toolName = TOOL_MAP[rawToolName.toLowerCase()] || rawToolName;
 
   if (toolName === 'Edit' || toolName === 'Write') {
     const filePath = toolInput.file_path || '';
@@ -228,7 +233,7 @@ function run(rawInput) {
 
     if (DESTRUCTIVE_BASH.test(command)) {
       // Gate destructive commands on first attempt; allow retry after facts presented
-      const key = '__destructive__' + command.slice(0, 200);
+      const key = '__destructive__' + crypto.createHash('sha256').update(command).digest('hex').slice(0, 16);
       if (!isChecked(key)) {
         markChecked(key);
         return denyResult(destructiveBashMsg());

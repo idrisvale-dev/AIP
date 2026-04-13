@@ -45,7 +45,9 @@ Both agents produce code that runs and passes tests. The difference is design de
 
 ## Gate Types
 
-### Edit Gate (first edit per file)
+### Edit / MultiEdit Gate (first edit per file)
+
+MultiEdit is handled identically — each file in the batch is gated individually.
 
 ```
 Before editing {file_path}, present these facts:

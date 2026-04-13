@@ -307,6 +307,55 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  // --- Test 10: MultiEdit gates first unchecked file ---
+  clearState();
+  if (test('denies first MultiEdit with unchecked file', () => {
+    const input = {
+      tool_name: 'MultiEdit',
+      tool_input: {
+        edits: [
+          { file_path: '/src/multi-a.js', old_string: 'a', new_string: 'b' },
+          { file_path: '/src/multi-b.js', old_string: 'c', new_string: 'd' }
+        ]
+      }
+    };
+    const result = runHook(input);
+    assert.strictEqual(result.code, 0, 'exit code should be 0');
+    const output = parseOutput(result.stdout);
+    assert.ok(output, 'should produce JSON output');
+    assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
+    assert.ok(output.hookSpecificOutput.permissionDecisionReason.includes('Fact-Forcing Gate'));
+    assert.ok(output.hookSpecificOutput.permissionDecisionReason.includes('/src/multi-a.js'));
+  })) passed++; else failed++;
+
+  // --- Test 11: MultiEdit allows after all files gated ---
+  if (test('allows MultiEdit after all files gated', () => {
+    // multi-a.js was gated in test 10; gate multi-b.js
+    const input2 = {
+      tool_name: 'MultiEdit',
+      tool_input: { edits: [{ file_path: '/src/multi-b.js', old_string: 'c', new_string: 'd' }] }
+    };
+    runHook(input2); // gates multi-b.js
+
+    // Now both files are gated — retry should allow
+    const input3 = {
+      tool_name: 'MultiEdit',
+      tool_input: {
+        edits: [
+          { file_path: '/src/multi-a.js', old_string: 'a', new_string: 'b' },
+          { file_path: '/src/multi-b.js', old_string: 'c', new_string: 'd' }
+        ]
+      }
+    };
+    const result3 = runHook(input3);
+    const output3 = parseOutput(result3.stdout);
+    assert.ok(output3, 'should produce valid JSON');
+    if (output3.hookSpecificOutput) {
+      assert.notStrictEqual(output3.hookSpecificOutput.permissionDecision, 'deny',
+        'should allow MultiEdit after all files gated');
+    }
+  })) passed++; else failed++;
+
   // Cleanup: remove test-isolated state directory
   try {
     if (fs.existsSync(stateDir)) {
