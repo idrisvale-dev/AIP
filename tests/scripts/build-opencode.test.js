@@ -35,7 +35,7 @@ function main() {
     ["package.json exposes the OpenCode build and prepack hooks", () => {
       assert.strictEqual(packageJson.scripts["build:opencode"], "node scripts/build-opencode.js")
       assert.strictEqual(packageJson.scripts.prepack, "npm run build:opencode")
-      assert.ok(packageJson.files.includes(".opencode/dist/"))
+      assert.ok(packageJson.files.includes(".opencode/"))
     }],
     ["build script generates .opencode/dist", () => {
       const result = spawnSync("node", [buildScript], {
