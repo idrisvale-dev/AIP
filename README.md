@@ -989,6 +989,14 @@ Please contribute! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - Testing strategies (different frameworks, visual regression)
 - Domain-specific knowledge (ML, data engineering, mobile)
 
+### Community Ecosystem Notes
+
+These are not bundled with ECC and are not audited by this repo, but they are worth knowing about if you are exploring the broader Claude Code skills ecosystem:
+
+- [claude-seo](https://github.com/AgriciDaniel/claude-seo) — SEO-focused skill and agent collection
+- [claude-ads](https://github.com/AgriciDaniel/claude-ads) — Ad-audit and paid-growth workflow collection
+- [claude-cybersecurity](https://github.com/AgriciDaniel/claude-cybersecurity) — Security-oriented skill and agent collection
+
 ---
 
 ## Cursor IDE Support
