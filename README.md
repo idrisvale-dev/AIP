@@ -703,11 +703,27 @@ mkdir -p ~/.claude/commands
 cp everything-claude-code/commands/*.md ~/.claude/commands/
 ```
 
-#### Add hooks to settings.json
+#### Install hooks
 
-Manual install only: copy the hooks from `hooks/hooks.json` to your `~/.claude/settings.json` if you are not installing ECC as a Claude plugin.
+Do not copy the raw repo `hooks/hooks.json` into `~/.claude/settings.json` or `~/.claude/hooks/hooks.json`. That file is plugin/repo-oriented and still contains `${CLAUDE_PLUGIN_ROOT}` placeholders, so raw copying is not a supported manual install path.
+
+Use the installer to install only the Claude hook runtime so command paths are rewritten correctly:
+
+```bash
+# macOS / Linux
+bash ./install.sh --target claude --modules hooks-runtime
+```
+
+```powershell
+# Windows PowerShell
+pwsh -File .\install.ps1 --target claude --modules hooks-runtime
+```
+
+That writes resolved hooks to `~/.claude/hooks/hooks.json` and leaves any existing `~/.claude/settings.json` untouched.
 
 If you installed ECC via `/plugin install`, do not copy those hooks into `settings.json`. Claude Code v2.1+ already auto-loads plugin `hooks/hooks.json`, and duplicating them in `settings.json` causes duplicate execution and `${CLAUDE_PLUGIN_ROOT}` resolution failures.
+
+Windows note: the Claude config directory is `%USERPROFILE%\\.claude`, not `~/claude`.
 
 #### Configure MCPs
 
