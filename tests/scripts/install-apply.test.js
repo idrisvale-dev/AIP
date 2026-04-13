@@ -580,26 +580,64 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('fails when source hooks.json root is not an object before copying files', () => {
-    const homeDir = createTempDir('install-apply-home-');
-    const projectDir = createTempDir('install-apply-project-');
-    const sourceHooksPath = path.join(REPO_ROOT, 'hooks', 'hooks.json');
-    const originalHooks = fs.readFileSync(sourceHooksPath, 'utf8');
+    const tempDir = createTempDir('install-apply-invalid-hooks-');
+    const targetRoot = path.join(tempDir, '.claude');
+    const installStatePath = path.join(targetRoot, 'ecc', 'install-state.json');
+    const sourceHooksPath = path.join(tempDir, 'hooks.json');
 
     try {
       fs.writeFileSync(sourceHooksPath, '[]\n');
 
-      const result = run(['--profile', 'core'], { cwd: projectDir, homeDir });
-      assert.strictEqual(result.code, 1);
-      assert.ok(result.stderr.includes('Invalid hooks config at'));
-      assert.ok(result.stderr.includes('expected a JSON object'));
+      assert.throws(() => {
+        applyInstallPlan({
+          targetRoot,
+          installStatePath,
+          statePreview: {
+            schemaVersion: 'ecc.install.v1',
+            installedAt: new Date().toISOString(),
+            target: {
+              id: 'claude-home',
+              kind: 'home',
+              root: targetRoot,
+              installStatePath,
+            },
+            request: {
+              profile: 'core',
+              modules: [],
+              includeComponents: [],
+              excludeComponents: [],
+              legacyLanguages: [],
+              legacyMode: false,
+            },
+            resolution: {
+              selectedModules: ['hooks-runtime'],
+              skippedModules: [],
+            },
+            source: {
+              repoVersion: null,
+              repoCommit: null,
+              manifestVersion: 1,
+            },
+            operations: [],
+          },
+          adapter: { target: 'claude' },
+          operations: [{
+            kind: 'copy-file',
+            moduleId: 'hooks-runtime',
+            sourcePath: sourceHooksPath,
+            sourceRelativePath: 'hooks/hooks.json',
+            destinationPath: path.join(targetRoot, 'hooks', 'hooks.json'),
+            strategy: 'preserve-relative-path',
+            ownership: 'managed',
+            scaffoldOnly: false,
+          }],
+        });
+      }, /Invalid hooks config at .*expected a JSON object/);
 
-      const claudeRoot = path.join(homeDir, '.claude');
-      assert.ok(!fs.existsSync(path.join(claudeRoot, 'hooks', 'hooks.json')), 'hooks.json should not be copied when source hooks are invalid');
-      assert.ok(!fs.existsSync(path.join(claudeRoot, 'ecc', 'install-state.json')), 'install state should not be written when source hooks are invalid');
+      assert.ok(!fs.existsSync(path.join(targetRoot, 'hooks', 'hooks.json')), 'hooks.json should not be copied when source hooks are invalid');
+      assert.ok(!fs.existsSync(installStatePath), 'install state should not be written when source hooks are invalid');
     } finally {
-      fs.writeFileSync(sourceHooksPath, originalHooks);
-      cleanup(homeDir);
-      cleanup(projectDir);
+      cleanup(tempDir);
     }
   })) passed++; else failed++;
 
