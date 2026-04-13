@@ -87,6 +87,8 @@ jobs:
         if: matrix.pm == 'pnpm'
         id: pnpm-cache-dir
         shell: bash
+        env:
+          COREPACK_ENABLE_STRICT: '0'
         run: echo "dir=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm
