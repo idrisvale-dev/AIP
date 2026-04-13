@@ -64,7 +64,10 @@ function saveState(state) {
     if (state.checked.length > MAX_CHECKED_ENTRIES) {
       const sessionKeys = state.checked.filter(k => k.startsWith('__'));
       const fileKeys = state.checked.filter(k => !k.startsWith('__'));
-      state.checked = [...sessionKeys, ...fileKeys.slice(-(MAX_CHECKED_ENTRIES - sessionKeys.length))];
+      // Cap session keys at 50 to prevent unbounded growth
+      const cappedSession = sessionKeys.length > 50 ? sessionKeys.slice(-50) : sessionKeys;
+      const remaining = MAX_CHECKED_ENTRIES - cappedSession.length;
+      state.checked = [...cappedSession, ...fileKeys.slice(-Math.max(remaining, 0))];
     }
     fs.mkdirSync(STATE_DIR, { recursive: true });
     // Atomic write: temp file + rename prevents partial reads

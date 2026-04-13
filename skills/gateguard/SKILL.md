@@ -1,6 +1,6 @@
 ---
 name: gateguard
-description: Fact-forcing gate that blocks Edit/Write/Bash and demands concrete investigation (importers, data schemas, user instruction) before allowing the action. Measurably improves output quality by +2.25 points vs ungated agents.
+description: Fact-forcing gate that blocks Edit/MultiEdit/Write/Bash and demands concrete investigation (importers, data schemas, user instruction) before allowing the action. Measurably improves output quality by +2.25 points vs ungated agents.
 origin: community
 ---
 
@@ -52,8 +52,8 @@ Before editing {file_path}, present these facts:
 
 1. List ALL files that import/require this file (use Grep)
 2. List the public functions/classes affected by this change
-3. If this file reads/writes data files, cat one real record
-   and show actual field names, structure, and date format
+3. If this file reads/writes data files, show field names, structure,
+   and date format (use redacted or synthetic values, not raw production data)
 4. Quote the user's current instruction verbatim
 ```
 
