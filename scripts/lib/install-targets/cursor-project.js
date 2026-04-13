@@ -29,6 +29,7 @@ module.exports = createInstallTargetAdapter({
     const modules = Array.isArray(input.modules)
       ? input.modules
       : (input.module ? [input.module] : []);
+    const seenDestinationPaths = new Set();
     const {
       repoRoot,
       projectRoot,
@@ -40,51 +41,98 @@ module.exports = createInstallTargetAdapter({
       homeDir,
     };
     const targetRoot = adapter.resolveRoot(planningInput);
-
-    return modules.flatMap(module => {
+    const entries = modules.flatMap((module, moduleIndex) => {
       const paths = Array.isArray(module.paths) ? module.paths : [];
       return paths
         .filter(p => !isForeignPlatformPath(p, adapter.target))
-        .flatMap(sourceRelativePath => {
-          if (sourceRelativePath === 'rules') {
-            return createFlatRuleOperations({
-              moduleId: module.id,
-              repoRoot,
-              sourceRelativePath,
-              destinationDir: path.join(targetRoot, 'rules'),
-              destinationNameTransform: toCursorRuleFileName,
-            });
-          }
+        .map((sourceRelativePath, pathIndex) => ({
+          module,
+          sourceRelativePath,
+          moduleIndex,
+          pathIndex,
+        }));
+    }).sort((left, right) => {
+      const getPriority = value => {
+        if (value === 'rules') {
+          return 0;
+        }
 
-          if (sourceRelativePath === '.cursor') {
-            const cursorRoot = path.join(repoRoot, '.cursor');
-            if (!fs.existsSync(cursorRoot) || !fs.statSync(cursorRoot).isDirectory()) {
-              return [];
-            }
+        if (value === '.cursor') {
+          return 1;
+        }
 
-            const childOperations = fs.readdirSync(cursorRoot, { withFileTypes: true })
-              .sort((left, right) => left.name.localeCompare(right.name))
-              .filter(entry => entry.name !== 'rules')
-              .map(entry => createManagedOperation({
-                moduleId: module.id,
-                sourceRelativePath: path.join('.cursor', entry.name),
-                destinationPath: path.join(targetRoot, entry.name),
-                strategy: 'preserve-relative-path',
-              }));
+        return 2;
+      };
 
-            const ruleOperations = createFlatRuleOperations({
-              moduleId: module.id,
-              repoRoot,
-              sourceRelativePath: '.cursor/rules',
-              destinationDir: path.join(targetRoot, 'rules'),
-              destinationNameTransform: toCursorRuleFileName,
-            });
+      const leftPriority = getPriority(left.sourceRelativePath);
+      const rightPriority = getPriority(right.sourceRelativePath);
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority;
+      }
 
-            return [...childOperations, ...ruleOperations];
-          }
+      if (left.moduleIndex !== right.moduleIndex) {
+        return left.moduleIndex - right.moduleIndex;
+      }
 
-          return [adapter.createScaffoldOperation(module.id, sourceRelativePath, planningInput)];
+      return left.pathIndex - right.pathIndex;
+    });
+
+    function takeUniqueOperations(operations) {
+      return operations.filter(operation => {
+        if (!operation || !operation.destinationPath) {
+          return false;
+        }
+
+        if (seenDestinationPaths.has(operation.destinationPath)) {
+          return false;
+        }
+
+        seenDestinationPaths.add(operation.destinationPath);
+        return true;
+      });
+    }
+
+    return entries.flatMap(({ module, sourceRelativePath }) => {
+      if (sourceRelativePath === 'rules') {
+        return takeUniqueOperations(createFlatRuleOperations({
+          moduleId: module.id,
+          repoRoot,
+          sourceRelativePath,
+          destinationDir: path.join(targetRoot, 'rules'),
+          destinationNameTransform: toCursorRuleFileName,
+        }));
+      }
+
+      if (sourceRelativePath === '.cursor') {
+        const cursorRoot = path.join(repoRoot, '.cursor');
+        if (!fs.existsSync(cursorRoot) || !fs.statSync(cursorRoot).isDirectory()) {
+          return [];
+        }
+
+        const childOperations = fs.readdirSync(cursorRoot, { withFileTypes: true })
+          .sort((left, right) => left.name.localeCompare(right.name))
+          .filter(entry => entry.name !== 'rules')
+          .map(entry => createManagedOperation({
+            moduleId: module.id,
+            sourceRelativePath: path.join('.cursor', entry.name),
+            destinationPath: path.join(targetRoot, entry.name),
+            strategy: 'preserve-relative-path',
+          }));
+
+        const ruleOperations = createFlatRuleOperations({
+          moduleId: module.id,
+          repoRoot,
+          sourceRelativePath: '.cursor/rules',
+          destinationDir: path.join(targetRoot, 'rules'),
+          destinationNameTransform: toCursorRuleFileName,
         });
+
+        return takeUniqueOperations([...childOperations, ...ruleOperations]);
+      }
+
+      return takeUniqueOperations([
+        adapter.createScaffoldOperation(module.id, sourceRelativePath, planningInput),
+      ]);
     });
   },
 });

@@ -209,6 +209,70 @@ function runTests() {
     );
   })) passed++; else failed++;
 
+  if (test('deduplicates cursor rule destinations when rules-core and platform-configs overlap', () => {
+    const repoRoot = path.join(__dirname, '..', '..');
+    const projectRoot = '/workspace/app';
+
+    const plan = planInstallTargetScaffold({
+      target: 'cursor',
+      repoRoot,
+      projectRoot,
+      modules: [
+        {
+          id: 'rules-core',
+          paths: ['rules'],
+        },
+        {
+          id: 'platform-configs',
+          paths: ['.cursor'],
+        },
+      ],
+    });
+
+    const commonAgentsDestinations = plan.operations.filter(operation => (
+      operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'common-agents.mdc')
+    ));
+
+    assert.strictEqual(commonAgentsDestinations.length, 1, 'Should keep only one common-agents.mdc operation');
+    assert.strictEqual(
+      normalizedRelativePath(commonAgentsDestinations[0].sourceRelativePath),
+      'rules/common/agents.md',
+      'Should prefer rules-core when cursor platform rules would collide'
+    );
+  })) passed++; else failed++;
+
+  if (test('prefers native cursor hooks when hooks-runtime and platform-configs overlap', () => {
+    const repoRoot = path.join(__dirname, '..', '..');
+    const projectRoot = '/workspace/app';
+
+    const plan = planInstallTargetScaffold({
+      target: 'cursor',
+      repoRoot,
+      projectRoot,
+      modules: [
+        {
+          id: 'hooks-runtime',
+          paths: ['hooks', 'scripts/hooks', 'scripts/lib'],
+        },
+        {
+          id: 'platform-configs',
+          paths: ['.cursor'],
+        },
+      ],
+    });
+
+    const hooksDestinations = plan.operations.filter(operation => (
+      operation.destinationPath === path.join(projectRoot, '.cursor', 'hooks')
+    ));
+
+    assert.strictEqual(hooksDestinations.length, 1, 'Should keep only one .cursor/hooks scaffold operation');
+    assert.strictEqual(
+      normalizedRelativePath(hooksDestinations[0].sourceRelativePath),
+      '.cursor/hooks',
+      'Should prefer native Cursor hooks over generic hooks-runtime hooks'
+    );
+  })) passed++; else failed++;
+
   if (test('plans antigravity remaps for workflows, skills, and flat rules', () => {
     const repoRoot = path.join(__dirname, '..', '..');
     const projectRoot = '/workspace/app';
