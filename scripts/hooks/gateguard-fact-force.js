@@ -59,9 +59,12 @@ function loadState() {
 function saveState(state) {
   try {
     state.last_active = Date.now();
-    // Prune checked list if it exceeds the cap
+    // Prune checked list if it exceeds the cap.
+    // Preserve session keys (__prefixed) so gates like __bash_session__ don't re-fire.
     if (state.checked.length > MAX_CHECKED_ENTRIES) {
-      state.checked = state.checked.slice(-MAX_CHECKED_ENTRIES);
+      const sessionKeys = state.checked.filter(k => k.startsWith('__'));
+      const fileKeys = state.checked.filter(k => !k.startsWith('__'));
+      state.checked = [...sessionKeys, ...fileKeys.slice(-(MAX_CHECKED_ENTRIES - sessionKeys.length))];
     }
     fs.mkdirSync(STATE_DIR, { recursive: true });
     // Atomic write: temp file + rename prevents partial reads

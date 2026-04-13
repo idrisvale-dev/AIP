@@ -9,9 +9,9 @@ const { spawnSync } = require('child_process');
 
 const runner = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'run-with-flags.js');
 const stateDir = process.env.GATEGUARD_STATE_DIR || path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard-test-' + process.pid);
-// State files are per-session. In tests, falls back to pid-based name.
-const sessionId = process.env.CLAUDE_SESSION_ID || process.env.ECC_SESSION_ID || `pid-${process.ppid || process.pid}`;
-const stateFile = path.join(stateDir, `state-${sessionId.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`);
+// Use a fixed session ID so test process and spawned hook process share the same state file
+const TEST_SESSION_ID = 'gateguard-test-session';
+const stateFile = path.join(stateDir, `state-${TEST_SESSION_ID}.json`);
 
 function test(name, fn) {
   try {
@@ -60,6 +60,7 @@ function runHook(input, env = {}) {
       ...process.env,
       ECC_HOOK_PROFILE: 'standard',
       GATEGUARD_STATE_DIR: stateDir,
+      CLAUDE_SESSION_ID: TEST_SESSION_ID,
       ...env
     },
     timeout: 15000,
@@ -87,6 +88,7 @@ function runBashHook(input, env = {}) {
       ...process.env,
       ECC_HOOK_PROFILE: 'standard',
       GATEGUARD_STATE_DIR: stateDir,
+      CLAUDE_SESSION_ID: TEST_SESSION_ID,
       ...env
     },
     timeout: 15000,
