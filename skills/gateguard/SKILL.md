@@ -1,6 +1,6 @@
 ---
 name: gateguard
-description: Fact-forcing gate that blocks Edit/MultiEdit/Write/Bash and demands concrete investigation (importers, data schemas, user instruction) before allowing the action. Measurably improves output quality by +2.25 points vs ungated agents.
+description: Fact-forcing gate that blocks Edit/Write/Bash (including MultiEdit) and demands concrete investigation (importers, data schemas, user instruction) before allowing the action. Measurably improves output quality by +2.25 points vs ungated agents.
 origin: community
 ---
 
@@ -64,7 +64,8 @@ Before creating {file_path}, present these facts:
 
 1. Name the file(s) and line(s) that will call this new file
 2. Confirm no existing file serves the same purpose (use Glob)
-3. If this file reads/writes data files, cat one real record
+3. If this file reads/writes data files, show field names, structure,
+   and date format (use redacted or synthetic values, not raw production data)
 4. Quote the user's current instruction verbatim
 ```
 
@@ -102,7 +103,7 @@ This adds `.gateguard.yml` for per-project configuration (custom messages, ignor
 ## Anti-Patterns
 
 - **Don't use self-evaluation instead.** "Are you sure?" always gets "yes." This is experimentally verified.
-- **Don't skip the data schema check.** Both A/B test agents assumed ISO-8601 dates when real data used `%Y/%m/%d %H:%M`. Checking one real record prevents this entire class of bugs.
+- **Don't skip the data schema check.** Both A/B test agents assumed ISO-8601 dates when real data used `%Y/%m/%d %H:%M`. Checking data structure (with redacted values) prevents this entire class of bugs.
 - **Don't gate every single Bash command.** Routine bash gates once per session. Destructive bash gates every time. This balance avoids slowdown while catching real risks.
 
 ## Best Practices
