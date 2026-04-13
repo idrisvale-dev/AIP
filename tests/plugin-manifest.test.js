@@ -178,8 +178,8 @@ test('claude plugin.json version matches package.json', () => {
   assert.strictEqual(claudePlugin.version, expectedVersion);
 });
 
-test('claude plugin.json uses short plugin slug', () => {
-  assert.strictEqual(claudePlugin.name, 'ecc');
+test('claude plugin.json uses published plugin name', () => {
+  assert.strictEqual(claudePlugin.name, 'everything-claude-code');
 });
 
 test('claude plugin.json agents is an array', () => {
@@ -248,10 +248,10 @@ test('claude marketplace.json keeps only Claude-supported top-level keys', () =>
   }
 });
 
-test('claude marketplace.json has plugins array with a short ecc plugin entry', () => {
+test('claude marketplace.json has plugins array with the published plugin entry', () => {
   assert.ok(Array.isArray(claudeMarketplace.plugins) && claudeMarketplace.plugins.length > 0, 'Expected plugins array');
-  assert.strictEqual(claudeMarketplace.name, 'ecc');
-  assert.strictEqual(claudeMarketplace.plugins[0].name, 'ecc');
+  assert.strictEqual(claudeMarketplace.name, 'everything-claude-code');
+  assert.strictEqual(claudeMarketplace.plugins[0].name, 'everything-claude-code');
 });
 
 test('claude marketplace.json plugin version matches package.json', () => {
