@@ -43,12 +43,18 @@ jobs:
 
       # Package manager setup
       - name: Setup pnpm
-        if: matrix.pm == 'pnpm'
+        if: matrix.pm == 'pnpm' && matrix.node != '18.x'
         uses: pnpm/action-setup@08c4be7e2e672a47d11bd04269e27e5f3e8529cb # v6.0.0
         with:
           # Keep an explicit pnpm major because this repo's packageManager is Yarn.
-          # pnpm 10's self-installer requires newer Node runtime features than Node 18 provides.
-          version: ${{ matrix.node == '18.x' && '9' || '10' }}
+          version: 10
+
+      - name: Setup pnpm (via Corepack)
+        if: matrix.pm == 'pnpm' && matrix.node == '18.x'
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@9 --activate
 
       - name: Setup Yarn (via Corepack)
         if: matrix.pm == 'yarn'
