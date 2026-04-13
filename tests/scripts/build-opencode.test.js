@@ -68,6 +68,42 @@ function main() {
         packagedPaths.has(".opencode/dist/tools/index.js"),
         "npm pack should include compiled OpenCode tool output"
       )
+      assert.ok(
+        packagedPaths.has(".claude-plugin/marketplace.json"),
+        "npm pack should include .claude-plugin/marketplace.json"
+      )
+      assert.ok(
+        packagedPaths.has(".claude-plugin/plugin.json"),
+        "npm pack should include .claude-plugin/plugin.json"
+      )
+      assert.ok(
+        packagedPaths.has(".codex-plugin/plugin.json"),
+        "npm pack should include .codex-plugin/plugin.json"
+      )
+      assert.ok(
+        packagedPaths.has(".agents/plugins/marketplace.json"),
+        "npm pack should include .agents/plugins/marketplace.json"
+      )
+      assert.ok(
+        packagedPaths.has(".opencode/package.json"),
+        "npm pack should include .opencode/package.json"
+      )
+      assert.ok(
+        packagedPaths.has(".opencode/package-lock.json"),
+        "npm pack should include .opencode/package-lock.json"
+      )
+      assert.ok(
+        packagedPaths.has("agent.yaml"),
+        "npm pack should include agent.yaml"
+      )
+      assert.ok(
+        packagedPaths.has("AGENTS.md"),
+        "npm pack should include AGENTS.md"
+      )
+      assert.ok(
+        packagedPaths.has("VERSION"),
+        "npm pack should include VERSION"
+      )
     }],
   ]
 
