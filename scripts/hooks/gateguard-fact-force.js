@@ -192,7 +192,7 @@ function run(rawInput) {
   const toolName = data.tool_name || '';
   const toolInput = data.tool_input || {};
 
-  if (toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'Write') {
+  if (toolName === 'Edit' || toolName === 'Write') {
     const filePath = toolInput.file_path || '';
     if (!filePath) {
       return rawInput; // allow
@@ -200,11 +200,21 @@ function run(rawInput) {
 
     if (!isChecked(filePath)) {
       markChecked(filePath);
-      const msg = (toolName === 'Edit' || toolName === 'MultiEdit')
-        ? editGateMsg(filePath) : writeGateMsg(filePath);
-      return denyResult(msg);
+      return denyResult(toolName === 'Edit' ? editGateMsg(filePath) : writeGateMsg(filePath));
     }
 
+    return rawInput; // allow
+  }
+
+  if (toolName === 'MultiEdit') {
+    const edits = toolInput.edits || [];
+    for (const edit of edits) {
+      const filePath = edit.file_path || '';
+      if (filePath && !isChecked(filePath)) {
+        markChecked(filePath);
+        return denyResult(editGateMsg(filePath));
+      }
+    }
     return rawInput; // allow
   }
 
