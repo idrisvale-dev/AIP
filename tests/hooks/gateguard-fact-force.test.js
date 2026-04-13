@@ -48,6 +48,11 @@ function writeExpiredState() {
   } catch (_) { /* ignore */ }
 }
 
+function writeState(state) {
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(stateFile, JSON.stringify(state), 'utf8');
+}
+
 function runHook(input, env = {}) {
   const rawInput = typeof input === 'string' ? input : JSON.stringify(input);
   const result = spawnSync('node', [
@@ -356,6 +361,62 @@ function runTests() {
       assert.notStrictEqual(output3.hookSpecificOutput.permissionDecision, 'deny',
         'should allow MultiEdit after all files gated');
     }
+  })) passed++; else failed++;
+
+  // --- Test 12: reads refresh active session state ---
+  clearState();
+  if (test('touches last_active on read so active sessions do not age out', () => {
+    const staleButActive = Date.now() - (29 * 60 * 1000);
+    writeState({
+      checked: ['/src/keep-alive.js'],
+      last_active: staleButActive
+    });
+
+    const before = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    assert.strictEqual(before.last_active, staleButActive, 'seed state should use the expected timestamp');
+
+    const result = runHook({
+      tool_name: 'Edit',
+      tool_input: { file_path: '/src/keep-alive.js', old_string: 'a', new_string: 'b' }
+    });
+    const output = parseOutput(result.stdout);
+    assert.ok(output, 'should produce valid JSON output');
+    if (output.hookSpecificOutput) {
+      assert.notStrictEqual(output.hookSpecificOutput.permissionDecision, 'deny',
+        'already-checked file should still be allowed');
+    }
+
+    const after = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    assert.ok(after.last_active > staleButActive, 'successful reads should refresh last_active');
+  })) passed++; else failed++;
+
+  // --- Test 13: pruning preserves routine bash gate marker ---
+  clearState();
+  if (test('preserves __bash_session__ when pruning oversized state', () => {
+    const checked = ['__bash_session__'];
+    for (let i = 0; i < 80; i++) checked.push(`__destructive__${i}`);
+    for (let i = 0; i < 700; i++) checked.push(`/src/file-${i}.js`);
+    writeState({ checked, last_active: Date.now() });
+
+    runHook({
+      tool_name: 'Edit',
+      tool_input: { file_path: '/src/newly-gated.js', old_string: 'a', new_string: 'b' }
+    });
+
+    const result = runBashHook({
+      tool_name: 'Bash',
+      tool_input: { command: 'pwd' }
+    });
+    const output = parseOutput(result.stdout);
+    assert.ok(output, 'should produce valid JSON output');
+    if (output.hookSpecificOutput) {
+      assert.notStrictEqual(output.hookSpecificOutput.permissionDecision, 'deny',
+        'routine bash marker should survive pruning');
+    }
+
+    const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    assert.ok(persisted.checked.includes('__bash_session__'), 'pruned state should retain __bash_session__');
+    assert.ok(persisted.checked.length <= 500, 'pruned state should still honor the checked-entry cap');
   })) passed++; else failed++;
 
   // Cleanup only the temp directory created by this test file.

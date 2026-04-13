@@ -37,6 +37,8 @@ const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 // Maximum checked entries to prevent unbounded growth
 const MAX_CHECKED_ENTRIES = 500;
+const MAX_SESSION_KEYS = 50;
+const ROUTINE_BASH_SESSION_KEY = '__bash_session__';
 
 const DESTRUCTIVE_BASH = /\b(rm\s+-rf|git\s+reset\s+--hard|git\s+checkout\s+--|git\s+clean\s+-f|drop\s+table|delete\s+from|truncate|git\s+push\s+--force|dd\s+if=)\b/i;
 
@@ -57,19 +59,25 @@ function loadState() {
   return { checked: [], last_active: Date.now() };
 }
 
+function pruneCheckedEntries(checked) {
+  if (checked.length <= MAX_CHECKED_ENTRIES) {
+    return checked;
+  }
+
+  const preserved = checked.includes(ROUTINE_BASH_SESSION_KEY) ? [ROUTINE_BASH_SESSION_KEY] : [];
+  const sessionKeys = checked.filter(k => k.startsWith('__') && k !== ROUTINE_BASH_SESSION_KEY);
+  const fileKeys = checked.filter(k => !k.startsWith('__'));
+  const remainingSessionSlots = Math.max(MAX_SESSION_KEYS - preserved.length, 0);
+  const cappedSession = sessionKeys.slice(-remainingSessionSlots);
+  const remainingFileSlots = Math.max(MAX_CHECKED_ENTRIES - preserved.length - cappedSession.length, 0);
+  const cappedFiles = fileKeys.slice(-remainingFileSlots);
+  return [...preserved, ...cappedSession, ...cappedFiles];
+}
+
 function saveState(state) {
   try {
     state.last_active = Date.now();
-    // Prune checked list if it exceeds the cap.
-    // Preserve session keys (__prefixed) so gates like __bash_session__ don't re-fire.
-    if (state.checked.length > MAX_CHECKED_ENTRIES) {
-      const sessionKeys = state.checked.filter(k => k.startsWith('__'));
-      const fileKeys = state.checked.filter(k => !k.startsWith('__'));
-      // Cap session keys at 50 to prevent unbounded growth
-      const cappedSession = sessionKeys.length > 50 ? sessionKeys.slice(-50) : sessionKeys;
-      const remaining = MAX_CHECKED_ENTRIES - cappedSession.length;
-      state.checked = [...cappedSession, ...fileKeys.slice(-Math.max(remaining, 0))];
-    }
+    state.checked = pruneCheckedEntries(state.checked);
     fs.mkdirSync(STATE_DIR, { recursive: true });
     // Atomic write: temp file + rename prevents partial reads
     const tmpFile = STATE_FILE + '.tmp.' + process.pid;
@@ -88,7 +96,9 @@ function markChecked(key) {
 
 function isChecked(key) {
   const state = loadState();
-  return state.checked.includes(key);
+  const found = state.checked.includes(key);
+  saveState(state);
+  return found;
 }
 
 // Prune stale session files older than 1 hour
@@ -241,8 +251,8 @@ function run(rawInput) {
       return rawInput; // allow retry after facts presented
     }
 
-    if (!isChecked('__bash_session__')) {
-      markChecked('__bash_session__');
+    if (!isChecked(ROUTINE_BASH_SESSION_KEY)) {
+      markChecked(ROUTINE_BASH_SESSION_KEY);
       return denyResult(routineBashMsg());
     }
 
