@@ -705,7 +705,9 @@ cp everything-claude-code/commands/*.md ~/.claude/commands/
 
 #### Add hooks to settings.json
 
-Copy the hooks from `hooks/hooks.json` to your `~/.claude/settings.json`.
+Manual install only: copy the hooks from `hooks/hooks.json` to your `~/.claude/settings.json` if you are not installing ECC as a Claude plugin.
+
+If you installed ECC via `/plugin install`, do not copy those hooks into `settings.json`. Claude Code v2.1+ already auto-loads plugin `hooks/hooks.json`, and duplicating them in `settings.json` causes duplicate execution and `${CLAUDE_PLUGIN_ROOT}` resolution failures.
 
 #### Configure MCPs
 
