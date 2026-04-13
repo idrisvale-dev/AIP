@@ -308,10 +308,9 @@ function runTests() {
   })) passed++; else failed++;
 
   // Cleanup: remove test-isolated state directory
-  clearState();
   try {
     if (fs.existsSync(stateDir)) {
-      fs.rmdirSync(stateDir);
+      fs.rmSync(stateDir, { recursive: true, force: true });
     }
   } catch (err) {
     console.error(`  [cleanup] failed to remove ${stateDir}: ${err.message}`);

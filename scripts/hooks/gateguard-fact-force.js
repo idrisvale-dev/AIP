@@ -84,7 +84,6 @@ function markChecked(key) {
 
 function isChecked(key) {
   const state = loadState();
-  saveState(state);
   return state.checked.includes(key);
 }
 
