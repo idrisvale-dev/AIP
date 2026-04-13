@@ -9,7 +9,9 @@ const { spawnSync } = require('child_process');
 
 const runner = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'run-with-flags.js');
 const stateDir = process.env.GATEGUARD_STATE_DIR || path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard-test-' + process.pid);
-const stateFile = path.join(stateDir, '.session_state.json');
+// State files are per-session. In tests, falls back to pid-based name.
+const sessionId = process.env.CLAUDE_SESSION_ID || process.env.ECC_SESSION_ID || `pid-${process.ppid || process.pid}`;
+const stateFile = path.join(stateDir, `state-${sessionId.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`);
 
 function test(name, fn) {
   try {

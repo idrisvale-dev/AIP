@@ -25,16 +25,21 @@
 const fs = require('fs');
 const path = require('path');
 
-// Session state file for tracking which files have been gated
+// Session state — scoped per session to avoid cross-session races.
+// Uses CLAUDE_SESSION_ID (set by Claude Code) or falls back to PID-based isolation.
 const STATE_DIR = process.env.GATEGUARD_STATE_DIR || path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard');
-const STATE_FILE = path.join(STATE_DIR, '.session_state.json');
+const SESSION_ID = process.env.CLAUDE_SESSION_ID || process.env.ECC_SESSION_ID || `pid-${process.ppid || process.pid}`;
+const STATE_FILE = path.join(STATE_DIR, `state-${SESSION_ID.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`);
 
-// State expires after 30 minutes of inactivity (= new session)
+// State expires after 30 minutes of inactivity
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+
+// Maximum checked entries to prevent unbounded growth
+const MAX_CHECKED_ENTRIES = 500;
 
 const DESTRUCTIVE_BASH = /\b(rm\s+-rf|git\s+reset\s+--hard|git\s+checkout\s+--|git\s+clean\s+-f|drop\s+table|delete\s+from|truncate|git\s+push\s+--force|dd\s+if=)\b/i;
 
-// --- State management (with session timeout) ---
+// --- State management (per-session, atomic writes, bounded) ---
 
 function loadState() {
   try {
@@ -42,7 +47,7 @@ function loadState() {
       const state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
       const lastActive = state.last_active || 0;
       if (Date.now() - lastActive > SESSION_TIMEOUT_MS) {
-        // Session expired — start fresh
+        try { fs.unlinkSync(STATE_FILE); } catch (_) { /* ignore */ }
         return { checked: [], last_active: Date.now() };
       }
       return state;
@@ -54,8 +59,15 @@ function loadState() {
 function saveState(state) {
   try {
     state.last_active = Date.now();
+    // Prune checked list if it exceeds the cap
+    if (state.checked.length > MAX_CHECKED_ENTRIES) {
+      state.checked = state.checked.slice(-MAX_CHECKED_ENTRIES);
+    }
     fs.mkdirSync(STATE_DIR, { recursive: true });
-    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+    // Atomic write: temp file + rename prevents partial reads
+    const tmpFile = STATE_FILE + '.tmp.' + process.pid;
+    fs.writeFileSync(tmpFile, JSON.stringify(state, null, 2), 'utf8');
+    fs.renameSync(tmpFile, STATE_FILE);
   } catch (_) { /* ignore */ }
 }
 
@@ -69,10 +81,25 @@ function markChecked(key) {
 
 function isChecked(key) {
   const state = loadState();
-  // Touch last_active on every check
   saveState(state);
   return state.checked.includes(key);
 }
+
+// Prune stale session files older than 1 hour
+(function pruneStaleFiles() {
+  try {
+    const files = fs.readdirSync(STATE_DIR);
+    const now = Date.now();
+    for (const f of files) {
+      if (!f.startsWith('state-') || !f.endsWith('.json')) continue;
+      const fp = path.join(STATE_DIR, f);
+      const stat = fs.statSync(fp);
+      if (now - stat.mtimeMs > SESSION_TIMEOUT_MS * 2) {
+        fs.unlinkSync(fp);
+      }
+    }
+  } catch (_) { /* ignore */ }
+})();
 
 // --- Sanitize file path against injection ---
 
