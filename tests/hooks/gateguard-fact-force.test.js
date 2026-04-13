@@ -8,7 +8,9 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const runner = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'run-with-flags.js');
-const stateDir = process.env.GATEGUARD_STATE_DIR || path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard-test-' + process.pid);
+const externalStateDir = process.env.GATEGUARD_STATE_DIR;
+const tmpRoot = process.env.TMPDIR || process.env.TEMP || process.env.TMP || '/tmp';
+const stateDir = externalStateDir || fs.mkdtempSync(path.join(tmpRoot, 'gateguard-test-'));
 // Use a fixed session ID so test process and spawned hook process share the same state file
 const TEST_SESSION_ID = 'gateguard-test-session';
 const stateFile = path.join(stateDir, `state-${TEST_SESSION_ID}.json`);
@@ -356,13 +358,15 @@ function runTests() {
     }
   })) passed++; else failed++;
 
-  // Cleanup: remove test-isolated state directory
-  try {
-    if (fs.existsSync(stateDir)) {
-      fs.rmSync(stateDir, { recursive: true, force: true });
+  // Cleanup only the temp directory created by this test file.
+  if (!externalStateDir) {
+    try {
+      if (fs.existsSync(stateDir)) {
+        fs.rmSync(stateDir, { recursive: true, force: true });
+      }
+    } catch (err) {
+      console.error(`  [cleanup] failed to remove ${stateDir}: ${err.message}`);
     }
-  } catch (err) {
-    console.error(`  [cleanup] failed to remove ${stateDir}: ${err.message}`);
   }
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
