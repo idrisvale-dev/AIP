@@ -23,8 +23,6 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-const REPO_ROOT = path.join(__dirname, '..', '..');
-
 function run(args = [], options = {}) {
   const homeDir = options.homeDir || process.env.HOME;
   const env = {
