@@ -181,7 +181,13 @@ function createNamespacedFlatRuleOperations(adapter, moduleId, sourceRelativePat
   return operations;
 }
 
-function createFlatRuleOperations({ moduleId, repoRoot, sourceRelativePath, destinationDir }) {
+function createFlatRuleOperations({
+  moduleId,
+  repoRoot,
+  sourceRelativePath,
+  destinationDir,
+  destinationNameTransform,
+}) {
   const normalizedSourcePath = normalizeRelativePath(sourceRelativePath);
   const sourceRoot = path.join(repoRoot || '', normalizedSourcePath);
 
@@ -201,7 +207,10 @@ function createFlatRuleOperations({ moduleId, repoRoot, sourceRelativePath, dest
     if (entry.isDirectory()) {
       const relativeFiles = listRelativeFiles(entryPath);
       for (const relativeFile of relativeFiles) {
-        const flattenedFileName = `${namespace}-${normalizeRelativePath(relativeFile).replace(/\//g, '-')}`;
+        const defaultFileName = `${namespace}-${normalizeRelativePath(relativeFile).replace(/\//g, '-')}`;
+        const flattenedFileName = typeof destinationNameTransform === 'function'
+          ? destinationNameTransform(defaultFileName)
+          : defaultFileName;
         operations.push(createManagedOperation({
           moduleId,
           sourceRelativePath: path.join(normalizedSourcePath, namespace, relativeFile),
@@ -210,10 +219,13 @@ function createFlatRuleOperations({ moduleId, repoRoot, sourceRelativePath, dest
         }));
       }
     } else if (entry.isFile()) {
+      const destinationFileName = typeof destinationNameTransform === 'function'
+        ? destinationNameTransform(entry.name)
+        : entry.name;
       operations.push(createManagedOperation({
         moduleId,
         sourceRelativePath: path.join(normalizedSourcePath, entry.name),
-        destinationPath: path.join(destinationDir, entry.name),
+        destinationPath: path.join(destinationDir, destinationFileName),
         strategy: 'flatten-copy',
       }));
     }

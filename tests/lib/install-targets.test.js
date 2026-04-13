@@ -103,7 +103,7 @@ function runTests() {
     assert.strictEqual(preserved.strategy, 'flatten-copy');
     assert.strictEqual(
       preserved.destinationPath,
-      path.join(projectRoot, '.cursor', 'rules', 'common-coding-style.md')
+      path.join(projectRoot, '.cursor', 'rules', 'common-coding-style.mdc')
     );
   })) passed++; else failed++;
 
@@ -126,22 +126,28 @@ function runTests() {
     assert.ok(
       plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === 'rules/common/coding-style.md'
-        && operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'common-coding-style.md')
+        && operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'common-coding-style.mdc')
       )),
-      'Should flatten common rules into namespaced files'
+      'Should flatten common rules into namespaced .mdc files'
     );
     assert.ok(
       plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === 'rules/typescript/testing.md'
-        && operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'typescript-testing.md')
+        && operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'typescript-testing.mdc')
       )),
-      'Should flatten language rules into namespaced files'
+      'Should flatten language rules into namespaced .mdc files'
     );
     assert.ok(
       !plan.operations.some(operation => (
         operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'common', 'coding-style.md')
       )),
       'Should not preserve nested rule directories for cursor installs'
+    );
+    assert.ok(
+      !plan.operations.some(operation => (
+        operation.destinationPath === path.join(projectRoot, '.cursor', 'rules', 'common-coding-style.md')
+      )),
+      'Should not emit .md Cursor rule files'
     );
   })) passed++; else failed++;
 

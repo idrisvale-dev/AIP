@@ -40,6 +40,11 @@ module.exports = createInstallTargetAdapter({
               repoRoot,
               sourceRelativePath,
               destinationDir: path.join(targetRoot, 'rules'),
+              destinationNameTransform(fileName) {
+                return fileName.endsWith('.md')
+                  ? `${fileName.slice(0, -3)}.mdc`
+                  : fileName;
+              },
             });
           }
 
