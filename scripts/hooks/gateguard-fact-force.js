@@ -27,13 +27,12 @@ const fs = require('fs');
 const path = require('path');
 
 // Session state — scoped per session to avoid cross-session races.
-// Uses CLAUDE_SESSION_ID (set by Claude Code) or falls back to PID-based isolation.
 const STATE_DIR = process.env.GATEGUARD_STATE_DIR || path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard');
-const SESSION_ID = process.env.CLAUDE_SESSION_ID || process.env.ECC_SESSION_ID || `pid-${process.ppid || process.pid}`;
-const STATE_FILE = path.join(STATE_DIR, `state-${SESSION_ID.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`);
+let activeStateFile = null;
 
 // State expires after 30 minutes of inactivity
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+const READ_HEARTBEAT_MS = 60 * 1000;
 
 // Maximum checked entries to prevent unbounded growth
 const MAX_CHECKED_ENTRIES = 500;
@@ -44,13 +43,65 @@ const DESTRUCTIVE_BASH = /\b(rm\s+-rf|git\s+reset\s+--hard|git\s+checkout\s+--|g
 
 // --- State management (per-session, atomic writes, bounded) ---
 
+function sanitizeSessionKey(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  const sanitized = raw.replace(/[^a-zA-Z0-9_-]/g, '_');
+  if (sanitized && sanitized.length <= 64) {
+    return sanitized;
+  }
+
+  return '';
+}
+
+function hashSessionKey(prefix, value) {
+  return `${prefix}-${crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 24)}`;
+}
+
+function resolveSessionKey(data) {
+  const directCandidates = [
+    data && data.session_id,
+    data && data.sessionId,
+    data && data.session && data.session.id,
+    process.env.CLAUDE_SESSION_ID,
+    process.env.ECC_SESSION_ID,
+  ];
+
+  for (const candidate of directCandidates) {
+    const sanitized = sanitizeSessionKey(candidate);
+    if (sanitized) {
+      return sanitized;
+    }
+  }
+
+  const transcriptPath = (data && (data.transcript_path || data.transcriptPath)) || process.env.CLAUDE_TRANSCRIPT_PATH;
+  if (transcriptPath && String(transcriptPath).trim()) {
+    return hashSessionKey('tx', path.resolve(String(transcriptPath).trim()));
+  }
+
+  const projectFingerprint = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  return hashSessionKey('proj', path.resolve(projectFingerprint));
+}
+
+function getStateFile(data) {
+  if (!activeStateFile) {
+    const sessionKey = resolveSessionKey(data);
+    activeStateFile = path.join(STATE_DIR, `state-${sessionKey}.json`);
+  }
+  return activeStateFile;
+}
+
 function loadState() {
+  const stateFile = getStateFile();
   try {
-    if (fs.existsSync(STATE_FILE)) {
-      const state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    if (fs.existsSync(stateFile)) {
+      const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
       const lastActive = state.last_active || 0;
       if (Date.now() - lastActive > SESSION_TIMEOUT_MS) {
-        try { fs.unlinkSync(STATE_FILE); } catch (_) { /* ignore */ }
+        try { fs.unlinkSync(stateFile); } catch (_) { /* ignore */ }
         return { checked: [], last_active: Date.now() };
       }
       return state;
@@ -75,15 +126,30 @@ function pruneCheckedEntries(checked) {
 }
 
 function saveState(state) {
+  const stateFile = getStateFile();
+  let tmpFile = null;
   try {
     state.last_active = Date.now();
     state.checked = pruneCheckedEntries(state.checked);
     fs.mkdirSync(STATE_DIR, { recursive: true });
     // Atomic write: temp file + rename prevents partial reads
-    const tmpFile = STATE_FILE + '.tmp.' + process.pid;
+    tmpFile = stateFile + '.tmp.' + process.pid;
     fs.writeFileSync(tmpFile, JSON.stringify(state, null, 2), 'utf8');
-    fs.renameSync(tmpFile, STATE_FILE);
-  } catch (_) { /* ignore */ }
+    try {
+      fs.renameSync(tmpFile, stateFile);
+    } catch (error) {
+      if (error && (error.code === 'EEXIST' || error.code === 'EPERM')) {
+        try { fs.unlinkSync(stateFile); } catch (_) { /* ignore */ }
+        fs.renameSync(tmpFile, stateFile);
+      } else {
+        throw error;
+      }
+    }
+  } catch (_) {
+    if (tmpFile) {
+      try { fs.unlinkSync(tmpFile); } catch (_) { /* ignore */ }
+    }
+  }
 }
 
 function markChecked(key) {
@@ -97,7 +163,9 @@ function markChecked(key) {
 function isChecked(key) {
   const state = loadState();
   const found = state.checked.includes(key);
-  saveState(state);
+  if (found && Date.now() - (state.last_active || 0) > READ_HEARTBEAT_MS) {
+    saveState(state);
+  }
   return found;
 }
 
@@ -122,6 +190,24 @@ function isChecked(key) {
 function sanitizePath(filePath) {
   // Strip control chars (including null), bidi overrides, and newlines
   return filePath.replace(/[\x00-\x1f\x7f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').trim().slice(0, 500);
+}
+
+function normalizeForMatch(value) {
+  return String(value || '').replace(/\\/g, '/').toLowerCase();
+}
+
+function isClaudeSettingsPath(filePath) {
+  const normalized = normalizeForMatch(filePath);
+  return /(^|\/)\.claude\/settings(?:\.[^/]+)?\.json$/.test(normalized);
+}
+
+function isReadOnlyGitIntrospection(command) {
+  const trimmed = String(command || '').trim();
+  if (!trimmed || /[;&|><`$()]/.test(trimmed)) {
+    return false;
+  }
+
+  return /^(git\s+(status|diff|log|show|branch(?:\s+--show-current)?|rev-parse(?:\s+--abbrev-ref\s+head)?)(\s|$))/i.test(trimmed);
 }
 
 // --- Gate messages ---
@@ -205,6 +291,8 @@ function run(rawInput) {
   } catch (_) {
     return rawInput; // allow on parse error
   }
+  activeStateFile = null;
+  getStateFile(data);
 
   const rawToolName = data.tool_name || '';
   const toolInput = data.tool_input || {};
@@ -214,7 +302,7 @@ function run(rawInput) {
 
   if (toolName === 'Edit' || toolName === 'Write') {
     const filePath = toolInput.file_path || '';
-    if (!filePath) {
+    if (!filePath || isClaudeSettingsPath(filePath)) {
       return rawInput; // allow
     }
 
@@ -230,7 +318,7 @@ function run(rawInput) {
     const edits = toolInput.edits || [];
     for (const edit of edits) {
       const filePath = edit.file_path || '';
-      if (filePath && !isChecked(filePath)) {
+      if (filePath && !isClaudeSettingsPath(filePath) && !isChecked(filePath)) {
         markChecked(filePath);
         return denyResult(editGateMsg(filePath));
       }
@@ -240,6 +328,9 @@ function run(rawInput) {
 
   if (toolName === 'Bash') {
     const command = toolInput.command || '';
+    if (isReadOnlyGitIntrospection(command)) {
+      return rawInput;
+    }
 
     if (DESTRUCTIVE_BASH.test(command)) {
       // Gate destructive commands on first attempt; allow retry after facts presented
