@@ -189,7 +189,14 @@ function isChecked(key) {
 
 function sanitizePath(filePath) {
   // Strip control chars (including null), bidi overrides, and newlines
-  return filePath.replace(/[\x00-\x1f\x7f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').trim().slice(0, 500);
+  let sanitized = '';
+  for (const char of String(filePath || '')) {
+    const code = char.codePointAt(0);
+    const isAsciiControl = code <= 0x1f || code === 0x7f;
+    const isBidiOverride = (code >= 0x200e && code <= 0x200f) || (code >= 0x202a && code <= 0x202e) || (code >= 0x2066 && code <= 0x2069);
+    sanitized += (isAsciiControl || isBidiOverride) ? ' ' : char;
+  }
+  return sanitized.trim().slice(0, 500);
 }
 
 function normalizeForMatch(value) {
