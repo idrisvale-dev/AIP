@@ -177,6 +177,8 @@ Get up and running in under 2 minutes:
 /plugin install everything-claude-code
 ```
 
+> Install-name clarification: older posts may still show `ecc@ecc`. That shorthand is deprecated. Anthropic marketplace/plugin installs are keyed by a canonical plugin identifier, so ECC standardized on `everything-claude-code@everything-claude-code` to keep the listing name, install path, `/plugin list`, and repo docs aligned instead of maintaining two different public names for the same plugin.
+
 ### Step 2: Install Rules (Required)
 
 > WARNING: **Important:** Claude Code plugins cannot distribute `rules` automatically. Install them manually:

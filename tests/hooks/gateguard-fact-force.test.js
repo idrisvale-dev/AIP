@@ -10,7 +10,8 @@ const { spawnSync } = require('child_process');
 const runner = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'run-with-flags.js');
 const externalStateDir = process.env.GATEGUARD_STATE_DIR;
 const tmpRoot = process.env.TMPDIR || process.env.TEMP || process.env.TMP || '/tmp';
-const stateDir = externalStateDir || fs.mkdtempSync(path.join(tmpRoot, 'gateguard-test-'));
+const baseStateDir = externalStateDir || tmpRoot;
+const stateDir = fs.mkdtempSync(path.join(baseStateDir, 'gateguard-test-'));
 // Use a fixed session ID so test process and spawned hook process share the same state file
 const TEST_SESSION_ID = 'gateguard-test-session';
 const stateFile = path.join(stateDir, `state-${TEST_SESSION_ID}.json`);
@@ -31,12 +32,9 @@ function test(name, fn) {
 function clearState() {
   try {
     if (fs.existsSync(stateDir)) {
-      for (const entry of fs.readdirSync(stateDir)) {
-        if (entry.startsWith('state-') && entry.endsWith('.json')) {
-          fs.unlinkSync(path.join(stateDir, entry));
-        }
-      }
+      fs.rmSync(stateDir, { recursive: true, force: true });
     }
+    fs.mkdirSync(stateDir, { recursive: true });
   } catch (err) {
     console.error(`  [clearState] failed to remove state files in ${stateDir}: ${err.message}`);
   }
@@ -516,15 +514,61 @@ function runTests() {
     }
   })) passed++; else failed++;
 
-  // Cleanup only the temp directory created by this test file.
-  if (!externalStateDir) {
-    try {
-      if (fs.existsSync(stateDir)) {
-        fs.rmSync(stateDir, { recursive: true, force: true });
-      }
-    } catch (err) {
-      console.error(`  [cleanup] failed to remove ${stateDir}: ${err.message}`);
+  // --- Test 18: rejects mutating git commands that only share a prefix ---
+  clearState();
+  if (test('does not treat mutating git commands as read-only introspection', () => {
+    const input = {
+      tool_name: 'Bash',
+      tool_input: { command: 'git status && rm -rf /tmp/demo' }
+    };
+    const result = runBashHook(input);
+    const output = parseOutput(result.stdout);
+    assert.ok(output, 'should produce valid JSON output');
+    assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
+    assert.ok(output.hookSpecificOutput.permissionDecisionReason.includes('current instruction'));
+  })) passed++; else failed++;
+
+  // --- Test 19: long raw session IDs hash instead of collapsing to project fallback ---
+  clearState();
+  if (test('uses a stable hash for long raw session ids', () => {
+    const longSessionId = `session-${'x'.repeat(120)}`;
+    const input = {
+      session_id: longSessionId,
+      tool_name: 'Bash',
+      tool_input: { command: 'ls -la' }
+    };
+
+    const first = runBashHook(input, {
+      CLAUDE_SESSION_ID: '',
+      ECC_SESSION_ID: '',
+    });
+    const firstOutput = parseOutput(first.stdout);
+    assert.strictEqual(firstOutput.hookSpecificOutput.permissionDecision, 'deny');
+
+    const stateFiles = fs.readdirSync(stateDir).filter(entry => entry.startsWith('state-') && entry.endsWith('.json'));
+    assert.strictEqual(stateFiles.length, 1, 'long raw session id should still produce a dedicated state file');
+    assert.ok(/state-sid-[a-f0-9]{24}\.json$/.test(stateFiles[0]), 'long raw session ids should hash to a bounded sid-* key');
+
+    const second = runBashHook(input, {
+      CLAUDE_SESSION_ID: '',
+      ECC_SESSION_ID: '',
+    });
+    const secondOutput = parseOutput(second.stdout);
+    if (secondOutput.hookSpecificOutput) {
+      assert.notStrictEqual(secondOutput.hookSpecificOutput.permissionDecision, 'deny',
+        'retry should be allowed when long raw session_id is stable');
+    } else {
+      assert.strictEqual(secondOutput.tool_name, 'Bash');
     }
+  })) passed++; else failed++;
+
+  // Cleanup only the temp directory created by this test file.
+  try {
+    if (fs.existsSync(stateDir)) {
+      fs.rmSync(stateDir, { recursive: true, force: true });
+    }
+  } catch (err) {
+    console.error(`  [cleanup] failed to remove ${stateDir}: ${err.message}`);
   }
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);

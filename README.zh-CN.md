@@ -99,11 +99,13 @@
 
 ```bash
 # 添加市场
-/plugin marketplace add affaan-m/everything-claude-code
+/plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # 安装插件
 /plugin install everything-claude-code
 ```
+
+> 安装名称说明：较早的帖子里可能还会出现 `ecc@ecc`。那个旧缩写现在已经废弃。Anthropic 的 marketplace/plugin 安装是按规范化插件标识符寻址的，因此 ECC 统一为 `everything-claude-code@everything-claude-code`，这样市场条目、安装命令、`/plugin list` 输出和仓库文档都使用同一个公开名称，不再出现两个名字指向同一插件的混乱。
 
 ### 第二步：安装规则（必需）
 
@@ -543,7 +545,7 @@ Claude Code v2.1+ 会**按照约定自动加载**已安装插件中的 `hooks/ho
 
 ```bash
 # 将此仓库添加为市场
-/plugin marketplace add affaan-m/everything-claude-code
+/plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # 安装插件
 /plugin install everything-claude-code

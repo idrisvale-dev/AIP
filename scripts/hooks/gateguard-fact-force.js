@@ -54,7 +54,7 @@ function sanitizeSessionKey(value) {
     return sanitized;
   }
 
-  return '';
+  return hashSessionKey('sid', raw);
 }
 
 function hashSessionKey(prefix, value) {
@@ -177,9 +177,13 @@ function isChecked(key) {
     for (const f of files) {
       if (!f.startsWith('state-') || !f.endsWith('.json')) continue;
       const fp = path.join(STATE_DIR, f);
-      const stat = fs.statSync(fp);
-      if (now - stat.mtimeMs > SESSION_TIMEOUT_MS * 2) {
-        fs.unlinkSync(fp);
+      try {
+        const stat = fs.statSync(fp);
+        if (now - stat.mtimeMs > SESSION_TIMEOUT_MS * 2) {
+          fs.unlinkSync(fp);
+        }
+      } catch (_) {
+        // Ignore files that disappear between readdir/stat/unlink.
       }
     }
   } catch (_) { /* ignore */ }
@@ -210,11 +214,43 @@ function isClaudeSettingsPath(filePath) {
 
 function isReadOnlyGitIntrospection(command) {
   const trimmed = String(command || '').trim();
-  if (!trimmed || /[;&|><`$()]/.test(trimmed)) {
+  if (!trimmed || /[\r\n;&|><`$()]/.test(trimmed)) {
     return false;
   }
 
-  return /^(git\s+(status|diff|log|show|branch(?:\s+--show-current)?|rev-parse(?:\s+--abbrev-ref\s+head)?)(\s|$))/i.test(trimmed);
+  const tokens = trimmed.split(/\s+/);
+  if (tokens[0] !== 'git' || tokens.length < 2) {
+    return false;
+  }
+
+  const subcommand = tokens[1].toLowerCase();
+  const args = tokens.slice(2);
+
+  if (subcommand === 'status') {
+    return args.every(arg => ['--porcelain', '--short', '--branch'].includes(arg));
+  }
+
+  if (subcommand === 'diff') {
+    return args.length <= 1 && args.every(arg => ['--name-only', '--name-status'].includes(arg));
+  }
+
+  if (subcommand === 'log') {
+    return args.every(arg => arg === '--oneline' || /^--max-count=\d+$/.test(arg));
+  }
+
+  if (subcommand === 'show') {
+    return args.length === 1 && !args[0].startsWith('--') && /^[a-zA-Z0-9._:/-]+$/.test(args[0]);
+  }
+
+  if (subcommand === 'branch') {
+    return args.length === 1 && args[0] === '--show-current';
+  }
+
+  if (subcommand === 'rev-parse') {
+    return args.length === 2 && args[0] === '--abbrev-ref' && /^head$/i.test(args[1]);
+  }
+
+  return false;
 }
 
 // --- Gate messages ---

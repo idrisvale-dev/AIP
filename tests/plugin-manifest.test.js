@@ -476,7 +476,7 @@ test('README version row matches package.json', () => {
   assert.strictEqual(match[1], expectedVersion);
 });
 
-test('user-facing docs do not reference deprecated ecc@ecc plugin identifier', () => {
+test('user-facing docs do not use deprecated ecc@ecc install commands', () => {
   const markdownFiles = [
     path.join(repoRoot, 'README.md'),
     path.join(repoRoot, 'README.zh-CN.md'),
@@ -487,7 +487,7 @@ test('user-facing docs do not reference deprecated ecc@ecc plugin identifier', (
   const offenders = [];
   for (const filePath of markdownFiles) {
     const source = fs.readFileSync(filePath, 'utf8');
-    if (source.includes('ecc@ecc')) {
+    if (/\/plugin\s+(install|list)\s+ecc@ecc\b/.test(source)) {
       offenders.push(path.relative(repoRoot, filePath));
     }
   }
@@ -495,7 +495,29 @@ test('user-facing docs do not reference deprecated ecc@ecc plugin identifier', (
   assert.deepStrictEqual(
     offenders,
     [],
-    `Deprecated ecc@ecc identifier must not appear in user-facing docs: ${offenders.join(', ')}`,
+    `Deprecated ecc@ecc install commands must not appear in user-facing docs: ${offenders.join(', ')}`,
+  );
+});
+
+test('user-facing docs do not use the legacy non-URL marketplace add form', () => {
+  const markdownFiles = [
+    path.join(repoRoot, 'README.md'),
+    path.join(repoRoot, 'README.zh-CN.md'),
+    ...collectMarkdownFiles(path.join(repoRoot, 'docs')),
+  ];
+
+  const offenders = [];
+  for (const filePath of markdownFiles) {
+    const source = fs.readFileSync(filePath, 'utf8');
+    if (source.includes('/plugin marketplace add affaan-m/everything-claude-code')) {
+      offenders.push(path.relative(repoRoot, filePath));
+    }
+  }
+
+  assert.deepStrictEqual(
+    offenders,
+    [],
+    `Legacy non-URL marketplace add form must not appear in user-facing docs: ${offenders.join(', ')}`,
   );
 });
 

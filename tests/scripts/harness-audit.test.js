@@ -19,11 +19,13 @@ function cleanup(dirPath) {
 }
 
 function run(args = [], options = {}) {
+  const userProfile = options.userProfile || options.homeDir || process.env.USERPROFILE;
   const stdout = execFileSync('node', [SCRIPT, ...args], {
     cwd: options.cwd || path.join(__dirname, '..', '..'),
     env: {
       ...process.env,
       HOME: options.homeDir || process.env.HOME,
+      USERPROFILE: userProfile,
     },
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -132,7 +134,7 @@ function runTests() {
     }
   })) passed++; else failed++;
 
-  if (test('detects marketplace-installed Claude plugins under marketplaces/', () => {
+  if (test('detects marketplace-installed Claude plugins under home marketplaces/', () => {
     const homeDir = createTempDir('harness-audit-marketplace-home-');
     const projectRoot = createTempDir('harness-audit-marketplace-project-');
 
@@ -158,6 +160,76 @@ function runTests() {
       );
 
       const parsed = JSON.parse(run(['repo', '--format', 'json'], { cwd: projectRoot, homeDir }));
+      assert.ok(parsed.checks.some(check => check.id === 'consumer-plugin-install' && check.pass));
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
+  if (test('detects marketplace-installed Claude plugins under project marketplaces/', () => {
+    const homeDir = createTempDir('harness-audit-marketplace-home-');
+    const projectRoot = createTempDir('harness-audit-marketplace-project-');
+
+    try {
+      fs.mkdirSync(path.join(projectRoot, '.claude', 'plugins', 'marketplaces', 'everything-claude-code', '.claude-plugin'), { recursive: true });
+      fs.writeFileSync(
+        path.join(projectRoot, '.claude', 'plugins', 'marketplaces', 'everything-claude-code', '.claude-plugin', 'plugin.json'),
+        JSON.stringify({ name: 'everything-claude-code' }, null, 2)
+      );
+
+      fs.mkdirSync(path.join(projectRoot, '.github', 'workflows'), { recursive: true });
+      fs.mkdirSync(path.join(projectRoot, 'tests'), { recursive: true });
+      fs.mkdirSync(path.join(projectRoot, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(projectRoot, 'AGENTS.md'), '# Project instructions\n');
+      fs.writeFileSync(path.join(projectRoot, '.mcp.json'), JSON.stringify({ mcpServers: {} }, null, 2));
+      fs.writeFileSync(path.join(projectRoot, '.gitignore'), 'node_modules\n.env\n');
+      fs.writeFileSync(path.join(projectRoot, '.github', 'workflows', 'ci.yml'), 'name: ci\n');
+      fs.writeFileSync(path.join(projectRoot, 'tests', 'app.test.js'), 'test placeholder\n');
+      fs.writeFileSync(path.join(projectRoot, '.claude', 'settings.json'), JSON.stringify({ hooks: ['PreToolUse'] }, null, 2));
+      fs.writeFileSync(
+        path.join(projectRoot, 'package.json'),
+        JSON.stringify({ name: 'consumer-project', scripts: { test: 'node tests/app.test.js' } }, null, 2)
+      );
+
+      const parsed = JSON.parse(run(['repo', '--format', 'json'], { cwd: projectRoot, homeDir }));
+      assert.ok(parsed.checks.some(check => check.id === 'consumer-plugin-install' && check.pass));
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
+  if (test('detects marketplace-installed Claude plugins from USERPROFILE fallback on Windows-style setups', () => {
+    const homeDir = createTempDir('harness-audit-marketplace-home-');
+    const projectRoot = createTempDir('harness-audit-marketplace-project-');
+
+    try {
+      fs.mkdirSync(path.join(homeDir, '.claude', 'plugins', 'marketplaces', 'everything-claude-code', '.claude-plugin'), { recursive: true });
+      fs.writeFileSync(
+        path.join(homeDir, '.claude', 'plugins', 'marketplaces', 'everything-claude-code', '.claude-plugin', 'plugin.json'),
+        JSON.stringify({ name: 'everything-claude-code' }, null, 2)
+      );
+
+      fs.mkdirSync(path.join(projectRoot, '.github', 'workflows'), { recursive: true });
+      fs.mkdirSync(path.join(projectRoot, 'tests'), { recursive: true });
+      fs.mkdirSync(path.join(projectRoot, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(projectRoot, 'AGENTS.md'), '# Project instructions\n');
+      fs.writeFileSync(path.join(projectRoot, '.mcp.json'), JSON.stringify({ mcpServers: {} }, null, 2));
+      fs.writeFileSync(path.join(projectRoot, '.gitignore'), 'node_modules\n.env\n');
+      fs.writeFileSync(path.join(projectRoot, '.github', 'workflows', 'ci.yml'), 'name: ci\n');
+      fs.writeFileSync(path.join(projectRoot, 'tests', 'app.test.js'), 'test placeholder\n');
+      fs.writeFileSync(path.join(projectRoot, '.claude', 'settings.json'), JSON.stringify({ hooks: ['PreToolUse'] }, null, 2));
+      fs.writeFileSync(
+        path.join(projectRoot, 'package.json'),
+        JSON.stringify({ name: 'consumer-project', scripts: { test: 'node tests/app.test.js' } }, null, 2)
+      );
+
+      const parsed = JSON.parse(run(['repo', '--format', 'json'], {
+        cwd: projectRoot,
+        homeDir: '',
+        userProfile: homeDir,
+      }));
       assert.ok(parsed.checks.some(check => check.id === 'consumer-plugin-install' && check.pass));
     } finally {
       cleanup(homeDir);
