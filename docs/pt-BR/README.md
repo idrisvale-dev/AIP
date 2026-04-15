@@ -124,7 +124,7 @@ Comece em menos de 2 minutos:
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Instalar plugin
-/plugin install everything-claude-code
+/plugin install everything-claude-code@everything-claude-code
 ```
 
 ### Passo 2: Instalar as Regras (Obrigatório)
@@ -313,7 +313,7 @@ claude --version
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Instalar o plugin
-/plugin install everything-claude-code
+/plugin install everything-claude-code@everything-claude-code
 ```
 
 Ou adicione diretamente ao seu `~/.claude/settings.json`:
