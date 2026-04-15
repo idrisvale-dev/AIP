@@ -15,6 +15,17 @@ on:
     secrets:
       NPM_TOKEN:
         required: false
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag to release or republish (e.g., v1.10.0)'
+        required: true
+        type: string
+      generate-notes:
+        description: 'Auto-generate release notes'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
