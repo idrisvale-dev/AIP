@@ -162,7 +162,7 @@ npx ecc-install typescript
 /plugin list everything-claude-code@everything-claude-code
 ```
 
-**完成！** 你现在可以使用 47 个代理、181 个技能和 79 个命令。
+**完成！** 你现在可以使用 48 个代理、183 个技能和 79 个命令。
 
 ### multi-* 命令需要额外配置
 
