@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const CATEGORIES = [
@@ -187,7 +188,7 @@ function detectTargetMode(rootDir) {
 }
 
 function findPluginInstall(rootDir) {
-  const homeDir = process.env.HOME || '';
+  const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir() || '';
   const pluginDirs = [
     'ecc',
     'ecc@ecc',

@@ -174,8 +174,10 @@ Get up and running in under 2 minutes:
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Install plugin
-/plugin install ecc@ecc
+/plugin install everything-claude-code
 ```
+
+> Install-name clarification: older posts may still show `ecc@ecc`. That shorthand is deprecated. Anthropic marketplace/plugin installs are keyed by a canonical plugin identifier, so ECC standardized on `everything-claude-code@everything-claude-code` to keep the listing name, install path, `/plugin list`, and repo docs aligned instead of maintaining two different public names for the same plugin.
 
 ### Step 2: Install Rules (Required)
 
@@ -236,7 +238,7 @@ For manual install instructions see the README in the `rules/` folder. When copy
 # /plan "Add user authentication"
 
 # Check available commands
-/plugin list ecc@ecc
+/plugin list everything-claude-code@everything-claude-code
 ```
 
 **That's it!** You now have access to 48 agents, 183 skills, and 79 legacy command shims.
@@ -648,7 +650,7 @@ The easiest way to use this repo - install as a Claude Code plugin:
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Install the plugin
-/plugin install ecc@ecc
+/plugin install everything-claude-code
 ```
 
 Or add directly to your `~/.claude/settings.json`:
@@ -664,7 +666,7 @@ Or add directly to your `~/.claude/settings.json`:
     }
   },
   "enabledPlugins": {
-    "ecc@ecc": true
+    "everything-claude-code@everything-claude-code": true
   }
 }
 ```
@@ -882,7 +884,7 @@ Slash forms below are shown because they are still the fastest familiar entrypoi
 <summary><b>How do I check which agents/commands are installed?</b></summary>
 
 ```bash
-/plugin list ecc@ecc
+/plugin list everything-claude-code@everything-claude-code
 ```
 
 This shows all available agents, commands, and skills from the plugin.
