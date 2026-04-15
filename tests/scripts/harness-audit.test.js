@@ -20,13 +20,20 @@ function cleanup(dirPath) {
 
 function run(args = [], options = {}) {
   const userProfile = options.userProfile || options.homeDir || process.env.USERPROFILE;
+  const env = {
+    ...process.env,
+    USERPROFILE: userProfile,
+  };
+
+  if (Object.prototype.hasOwnProperty.call(options, 'homeDir')) {
+    env.HOME = options.homeDir;
+  } else {
+    env.HOME = process.env.HOME;
+  }
+
   const stdout = execFileSync('node', [SCRIPT, ...args], {
     cwd: options.cwd || path.join(__dirname, '..', '..'),
-    env: {
-      ...process.env,
-      HOME: options.homeDir || process.env.HOME,
-      USERPROFILE: userProfile,
-    },
+    env,
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
     timeout: 10000,
