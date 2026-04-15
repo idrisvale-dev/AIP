@@ -174,15 +174,25 @@ Get up and running in under 2 minutes:
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Install plugin
-/plugin install everything-claude-code
+/plugin install everything-claude-code@everything-claude-code
 ```
 
-> Install-name clarification: older posts may still show `ecc@ecc`. That shorthand is deprecated. Anthropic marketplace/plugin installs are keyed by a canonical plugin identifier, so ECC standardized on `everything-claude-code@everything-claude-code` to keep the listing name, install path, `/plugin list`, and repo docs aligned instead of maintaining two different public names for the same plugin.
+### Naming + Migration Note
+
+ECC now has three public identifiers, and they are not interchangeable:
+
+- GitHub source repo: `affaan-m/everything-claude-code`
+- Claude marketplace/plugin identifier: `everything-claude-code@everything-claude-code`
+- npm package: `ecc-universal`
+
+This is intentional. Anthropic marketplace/plugin installs are keyed by a canonical plugin identifier, so ECC standardized on `everything-claude-code@everything-claude-code` to keep the listing name, `/plugin install`, `/plugin list`, and repo docs aligned to one public install surface. Older posts may still show the old short-form nickname; that shorthand is deprecated. Separately, the npm package stayed on `ecc-universal`, so npm installs and marketplace installs intentionally use different names.
 
 ### Step 2: Install Rules (Required)
 
 > WARNING: **Important:** Claude Code plugins cannot distribute `rules` automatically. Install them manually:
 >
+> If your local Claude setup was wiped or reset, that does not mean you need to repurchase ECC. Start with `ecc list-installed`, then run `ecc doctor` and `ecc repair` before reinstalling anything. That usually restores ECC-managed files without rebuilding your setup. If the problem is account or marketplace access for ECC Tools, handle billing/account recovery separately.
+
 > If your local Claude setup was wiped or reset, that does not mean you need to repurchase ECC. Start with `ecc list-installed`, then run `ecc doctor` and `ecc repair` before reinstalling anything. That usually restores ECC-managed files without rebuilding your setup. If the problem is account or marketplace access for ECC Tools, handle billing/account recovery separately.
 
 ```bash
@@ -650,7 +660,7 @@ The easiest way to use this repo - install as a Claude Code plugin:
 /plugin marketplace add https://github.com/affaan-m/everything-claude-code
 
 # Install the plugin
-/plugin install everything-claude-code
+/plugin install everything-claude-code@everything-claude-code
 ```
 
 Or add directly to your `~/.claude/settings.json`:
