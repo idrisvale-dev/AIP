@@ -1931,6 +1931,27 @@ async function runTests() {
   else failed++;
 
   if (
+    test('all hook commands use string form for Claude Code schema compatibility', () => {
+      const hooksPath = path.join(__dirname, '..', '..', 'hooks', 'hooks.json');
+      const hooks = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+
+      for (const [eventName, hookArray] of Object.entries(hooks.hooks)) {
+        for (const entry of hookArray) {
+          for (const hook of entry.hooks) {
+            assert.strictEqual(
+              typeof hook.command,
+              'string',
+              `${eventName}/${entry.id || entry.matcher || 'hook'} should use string command form`,
+            );
+          }
+        }
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
     test('all hook commands use node or approved shell wrappers', () => {
       const hooksPath = path.join(__dirname, '..', '..', 'hooks', 'hooks.json');
       const hooks = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
@@ -1968,10 +1989,8 @@ async function runTests() {
       const sessionStartHook = hooks.hooks.SessionStart?.[0]?.hooks?.[0];
 
       assert.ok(sessionStartHook, 'Should define a SessionStart hook');
-      const commandText = Array.isArray(sessionStartHook.command)
-        ? sessionStartHook.command.join(' ')
-        : sessionStartHook.command;
-      assert.ok(Array.isArray(sessionStartHook.command), 'SessionStart should use argv form for cross-platform safety');
+      const commandText = sessionStartHook.command;
+      assert.strictEqual(typeof sessionStartHook.command, 'string', 'SessionStart should use string command form for Claude Code compatibility');
       assert.ok(
         commandText.includes('session-start-bootstrap.js'),
         'SessionStart should delegate to the extracted bootstrap script'
