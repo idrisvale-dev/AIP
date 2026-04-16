@@ -363,25 +363,25 @@ function runTests() {
 
       const installedBashDispatcherEntry = installedHooks.hooks.PreToolUse.find(entry => entry.id === 'pre:bash:dispatcher');
       assert.ok(installedBashDispatcherEntry, 'hooks/hooks.json should include the consolidated Bash dispatcher hook');
-      assert.ok(Array.isArray(installedBashDispatcherEntry.hooks[0].command), 'hooks/hooks.json should install argv-form commands for cross-platform safety');
+      assert.strictEqual(typeof installedBashDispatcherEntry.hooks[0].command, 'string', 'hooks/hooks.json should install string-form commands for Claude Code schema compatibility');
       assert.ok(
-        installedBashDispatcherEntry.hooks[0].command[0] === 'node' && installedBashDispatcherEntry.hooks[0].command[1] === '-e',
+        installedBashDispatcherEntry.hooks[0].command.startsWith('node -e '),
         'hooks/hooks.json should use the inline node bootstrap contract'
       );
       assert.ok(
-        installedBashDispatcherEntry.hooks[0].command.some(part => String(part).includes('plugin-hook-bootstrap.js')),
+        installedBashDispatcherEntry.hooks[0].command.includes('plugin-hook-bootstrap.js'),
         'hooks/hooks.json should route plugin-managed hooks through the shared bootstrap'
       );
       assert.ok(
-        installedBashDispatcherEntry.hooks[0].command.some(part => String(part).includes('CLAUDE_PLUGIN_ROOT')),
+        installedBashDispatcherEntry.hooks[0].command.includes('CLAUDE_PLUGIN_ROOT'),
         'hooks/hooks.json should still consult CLAUDE_PLUGIN_ROOT for runtime resolution'
       );
       assert.ok(
-        installedBashDispatcherEntry.hooks[0].command.some(part => String(part).includes('pre-bash-dispatcher.js')),
+        installedBashDispatcherEntry.hooks[0].command.includes('pre-bash-dispatcher.js'),
         'hooks/hooks.json should point the Bash preflight contract at the consolidated dispatcher'
       );
       assert.ok(
-        !installedBashDispatcherEntry.hooks[0].command.some(part => String(part).includes('${CLAUDE_PLUGIN_ROOT}')),
+        !installedBashDispatcherEntry.hooks[0].command.includes('${CLAUDE_PLUGIN_ROOT}'),
         'hooks/hooks.json should not retain raw CLAUDE_PLUGIN_ROOT shell placeholders after install'
       );
     } finally {
