@@ -190,7 +190,16 @@ async function main() {
 
   const sessionsDir = getSessionsDir();
   const today = getDateString();
-  const shortId = getSessionIdShort();
+  // Prefer the real session UUID (first 8 chars) from transcript_path when available.
+  // Without this, a parent session and any `claude -p ...` subprocess spawned by
+  // another Stop-hook share the project-name fallback filename, and the subprocess
+  // overwrites the parent's summary. See issue #1494 for full repro details.
+  let shortId = null;
+  if (transcriptPath) {
+    const m = path.basename(transcriptPath).match(/([0-9a-f]{8})-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jsonl$/i);
+    if (m) { shortId = m[1]; }
+  }
+  if (!shortId) { shortId = getSessionIdShort(); }
   const sessionFile = path.join(sessionsDir, `${today}-${shortId}-session.tmp`);
   const sessionMetadata = getSessionMetadata();
 

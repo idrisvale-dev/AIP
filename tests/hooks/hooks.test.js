@@ -633,6 +633,40 @@ async function runTests() {
     passed++;
   else failed++;
 
+  // Regression test for #1494: transcript_path UUID takes precedence over fallback
+  if (
+    await asyncTest('derives shortId from transcript_path UUID when available', async () => {
+      const isoHome = path.join(os.tmpdir(), `ecc-session-transcript-${Date.now()}`);
+      const transcriptUuid = 'abcdef12-3456-4789-a012-bcdef3456789';
+      const expectedShortId = 'abcdef12'; // First 8 chars of UUID
+      const transcriptPath = path.join(isoHome, 'transcripts', `${transcriptUuid}.jsonl`);
+
+      try {
+        fs.mkdirSync(path.dirname(transcriptPath), { recursive: true });
+        fs.writeFileSync(transcriptPath, '');
+
+        const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+        await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+          HOME: isoHome,
+          USERPROFILE: isoHome,
+          // CLAUDE_SESSION_ID intentionally unset so that without the fix the project-name
+          // fallback would be used, exposing the filename collision described in #1494.
+        });
+
+        const sessionsDir = getCanonicalSessionsDir(isoHome);
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const sessionFile = path.join(sessionsDir, `${today}-${expectedShortId}-session.tmp`);
+
+        assert.ok(fs.existsSync(sessionFile), `Session file with transcript UUID shortId should exist: ${sessionFile}`);
+      } finally {
+        fs.rmSync(isoHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
   if (
     await asyncTest('writes project, branch, and worktree metadata into new session files', async () => {
       const isoHome = path.join(os.tmpdir(), `ecc-session-metadata-${Date.now()}`);
