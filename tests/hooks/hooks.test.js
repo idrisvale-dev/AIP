@@ -651,8 +651,10 @@ async function runTests() {
         await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
           HOME: isoHome,
           USERPROFILE: isoHome,
-          // Explicitly clear CLAUDE_SESSION_ID so parent env does not leak in and
-          // force the getSessionIdShort() fallback instead of the transcript path.
+          // Clear CLAUDE_SESSION_ID so parent-process env does not leak into the
+          // child and the test deterministically exercises the transcript_path
+          // branch (getSessionIdShort() is the alternative path that is not
+          // exercised here).
           CLAUDE_SESSION_ID: ''
         });
 

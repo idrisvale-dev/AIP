@@ -16,6 +16,7 @@ const {
   getDateString,
   getTimeString,
   getSessionIdShort,
+  sanitizeSessionId,
   getProjectName,
   ensureDir,
   readFile,
@@ -202,7 +203,11 @@ async function main() {
   let shortId = null;
   if (transcriptPath) {
     const m = path.basename(transcriptPath).match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/i);
-    if (m) { shortId = m[1].slice(-8).toLowerCase(); }
+    if (m) {
+      // Run through sanitizeSessionId() for byte-for-byte parity with
+      // getSessionIdShort(sessionId.slice(-8)).
+      shortId = sanitizeSessionId(m[1].slice(-8).toLowerCase());
+    }
   }
   if (!shortId) { shortId = getSessionIdShort(); }
   const sessionFile = path.join(sessionsDir, `${today}-${shortId}-session.tmp`);
