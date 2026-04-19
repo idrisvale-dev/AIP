@@ -179,14 +179,22 @@ function mergeSessionHeader(content, today, currentTime, metadata) {
 }
 
 async function main() {
-  // Parse stdin JSON to get transcript_path
+  // Parse stdin JSON to get transcript_path; fall back to env var on missing,
+  // empty, or non-string values as well as on malformed JSON.
   let transcriptPath = null;
   try {
     const input = JSON.parse(stdinData);
-    transcriptPath = input.transcript_path;
+    if (input && typeof input.transcript_path === 'string' && input.transcript_path.length > 0) {
+      transcriptPath = input.transcript_path;
+    }
   } catch {
-    // Fallback: try env var for backwards compatibility
-    transcriptPath = process.env.CLAUDE_TRANSCRIPT_PATH;
+    // Malformed stdin: fall through to the env-var fallback below.
+  }
+  if (!transcriptPath) {
+    const envTranscriptPath = process.env.CLAUDE_TRANSCRIPT_PATH;
+    if (typeof envTranscriptPath === 'string' && envTranscriptPath.length > 0) {
+      transcriptPath = envTranscriptPath;
+    }
   }
 
   const sessionsDir = getSessionsDir();
