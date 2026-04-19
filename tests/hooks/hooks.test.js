@@ -633,12 +633,14 @@ async function runTests() {
     passed++;
   else failed++;
 
-  // Regression test for #1494: transcript_path UUID takes precedence over fallback
+  // Regression test for #1494: transcript_path UUID-derived shortId (last 8 chars)
+  // isolates sibling subprocess invocations while preserving getSessionIdShort()
+  // backward compatibility (same `.slice(-8)` convention).
   if (
     await asyncTest('derives shortId from transcript_path UUID when available', async () => {
       const isoHome = path.join(os.tmpdir(), `ecc-session-transcript-${Date.now()}`);
       const transcriptUuid = 'abcdef12-3456-4789-a012-bcdef3456789';
-      const expectedShortId = 'abcdef12'; // First 8 chars of UUID
+      const expectedShortId = 'f3456789'; // Last 8 chars of UUID (matches getSessionIdShort convention)
       const transcriptPath = path.join(isoHome, 'transcripts', `${transcriptUuid}.jsonl`);
 
       try {
@@ -649,8 +651,9 @@ async function runTests() {
         await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
           HOME: isoHome,
           USERPROFILE: isoHome,
-          // CLAUDE_SESSION_ID intentionally unset so that without the fix the project-name
-          // fallback would be used, exposing the filename collision described in #1494.
+          // Explicitly clear CLAUDE_SESSION_ID so parent env does not leak in and
+          // force the getSessionIdShort() fallback instead of the transcript path.
+          CLAUDE_SESSION_ID: ''
         });
 
         const sessionsDir = getCanonicalSessionsDir(isoHome);
@@ -659,6 +662,75 @@ async function runTests() {
         const sessionFile = path.join(sessionsDir, `${today}-${expectedShortId}-session.tmp`);
 
         assert.ok(fs.existsSync(sessionFile), `Session file with transcript UUID shortId should exist: ${sessionFile}`);
+      } finally {
+        fs.rmSync(isoHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  // Regression test for #1494: uppercase UUID hex digits should be normalized to
+  // lowercase so the filename is consistent with getSessionIdShort()'s output.
+  if (
+    await asyncTest('normalizes transcript UUID shortId to lowercase', async () => {
+      const isoHome = path.join(os.tmpdir(), `ecc-session-transcript-upper-${Date.now()}`);
+      const transcriptUuid = 'ABCDEF12-3456-4789-A012-BCDEF3456789';
+      const expectedShortId = 'f3456789'; // last 8 lowercased
+      const transcriptPath = path.join(isoHome, 'transcripts', `${transcriptUuid}.jsonl`);
+
+      try {
+        fs.mkdirSync(path.dirname(transcriptPath), { recursive: true });
+        fs.writeFileSync(transcriptPath, '');
+
+        const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+        await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+          HOME: isoHome,
+          USERPROFILE: isoHome,
+          CLAUDE_SESSION_ID: ''
+        });
+
+        const sessionsDir = getCanonicalSessionsDir(isoHome);
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const sessionFile = path.join(sessionsDir, `${today}-${expectedShortId}-session.tmp`);
+
+        assert.ok(fs.existsSync(sessionFile), `Session file with lowercase shortId should exist: ${sessionFile}`);
+      } finally {
+        fs.rmSync(isoHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  // Regression test for #1494: when CLAUDE_SESSION_ID and transcript_path refer to the
+  // same UUID, the derived shortId must be identical to the pre-fix behaviour so that
+  // existing .tmp files are not orphaned on upgrade.
+  if (
+    await asyncTest('matches getSessionIdShort when transcript UUID equals CLAUDE_SESSION_ID', async () => {
+      const isoHome = path.join(os.tmpdir(), `ecc-session-transcript-match-${Date.now()}`);
+      const sessionUuid = '11223344-5566-4778-8899-aabbccddeeff';
+      const expectedShortId = 'ccddeeff'; // last 8 chars of both transcript UUID and CLAUDE_SESSION_ID
+      const transcriptPath = path.join(isoHome, 'transcripts', `${sessionUuid}.jsonl`);
+
+      try {
+        fs.mkdirSync(path.dirname(transcriptPath), { recursive: true });
+        fs.writeFileSync(transcriptPath, '');
+
+        const stdinJson = JSON.stringify({ transcript_path: transcriptPath });
+        await runScript(path.join(scriptsDir, 'session-end.js'), stdinJson, {
+          HOME: isoHome,
+          USERPROFILE: isoHome,
+          CLAUDE_SESSION_ID: sessionUuid
+        });
+
+        const sessionsDir = getCanonicalSessionsDir(isoHome);
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const sessionFile = path.join(sessionsDir, `${today}-${expectedShortId}-session.tmp`);
+
+        assert.ok(fs.existsSync(sessionFile), `Session filename should match the pre-fix CLAUDE_SESSION_ID-based name: ${sessionFile}`);
       } finally {
         fs.rmSync(isoHome, { recursive: true, force: true });
       }
