@@ -46,8 +46,21 @@ pwsh -File docs/fixes/install_hook_wrapper.ps1
 The script backs up `settings.local.json` to
 `settings.local.json.bak-<timestamp>` before writing.
 
+## PowerShell 5.1 compatibility
+
+`ConvertFrom-Json -AsHashtable` is PowerShell 7+ only. The script tries
+`-AsHashtable` first and falls back to a manual `PSCustomObject` →
+`Hashtable` conversion on Windows PowerShell 5.1. Both hook buckets
+(`PreToolUse`, `PostToolUse`) and their inner `hooks` arrays are
+materialized as `System.Collections.ArrayList` before serialization, so
+PS 5.1's `ConvertTo-Json` cannot collapse single-element arrays into
+bare objects. Verified by running `powershell -NoProfile -File
+docs/fixes/install_hook_wrapper.ps1` on a Windows 11 machine with only
+Windows PowerShell 5.1 installed (no `pwsh`).
+
 ## Related
 
 - PR #1524 — settings.local.json shape fix (same argv-dup root cause)
 - PR #1511 — skip `AppInstallerPythonRedirector.exe` in observer python resolution
 - PR #1539 — locale-independent `detect-project.sh`
+- PR #1542 — `patch_settings_cl_v2_simple.ps1` companion fix
