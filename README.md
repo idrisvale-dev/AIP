@@ -40,6 +40,8 @@ Not just configs. A complete system: skills, instincts, memory optimization, con
 
 Works across **Claude Code**, **Codex**, **Cursor**, **OpenCode**, **Gemini**, and other AI agent harnesses.
 
+ECC v2.0.0-rc.1 adds the public Hermes operator story on top of that reusable layer: start with the [Hermes setup guide](docs/HERMES-SETUP.md), then review the [rc.1 release notes](docs/releases/2.0.0-rc.1/release-notes.md) and [cross-harness architecture](docs/architecture/cross-harness.md).
+
 ---
 
 ## The Guides
@@ -84,7 +86,7 @@ This repo is the raw code only. The guides explain everything.
 
 ## What's New
 
-### v1.10.0 — Surface Refresh, Operator Workflows, and ECC 2.0 Alpha (Apr 2026)
+### v2.0.0-rc.1 — Surface Refresh, Operator Workflows, and ECC 2.0 Alpha (Apr 2026)
 
 - **Dashboard GUI** — New Tkinter-based desktop application (`ecc_dashboard.py` or `npm run dashboard`) with dark/light theme toggle, font customization, and project logo in header and taskbar.
 - **Public surface synced to the live repo** — metadata, catalog counts, plugin manifests, and install-facing docs now match the actual OSS surface: 38 agents, 156 skills, and 72 legacy command shims.
@@ -247,7 +249,7 @@ For manual install instructions see the README in the `rules/` folder. When copy
 /plugin list everything-claude-code@everything-claude-code
 ```
 
-**That's it!** You now have access to 48 agents, 183 skills, and 79 legacy command shims.
+**That's it!** You now have access to 48 agents, 184 skills, and 79 legacy command shims.
 
 ### Dashboard GUI
 
@@ -1215,7 +1217,7 @@ The configuration is automatically detected from `.opencode/opencode.json`.
 |---------|-------------|----------|--------|
 | Agents | PASS: 48 agents | PASS: 12 agents | **Claude Code leads** |
 | Commands | PASS: 79 commands | PASS: 31 commands | **Claude Code leads** |
-| Skills | PASS: 183 skills | PASS: 37 skills | **Claude Code leads** |
+| Skills | PASS: 184 skills | PASS: 37 skills | **Claude Code leads** |
 | Hooks | PASS: 8 event types | PASS: 11 events | **OpenCode has more!** |
 | Rules | PASS: 29 rules | PASS: 13 instructions | **Claude Code leads** |
 | MCP Servers | PASS: 14 servers | PASS: Full | **Full parity** |
@@ -1324,7 +1326,7 @@ ECC is the **first plugin to maximize every major AI coding tool**. Here's how e
 |---------|------------|------------|-----------|----------|
 | **Agents** | 48 | Shared (AGENTS.md) | Shared (AGENTS.md) | 12 |
 | **Commands** | 79 | Shared | Instruction-based | 31 |
-| **Skills** | 183 | Shared | 10 (native format) | 37 |
+| **Skills** | 184 | Shared | 10 (native format) | 37 |
 | **Hook Events** | 8 types | 15 types | None yet | 11 types |
 | **Hook Scripts** | 20+ scripts | 16 scripts (DRY adapter) | N/A | Plugin hooks |
 | **Rules** | 34 (common + lang) | 34 (YAML frontmatter) | Instruction-based | 13 instructions |
@@ -1334,7 +1336,7 @@ ECC is the **first plugin to maximize every major AI coding tool**. Here's how e
 | **Context File** | CLAUDE.md + AGENTS.md | AGENTS.md | AGENTS.md | AGENTS.md |
 | **Secret Detection** | Hook-based | beforeSubmitPrompt hook | Sandbox-based | Hook-based |
 | **Auto-Format** | PostToolUse hook | afterFileEdit hook | N/A | file.edited hook |
-| **Version** | Plugin | Plugin | Reference config | 1.10.0 |
+| **Version** | Plugin | Plugin | Reference config | 2.0.0-rc.1 |
 
 **Key architectural decisions:**
 - **AGENTS.md** at root is the universal cross-tool file (read by all 4 tools)
