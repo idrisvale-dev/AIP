@@ -98,6 +98,16 @@ process.stdin.on('end', () => {
     process.exit(0);
   }
 
+  // The monitor only uses 0 (pass) and 2 (block). Other statuses usually
+  // mean Python launcher/dependency/runtime failure, so keep the hook fail-open.
+  if (result.status !== 0 && result.status !== 2) {
+    const detail = (result.stderr || result.stdout || '').trim();
+    const suffix = detail ? `: ${detail}` : '';
+    process.stderr.write(`[InsAIts] Security monitor exited with status ${result.status}${suffix}\n`);
+    process.stdout.write(raw);
+    process.exit(0);
+  }
+
   if (result.stdout) {
     process.stdout.write(result.stdout);
   } else if (result.status === 0) {

@@ -166,6 +166,29 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('enabled monitor unexpected failure fails open with warning and raw stdin', () => {
+    const tempDir = createTempDir();
+    try {
+      writeFakePython(path.join(tempDir, 'bin'));
+
+      const result = run({
+        input: 'raw-input',
+        env: {
+          ECC_ENABLE_INSAITS: '1',
+          FAKE_INSAITS_MODE: 'error',
+          PATH: path.join(tempDir, 'bin'),
+        },
+      });
+
+      assert.strictEqual(result.status, 0);
+      assert.strictEqual(result.stdout, 'raw-input');
+      assert.ok(result.stderr.includes('Security monitor exited with status 1'));
+      assert.ok(result.stderr.includes('spawned but failed'));
+    } finally {
+      cleanup(tempDir);
+    }
+  })) passed++; else failed++;
+
   if (test('missing Python fails open with warning and raw stdin', () => {
     const result = run({
       input: 'raw-input',
@@ -177,7 +200,10 @@ function runTests() {
 
     assert.strictEqual(result.status, 0);
     assert.strictEqual(result.stdout, 'raw-input');
-    assert.ok(result.stderr.includes('python3/python not found'));
+    assert.ok(
+      result.stderr.includes('python3/python not found')
+      || result.stderr.includes('Security monitor exited with status')
+    );
   })) passed++; else failed++;
 
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
