@@ -11,6 +11,7 @@ const TOML = require('@iarna/toml');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const installScript = path.join(repoRoot, 'scripts', 'codex', 'install-global-git-hooks.sh');
+const mergeCodexConfigScript = path.join(repoRoot, 'scripts', 'codex', 'merge-codex-config.js');
 const syncScript = path.join(repoRoot, 'scripts', 'sync-ecc-to-codex.sh');
 
 function test(name, fn) {
@@ -35,6 +36,18 @@ function cleanup(dirPath) {
 
 function runBash(scriptPath, args = [], env = {}, cwd = repoRoot) {
   return spawnSync('bash', [scriptPath, ...args], {
+    cwd,
+    env: {
+      ...process.env,
+      ...env,
+    },
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+}
+
+function runNode(scriptPath, args = [], env = {}, cwd = repoRoot) {
+  return spawnSync('node', [scriptPath, ...args], {
     cwd,
     env: {
       ...process.env,
@@ -87,6 +100,128 @@ if (os.platform() === 'win32') {
       assert.ok(fs.existsSync(path.join(weirdHooksDir, 'pre-push')));
     } finally {
       cleanup(homeDir);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('merge-codex-config reports usage, missing files, and TOML parse failures', () => {
+    const tempDir = createTempDir('codex-merge-errors-');
+
+    try {
+      const noArgs = runNode(mergeCodexConfigScript);
+      assert.strictEqual(noArgs.status, 1);
+      assert.match(noArgs.stderr, /Usage: merge-codex-config\.js/);
+
+      const missingPath = path.join(tempDir, 'missing-config.toml');
+      const missing = runNode(mergeCodexConfigScript, [missingPath]);
+      assert.strictEqual(missing.status, 1);
+      assert.match(missing.stderr, /Config file not found/);
+
+      const invalidPath = path.join(tempDir, 'invalid-config.toml');
+      fs.writeFileSync(invalidPath, 'approval_policy = [\n');
+      const invalid = runNode(mergeCodexConfigScript, [invalidPath]);
+      assert.strictEqual(invalid.status, 1);
+      assert.match(invalid.stderr, /Failed to parse TOML/);
+    } finally {
+      cleanup(tempDir);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('merge-codex-config dry-run reports additions without mutating the target', () => {
+    const tempDir = createTempDir('codex-merge-dry-run-');
+    const configPath = path.join(tempDir, 'config.toml');
+    const original = '';
+
+    try {
+      fs.writeFileSync(configPath, original);
+      const result = runNode(mergeCodexConfigScript, [configPath, '--dry-run']);
+
+      assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.match(result.stdout, /\[add-root\]/);
+      assert.match(result.stdout, /\[add-table\] \[features\]/);
+      assert.match(result.stdout, /Dry run/);
+      assert.strictEqual(fs.readFileSync(configPath, 'utf8'), original);
+    } finally {
+      cleanup(tempDir);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('merge-codex-config preserves user root choices while adding missing baseline tables', () => {
+    const tempDir = createTempDir('codex-merge-add-only-');
+    const configPath = path.join(tempDir, 'config.toml');
+
+    try {
+      fs.writeFileSync(configPath, 'approval_policy = "never"\n');
+      const result = runNode(mergeCodexConfigScript, [configPath]);
+
+      assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.match(result.stdout, /Done\. Baseline Codex settings merged\./);
+
+      const merged = fs.readFileSync(configPath, 'utf8');
+      const parsed = TOML.parse(merged);
+      assert.strictEqual(parsed.approval_policy, 'never');
+      assert.strictEqual(parsed.sandbox_mode, 'workspace-write');
+      assert.strictEqual(parsed.web_search, 'live');
+      assert.strictEqual(parsed.features.multi_agent, true);
+      assert.strictEqual(parsed.profiles.strict.approval_policy, 'on-request');
+      assert.strictEqual(parsed.profiles.yolo.approval_policy, 'never');
+      assert.strictEqual(parsed.agents.max_threads, 6);
+      assert.strictEqual(parsed.agents.explorer.config_file, 'agents/explorer.toml');
+    } finally {
+      cleanup(tempDir);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('merge-codex-config no-ops when the Codex baseline is already present', () => {
+    const tempDir = createTempDir('codex-merge-noop-');
+    const configPath = path.join(tempDir, 'config.toml');
+    const original = fs.readFileSync(path.join(repoRoot, '.codex', 'config.toml'), 'utf8');
+
+    try {
+      fs.writeFileSync(configPath, original);
+      const result = runNode(mergeCodexConfigScript, [configPath]);
+
+      assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.match(result.stdout, /All baseline Codex settings already present/);
+      assert.strictEqual(fs.readFileSync(configPath, 'utf8'), original);
+    } finally {
+      cleanup(tempDir);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('merge-codex-config warns when inline tables cannot be safely extended', () => {
+    const tempDir = createTempDir('codex-merge-inline-warn-');
+    const configPath = path.join(tempDir, 'config.toml');
+    const original = 'agents = { explorer = { description = "custom explorer" } }\n';
+
+    try {
+      fs.writeFileSync(configPath, original);
+      const result = runNode(mergeCodexConfigScript, [configPath, '--dry-run']);
+
+      assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.match(result.stderr, /WARNING: Skipping missing keys/);
+      assert.strictEqual(fs.readFileSync(configPath, 'utf8'), original);
+    } finally {
+      cleanup(tempDir);
     }
   })
 )
