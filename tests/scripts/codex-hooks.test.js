@@ -12,7 +12,12 @@ const TOML = require('@iarna/toml');
 const repoRoot = path.join(__dirname, '..', '..');
 const installScript = path.join(repoRoot, 'scripts', 'codex', 'install-global-git-hooks.sh');
 const mergeCodexConfigScript = path.join(repoRoot, 'scripts', 'codex', 'merge-codex-config.js');
+const mergeMcpConfigScript = path.join(repoRoot, 'scripts', 'codex', 'merge-mcp-config.js');
 const syncScript = path.join(repoRoot, 'scripts', 'sync-ecc-to-codex.sh');
+const deterministicPackageEnv = {
+  CLAUDE_PACKAGE_MANAGER: 'npm',
+  CLAUDE_CODE_PACKAGE_MANAGER: 'npm',
+};
 
 function test(name, fn) {
   try {
@@ -220,6 +225,169 @@ if (
       assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
       assert.match(result.stderr, /WARNING: Skipping missing keys/);
       assert.strictEqual(fs.readFileSync(configPath, 'utf8'), original);
+    } finally {
+      cleanup(tempDir);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('merge-mcp-config reports usage, missing files, and TOML parse failures', () => {
+    const tempDir = createTempDir('mcp-merge-errors-');
+
+    try {
+      const noArgs = runNode(mergeMcpConfigScript, [], deterministicPackageEnv);
+      assert.strictEqual(noArgs.status, 1);
+      assert.match(noArgs.stderr, /Usage: merge-mcp-config\.js/);
+
+      const missingPath = path.join(tempDir, 'missing-config.toml');
+      const missing = runNode(mergeMcpConfigScript, [missingPath], deterministicPackageEnv);
+      assert.strictEqual(missing.status, 1);
+      assert.match(missing.stderr, /Config file not found/);
+
+      const invalidPath = path.join(tempDir, 'invalid-config.toml');
+      fs.writeFileSync(invalidPath, '[mcp_servers.github\n');
+      const invalid = runNode(mergeMcpConfigScript, [invalidPath], deterministicPackageEnv);
+      assert.strictEqual(invalid.status, 1);
+      assert.match(invalid.stderr, /Failed to parse/);
+    } finally {
+      cleanup(tempDir);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('merge-mcp-config dry-run appends all recommended servers without mutating target', () => {
+    const tempDir = createTempDir('mcp-merge-dry-run-');
+    const configPath = path.join(tempDir, 'config.toml');
+    const original = '';
+
+    try {
+      fs.writeFileSync(configPath, original);
+      const result = runNode(mergeMcpConfigScript, [configPath, '--dry-run'], deterministicPackageEnv);
+
+      assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.match(result.stdout, /Package manager: npm \(exec: npx\)/);
+      assert.match(result.stdout, /\[add\] mcp_servers\.supabase/);
+      assert.match(result.stdout, /\[mcp_servers\.github\]/);
+      assert.match(result.stdout, /Dry run/);
+      assert.strictEqual(fs.readFileSync(configPath, 'utf8'), original);
+    } finally {
+      cleanup(tempDir);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('merge-mcp-config no-ops after all recommended servers are present', () => {
+    const tempDir = createTempDir('mcp-merge-noop-');
+    const configPath = path.join(tempDir, 'config.toml');
+
+    try {
+      fs.writeFileSync(configPath, '');
+      const first = runNode(mergeMcpConfigScript, [configPath], deterministicPackageEnv);
+      assert.strictEqual(first.status, 0, `${first.stdout}\n${first.stderr}`);
+
+      const merged = fs.readFileSync(configPath, 'utf8');
+      const parsed = TOML.parse(merged);
+      assert.strictEqual(parsed.mcp_servers.exa.url, 'https://mcp.exa.ai/mcp');
+      assert.strictEqual(parsed.mcp_servers.github.command, 'bash');
+      assert.deepStrictEqual(parsed.mcp_servers.memory.args, ['@modelcontextprotocol/server-memory']);
+      assert.strictEqual(parsed.mcp_servers.supabase.tool_timeout_sec, 120);
+
+      const second = runNode(mergeMcpConfigScript, [configPath], deterministicPackageEnv);
+      assert.strictEqual(second.status, 0, `${second.stdout}\n${second.stderr}`);
+      assert.match(second.stdout, /\[ok\] mcp_servers\.github/);
+      assert.match(second.stdout, /All ECC MCP servers already present/);
+      assert.strictEqual(fs.readFileSync(configPath, 'utf8'), merged);
+    } finally {
+      cleanup(tempDir);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('merge-mcp-config update dry-run reports canonical and legacy section refreshes', () => {
+    const tempDir = createTempDir('mcp-merge-update-dry-run-');
+    const configPath = path.join(tempDir, 'config.toml');
+    const original = [
+      '[mcp_servers.context7]',
+      'command = "custom"',
+      'args = ["old"]',
+      '',
+      '[mcp_servers.context7-mcp]',
+      'command = "npx"',
+      'args = ["legacy"]',
+      '',
+      '[mcp_servers.supabase]',
+      'command = "custom"',
+      'args = ["old"]',
+      '',
+      '[mcp_servers.supabase.env]',
+      'SUPABASE_ACCESS_TOKEN = "token"',
+      '',
+    ].join('\n');
+
+    try {
+      fs.writeFileSync(configPath, original);
+      const result = runNode(mergeMcpConfigScript, [configPath, '--update-mcp', '--dry-run'], deterministicPackageEnv);
+
+      assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.match(result.stdout, /\[remove\] mcp_servers\.context7/);
+      assert.match(result.stdout, /\[remove\] mcp_servers\.context7-mcp/);
+      assert.match(result.stdout, /\[remove\] mcp_servers\.supabase/);
+      assert.match(result.stdout, /\[mcp_servers\.supabase\]/);
+      assert.match(result.stdout, /\[mcp_servers\.context7\]/);
+      assert.strictEqual(fs.readFileSync(configPath, 'utf8'), original);
+    } finally {
+      cleanup(tempDir);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('merge-mcp-config removes disabled legacy servers without appending replacements', () => {
+    const tempDir = createTempDir('mcp-merge-disabled-');
+    const configPath = path.join(tempDir, 'config.toml');
+    const original = [
+      '[mcp_servers.context7-mcp]',
+      'command = "npx"',
+      'args = ["legacy"]',
+      '',
+      '[mcp_servers.exa]',
+      'url = "https://mcp.exa.ai/mcp"',
+      '',
+    ].join('\n');
+    const allServersDisabled = 'supabase,playwright,context7,exa,github,memory,sequential-thinking';
+
+    try {
+      fs.writeFileSync(configPath, original);
+      const result = runNode(mergeMcpConfigScript, [configPath], {
+        ...deterministicPackageEnv,
+        ECC_DISABLED_MCPS: allServersDisabled,
+      });
+
+      assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.match(result.stdout, /Disabled via ECC_DISABLED_MCPS/);
+      assert.match(result.stdout, /\[skip\] mcp_servers\.context7 \(disabled\)/);
+      assert.match(result.stdout, /\[skip\] mcp_servers\.exa \(disabled\)/);
+      assert.match(result.stdout, /\[update\] mcp_servers\.context7-mcp \(disabled\)/);
+      assert.match(result.stdout, /\[update\] mcp_servers\.exa \(disabled\)/);
+      assert.match(result.stdout, /Done\. Removed 2 disabled server\(s\)\./);
+
+      const updated = fs.readFileSync(configPath, 'utf8');
+      assert.doesNotMatch(updated, /context7-mcp/);
+      assert.doesNotMatch(updated, /mcp_servers\.exa/);
     } finally {
       cleanup(tempDir);
     }
