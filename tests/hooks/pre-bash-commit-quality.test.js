@@ -62,6 +62,23 @@ function writeAndStage(repoDir, relativePath, content) {
   spawnSync('git', ['add', relativePath], { cwd: repoDir, stdio: 'pipe', encoding: 'utf8' });
 }
 
+function executableName(name) {
+  return process.platform === 'win32' ? `${name}.cmd` : name;
+}
+
+function writeFakeExecutable(filePath, output, exitCode) {
+  const source = process.platform === 'win32'
+    ? `@echo off\r\necho ${output}\r\nexit /b ${exitCode}\r\n`
+    : `#!/bin/sh\necho "${output}"\nexit ${exitCode}\n`;
+
+  fs.writeFileSync(filePath, source, 'utf8');
+  fs.chmodSync(filePath, 0o755);
+}
+
+function pathEnvKey() {
+  return Object.keys(process.env).find(key => key.toLowerCase() === 'path') || 'PATH';
+}
+
 function withEnv(overrides, fn) {
   const previous = {};
   for (const key of Object.keys(overrides)) {
@@ -222,21 +239,19 @@ if (test('reports eslint pylint and golint failures from staged files', () => {
     writeAndStage(repoDir, 'app.py', 'print("lint")\n');
     writeAndStage(repoDir, 'main.go', 'package main\n');
 
-    const eslintPath = path.join(repoDir, 'node_modules', '.bin', process.platform === 'win32' ? 'eslint.cmd' : 'eslint');
+    const eslintPath = path.join(repoDir, 'node_modules', '.bin', executableName('eslint'));
     fs.mkdirSync(path.dirname(eslintPath), { recursive: true });
-    fs.writeFileSync(eslintPath, '#!/bin/sh\necho "eslint failed"\nexit 1\n', 'utf8');
-    fs.chmodSync(eslintPath, 0o755);
+    writeFakeExecutable(eslintPath, 'eslint failed', 1);
 
     const binDir = path.join(repoDir, 'fake-bin');
     fs.mkdirSync(binDir, { recursive: true });
-    const pylintPath = path.join(binDir, 'pylint');
-    const golintPath = path.join(binDir, 'golint');
-    fs.writeFileSync(pylintPath, '#!/bin/sh\necho "pylint failed"\nexit 1\n', 'utf8');
-    fs.writeFileSync(golintPath, '#!/bin/sh\necho "main.go:1: lint failed"\nexit 0\n', 'utf8');
-    fs.chmodSync(pylintPath, 0o755);
-    fs.chmodSync(golintPath, 0o755);
+    const pylintPath = path.join(binDir, executableName('pylint'));
+    const golintPath = path.join(binDir, executableName('golint'));
+    writeFakeExecutable(pylintPath, 'pylint failed', 1);
+    writeFakeExecutable(golintPath, 'main.go:1: lint failed', 0);
 
-    withEnv({ PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}` }, () => {
+    const pathKey = pathEnvKey();
+    withEnv({ [pathKey]: `${binDir}${path.delimiter}${process.env[pathKey] || process.env.PATH || ''}` }, () => {
       const input = JSON.stringify({ tool_input: { command: 'git commit -m "fix: lint failures"' } });
       const { result, stderr } = captureConsoleError(() => hook.evaluate(input));
 
