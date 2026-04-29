@@ -15,6 +15,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const MAX_STDIN = 1024 * 1024;
+const WINDOWS_SHELL_UNSAFE_PATH_CHARS = /[&|<>^%!]/;
 
 function isEnabled(value) {
   return ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase());
@@ -37,17 +38,33 @@ process.stdin.on('end', () => {
   const scriptDir = __dirname;
   const pyScript = path.join(scriptDir, 'insaits-security-monitor.py');
 
-  // Try python3 first (macOS/Linux), fall back to python (Windows)
-  const pythonCandidates = ['python3', 'python'];
+  // Prefer real Windows executables before .cmd shims so shell execution is
+  // only used for wrapper scripts such as pyenv/npm-style shims.
+  const pythonCandidates = process.platform === 'win32'
+    ? ['python3.exe', 'python.exe', 'python3.cmd', 'python.cmd', 'python3', 'python']
+    : ['python3', 'python'];
   let result;
 
   for (const pythonBin of pythonCandidates) {
+    const useWindowsShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(pythonBin);
+    if (useWindowsShell && (
+      WINDOWS_SHELL_UNSAFE_PATH_CHARS.test(pythonBin)
+      || WINDOWS_SHELL_UNSAFE_PATH_CHARS.test(pyScript)
+    )) {
+      result = {
+        error: new Error(`Unsafe Windows Python shim path: ${pythonBin}`),
+      };
+      break;
+    }
+
     result = spawnSync(pythonBin, [pyScript], {
       input: raw,
       encoding: 'utf8',
       env: process.env,
       cwd: process.cwd(),
       timeout: 14000,
+      shell: useWindowsShell,
+      windowsHide: true,
     });
 
     // ENOENT means binary not found - try next candidate

@@ -21,8 +21,40 @@ function cleanup(dirPath) {
 }
 
 function writeFakePython(binDir) {
-  const fakePython = path.join(binDir, 'python3');
   fs.mkdirSync(binDir, { recursive: true });
+  if (process.platform === 'win32') {
+    const fakePythonJs = path.join(binDir, 'fake-python.js');
+    const fakePythonCmd = path.join(binDir, 'python3.cmd');
+    fs.writeFileSync(fakePythonJs, [
+      "'use strict';",
+      "const fs = require('fs');",
+      "const mode = process.env.FAKE_INSAITS_MODE || 'clean';",
+      "if (mode === 'clean') {",
+      "  fs.readFileSync(0, 'utf8');",
+      "  process.exit(0);",
+      "}",
+      "if (mode === 'echo') {",
+      "  process.stdout.write(fs.readFileSync(0, 'utf8'));",
+      "  process.exit(0);",
+      "}",
+      "if (mode === 'block') {",
+      "  process.stdout.write('blocked by monitor\\n');",
+      "  process.stderr.write('monitor warning\\n');",
+      "  process.exit(2);",
+      "}",
+      "if (mode === 'error') {",
+      "  process.stderr.write('spawned but failed\\n');",
+      "  process.exit(1);",
+      "}",
+    ].join('\n'), 'utf8');
+    fs.writeFileSync(fakePythonCmd, [
+      '@echo off',
+      `"${process.execPath}" "%~dp0fake-python.js" %*`,
+    ].join('\r\n'), 'utf8');
+    return;
+  }
+
+  const fakePython = path.join(binDir, 'python3');
   fs.writeFileSync(fakePython, [
     '#!/bin/sh',
     'mode="${FAKE_INSAITS_MODE:-clean}"',
