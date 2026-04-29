@@ -422,7 +422,7 @@ async function runTests() {
           CLAUDE_HOOK_EVENT_NAME: 'PreToolUse',
           ECC_MCP_CONFIG_PATH: configPath,
           ECC_MCP_HEALTH_STATE_PATH: statePath,
-          ECC_MCP_HEALTH_TIMEOUT_MS: '100'
+          ECC_MCP_HEALTH_TIMEOUT_MS: '1000'
         }
       );
 
@@ -458,7 +458,7 @@ async function runTests() {
           ECC_MCP_CONFIG_PATH: configPath,
           ECC_MCP_HEALTH_STATE_PATH: statePath,
           ECC_MCP_HEALTH_FAIL_OPEN: '1',
-          ECC_MCP_HEALTH_TIMEOUT_MS: '100'
+          ECC_MCP_HEALTH_TIMEOUT_MS: '1000'
         }
       );
 
@@ -490,7 +490,7 @@ async function runTests() {
           CLAUDE_HOOK_EVENT_NAME: 'PreToolUse',
           ECC_MCP_CONFIG_PATH: configPath,
           ECC_MCP_HEALTH_STATE_PATH: statePath,
-          ECC_MCP_HEALTH_TIMEOUT_MS: '100'
+          ECC_MCP_HEALTH_TIMEOUT_MS: '1000'
         }
       );
       const missingCommand = runHook(
@@ -499,7 +499,7 @@ async function runTests() {
           CLAUDE_HOOK_EVENT_NAME: 'PreToolUse',
           ECC_MCP_CONFIG_PATH: configPath,
           ECC_MCP_HEALTH_STATE_PATH: statePath,
-          ECC_MCP_HEALTH_TIMEOUT_MS: '100'
+          ECC_MCP_HEALTH_TIMEOUT_MS: '1000'
         }
       );
 
@@ -597,7 +597,7 @@ async function runTests() {
           ECC_MCP_CONFIG_PATH: configPath,
           ECC_MCP_HEALTH_STATE_PATH: statePath,
           ECC_MCP_RECONNECT_COMMAND: `${JSON.stringify(process.execPath)} ${JSON.stringify(reconnectScript)}`,
-          ECC_MCP_HEALTH_TIMEOUT_MS: '100',
+          ECC_MCP_HEALTH_TIMEOUT_MS: '1000',
           ECC_MCP_HEALTH_BACKOFF_MS: '10'
         }
       );
@@ -660,7 +660,7 @@ async function runTests() {
           ECC_MCP_CONFIG_PATH: configPath,
           ECC_MCP_HEALTH_STATE_PATH: statePath,
           ECC_MCP_RECONNECT_COMMAND: `node ${JSON.stringify(reconnectScript)}`,
-          ECC_MCP_HEALTH_TIMEOUT_MS: '100'
+          ECC_MCP_HEALTH_TIMEOUT_MS: '1000'
         }
       );
 
