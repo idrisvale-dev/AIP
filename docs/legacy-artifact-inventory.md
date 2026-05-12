@@ -35,7 +35,7 @@ The only tracked legacy directory currently found by filename scan is
 | --- | --- | --- | --- |
 | `_legacy-documents-*` directories | Archive/no-action | No matching directories exist in the tracked checkout as of 2026-05-12. | Re-run the scan before release. If any appear, add each directory to this table before publishing. |
 | `legacy-command-shims/` | Archive/no-action | `legacy-command-shims/README.md` states these retired short-name shims are opt-in and no longer loaded by the default plugin command surface. | Keep as an explicit compatibility archive. Do not move these back into the default plugin surface without a migration decision. |
-| Closed-stale PR salvage ledger | Landed | `~/.cluster-swarm/handoffs/ecc-stale-salvage-ledger-20260512-0210.md` records useful stale work recovered through maintainer PRs. | Continue using the ledger pattern for future stale closures. |
+| Closed-stale PR salvage ledger | Landed | `docs/stale-pr-salvage-ledger.md` records useful stale work recovered through maintainer PRs. | Continue using the ledger pattern for future stale closures. |
 | #1687 zh-CN localization tail | Translator/manual review | Large safe subsets landed in #1746-#1752; remaining pieces require translator/manual review per salvage ledger. | Do not blindly cherry-pick. Split by docs, commands, agents, and skills if a translator review lane opens. |
 
 ## Legacy Command Shim Contents

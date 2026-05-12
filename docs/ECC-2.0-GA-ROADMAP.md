@@ -33,6 +33,9 @@ As of 2026-05-12:
 - `docs/legacy-artifact-inventory.md` records that no `_legacy-documents-*`
   directories exist in the current checkout and classifies
   `legacy-command-shims/` as an opt-in archive/no-action surface.
+- `docs/stale-pr-salvage-ledger.md` records stale PR salvage outcomes,
+  skipped PRs, superseded work, and the remaining #1687 translator/manual
+  review tail.
 - AgentShield PR #53 reduced two context-rule false positives and closed the
   remaining AgentShield issues.
 - ECC PR #1778 recovered the useful stale #1413 network/homelab architect-agent
@@ -192,5 +195,3 @@ Acceptance:
    AgentShield repo.
 2. Audit ECC Tools billing and check-run surfaces before any native GitHub
    payments announcement.
-3. Build the stale-PR salvage ledger from closed cleanup batches, then port
-   useful pieces in small attributed maintainer PRs.
