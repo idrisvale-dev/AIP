@@ -902,8 +902,16 @@ Project: github.com/affaan-m/everything-claude-code"""
                 widget.configure(background=bg_color)
             except Exception:
                 logger.debug("Cannot set background on %s", widget.__class__.__name__, exc_info=True)
-            for child in widget.winfo_children():
-                update_widget_colors(child)
+            try:
+                children = widget.winfo_children()
+            except Exception:
+                logger.debug("Cannot list child widgets on %s", widget.__class__.__name__, exc_info=True)
+                return
+            for child in children:
+                try:
+                    update_widget_colors(child)
+                except Exception:
+                    logger.debug("Cannot update child widget colors on %s", child.__class__.__name__, exc_info=True)
 
         update_widget_colors(self)
         

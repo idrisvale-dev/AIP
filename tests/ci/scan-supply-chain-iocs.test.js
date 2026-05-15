@@ -68,6 +68,38 @@ function run() {
     });
   })) passed++; else failed++;
 
+  if (test('rejects expanded Mini Shai-Hulud campaign package versions', () => {
+    withFixture({
+      'package-lock.json': JSON.stringify({
+        packages: {
+          'node_modules/@opensearch-project/opensearch': {
+            version: '3.5.3',
+          },
+          'node_modules/@squawk/mcp': {
+            version: '0.9.5',
+          },
+          'node_modules/@mistralai/mistralai': {
+            version: '2.2.2',
+          },
+        },
+      }, null, 2),
+      'requirements.txt': [
+        'mistralai==2.4.6',
+        'guardrails-ai==0.10.1',
+        'lightning==2.6.3',
+      ].join('\n'),
+    }, rootDir => {
+      const result = scanSupplyChainIocs({ rootDir });
+      const indicators = result.findings.map(finding => finding.indicator);
+      assert.ok(indicators.includes('@opensearch-project/opensearch@3.5.3'));
+      assert.ok(indicators.includes('@squawk/mcp@0.9.5'));
+      assert.ok(indicators.includes('@mistralai/mistralai@2.2.2'));
+      assert.ok(indicators.includes('mistralai@2.4.6'));
+      assert.ok(indicators.includes('guardrails-ai@0.10.1'));
+      assert.ok(indicators.includes('lightning@2.6.3'));
+    });
+  })) passed++; else failed++;
+
   if (test('passes clean versions of watched packages', () => {
     withFixture({
       'package-lock.json': JSON.stringify({
@@ -113,6 +145,26 @@ function run() {
     }, rootDir => {
       const result = scanSupplyChainIocs({ rootDir });
       assert.ok(result.findings.some(finding => finding.indicator === 'router_runtime.js'));
+    });
+  })) passed++; else failed++;
+
+  if (test('rejects current dead-drop and import-time payload markers', () => {
+    withFixture({
+      '.vscode/tasks.json': JSON.stringify({
+        tasks: [{
+          label: 'watch',
+          command: 'python3 /tmp/transformers.pyz && node execution.js',
+          runOptions: { runOn: 'folderOpen' },
+        }],
+      }, null, 2),
+      'package.json': JSON.stringify({
+        description: 'Shai-Hulud: Here We Go Again',
+      }, null, 2),
+    }, rootDir => {
+      const result = scanSupplyChainIocs({ rootDir });
+      assert.ok(result.findings.some(finding => finding.indicator === 'transformers.pyz'));
+      assert.ok(result.findings.some(finding => finding.indicator === 'execution.js'));
+      assert.ok(result.findings.some(finding => finding.indicator === 'Shai-Hulud: Here We Go Again'));
     });
   })) passed++; else failed++;
 
