@@ -91,6 +91,13 @@ function readSessionCost(sessionId) {
       fs.readSync(fd, buf, 0, readSize, Math.max(0, stat.size - readSize));
       const lines = buf.toString('utf8').split('\n').filter(Boolean);
 
+      // Each row in costs.jsonl is *already* a cumulative session total — see
+      // scripts/hooks/cost-tracker.js: "Each row therefore represents the
+      // cumulative session total up to that point. To get per-session cost,
+      // take the last row per session_id." Summing every matching row
+      // therefore double-counts: for N rows of the same session it over-
+      // reports by roughly N(N+1)/2 / N = (N+1)/2 ×. Take the last matching
+      // row instead.
       let totalCost = 0;
       let totalIn = 0;
       let totalOut = 0;
@@ -98,9 +105,9 @@ function readSessionCost(sessionId) {
         try {
           const row = JSON.parse(line);
           if (row.session_id === sessionId) {
-            totalCost += toNumber(row.estimated_cost_usd);
-            totalIn += toNumber(row.input_tokens);
-            totalOut += toNumber(row.output_tokens);
+            totalCost = toNumber(row.estimated_cost_usd);
+            totalIn = toNumber(row.input_tokens);
+            totalOut = toNumber(row.output_tokens);
           }
         } catch {
           /* skip malformed lines */

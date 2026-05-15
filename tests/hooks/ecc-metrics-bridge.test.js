@@ -146,6 +146,45 @@ function runTests() {
   else failed++;
 
   if (
+    test('readSessionCost returns the LAST cumulative row, not the sum (cost-tracker contract)', () => {
+      // cost-tracker.js writes one row per Stop event; each row is already
+      // a cumulative session total ("To get per-session cost, take the
+      // last row per session_id."). Summing across rows over-counts:
+      // 0.01 + 0.02 + 0.03 = 0.06, but the correct answer is 0.03.
+      const tmpHome = makeTempHome();
+      const originalHome = process.env.HOME;
+      const originalUserProfile = process.env.USERPROFILE;
+      try {
+        process.env.HOME = tmpHome;
+        process.env.USERPROFILE = tmpHome;
+        const metricsDir = path.join(tmpHome, '.claude', 'metrics');
+        fs.mkdirSync(metricsDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(metricsDir, 'costs.jsonl'),
+          [
+            JSON.stringify({ session_id: 'S1', estimated_cost_usd: 0.01, input_tokens: 333, output_tokens: 166 }),
+            JSON.stringify({ session_id: 'S1', estimated_cost_usd: 0.02, input_tokens: 666, output_tokens: 333 }),
+            JSON.stringify({ session_id: 'S1', estimated_cost_usd: 0.03, input_tokens: 1000, output_tokens: 500 })
+          ].join('\n') + '\n',
+          'utf8'
+        );
+        const result = readSessionCost('S1');
+        assert.strictEqual(result.totalCost, 0.03, `expected last-row 0.03, got ${result.totalCost} (was the bug: 0.06)`);
+        assert.strictEqual(result.totalIn, 1000);
+        assert.strictEqual(result.totalOut, 500);
+      } finally {
+        if (originalHome === undefined) delete process.env.HOME;
+        else process.env.HOME = originalHome;
+        if (originalUserProfile === undefined) delete process.env.USERPROFILE;
+        else process.env.USERPROFILE = originalUserProfile;
+        fs.rmSync(tmpHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
     test('readSessionCost does not include unrelated default-session rows', () => {
       const tmpHome = makeTempHome();
       const originalHome = process.env.HOME;
