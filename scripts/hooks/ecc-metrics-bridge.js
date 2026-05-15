@@ -77,46 +77,44 @@ function extractFilePaths(toolName, toolInput) {
 }
 
 /**
- * Read cumulative cost for a session from the tail of costs.jsonl.
- * Reads last 8KB to avoid scanning entire file.
+ * Read cumulative cost for a session from costs.jsonl.
+ *
+ * Scans the full file because each row is a cumulative session total
+ * (see cost-tracker.js docblock) and the row we need is the last one
+ * matching `sessionId`. The previous implementation read only the
+ * trailing 8 KiB; any session whose latest cumulative row was pushed
+ * past that window by newer rows from other sessions silently dropped
+ * to zero — the opposite sign of the double-count bug fixed in the
+ * previous commit.
+ *
+ * costs.jsonl is append-only and unbounded today (no rotation in
+ * cost-tracker.js). At a typical ~150 bytes per row, even 100k rows
+ * is ~15 MB and a single sync read on every PreToolUse hook is in
+ * the low milliseconds. If rotation lands later, this scan becomes
+ * even cheaper.
  */
 function readSessionCost(sessionId) {
   try {
     const costsPath = path.join(getClaudeDir(), 'metrics', 'costs.jsonl');
-    const stat = fs.statSync(costsPath);
-    const readSize = Math.min(stat.size, 8192);
-    const fd = fs.openSync(costsPath, 'r');
-    try {
-      const buf = Buffer.alloc(readSize);
-      fs.readSync(fd, buf, 0, readSize, Math.max(0, stat.size - readSize));
-      const lines = buf.toString('utf8').split('\n').filter(Boolean);
+    const content = fs.readFileSync(costsPath, 'utf8');
+    const lines = content.split('\n').filter(Boolean);
 
-      // Each row in costs.jsonl is *already* a cumulative session total — see
-      // scripts/hooks/cost-tracker.js: "Each row therefore represents the
-      // cumulative session total up to that point. To get per-session cost,
-      // take the last row per session_id." Summing every matching row
-      // therefore double-counts: for N rows of the same session it over-
-      // reports by roughly N(N+1)/2 / N = (N+1)/2 ×. Take the last matching
-      // row instead.
-      let totalCost = 0;
-      let totalIn = 0;
-      let totalOut = 0;
-      for (const line of lines) {
-        try {
-          const row = JSON.parse(line);
-          if (row.session_id === sessionId) {
-            totalCost = toNumber(row.estimated_cost_usd);
-            totalIn = toNumber(row.input_tokens);
-            totalOut = toNumber(row.output_tokens);
-          }
-        } catch {
-          /* skip malformed lines */
+    let totalCost = 0;
+    let totalIn = 0;
+    let totalOut = 0;
+    for (const line of lines) {
+      try {
+        const row = JSON.parse(line);
+        if (row.session_id === sessionId) {
+          totalCost = toNumber(row.estimated_cost_usd);
+          totalIn = toNumber(row.input_tokens);
+          totalOut = toNumber(row.output_tokens);
         }
+      } catch {
+        /* skip malformed lines */
       }
-      return { totalCost, totalIn, totalOut };
-    } finally {
-      fs.closeSync(fd);
     }
+    return { totalCost, totalIn, totalOut };
   } catch {
     return { totalCost: 0, totalIn: 0, totalOut: 0 };
   }

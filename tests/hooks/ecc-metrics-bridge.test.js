@@ -185,6 +185,47 @@ function runTests() {
   else failed++;
 
   if (
+    test('readSessionCost finds session row beyond the old 8 KiB tail boundary', () => {
+      // The previous implementation read only the trailing 8 KiB of
+      // costs.jsonl. A long-running deployment where the target session's
+      // most recent cumulative row sat further back than that — e.g.
+      // pushed past by many rows from OTHER sessions — silently saw
+      // cost=0. This test wedges the S1 row at the file start, fills
+      // ~16 KiB of OTHER-session noise after it, and asserts the S1 row
+      // is still found.
+      const tmpHome = makeTempHome();
+      const originalHome = process.env.HOME;
+      const originalUserProfile = process.env.USERPROFILE;
+      try {
+        process.env.HOME = tmpHome;
+        process.env.USERPROFILE = tmpHome;
+        const metricsDir = path.join(tmpHome, '.claude', 'metrics');
+        fs.mkdirSync(metricsDir, { recursive: true });
+        const otherRow = JSON.stringify({ session_id: 'OTHER', estimated_cost_usd: 1, input_tokens: 100, output_tokens: 50 });
+        const s1Row = JSON.stringify({ session_id: 'S1', estimated_cost_usd: 0.5, input_tokens: 500, output_tokens: 250 });
+        const rows = [s1Row, ...Array(200).fill(otherRow)];
+        fs.writeFileSync(path.join(metricsDir, 'costs.jsonl'), rows.join('\n') + '\n', 'utf8');
+        // Confirm we're actually past the old 8 KiB ceiling so the test
+        // would have failed under the previous implementation.
+        const size = fs.statSync(path.join(metricsDir, 'costs.jsonl')).size;
+        assert.ok(size > 8192, `setup: expected costs.jsonl > 8 KiB, got ${size} bytes`);
+        const result = readSessionCost('S1');
+        assert.strictEqual(result.totalCost, 0.5);
+        assert.strictEqual(result.totalIn, 500);
+        assert.strictEqual(result.totalOut, 250);
+      } finally {
+        if (originalHome === undefined) delete process.env.HOME;
+        else process.env.HOME = originalHome;
+        if (originalUserProfile === undefined) delete process.env.USERPROFILE;
+        else process.env.USERPROFILE = originalUserProfile;
+        fs.rmSync(tmpHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
     test('readSessionCost does not include unrelated default-session rows', () => {
       const tmpHome = makeTempHome();
       const originalHome = process.env.HOME;
