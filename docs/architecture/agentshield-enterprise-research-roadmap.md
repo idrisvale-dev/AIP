@@ -1,6 +1,6 @@
 # AgentShield Enterprise Research Roadmap
 
-Generated: 2026-05-12; refreshed with May 16 AgentShield PR #87 and #88 evidence.
+Generated: 2026-05-12; refreshed with May 16 AgentShield PR #87, #88, and #89 evidence.
 
 This is a planning artifact for the next AgentShield enterprise iteration. It
 does not modify AgentShield code. The goal is to turn the current scanner,
@@ -91,6 +91,10 @@ AgentShield is already more than a static lint tool:
   JSON/text summaries for report score, finding counts, runtime confidence,
   policy, baseline, supply-chain, CI context, remediation, and malformed
   artifact errors.
+- Fleet-level evidence-pack consumption now has a local routing primitive:
+  `agentshield evidence-pack fleet <dirs...> [--json]` aggregates multiple
+  inspected bundles into ready, security-blocker, policy-review,
+  baseline-regression, supply-chain-review, and invalid routes.
 
 May 16 update: AgentShield PR #87 merged as
 `26bb44650663816d07180e0d20c1895e431a326c`. It classifies installed Claude
@@ -103,10 +107,15 @@ AgentShield PR #88 merged as
 `agentshield evidence-pack inspect <dir> [--json]`, validates the bundle before
 readback, summarizes every consumer-facing evidence artifact, and keeps
 malformed-but-valid JSON artifacts from crashing inspection.
+AgentShield PR #89 merged as
+`521ada9091bb6d818511ab8589ae675b920c106a`. It adds
+`agentshield evidence-pack fleet <dirs...> [--json]`, verifies each pack through
+the inspect path, aggregates finding, policy, baseline, supply-chain, and
+remediation totals, and assigns each pack to a deterministic fleet route.
 
-The next iteration should not be "add more regex rules" by default. The higher
-leverage move is to make AgentShield remember, compare, route, and enforce
-security posture across time, repos, teams, and harnesses.
+The next iteration after fleet routing should not be "add more regex rules" by
+default. The higher leverage move is to wire the new fleet summaries into
+ECC-Tools follow-up routing and cross-harness policy integration.
 
 ## Enterprise Gaps
 
