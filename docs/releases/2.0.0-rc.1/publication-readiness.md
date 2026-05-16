@@ -21,7 +21,8 @@ AgentShield #86 evidence-pack provenance, and `ecc2` current-dir guard evidence
 refresh through PR #1941, see
 [`publication-evidence-2026-05-15.md`](publication-evidence-2026-05-15.md).
 For the May 16 queue cleanup, recsys skill merge, GateGuard issue triage,
-operator dashboard refresh, and combined final-gate rerun on current `main`, see
+AgentShield #87 plugin-cache runtime-confidence evidence, operator dashboard
+refresh, and combined final-gate rerun on current `main`, see
 [`publication-evidence-2026-05-16.md`](publication-evidence-2026-05-16.md).
 For the operator-facing prompt-to-artifact readiness dashboard from the same
 May 16 pass, see
@@ -78,7 +79,7 @@ Record the exact commit SHA and command output before any publication action:
 | Queue baseline | `gh pr list` / `gh issue list` across trunk, AgentShield, JARVIS, ECC Tools, and ECC website | Under 20 open PRs and under 20 open issues | `publication-evidence-2026-05-16.md`: platform audit ready, 0 open PRs and 0 open issues across checked repos |
 | Discussion baseline | `node scripts/discussion-audit.js --json` | No unmanaged active discussion queue and no answerable Q&A missing an accepted answer | `publication-evidence-2026-05-15.md`: 58 trunk discussions, 0 without maintainer touch; other tracked repos disabled or 0 |
 | Linear roadmap | Linear project and issue readback | Detailed roadmap exists with release, security, AgentShield, ECC Tools, legacy, and observability lanes | `publication-evidence-2026-05-15.md`: project and 16 issue lanes recorded |
-| Operator readiness dashboard | `npm run operator:dashboard -- --allow-untracked docs/drafts/ --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-15.md` | Current queue state mapped to macro-goal deliverables and incomplete gaps | `operator-readiness-dashboard-2026-05-15.md`: regenerated from `cecab597`, 0 open PRs, 0 open issues, 0 discussion gaps |
+| Operator readiness dashboard | `npm run operator:dashboard -- --allow-untracked docs/drafts/ --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-15.md` | Current queue state mapped to macro-goal deliverables and incomplete gaps | `operator-readiness-dashboard-2026-05-15.md`: regenerated from `6c8e909d`, 0 open PRs, 0 open issues, 0 discussion gaps |
 
 ## Do Not Publish If
 

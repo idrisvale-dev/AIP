@@ -1,6 +1,6 @@
 # AgentShield Enterprise Research Roadmap
 
-Generated: 2026-05-12
+Generated: 2026-05-12; refreshed with May 16 AgentShield PR #87 evidence.
 
 This is a planning artifact for the next AgentShield enterprise iteration. It
 does not modify AgentShield code. The goal is to turn the current scanner,
@@ -84,8 +84,15 @@ AgentShield is already more than a static lint tool:
 - Enterprise hooks exist: policy packs, exception metadata, expiring/expired
   exception reporting, SARIF code scanning, and job-summary output.
 - Accuracy work is active: `runtimeConfidence`, template/example weighting,
-  docs-example downgrades, hook-manifest resolution, false-positive audit
-  guidance, and corpus readiness.
+  docs-example downgrades, installed Claude plugin-cache confidence,
+  hook-manifest resolution, false-positive audit guidance, and corpus readiness.
+
+May 16 update: AgentShield PR #87 merged as
+`26bb44650663816d07180e0d20c1895e431a326c`. It classifies installed Claude
+plugin cache content as `runtimeConfidence: plugin-cache`, keeps non-secret
+plugin-cache score impact at `0.5x`, avoids downgrading repository-local
+non-Claude `plugins/cache` paths, and makes plugin-cache classification win
+before cached hook implementations would otherwise appear as active `hook-code`.
 
 The next iteration should not be "add more regex rules" by default. The higher
 leverage move is to make AgentShield remember, compare, route, and enforce
@@ -323,6 +330,8 @@ The AgentShield enterprise iteration is not complete until these are true:
 - Built CLI smoke tests cover the new flags or report modes.
 - GitHub Action self-test covers the new CI-visible output.
 - Documentation names the free/local path and the paid/team path separately.
+- Runtime-confidence changes include live scan evidence proving lower-confidence
+  plugin/package surfaces stay visible instead of being suppressed.
 - Evidence produced by the feature is deterministic enough for CI diffing.
 - ECC-Tools can consume the finding fingerprints or backlog export without
   exceeding GitHub/Linear object caps.

@@ -7,9 +7,9 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 
 | Field | Evidence |
 | --- | --- |
-| Upstream main | `cecab59747346ef3988305e5178b00652cb6d042` |
+| Upstream main | `6c8e909d630d233370160c10dad113b82002102c` |
 | Git remote | `https://github.com/affaan-m/everything-claude-code.git` |
-| Evidence scope | Current `main` after PR #1944, PR #1945, issue #1946 triage, ITO-57 sync, and operator dashboard refresh |
+| Evidence scope | Current `main` after PR #1944, PR #1945, issue #1946 triage, PR #1947 supply-chain protection, AgentShield PR #87, ITO-57 sync, and operator dashboard refresh |
 | Local status caveat | `git status --short --branch` showed `## main...origin/main` plus unrelated untracked `docs/drafts/` |
 
 The actual release operator should repeat all publish-facing checks from the
@@ -22,7 +22,7 @@ final release commit with a strictly clean checkout before publishing.
 | Trunk PRs | `gh pr list --state open --json number,title,url --limit 20` | `[]` |
 | Trunk issues | `gh issue list --state open --json number,title,url --limit 20` | `[]` |
 | Platform audit | `node scripts/platform-audit.js --json --allow-untracked docs/drafts/` | Ready; open PRs 0, open issues 0, discussion maintainer-touch gaps 0, discussion missing-answer gaps 0, blocking dirty files 0 |
-| Operator dashboard | `npm run operator:dashboard -- --json --allow-untracked docs/drafts/` | `dashboardReady: true`, `platformReady: true`, head `cecab59747346ef3988305e5178b00652cb6d042` |
+| Operator dashboard | `npm run operator:dashboard -- --json --allow-untracked docs/drafts/` | `dashboardReady: true`, `platformReady: true`, head `6c8e909d630d233370160c10dad113b82002102c` |
 
 ## Merge And Triage Batch
 
@@ -31,7 +31,10 @@ final release commit with a strictly clean checkout before publishing.
 | PR #1944 | Merged statusline ANSI palette update as `50ac061f9e72d7daa137f1bd08760cf74e9b577d`; targeted `node tests/hooks/ecc-statusline.test.js` and `node scripts/ci/validate-hooks.js` passed before merge |
 | PR #1945 | Merged `recsys-pipeline-architect` community skill as `9e973b29fb1a2a0aeb9e6980017b67c3ddb05201`; maintainer patches synced catalog counts and removed emoji blocked by Unicode safety |
 | Issue #1946 | Closed as triaged with a corrected maintainer comment; Linear `ITO-60` now tracks GateGuard proactive fact-forcing preflight UX |
+| PR #1947 | Merged scheduled supply-chain watch/advisory-source evidence as `4093d1bb7a14db1b4d4ea5bd00f2073baf94bfb0`; trunk now has the TanStack/Mini Shai-Hulud/node-ipc IOC scan plus advisory-source report surfaces wired into scheduled watch evidence |
+| AgentShield PR #87 | Merged plugin-cache runtime-confidence classification as `26bb44650663816d07180e0d20c1895e431a326c`; installed Claude plugin cache findings now emit `runtimeConfidence: plugin-cache`, `plugins/cache` only maps to Claude cache under `.claude`, and cached hook implementations are no longer mislabeled as active `hook-code` |
 | ITO-57 | Updated with PR #1947 advisory-source evidence, post-merge source refresh, IOC scan, npm audit/signature checks, and OpenAI app update caveat |
+| ITO-49 | Updated with AgentShield PR #87 merge, local test evidence, CI status, and live `~/.claude` scan classification counts |
 | ITO-44 | Updated with queue cleanup, dashboard refresh, and remaining macro gaps |
 
 ## Release Gate Commands
@@ -45,6 +48,7 @@ final release commit with a strictly clean checkout before publishing.
 | Harness audit | `npm run harness:audit -- --format json` | 70/70, no top actions |
 | Observability readiness | `npm run observability:ready` | 21/21, ready yes |
 | Supply-chain IOC scan | `npm run security:ioc-scan` | Passed; 227 files inspected |
+| Advisory source refresh | `npm run security:advisory-sources -- --refresh --json` | Ready; 9 active sources; Linear payload still points at `ITO-57` for sync |
 | npm audit | `npm audit --audit-level=moderate` | 0 vulnerabilities |
 | npm signatures | `npm audit signatures` | 241 verified registry signatures; 30 verified attestations |
 | Dashboard renderer | `node tests/scripts/operator-readiness-dashboard.test.js` | 7 passed, 0 failed |

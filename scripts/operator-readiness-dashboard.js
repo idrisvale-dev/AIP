@@ -392,11 +392,11 @@ function buildRequirements(rootDir, platformReport) {
       'agentshield-enterprise-iteration',
       'Advance AgentShield enterprise iteration',
       'AgentShield PR evidence plus enterprise roadmap',
-      roadmap.includes('AgentShield Enterprise Iteration') && roadmap.includes('#78-#86')
+      roadmap.includes('AgentShield Enterprise Iteration') && roadmap.includes('#78-#87')
         ? 'in_progress'
         : 'not_complete',
       'AgentShield enterprise PR evidence is mirrored in the GA roadmap',
-      'live IOC update loop and cross-harness depth remain pending'
+      'cross-harness depth and evidence-pack consumer/readback workflow remain pending'
     ),
     buildRequirement(
       'ecc-tools-next-level',
