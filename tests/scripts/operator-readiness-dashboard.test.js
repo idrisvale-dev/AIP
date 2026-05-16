@@ -49,7 +49,7 @@ function seedRepo(rootDir, overrides = {}) {
       'Linear ITO-44 ITO-59',
       'AgentShield PR #89 #78-#89',
       'AgentShield Enterprise Iteration',
-      'ECC-Tools PR #73',
+      'ECC-Tools PR #76',
       'hosted promotion',
       'announcementGate',
       'ITO-55'

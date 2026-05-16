@@ -23,7 +23,8 @@ refresh through PR #1941, see
 For the May 16 queue cleanup, recsys skill merge, GateGuard issue triage,
 AgentShield #87 plugin-cache runtime-confidence evidence, AgentShield #88
 evidence-pack inspect/readback, AgentShield #89 evidence-pack fleet routing,
-operator dashboard refresh, and combined final-gate rerun on current `main`, see
+ECC-Tools #76 fleet-summary consumption, operator dashboard refresh, and
+combined final-gate rerun on current `main`, see
 [`publication-evidence-2026-05-16.md`](publication-evidence-2026-05-16.md).
 For the operator-facing prompt-to-artifact readiness dashboard from the same
 May 16 pass, see

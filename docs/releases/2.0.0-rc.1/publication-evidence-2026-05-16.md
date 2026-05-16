@@ -9,7 +9,7 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 | --- | --- |
 | Upstream main | `6bced468d76b269243a6f0bd28472853aa78e0e4` |
 | Git remote | `https://github.com/affaan-m/everything-claude-code.git` |
-| Evidence scope | Current `main` after PR #1944, PR #1945, issue #1946 triage, PR #1947 supply-chain protection, AgentShield PR #87, AgentShield PR #88, AgentShield PR #89, ITO-57 sync, and operator dashboard refresh |
+| Evidence scope | Current `main` after PR #1944, PR #1945, issue #1946 triage, PR #1947 supply-chain protection, AgentShield PR #87, AgentShield PR #88, AgentShield PR #89, ECC-Tools PR #76, ITO-57 sync, and operator dashboard refresh |
 | Local status caveat | `git status --short --branch` showed `## main...origin/main` plus unrelated untracked `docs/drafts/` |
 
 The actual release operator should repeat all publish-facing checks from the
@@ -35,8 +35,10 @@ final release commit with a strictly clean checkout before publishing.
 | AgentShield PR #87 | Merged plugin-cache runtime-confidence classification as `26bb44650663816d07180e0d20c1895e431a326c`; installed Claude plugin cache findings now emit `runtimeConfidence: plugin-cache`, `plugins/cache` only maps to Claude cache under `.claude`, and cached hook implementations are no longer mislabeled as active `hook-code` |
 | AgentShield PR #88 | Merged evidence-pack inspect/readback as `65ed6e2a87545dc99d962b58413f49096a4d70ec`; `agentshield evidence-pack inspect` now emits verified JSON/text summaries for report, policy, baseline, supply-chain, CI context, remediation, and malformed artifact errors |
 | AgentShield PR #89 | Merged evidence-pack fleet routing as `521ada9091bb6d818511ab8589ae675b920c106a`; `agentshield evidence-pack fleet <dirs...> [--json]` now aggregates multiple verified bundles into ready, security-blocker, policy-review, baseline-regression, supply-chain-review, and invalid routes with finding, policy, baseline, supply-chain, and remediation totals |
+| ECC-Tools PR #76 | Merged AgentShield fleet-summary consumption as `5bde2328d15f584481fb6334e6960716dbf3e16f`; hosted `security-evidence-review` now recognizes `agentshield-evidence/fleet-summary.json`, classifies it as `evidence-pack-fleet`, routes invalid/security-blocker/policy/baseline/supply-chain fleet outcomes into hosted findings, and fails closed on malformed fleet JSON |
 | ITO-57 | Updated with PR #1947 advisory-source evidence, post-merge source refresh, IOC scan, npm audit/signature checks, and OpenAI app update caveat |
 | ITO-49 | Updated with AgentShield PR #87, #88, and #89 merge evidence, local test evidence, CI status, live `~/.claude` scan classification counts, and local Mini Shai-Hulud protection scan results |
+| ITO-50 | Updated with ECC-Tools PR #76 merge evidence, hosted security review behavior, local test evidence, and remote Verify/Security Audit/Workers build checks |
 | ITO-44 | Updated with queue cleanup, dashboard refresh, and remaining macro gaps |
 
 ## Release Gate Commands
