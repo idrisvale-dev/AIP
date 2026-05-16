@@ -21,8 +21,9 @@ AgentShield #86 evidence-pack provenance, and `ecc2` current-dir guard evidence
 refresh through PR #1941, see
 [`publication-evidence-2026-05-15.md`](publication-evidence-2026-05-15.md).
 For the May 16 queue cleanup, recsys skill merge, GateGuard issue triage,
-AgentShield #87 plugin-cache runtime-confidence evidence, operator dashboard
-refresh, and combined final-gate rerun on current `main`, see
+AgentShield #87 plugin-cache runtime-confidence evidence, AgentShield #88
+evidence-pack inspect/readback, operator dashboard refresh, and combined
+final-gate rerun on current `main`, see
 [`publication-evidence-2026-05-16.md`](publication-evidence-2026-05-16.md).
 For the operator-facing prompt-to-artifact readiness dashboard from the same
 May 16 pass, see

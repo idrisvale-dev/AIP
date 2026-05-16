@@ -1,6 +1,6 @@
 # AgentShield Enterprise Research Roadmap
 
-Generated: 2026-05-12; refreshed with May 16 AgentShield PR #87 evidence.
+Generated: 2026-05-12; refreshed with May 16 AgentShield PR #87 and #88 evidence.
 
 This is a planning artifact for the next AgentShield enterprise iteration. It
 does not modify AgentShield code. The goal is to turn the current scanner,
@@ -86,6 +86,11 @@ AgentShield is already more than a static lint tool:
 - Accuracy work is active: `runtimeConfidence`, template/example weighting,
   docs-example downgrades, installed Claude plugin-cache confidence,
   hook-manifest resolution, false-positive audit guidance, and corpus readiness.
+- Evidence-pack consumption is now first-class enough for downstream tools:
+  `agentshield evidence-pack inspect` verifies a bundle and emits compact
+  JSON/text summaries for report score, finding counts, runtime confidence,
+  policy, baseline, supply-chain, CI context, remediation, and malformed
+  artifact errors.
 
 May 16 update: AgentShield PR #87 merged as
 `26bb44650663816d07180e0d20c1895e431a326c`. It classifies installed Claude
@@ -93,6 +98,11 @@ plugin cache content as `runtimeConfidence: plugin-cache`, keeps non-secret
 plugin-cache score impact at `0.5x`, avoids downgrading repository-local
 non-Claude `plugins/cache` paths, and makes plugin-cache classification win
 before cached hook implementations would otherwise appear as active `hook-code`.
+AgentShield PR #88 merged as
+`65ed6e2a87545dc99d962b58413f49096a4d70ec`. It adds
+`agentshield evidence-pack inspect <dir> [--json]`, validates the bundle before
+readback, summarizes every consumer-facing evidence artifact, and keeps
+malformed-but-valid JSON artifacts from crashing inspection.
 
 The next iteration should not be "add more regex rules" by default. The higher
 leverage move is to make AgentShield remember, compare, route, and enforce
