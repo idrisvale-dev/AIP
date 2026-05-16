@@ -396,17 +396,17 @@ function buildRequirements(rootDir, platformReport) {
         ? 'in_progress'
         : 'not_complete',
       'AgentShield enterprise PR evidence is mirrored in the GA roadmap',
-      'cross-harness policy integration and operator-facing fleet review UX remain pending after ECC-Tools fleet-summary consumption shipped'
+      'cross-harness policy integration and richer fleet-review workflow remain pending after fleet-summary consumption and evidence-path surfacing shipped'
     ),
     buildRequirement(
       'ecc-tools-next-level',
       'Advance ECC Tools native payments and AI-native harness-agnostic app',
       'ECC Tools PR evidence, billing gate, hosted analysis lanes',
-      includesAll(roadmap, ['ECC-Tools PR #76', 'hosted promotion', 'announcementGate'])
+      includesAll(roadmap, ['ECC-Tools PR #77', 'hosted promotion', 'announcementGate'])
         ? 'in_progress'
         : 'not_complete',
-      'billing announcement gate, hosted analysis lanes, and AgentShield fleet-summary consumption are mirrored in the GA roadmap',
-      'live Marketplace test-account readback, hosted promotion telemetry, and operator review UX pending'
+      'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, and hosted finding evidence paths are mirrored in the GA roadmap',
+      'live Marketplace test-account readback, hosted promotion telemetry, and richer operator review UX pending'
     ),
     buildRequirement(
       'legacy-salvage',

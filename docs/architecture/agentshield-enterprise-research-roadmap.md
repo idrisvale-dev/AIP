@@ -118,9 +118,10 @@ the inspect path, aggregates finding, policy, baseline, supply-chain, and
 remediation totals, and assigns each pack to a deterministic fleet route.
 
 The next iteration after fleet routing should not be "add more regex rules" by
-default. ECC-Tools follow-up routing now consumes fleet summaries; the higher
-leverage move is cross-harness policy integration plus operator-facing review UX
-for routed fleet findings.
+default. ECC-Tools follow-up routing now consumes fleet summaries and surfaces
+source evidence paths in hosted findings; the higher leverage move is
+cross-harness policy integration plus richer review workflow for routed fleet
+findings.
 
 ## Enterprise Gaps
 
