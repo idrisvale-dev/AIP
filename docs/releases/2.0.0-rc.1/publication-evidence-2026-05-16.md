@@ -9,7 +9,7 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 | --- | --- |
 | Upstream main | `6bced468d76b269243a6f0bd28472853aa78e0e4` |
 | Git remote | `https://github.com/affaan-m/everything-claude-code.git` |
-| Evidence scope | Current `main` after PR #1944, PR #1945, issue #1946 triage, PR #1947 supply-chain protection, AgentShield PR #87, AgentShield PR #88, AgentShield PR #89, ECC-Tools PR #76, ECC-Tools PR #77, ITO-57 sync, and operator dashboard refresh |
+| Evidence scope | Current `main` after PR #1944, PR #1945, issue #1946 triage, PR #1947 supply-chain protection, AgentShield PR #87, AgentShield PR #88, AgentShield PR #89, ECC-Tools PR #76, ECC-Tools PR #77, ECC-Tools PR #78, ITO-57 sync, and operator dashboard refresh |
 | Local status caveat | `git status --short --branch` showed `## main...origin/main` plus unrelated untracked `docs/drafts/` |
 
 The actual release operator should repeat all publish-facing checks from the
@@ -37,9 +37,10 @@ final release commit with a strictly clean checkout before publishing.
 | AgentShield PR #89 | Merged evidence-pack fleet routing as `521ada9091bb6d818511ab8589ae675b920c106a`; `agentshield evidence-pack fleet <dirs...> [--json]` now aggregates multiple verified bundles into ready, security-blocker, policy-review, baseline-regression, supply-chain-review, and invalid routes with finding, policy, baseline, supply-chain, and remediation totals |
 | ECC-Tools PR #76 | Merged AgentShield fleet-summary consumption as `5bde2328d15f584481fb6334e6960716dbf3e16f`; hosted `security-evidence-review` now recognizes `agentshield-evidence/fleet-summary.json`, classifies it as `evidence-pack-fleet`, routes invalid/security-blocker/policy/baseline/supply-chain fleet outcomes into hosted findings, and fails closed on malformed fleet JSON |
 | ECC-Tools PR #77 | Merged hosted finding source-evidence output as `31fd883b3f0cee135aee4839b01d34855b7867f6`; hosted job PR comments and check-run details now include an `Evidence` column with up to three source evidence paths per finding, including AgentShield fleet-derived findings |
+| ECC-Tools PR #78 | Merged AgentShield fleet-route harness review as `0d4eb949aa56f56da88e6654273a22ffb95983a1`; hosted `harness-compatibility-audit` now collects fleet summaries, maps route target paths to Claude/Codex/OpenCode/MCP/plugin harness owners, and emits owner-review findings with source evidence paths |
 | ITO-57 | Updated with PR #1947 advisory-source evidence, post-merge source refresh, IOC scan, npm audit/signature checks, and OpenAI app update caveat |
 | ITO-49 | Updated with AgentShield PR #87, #88, and #89 merge evidence, local test evidence, CI status, live `~/.claude` scan classification counts, and local Mini Shai-Hulud protection scan results |
-| ITO-50 | Updated with ECC-Tools PR #76 and PR #77 merge evidence, hosted security review behavior, hosted finding evidence-path behavior, local test evidence, and remote Verify/Security Audit/Workers build checks |
+| ITO-50 | Updated with ECC-Tools PR #76, PR #77, and PR #78 merge evidence, hosted security review behavior, hosted finding evidence-path behavior, harness fleet-route owner-review behavior, local test evidence, and remote Verify/Security Audit/Workers build checks |
 | ITO-44 | Updated with queue cleanup, dashboard refresh, and remaining macro gaps |
 
 ## Release Gate Commands
