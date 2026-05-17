@@ -9,7 +9,7 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 | --- | --- |
 | Upstream main | `744f4169972fd81618c3114ea1ca5ffb85ef4c82` |
 | Git remote | `https://github.com/affaan-m/everything-claude-code.git` |
-| Evidence scope | Current `main` after the Japanese localization and Dependabot merge batch, post-merge ja-JP markdown anchor repair, Zed install-target support, Mini Shai-Hulud/TanStack protection recheck, and the Windows-path CI fix |
+| Evidence scope | Current `main` after the Japanese localization and Dependabot merge batch, post-merge ja-JP markdown anchor repair, Zed install-target support, Mini Shai-Hulud/TanStack protection recheck, the Windows-path CI fix, and the AgentShield policy-promotion Action output mirror |
 | Local status caveat | `git status --short --branch` showed `## main...origin/main` plus unrelated untracked `docs/drafts/` |
 
 The actual release operator should repeat all publish-facing checks from the
@@ -48,6 +48,7 @@ Tracked repositories in the platform audit were:
 | Zed Windows CI fix | Pushed `744f4169972fd81618c3114ea1ca5ffb85ef4c82` to normalize the Zed install-plan source-path assertion across Windows path separators |
 | Discussion #1896 | Added a maintainer update confirming Zed support on `main`, documenting the dry-run command, and clarifying that BYOK/OpenRouter secrets stay in Zed/local user settings rather than ECC-managed project files |
 | AgentShield hardening-output slice | Pushed AgentShield `1124535345d7040242ecd3803f65bcd4dcaf6ec2` to expose package-manager hardening status/count outputs and redacted GitHub Action job-summary evidence for registry credentials, lifecycle-script drift, and release-age gate drift |
+| AgentShield policy-promotion Action slice | Pushed AgentShield `1593925dca025632dd8a6454509fce3fe7517cdf` to expose policy-promotion status/count/digest outputs plus GitHub Action job-summary review items for owner approval, protected rollout, and runtime smoke; the same Action job marks runtime smoke verified when it scans with the promoted policy |
 
 ## Release Gate Commands
 
@@ -63,6 +64,7 @@ Tracked repositories in the platform audit were:
 | npm audit | `npm audit --audit-level=high` | 0 vulnerabilities |
 | npm signatures | `npm audit signatures` | 213 verified registry signatures; 17 verified attestations |
 | AgentShield enterprise CI output slice | AgentShield local `npm run build`, focused action tests, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25994354007`, `25994354011`, `25994354026` | Local gates passed; remote CI, Test GitHub Action, and Self-Scan completed successfully for `1124535` |
+| AgentShield policy-promotion Action output slice | AgentShield local `npm run build`, `npx vitest run tests/action-promotion.test.ts tests/action.test.ts`, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25995929182`, `25995929190`, `25995929161` | Local gates passed; remote CI, Test GitHub Action, and Self-Scan completed successfully for `1593925` |
 | GitHub queues | `gh pr list`; `gh issue list`; `node scripts/platform-audit.js --json --allow-untracked docs/drafts/` | 0 open PRs, 0 open issues, and platform audit ready across the tracked repo set |
 | Operator dashboard | `npm run operator:dashboard -- --allow-untracked docs/drafts/ --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-17.md` | Dashboard generated for the current commit; macro publication gates still incomplete |
 
