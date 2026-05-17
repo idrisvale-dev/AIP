@@ -70,7 +70,7 @@ Tracked repositories in the platform audit were:
 | Harness audit | `node scripts/harness-audit.js --format json` | 70/70, no top actions |
 | Observability readiness | `npm run observability:ready -- --format json` | 21/21, ready yes |
 | Workflow security | `node scripts/ci/validate-workflow-security.js` | Validated 8 workflow files |
-| Supply-chain IOC scan | `node scripts/ci/scan-supply-chain-iocs.js --root /Users/affoon/GitHub --home --json`; `node scripts/ci/scan-supply-chain-iocs.js --root /Users/affoon/Documents/GitHub --home --json` | Passed; each workspace sweep inspected 1,879 files with 0 findings, including user-level persistence targets |
+| Supply-chain IOC scan | `node scripts/ci/scan-supply-chain-iocs.js --root ~/GitHub --home --json`; `node scripts/ci/scan-supply-chain-iocs.js --root ~/Documents/GitHub --home --json` | Passed; each workspace sweep inspected 1,879 files with 0 findings, including user-level persistence targets |
 | npm audit | `npm audit --audit-level=high` | 0 vulnerabilities |
 | npm signatures | `npm audit signatures` across `agentshield`, `everything-claude-code`, `ECC-Tools`, `ECC-website`, and `JARVIS/frontend` | Passed across the primary ECC Node package roots |
 | Preview-pack smoke | `npm run preview-pack:smoke` | Passed; ready yes; digest `dfb1ed014607`; 5 checks passed and 0 failed |
