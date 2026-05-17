@@ -16,6 +16,7 @@ surfaces, or posting announcements.
 | `docs/architecture/harness-adapter-compliance.md` | Adapter matrix and scorecard | Verified by `npm run harness:adapters -- --check` |
 | `docs/architecture/observability-readiness.md` | Local operator-readiness gate | Verified by `npm run observability:ready` |
 | `docs/architecture/progress-sync-contract.md` | GitHub, Linear, handoff, roadmap, and work-item sync boundary | Checked by `node scripts/platform-audit.js --format json --allow-untracked docs/drafts/` |
+| `scripts/preview-pack-smoke.js` | Deterministic preview-pack smoke gate | Verified by `npm run preview-pack:smoke` |
 | `docs/releases/2.0.0-rc.1/release-notes.md` | GitHub release copy source | Must be refreshed with final live release/package/plugin URLs before publication |
 | `docs/releases/2.0.0-rc.1/quickstart.md` | Clone-to-first-workflow path | Covers clone, install, verify, first skill, and harness switch |
 | `docs/releases/2.0.0-rc.1/launch-checklist.md` | Operator launch checklist | Must remain approval-gated for release, package, plugin, and announcement actions |
@@ -69,6 +70,7 @@ Run these from the exact release commit before publication:
 ```bash
 git status --short --branch
 node scripts/platform-audit.js --format json --allow-untracked docs/drafts/
+npm run preview-pack:smoke
 npm run harness:adapters -- --check
 npm run harness:audit -- --format json
 npm run observability:ready

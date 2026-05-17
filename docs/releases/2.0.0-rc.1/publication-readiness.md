@@ -78,6 +78,7 @@ Record the exact commit SHA and command output before any publication action:
 | Evidence | Command | Required result | Recorded output |
 | --- | --- | --- | --- |
 | Clean release branch | `git status --short --branch` | On intended release commit; no unrelated files | Pending final strict clean-checkout release pass; `publication-evidence-2026-05-17.md` records current `main` with unrelated untracked `docs/drafts/` |
+| Preview-pack smoke | `npm run preview-pack:smoke` | Preview pack artifacts, Hermes boundary, final verification command list, and publication blockers pass | Pending final strict clean-checkout release pass; deterministic smoke gate is in-tree |
 | Harness audit | `npm run harness:audit -- --format json` | 70/70 passing | `publication-evidence-2026-05-17.md`: 70/70 |
 | Adapter scorecard | `npm run harness:adapters -- --check` | PASS | `publication-evidence-2026-05-16.md`: PASS, 11 adapters |
 | Observability readiness | `npm run observability:ready` | 21/21 passing | `publication-evidence-2026-05-17.md`: 21/21, ready yes |

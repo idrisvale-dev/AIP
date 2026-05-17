@@ -469,6 +469,7 @@ function buildRequirements(rootDir, platformReport) {
   const publicationReadiness = readText(rootDir, 'docs/releases/2.0.0-rc.1/publication-readiness.md');
   const namingMatrix = readText(rootDir, 'docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md');
   const previewManifest = readText(rootDir, 'docs/releases/2.0.0-rc.1/preview-pack-manifest.md');
+  const previewPackSmoke = readText(rootDir, 'scripts/preview-pack-smoke.js');
   const progressSync = readText(rootDir, 'docs/architecture/progress-sync-contract.md');
   const observabilityReadiness = readText(rootDir, 'docs/architecture/observability-readiness.md');
   const stalePrSalvage = readText(rootDir, 'docs/stale-pr-salvage-ledger.md');
@@ -478,6 +479,22 @@ function buildRequirements(rootDir, platformReport) {
   const packageJson = readPackage(rootDir);
   const scripts = packageJson.scripts || {};
   const legacyContext = { stalePrSalvage, legacyInventory, roadmap };
+  const previewPackManifestReady = includesAll(previewManifest, [
+    'publication-readiness.md',
+    'release-notes.md',
+    'quickstart.md'
+  ]);
+  const previewPackSmokeReady = scripts['preview-pack:smoke'] === 'node scripts/preview-pack-smoke.js'
+    && fileExists(rootDir, 'scripts/preview-pack-smoke.js')
+    && includesAll(previewManifest, ['scripts/preview-pack-smoke.js', 'npm run preview-pack:smoke'])
+    && includesAll(previewPackSmoke, [
+      'ecc.preview-pack-smoke.v1',
+      'preview-pack-artifacts-present',
+      'hermes-boundary-sanitized',
+      'publication-blockers-preserved'
+    ]);
+  const hermesArtifactsReady = fileExists(rootDir, 'docs/HERMES-SETUP.md')
+    && fileExists(rootDir, 'skills/hermes-imports/SKILL.md');
 
   const githubLive = !platformReport.github.skipped && platformReport.github.totals.errors === 0;
   const queuesCurrent = githubLive
@@ -535,23 +552,29 @@ function buildRequirements(rootDir, platformReport) {
       'ecc-preview-pack',
       'ECC 2.0 preview pack ready',
       'docs/releases/2.0.0-rc.1/preview-pack-manifest.md',
-      includesAll(previewManifest, ['publication-readiness.md', 'release-notes.md', 'quickstart.md']) ? 'in_progress' : 'not_complete',
-      includesAll(previewManifest, ['publication-readiness.md', 'release-notes.md', 'quickstart.md'])
+      previewPackManifestReady && previewPackSmokeReady ? 'current' : previewPackManifestReady ? 'in_progress' : 'not_complete',
+      previewPackManifestReady && previewPackSmokeReady
+        ? 'preview pack manifest and deterministic smoke gate are in-tree'
+        : previewPackManifestReady
         ? 'preview pack manifest is in-tree'
         : 'preview pack manifest is incomplete',
-      'final clean-checkout release approval and publish evidence still pending'
+      previewPackManifestReady && previewPackSmokeReady
+        ? 'repeat clean-checkout preview-pack smoke before publication'
+        : 'final clean-checkout release approval and publish evidence still pending'
     ),
     buildRequirement(
       'hermes-specialized-skills',
       'Include Hermes specialized skills safely',
       'docs/HERMES-SETUP.md and skills/hermes-imports/SKILL.md',
-      fileExists(rootDir, 'docs/HERMES-SETUP.md') && fileExists(rootDir, 'skills/hermes-imports/SKILL.md')
-        ? 'in_progress'
-        : 'not_complete',
-      fileExists(rootDir, 'docs/HERMES-SETUP.md') && fileExists(rootDir, 'skills/hermes-imports/SKILL.md')
+      hermesArtifactsReady && previewPackSmokeReady ? 'current' : hermesArtifactsReady ? 'in_progress' : 'not_complete',
+      hermesArtifactsReady && previewPackSmokeReady
+        ? 'Hermes setup/import artifacts are covered by preview-pack smoke'
+        : hermesArtifactsReady
         ? 'Hermes setup and import skill are present'
         : 'Hermes setup/import artifacts missing',
-      'final preview-pack smoke and release review pending'
+      hermesArtifactsReady && previewPackSmokeReady
+        ? 'repeat preview-pack smoke before release review'
+        : 'final preview-pack smoke and release review pending'
     ),
     buildRequirement(
       'naming-and-plugin-publication',

@@ -32,18 +32,26 @@ function seedRepo(rootDir, overrides = {}) {
       files: [
         'scripts/observability-readiness.js',
         'scripts/operator-readiness-dashboard.js',
-        'scripts/platform-audit.js'
+        'scripts/platform-audit.js',
+        'scripts/preview-pack-smoke.js'
       ],
       scripts: {
         'discussion:audit': 'node scripts/discussion-audit.js',
         'observability:ready': 'node scripts/observability-readiness.js',
         'operator:dashboard': 'node scripts/operator-readiness-dashboard.js',
         'platform:audit': 'node scripts/platform-audit.js',
+        'preview-pack:smoke': 'node scripts/preview-pack-smoke.js',
         'security:ioc-scan': 'node scripts/ci/scan-supply-chain-iocs.js',
         'security:advisory-sources': 'node scripts/ci/supply-chain-advisory-sources.js'
       }
     }, null, 2),
     'scripts/operator-readiness-dashboard.js': 'operator dashboard generator',
+    'scripts/preview-pack-smoke.js': [
+      'ecc.preview-pack-smoke.v1',
+      'preview-pack-artifacts-present',
+      'hermes-boundary-sanitized',
+      'publication-blockers-preserved'
+    ].join('\n'),
     'docs/ECC-2.0-GA-ROADMAP.md': [
       'https://linear.app/itomarkets/project/ecc-platform-roadmap-52b328ee03e1',
       'Linear ITO-44 ITO-59',
@@ -63,7 +71,11 @@ function seedRepo(rootDir, overrides = {}) {
     ].join('\n'),
     'docs/releases/2.0.0-rc.1/publication-readiness.md': 'Claude plugin Codex plugin',
     'docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md': 'Claude plugin Codex plugin npm package Publication Paths',
-    'docs/releases/2.0.0-rc.1/preview-pack-manifest.md': 'publication-readiness.md release-notes.md quickstart.md',
+    'docs/releases/2.0.0-rc.1/preview-pack-manifest.md': [
+      'publication-readiness.md release-notes.md quickstart.md',
+      '`scripts/preview-pack-smoke.js`',
+      'npm run preview-pack:smoke'
+    ].join('\n'),
     'docs/releases/2.0.0-rc.1/release-notes.md': 'release notes',
     'docs/releases/2.0.0-rc.1/x-thread.md': 'x thread',
     'docs/releases/2.0.0-rc.1/linkedin-post.md': 'linkedin post',
@@ -77,8 +89,8 @@ function seedRepo(rootDir, overrides = {}) {
       'PR queue',
       'Not complete'
     ].join('\n'),
-    'docs/HERMES-SETUP.md': 'Hermes setup',
-    'skills/hermes-imports/SKILL.md': 'Hermes imports',
+    'docs/HERMES-SETUP.md': 'Hermes setup Public Release Candidate Scope',
+    'skills/hermes-imports/SKILL.md': 'Hermes imports Sanitization Checklist Do not ship raw workspace exports Output Contract',
     'docs/stale-pr-salvage-ledger.md': [
       'Remaining Manual-Review Backlog',
       'Linear ITO-55',
@@ -218,6 +230,18 @@ function runTests() {
       assert.strictEqual(report.ready, false);
       assert.strictEqual(report.publicationReady, false);
       assert.ok(report.requirements.some(item => item.id === 'completion-dashboard' && item.status === 'complete'));
+      assert.ok(report.requirements.some(item => (
+        item.id === 'ecc-preview-pack'
+          && item.status === 'current'
+          && item.evidence.includes('deterministic smoke gate')
+          && item.gap === 'repeat clean-checkout preview-pack smoke before publication'
+      )));
+      assert.ok(report.requirements.some(item => (
+        item.id === 'hermes-specialized-skills'
+          && item.status === 'current'
+          && item.evidence.includes('covered by preview-pack smoke')
+          && item.gap === 'repeat preview-pack smoke before release review'
+      )));
       assert.ok(report.requirements.some(item => item.id === 'ecc-tools-next-level' && item.status === 'in_progress'));
       assert.ok(report.requirements.some(item => (
         item.id === 'agentshield-enterprise-iteration'
@@ -253,6 +277,8 @@ function runTests() {
           && item.gap === 'repeat Linear/project status update and local work-items sync after each significant merge batch'
       )));
       assert.ok(report.top_actions.some(item => item.id === 'naming-and-plugin-publication'));
+      assert.ok(!report.top_actions.some(item => item.id === 'ecc-preview-pack'));
+      assert.ok(!report.top_actions.some(item => item.id === 'hermes-specialized-skills'));
       assert.ok(!report.top_actions.some(item => item.id === 'legacy-salvage'));
       assert.ok(!report.top_actions.some(item => item.id === 'linear-roadmap-and-progress'));
     } finally {
@@ -282,6 +308,45 @@ function runTests() {
       assert.strictEqual(linearProgress.evidence, 'repo mirror and progress-sync contract are present');
       assert.strictEqual(linearProgress.gap, 'recurring Linear status sync and productized realtime sync remain pending');
       assert.ok(report.top_actions.some(item => item.id === 'linear-roadmap-and-progress'));
+    } finally {
+      cleanup(rootDir);
+    }
+  })) passed++; else failed++;
+
+  if (test('preview pack and Hermes gates stay in progress until smoke gate is wired', () => {
+    const rootDir = createTempDir('operator-dashboard-preview-smoke-');
+
+    try {
+      seedRepo(rootDir, {
+        'package.json': JSON.stringify({
+          files: [
+            'scripts/observability-readiness.js',
+            'scripts/operator-readiness-dashboard.js',
+            'scripts/platform-audit.js'
+          ],
+          scripts: {
+            'discussion:audit': 'node scripts/discussion-audit.js',
+            'observability:ready': 'node scripts/observability-readiness.js',
+            'operator:dashboard': 'node scripts/operator-readiness-dashboard.js',
+            'platform:audit': 'node scripts/platform-audit.js',
+            'security:ioc-scan': 'node scripts/ci/scan-supply-chain-iocs.js',
+            'security:advisory-sources': 'node scripts/ci/supply-chain-advisory-sources.js'
+          }
+        }, null, 2),
+        'scripts/preview-pack-smoke.js': null,
+        'docs/releases/2.0.0-rc.1/preview-pack-manifest.md': 'publication-readiness.md release-notes.md quickstart.md'
+      });
+
+      const report = buildSeededReport(rootDir);
+      const previewPack = report.requirements.find(item => item.id === 'ecc-preview-pack');
+      const hermes = report.requirements.find(item => item.id === 'hermes-specialized-skills');
+
+      assert.strictEqual(previewPack.status, 'in_progress');
+      assert.strictEqual(previewPack.gap, 'final clean-checkout release approval and publish evidence still pending');
+      assert.strictEqual(hermes.status, 'in_progress');
+      assert.strictEqual(hermes.gap, 'final preview-pack smoke and release review pending');
+      assert.ok(report.top_actions.some(item => item.id === 'ecc-preview-pack'));
+      assert.ok(report.top_actions.some(item => item.id === 'hermes-specialized-skills'));
     } finally {
       cleanup(rootDir);
     }
