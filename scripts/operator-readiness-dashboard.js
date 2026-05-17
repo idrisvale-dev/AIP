@@ -264,10 +264,17 @@ function hasAgentShieldEnterpriseTracking(roadmap) {
       || roadmap.includes('AgentShield #91')
       || roadmap.includes('checksum-backed policy export')
       || roadmap.includes('#78-#90')
+      || roadmap.includes('hosted promotion judge audit traces')
+      || roadmap.includes('operator-visible promotion output values')
     );
 }
 
 function agentShieldEnterpriseGap(roadmap) {
+  if (roadmap.includes('hosted promotion judge audit traces')
+    || roadmap.includes('operator-visible promotion output values')) {
+    return 'deepen live operator approval/readback after Marketplace/payment gates';
+  }
+
   if (roadmap.includes('#78-#92')
     || roadmap.includes('AgentShield PR #92')
     || roadmap.includes('AgentShield #92')
@@ -282,6 +289,63 @@ function agentShieldEnterpriseGap(roadmap) {
     || roadmap.includes('checksum-backed policy export')
     ? 'workflow automation plus policy promotion/review UX pending after policy export shipped'
     : 'durable policy export and fleet-review workflow automation remain pending after reviewItems shipped';
+}
+
+function agentShieldEnterpriseEvidence(roadmap) {
+  if (roadmap.includes('hosted promotion judge audit traces')
+    || roadmap.includes('operator-visible promotion output values')) {
+    return 'AgentShield policy promotion `reviewItems` landed in `87aec47`; package-manager hardening drift detection landed in `28d08c7`; workflow action runtime pins were refreshed in `659f569`; npm age-gate guidance was corrected in `ee585cd`; package-manager hardening Action outputs landed in `1124535`; policy-promotion Action outputs and runtime-smoke job-summary evidence landed in `1593925`; ECC-Tools consumes those outputs in `8658951`, surfaces operator-readable status/pack/count/digest telemetry in `16c537f`, and renders hosted promotion judge audit traces in `05d4e82`; all are mirrored in the GA roadmap';
+  }
+
+  return 'AgentShield enterprise PR evidence is mirrored in the GA roadmap';
+}
+
+function eccToolsNextLevelEvidence(roadmap) {
+  if (roadmap.includes('production Marketplace readback state')
+    || roadmap.includes('eb69412')) {
+    return 'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, and production KV readback state are mirrored in the GA roadmap';
+  }
+
+  if (roadmap.includes('hosted promotion judge audit traces')
+    || roadmap.includes('operator-visible promotion output values')) {
+    return 'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, and hosted promotion judge audit traces are mirrored in the GA roadmap';
+  }
+
+  return 'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, and harness-route policy linking are mirrored in the GA roadmap';
+}
+
+function eccToolsNextLevelGap(roadmap) {
+  if (roadmap.includes('production Marketplace readback state')
+    || roadmap.includes('eb69412')) {
+    return 'complete Marketplace purchase/webhook readback, then run the live announcement gate';
+  }
+
+  if (roadmap.includes('hosted promotion judge audit traces')
+    || roadmap.includes('operator-visible promotion output values')) {
+    return 'live Marketplace test-account readback pending';
+  }
+
+  return 'live Marketplace test-account readback, hosted promotion telemetry, and richer operator review UX pending';
+}
+
+function supplyChainLocalProtectionEvidence({ roadmap, scripts }) {
+  if (scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
+    && roadmap.includes('package-manager hardening Action outputs')) {
+    return 'scheduled supply-chain watch emits IOC/advisory-source refresh artifacts; AgentShield now detects known AI-tool persistence IOCs, npm lifecycle/token drift, unsupported npm age-key drift, and pnpm/Yarn cooldown drift; ITO-57 has May 17 Linear evidence updates';
+  }
+
+  return scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
+    ? 'scheduled supply-chain watch now emits IOC and advisory-source refresh artifacts'
+    : 'scheduled supply-chain watch or advisory-source command is missing';
+}
+
+function supplyChainLocalProtectionGap({ roadmap, scripts }) {
+  if (scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
+    && roadmap.includes('package-manager hardening Action outputs')) {
+    return 'repeat advisory/source refresh and Linear sync after each significant supply-chain batch';
+  }
+
+  return 'Linear status synchronization remains ITO-57 follow-up after each significant merge batch';
 }
 
 function runCommand(command, args, options = {}) {
@@ -437,7 +501,7 @@ function buildRequirements(rootDir, platformReport) {
       hasAgentShieldEnterpriseTracking(roadmap)
         ? 'in_progress'
         : 'not_complete',
-      'AgentShield enterprise PR evidence is mirrored in the GA roadmap',
+      agentShieldEnterpriseEvidence(roadmap),
       agentShieldEnterpriseGap(roadmap)
     ),
     buildRequirement(
@@ -447,8 +511,8 @@ function buildRequirements(rootDir, platformReport) {
       includesAll(roadmap, ['ECC-Tools PR #78', 'hosted promotion', 'announcementGate'])
         ? 'in_progress'
         : 'not_complete',
-      'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, and harness-route policy linking are mirrored in the GA roadmap',
-      'live Marketplace test-account readback, hosted promotion telemetry, and richer operator review UX pending'
+      eccToolsNextLevelEvidence(roadmap),
+      eccToolsNextLevelGap(roadmap)
     ),
     buildRequirement(
       'legacy-salvage',
@@ -486,17 +550,15 @@ function buildRequirements(rootDir, platformReport) {
     buildRequirement(
       'supply-chain-local-protection',
       'Keep Mini Shai-Hulud/TanStack protection loop current',
-      'supply-chain watch plus runbook',
+      'supply-chain watch plus runbook plus AgentShield package-manager hardening',
       includesAll(supplyChainRunbook, ['TanStack', 'Mini Shai-Hulud', 'scan-supply-chain-iocs.js', 'supply-chain-advisory-sources.js'])
         && includesAll(supplyChainWorkflow, ['supply-chain-advisory-sources.js', 'supply-chain-advisory-sources.json'])
         && scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
         && fileExists(rootDir, '.github/workflows/supply-chain-watch.yml')
         ? 'current'
         : 'in_progress',
-      scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
-        ? 'scheduled supply-chain watch now emits IOC and advisory-source refresh artifacts'
-        : 'scheduled supply-chain watch or advisory-source command is missing',
-      'Linear status synchronization remains ITO-57 follow-up after each significant merge batch'
+      supplyChainLocalProtectionEvidence({ roadmap, scripts }),
+      supplyChainLocalProtectionGap({ roadmap, scripts })
     ),
   ];
 }
@@ -550,7 +612,7 @@ function buildReport(options) {
     next_work_order: [
       'Regenerate this dashboard from the final release commit before publication evidence is recorded.',
       'Continue ITO-57 with Linear status synchronization for the scheduled supply-chain watch advisory-source report.',
-      'Advance ECC Tools live Marketplace test-account readback before publishing native-payments announcement copy.',
+      'Complete ECC Tools Marketplace purchase/webhook readback, then run preflight and the live announcement gate before publishing native-payments copy.',
       'Resume ITO-45, ITO-46, and ITO-56 only after the generated dashboard and final release gates are refreshed.',
     ],
   };

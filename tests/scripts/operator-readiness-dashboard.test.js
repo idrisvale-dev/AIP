@@ -51,6 +51,11 @@ function seedRepo(rootDir, overrides = {}) {
       'AgentShield Enterprise Iteration',
       'ECC-Tools PR #78',
       'hosted promotion',
+      'operator-visible promotion output values',
+      'hosted promotion judge audit traces',
+      'package-manager hardening Action outputs',
+      'production Marketplace readback state',
+      'eb69412',
       'announcementGate',
       'ITO-55'
     ].join('\n'),
@@ -190,7 +195,24 @@ function runTests() {
       assert.ok(report.requirements.some(item => item.id === 'ecc-tools-next-level' && item.status === 'in_progress'));
       assert.ok(report.requirements.some(item => (
         item.id === 'agentshield-enterprise-iteration'
-          && item.gap === 'workflow automation around protected rollout and richer runtime review UX pending after policy promotion shipped'
+          && item.gap === 'deepen live operator approval/readback after Marketplace/payment gates'
+          && item.evidence.includes('policy-promotion Action outputs')
+          && item.evidence.includes('hosted promotion judge audit traces')
+      )));
+      assert.ok(report.requirements.some(item => (
+        item.id === 'ecc-tools-next-level'
+          && item.gap === 'complete Marketplace purchase/webhook readback, then run the live announcement gate'
+          && item.evidence.includes('operator-visible promotion output details')
+          && item.evidence.includes('hosted promotion judge audit traces')
+          && item.evidence.includes('billing announcement preflight')
+          && item.evidence.includes('production KV readback state')
+      )));
+      assert.ok(report.requirements.some(item => (
+        item.id === 'supply-chain-local-protection'
+          && item.artifact.includes('AgentShield package-manager hardening')
+          && item.evidence.includes('known AI-tool persistence IOCs')
+          && item.evidence.includes('unsupported npm age-key drift')
+          && item.gap === 'repeat advisory/source refresh and Linear sync after each significant supply-chain batch'
       )));
       assert.ok(report.top_actions.some(item => item.id === 'naming-and-plugin-publication'));
     } finally {
@@ -215,6 +237,10 @@ function runTests() {
       {
         marker: 'checksum-verified policy promotion',
         gap: 'workflow automation around protected rollout and richer runtime review UX pending after policy promotion shipped'
+      },
+      {
+        marker: 'hosted promotion judge audit traces',
+        gap: 'deepen live operator approval/readback after Marketplace/payment gates'
       },
       {
         marker: '#78-#91',
