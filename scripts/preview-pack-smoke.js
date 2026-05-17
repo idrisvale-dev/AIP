@@ -158,10 +158,6 @@ function safeParseJson(text) {
   }
 }
 
-function includesAll(text, needles) {
-  return needles.every(needle => text.includes(needle));
-}
-
 function lineNumberForIndex(text, index) {
   return text.slice(0, index).split('\n').length;
 }
