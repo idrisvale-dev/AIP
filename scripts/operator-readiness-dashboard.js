@@ -389,6 +389,46 @@ function supplyChainLocalProtectionGap({ roadmap, scripts }) {
   return 'Linear status synchronization remains ITO-57 follow-up after each significant merge batch';
 }
 
+function hasCurrentLinearProgressSync({ roadmap, progressSync }) {
+  return includesAll(roadmap, [
+    'Linear live sync is current',
+    'operator progress snapshot',
+  ]) && includesAll(progressSync, [
+    'node scripts/work-items.js sync-github --repo <owner/repo>',
+    'node scripts/status.js --json',
+    'Linear remains the external status surface',
+  ]);
+}
+
+function hasLinearProgressContract({ roadmap, progressSync }) {
+  return includesAll(roadmap, ['ITO-44', 'ITO-59', 'Linear'])
+    && includesAll(progressSync, ['GitHub', 'Linear', 'handoff', 'repo roadmap']);
+}
+
+function linearProgressStatus(context) {
+  if (hasCurrentLinearProgressSync(context)) {
+    return 'current';
+  }
+
+  return hasLinearProgressContract(context) ? 'in_progress' : 'not_complete';
+}
+
+function linearProgressEvidence(context) {
+  if (hasCurrentLinearProgressSync(context)) {
+    return 'Linear live sync and project progress snapshot are current; progress-sync contract defines the file-backed work-items/status path';
+  }
+
+  return 'repo mirror and progress-sync contract are present';
+}
+
+function linearProgressGap(context) {
+  if (hasCurrentLinearProgressSync(context)) {
+    return 'repeat Linear/project status update and local work-items sync after each significant merge batch';
+  }
+
+  return 'recurring Linear status sync and productized realtime sync remain pending';
+}
+
 function runCommand(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
@@ -568,11 +608,9 @@ function buildRequirements(rootDir, platformReport) {
       'linear-roadmap-and-progress',
       'Keep Linear roadmap detailed and progress tracking synchronized',
       'Linear project mirror plus progress-sync contract',
-      includesAll(roadmap, ['ITO-44', 'ITO-59', 'Linear']) && includesAll(progressSync, ['GitHub', 'Linear', 'handoff', 'repo roadmap'])
-        ? 'in_progress'
-        : 'not_complete',
-      'repo mirror and progress-sync contract are present',
-      'recurring Linear status sync and productized realtime sync remain pending'
+      linearProgressStatus({ roadmap, progressSync }),
+      linearProgressEvidence({ roadmap, progressSync }),
+      linearProgressGap({ roadmap, progressSync })
     ),
     buildRequirement(
       'observability-for-self-use',
@@ -651,7 +689,7 @@ function buildReport(options) {
     top_actions: topActions,
     next_work_order: [
       'Regenerate this dashboard from the final release commit before publication evidence is recorded.',
-      'Continue ITO-57 with Linear status synchronization for the scheduled supply-chain watch advisory-source report.',
+      'Repeat ITO-57 Linear/project status sync after the next significant merge batch or advisory-source refresh.',
       'Complete ECC Tools Marketplace purchase/webhook readback, then run preflight and the live announcement gate before publishing native-payments copy.',
       'Resume ITO-45, ITO-46, and ITO-56 only after the generated dashboard and final release gates are refreshed.',
     ],

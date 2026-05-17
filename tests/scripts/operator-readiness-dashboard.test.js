@@ -57,7 +57,9 @@ function seedRepo(rootDir, overrides = {}) {
       'production Marketplace readback state',
       'eb69412',
       'announcementGate',
-      'ITO-55'
+      'ITO-55',
+      'Linear live sync is current for the May 17 merge batch',
+      'operator progress snapshot'
     ].join('\n'),
     'docs/releases/2.0.0-rc.1/publication-readiness.md': 'Claude plugin Codex plugin',
     'docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md': 'Claude plugin Codex plugin npm package Publication Paths',
@@ -97,7 +99,12 @@ function seedRepo(rootDir, overrides = {}) {
       '#1565 pt-BR README sync',
       'no automatic import remains release-blocking'
     ].join('\n'),
-    'docs/architecture/progress-sync-contract.md': 'GitHub PRs/issues/discussions Linear project local handoff repo roadmap scripts/work-items.js',
+    'docs/architecture/progress-sync-contract.md': [
+      'GitHub PRs/issues/discussions Linear project local handoff repo roadmap scripts/work-items.js',
+      'node scripts/work-items.js sync-github --repo <owner/repo>',
+      'node scripts/status.js --json',
+      'Linear remains the external status surface'
+    ].join('\n'),
     'docs/architecture/observability-readiness.md': 'observability-readiness.js',
     'docs/security/supply-chain-incident-response.md': 'TanStack Mini Shai-Hulud node-ipc scan-supply-chain-iocs.js supply-chain-advisory-sources.js',
     'docs/releases/2.0.0-rc.1/publication-evidence-2026-05-15.md': 'TanStack Mini Shai-Hulud Node IPC follow-up node-ipc IOC scan',
@@ -239,8 +246,42 @@ function runTests() {
           && item.evidence.includes('all localization tails are attached to Linear ITO-55')
           && item.gap === 'repeat legacy scan before release'
       )));
+      assert.ok(report.requirements.some(item => (
+        item.id === 'linear-roadmap-and-progress'
+          && item.status === 'current'
+          && item.evidence.includes('Linear live sync')
+          && item.gap === 'repeat Linear/project status update and local work-items sync after each significant merge batch'
+      )));
       assert.ok(report.top_actions.some(item => item.id === 'naming-and-plugin-publication'));
       assert.ok(!report.top_actions.some(item => item.id === 'legacy-salvage'));
+      assert.ok(!report.top_actions.some(item => item.id === 'linear-roadmap-and-progress'));
+    } finally {
+      cleanup(rootDir);
+    }
+  })) passed++; else failed++;
+
+  if (test('Linear progress stays in progress until live sync evidence is mirrored', () => {
+    const rootDir = createTempDir('operator-dashboard-linear-progress-');
+
+    try {
+      seedRepo(rootDir, {
+        'docs/ECC-2.0-GA-ROADMAP.md': [
+          'https://linear.app/itomarkets/project/ecc-platform-roadmap-52b328ee03e1',
+          'Linear ITO-44 ITO-59',
+          'AgentShield Enterprise Iteration',
+          'ECC-Tools PR #78',
+          'hosted promotion',
+          'announcementGate',
+          'ITO-55'
+        ].join('\n')
+      });
+
+      const report = buildSeededReport(rootDir);
+      const linearProgress = report.requirements.find(item => item.id === 'linear-roadmap-and-progress');
+      assert.strictEqual(linearProgress.status, 'in_progress');
+      assert.strictEqual(linearProgress.evidence, 'repo mirror and progress-sync contract are present');
+      assert.strictEqual(linearProgress.gap, 'recurring Linear status sync and productized realtime sync remain pending');
+      assert.ok(report.top_actions.some(item => item.id === 'linear-roadmap-and-progress'));
     } finally {
       cleanup(rootDir);
     }
