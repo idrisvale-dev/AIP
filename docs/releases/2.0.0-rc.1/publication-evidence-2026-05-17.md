@@ -9,7 +9,7 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 | --- | --- |
 | Upstream main | `744f4169972fd81618c3114ea1ca5ffb85ef4c82` |
 | Git remote | `https://github.com/affaan-m/everything-claude-code.git` |
-| Evidence scope | Current `main` after the Japanese localization and Dependabot merge batch, post-merge ja-JP markdown anchor repair, Zed install-target support, Mini Shai-Hulud/TanStack protection recheck, the Windows-path CI fix, and the AgentShield policy-promotion Action output mirror |
+| Evidence scope | Current `main` after the Japanese localization and Dependabot merge batch, post-merge ja-JP markdown anchor repair, Zed install-target support, Mini Shai-Hulud/TanStack protection recheck, the Windows-path CI fix, AgentShield policy-promotion Action output mirror, and ECC-Tools hosted promotion judge audit-trace mirror |
 | Local status caveat | `git status --short --branch` showed `## main...origin/main` plus unrelated untracked `docs/drafts/` |
 
 The actual release operator should repeat all publish-facing checks from the
@@ -51,6 +51,7 @@ Tracked repositories in the platform audit were:
 | AgentShield policy-promotion Action slice | Pushed AgentShield `1593925dca025632dd8a6454509fce3fe7517cdf` to expose policy-promotion status/count/digest outputs plus GitHub Action job-summary review items for owner approval, protected rollout, and runtime smoke; the same Action job marks runtime smoke verified when it scans with the promoted policy |
 | ECC-Tools policy-promotion telemetry slice | Pushed ECC-Tools `86589517b11b95f1b0216ae7737563fb67ee1604` to route AgentShield policy-promotion Action outputs into hosted security review findings and Hosted Promotion Readiness scoring |
 | ECC-Tools policy-promotion operator UX slice | Pushed ECC-Tools `16c537fd385458c438ff32fb4211079b2f8ea1c4` to render policy-promotion Action output status, pack, review item count, remaining action count, and digest in hosted security job comments and check-runs |
+| ECC-Tools hosted promotion judge audit trace slice | Pushed ECC-Tools `05d4e8296e37ba72e471beaa23ea4c81eb2aa31f` to render hosted promotion judge request fingerprints and allowed-citation audit traces without exposing raw provider output |
 
 ## Release Gate Commands
 
@@ -69,6 +70,7 @@ Tracked repositories in the platform audit were:
 | AgentShield policy-promotion Action output slice | AgentShield local `npm run build`, `npx vitest run tests/action-promotion.test.ts tests/action.test.ts`, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25995929182`, `25995929190`, `25995929161` | Local gates passed; remote CI, Test GitHub Action, and Self-Scan completed successfully for `1593925` |
 | ECC-Tools policy-promotion hosted telemetry slice | ECC-Tools local focused vitest checks for policy-promotion Action-output routing and hosted-promotion readiness, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25996758218` | Local gates passed; remote CI completed successfully for `8658951` |
 | ECC-Tools policy-promotion operator UX slice | ECC-Tools local focused vitest checks for policy-promotion Action output values in hosted findings/comments/checks, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25997300046` | Local gates passed; remote CI completed successfully for `16c537f` |
+| ECC-Tools hosted promotion judge audit trace slice | ECC-Tools local focused vitest checks for hosted model-judge audit traces, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25997840703` | Local gates passed; remote CI completed successfully for `05d4e82` |
 | GitHub queues | `gh pr list`; `gh issue list`; `node scripts/platform-audit.js --json --allow-untracked docs/drafts/` | 0 open PRs, 0 open issues, and platform audit ready across the tracked repo set |
 | Operator dashboard | `npm run operator:dashboard -- --allow-untracked docs/drafts/ --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-17.md` | Dashboard generated for the current commit; macro publication gates still incomplete |
 
