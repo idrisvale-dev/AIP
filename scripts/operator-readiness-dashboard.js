@@ -243,12 +243,53 @@ function includesAll(text, needles) {
   return needles.every(needle => text.includes(needle));
 }
 
+const LOCALIZATION_MANUAL_REVIEW_TAIL = [
+  '#1687 zh-CN localization tail',
+  '#1609 Persian README translation',
+  '#1563 zh-TW README sync',
+  '#1564 Turkish README sync',
+  '#1565 pt-BR README sync',
+];
+
 function hasLegacySalvageTracking({ stalePrSalvage, legacyInventory, roadmap }) {
   return stalePrSalvage.includes('Manual review tail')
     || stalePrSalvage.includes('Remaining Manual-Review Backlog')
     || stalePrSalvage.includes('Translator/manual review')
     || legacyInventory.includes('Translator/manual review')
     || roadmap.includes('ITO-55');
+}
+
+function hasAttachedLegacyManualReviewTail({ stalePrSalvage, legacyInventory, roadmap }) {
+  return stalePrSalvage.includes('Linear ITO-55')
+    && legacyInventory.includes('ITO-55')
+    && roadmap.includes('ITO-55')
+    && LOCALIZATION_MANUAL_REVIEW_TAIL.every(item => (
+      stalePrSalvage.includes(item) && legacyInventory.includes(item)
+    ));
+}
+
+function legacySalvageStatus(context) {
+  if (hasAttachedLegacyManualReviewTail(context)) {
+    return 'current';
+  }
+
+  return hasLegacySalvageTracking(context) ? 'in_progress' : 'not_complete';
+}
+
+function legacySalvageEvidence(context) {
+  if (hasAttachedLegacyManualReviewTail(context)) {
+    return 'legacy salvage ledger and inventory are current; all localization tails are attached to Linear ITO-55 for manual language-owner review';
+  }
+
+  return 'legacy salvage ledger and ITO-55 tracking are present';
+}
+
+function legacySalvageGap(context) {
+  if (hasAttachedLegacyManualReviewTail(context)) {
+    return 'repeat legacy scan before release';
+  }
+
+  return 'final translation/manual-review tail remains';
 }
 
 function hasAgentShieldEnterpriseTracking(roadmap) {
@@ -396,6 +437,7 @@ function buildRequirements(rootDir, platformReport) {
   const supplyChainWorkflow = readText(rootDir, '.github/workflows/supply-chain-watch.yml');
   const packageJson = readPackage(rootDir);
   const scripts = packageJson.scripts || {};
+  const legacyContext = { stalePrSalvage, legacyInventory, roadmap };
 
   const githubLive = !platformReport.github.skipped && platformReport.github.totals.errors === 0;
   const queuesCurrent = githubLive
@@ -518,11 +560,9 @@ function buildRequirements(rootDir, platformReport) {
       'legacy-salvage',
       'Audit, prune, or attach legacy work',
       'docs/stale-pr-salvage-ledger.md and legacy inventory',
-      hasLegacySalvageTracking({ stalePrSalvage, legacyInventory, roadmap })
-        ? 'in_progress'
-        : 'not_complete',
-      'legacy salvage ledger and ITO-55 tracking are present',
-      'final translation/manual-review tail remains'
+      legacySalvageStatus(legacyContext),
+      legacySalvageEvidence(legacyContext),
+      legacySalvageGap(legacyContext)
     ),
     buildRequirement(
       'linear-roadmap-and-progress',

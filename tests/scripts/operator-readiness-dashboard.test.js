@@ -77,7 +77,26 @@ function seedRepo(rootDir, overrides = {}) {
     ].join('\n'),
     'docs/HERMES-SETUP.md': 'Hermes setup',
     'skills/hermes-imports/SKILL.md': 'Hermes imports',
-    'docs/stale-pr-salvage-ledger.md': 'Manual review tail',
+    'docs/stale-pr-salvage-ledger.md': [
+      'Remaining Manual-Review Backlog',
+      'Linear ITO-55',
+      '#1687 zh-CN localization tail',
+      '#1609 Persian README translation',
+      '#1563 zh-TW README sync',
+      '#1564 Turkish README sync',
+      '#1565 pt-BR README sync',
+      'not a release-blocking salvage task'
+    ].join('\n'),
+    'docs/legacy-artifact-inventory.md': [
+      'Translator/manual review',
+      'ITO-55',
+      '#1687 zh-CN localization tail',
+      '#1609 Persian README translation',
+      '#1563 zh-TW README sync',
+      '#1564 Turkish README sync',
+      '#1565 pt-BR README sync',
+      'no automatic import remains release-blocking'
+    ].join('\n'),
     'docs/architecture/progress-sync-contract.md': 'GitHub PRs/issues/discussions Linear project local handoff repo roadmap scripts/work-items.js',
     'docs/architecture/observability-readiness.md': 'observability-readiness.js',
     'docs/security/supply-chain-incident-response.md': 'TanStack Mini Shai-Hulud node-ipc scan-supply-chain-iocs.js supply-chain-advisory-sources.js',
@@ -214,7 +233,14 @@ function runTests() {
           && item.evidence.includes('unsupported npm age-key drift')
           && item.gap === 'repeat advisory/source refresh and Linear sync after each significant supply-chain batch'
       )));
+      assert.ok(report.requirements.some(item => (
+        item.id === 'legacy-salvage'
+          && item.status === 'current'
+          && item.evidence.includes('all localization tails are attached to Linear ITO-55')
+          && item.gap === 'repeat legacy scan before release'
+      )));
       assert.ok(report.top_actions.some(item => item.id === 'naming-and-plugin-publication'));
+      assert.ok(!report.top_actions.some(item => item.id === 'legacy-salvage'));
     } finally {
       cleanup(rootDir);
     }

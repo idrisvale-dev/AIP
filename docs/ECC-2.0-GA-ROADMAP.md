@@ -324,8 +324,8 @@ As of 2026-05-17:
   and classifies `legacy-command-shims/` as an opt-in archive/no-action
   surface.
 - `docs/stale-pr-salvage-ledger.md` records stale PR salvage outcomes,
-  skipped PRs, superseded work, and the remaining #1687 translator/manual
-  review tail.
+  skipped PRs, superseded work, and the remaining #1687, #1609, #1563, #1564,
+  and #1565 translator/manual review tail now attached to Linear ITO-55.
 - AgentShield PR #53 reduced two context-rule false positives and closed the
   remaining AgentShield issues.
 - AgentShield PR #55 added GitHub Action organization-policy enforcement with
@@ -625,7 +625,7 @@ is not complete unless the evidence column exists and has been freshly verified.
 | Keep public issues below 20 | Repo-family issue recheck | 0 open issues across `everything-claude-code`, AgentShield, JARVIS, `ECC-Tools/ECC-Tools`, and `ECC-Tools/ECC-website` on 2026-05-17; #1951 closed with #1953 | Complete |
 | Manage repository discussions | Repo-family discussion recheck | Platform audit reports 0 discussion maintainer-touch gaps and 0 answerable Q&A missing accepted answers; trunk still has 58 total discussions | Complete |
 | Manage PR discussions | PR review/comment closure plus merge/close state | ECC #1961, #1963, and #1953 merged after maintainer validation; no open tracked PRs remain | Complete |
-| Salvage useful stale work | `docs/stale-pr-salvage-ledger.md` | Ledger records salvaged, superseded, skipped, and manual-review tails; #1815-#1818 added cost tracking, skill scout, frontend design guidance, code-reviewer false-positive guardrails, and the May 12 gap pass | Complete except translation/manual review tail |
+| Salvage useful stale work | `docs/stale-pr-salvage-ledger.md` plus `docs/legacy-artifact-inventory.md` | Ledger records salvaged, superseded, skipped, and manual-review tails; #1815-#1818 added cost tracking, skill scout, frontend design guidance, code-reviewer false-positive guardrails, and the May 12 gap pass; #1687, #1609, #1563, #1564, and #1565 localization tails are attached to Linear ITO-55 for language-owner review and no automatic import remains release-blocking | Complete; repeat legacy scan before release |
 | ECC 2.0 preview pack ready | Release docs, quickstart, publication readiness, release notes | `docs/releases/2.0.0-rc.1/` and readiness docs are in-tree; May 17 evidence records queue-zero state, localized docs merge, supply-chain recheck, lint/test/security gates, operator dashboard, and successful GitHub CI on `99dd6ac0` | Needs final clean-checkout release approval |
 | Hermes specialized skills included safely | Hermes setup/import docs and sanitized skill surface | Hermes setup and import playbook are public; secrets stay local | Needs final release review |
 | Naming and rename readiness | Naming matrix across package/plugin/docs/social surfaces | `docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md` records current package, repo, Claude plugin, Codex plugin, OpenCode, and npm availability evidence | Complete for rc.1; post-rc rename remains future work |
