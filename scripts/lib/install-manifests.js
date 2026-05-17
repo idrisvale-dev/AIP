@@ -12,7 +12,28 @@ const COMPONENT_FAMILY_PREFIXES = {
   capability: 'capability:',
   agent: 'agent:',
   skill: 'skill:',
+  locale: 'locale:',
 };
+const SUPPORTED_LOCALES = Object.freeze(['ja', 'zh-CN', 'ko-KR', 'pt-BR', 'ru', 'tr', 'vi-VN', 'zh-TW']);
+const LOCALE_ALIAS_TO_COMPONENT_ID = Object.freeze({
+  'ja': 'locale:ja',
+  'ja-JP': 'locale:ja',
+  'zh-CN': 'locale:zh-CN',
+  'zh': 'locale:zh-CN',
+  'ko-KR': 'locale:ko-KR',
+  'ko': 'locale:ko-KR',
+  'pt-BR': 'locale:pt-BR',
+  'pt': 'locale:pt-BR',
+  'ru': 'locale:ru',
+  'tr': 'locale:tr',
+  'vi-VN': 'locale:vi-VN',
+  'vi': 'locale:vi-VN',
+  'zh-TW': 'locale:zh-TW',
+});
+
+function listSupportedLocales() {
+  return [...SUPPORTED_LOCALES];
+}
 const LEGACY_COMPAT_BASE_MODULE_IDS_BY_TARGET = Object.freeze({
   claude: [
     'rules-core',
@@ -607,11 +628,14 @@ function resolveInstallPlan(options = {}) {
 module.exports = {
   DEFAULT_REPO_ROOT,
   SUPPORTED_INSTALL_TARGETS,
+  SUPPORTED_LOCALES,
+  LOCALE_ALIAS_TO_COMPONENT_ID,
   getManifestPaths,
   loadInstallManifests,
   getInstallComponent,
   listInstallComponents,
   listLegacyCompatibilityLanguages,
+  listSupportedLocales,
   listInstallModules,
   listInstallProfiles,
   resolveInstallPlan,

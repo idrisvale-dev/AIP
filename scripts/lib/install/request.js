@@ -1,6 +1,6 @@
 'use strict';
 
-const { validateInstallModuleIds } = require('../install-manifests');
+const { validateInstallModuleIds, LOCALE_ALIAS_TO_COMPONENT_ID, listSupportedLocales } = require('../install-manifests');
 
 const LEGACY_INSTALL_TARGETS = ['claude', 'cursor', 'antigravity'];
 
@@ -27,6 +27,7 @@ function parseInstallArgs(argv) {
     includeComponentIds: [],
     excludeComponentIds: [],
     languages: [],
+    locale: null,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -60,6 +61,9 @@ function parseInstallArgs(argv) {
         parsed.excludeComponentIds.push(componentId.trim());
       }
       index += 1;
+    } else if (arg === '--locale') {
+      parsed.locale = args[index + 1] || null;
+      index += 1;
     } else if (arg === '--dry-run') {
       parsed.dryRun = true;
     } else if (arg === '--json') {
@@ -84,9 +88,17 @@ function normalizeInstallRequest(options = {}) {
   const moduleIds = validateInstallModuleIds(
     dedupeStrings([...(config?.moduleIds || []), ...(options.moduleIds || [])])
   );
+  const locale = options.locale || config?.locale || null;
+  const localeComponentId = locale ? LOCALE_ALIAS_TO_COMPONENT_ID[locale] : null;
+  if (locale && !localeComponentId) {
+    throw new Error(
+      `Unsupported locale: "${locale}". Supported locales: ${listSupportedLocales().join(', ')}`
+    );
+  }
   const includeComponentIds = dedupeStrings([
     ...(config?.includeComponentIds || []),
     ...(options.includeComponentIds || []),
+    ...(localeComponentId ? [localeComponentId] : []),
   ]);
   const excludeComponentIds = dedupeStrings([
     ...(config?.excludeComponentIds || []),
@@ -102,7 +114,7 @@ function normalizeInstallRequest(options = {}) {
 
   if (usingManifestMode && legacyLanguages.length > 0) {
     throw new Error(
-      'Legacy language arguments cannot be combined with --profile, --modules, --with, --without, or manifest config selections'
+      'Legacy language arguments cannot be combined with --profile, --modules, --with, --without, --locale, or manifest config selections'
     );
   }
 
