@@ -372,7 +372,7 @@ function eccToolsNextLevelGap(roadmap) {
 function supplyChainLocalProtectionEvidence({ roadmap, scripts }) {
   if (scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
     && roadmap.includes('package-manager hardening Action outputs')) {
-    return 'scheduled supply-chain watch emits IOC/advisory-source refresh artifacts; AgentShield now detects known AI-tool persistence IOCs, npm lifecycle/token drift, unsupported npm age-key drift, and pnpm/Yarn cooldown drift; ITO-57 has May 17 Linear evidence updates';
+    return 'scheduled supply-chain watch emits IOC/advisory-source refresh artifacts; ECC scanner covers gh-token-monitor token-store persistence; AgentShield now detects known AI-tool persistence IOCs, npm lifecycle/token drift, unsupported npm age-key drift, and pnpm/Yarn cooldown drift; ITO-57 has May 17 Linear evidence updates';
   }
 
   return scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
