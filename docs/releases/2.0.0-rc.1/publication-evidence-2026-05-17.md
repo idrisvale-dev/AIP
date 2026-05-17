@@ -9,7 +9,7 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 | --- | --- |
 | Upstream main | `744f4169972fd81618c3114ea1ca5ffb85ef4c82` |
 | Git remote | `https://github.com/affaan-m/everything-claude-code.git` |
-| Evidence scope | Current `main` after the Japanese localization and Dependabot merge batch, post-merge ja-JP markdown anchor repair, Zed install-target support, Mini Shai-Hulud/TanStack protection recheck, the Windows-path CI fix, AgentShield policy-promotion Action output mirror, ECC-Tools hosted promotion judge audit-trace mirror, and ECC-Tools billing announcement preflight mirror |
+| Evidence scope | Current `main` after the Japanese localization and Dependabot merge batch, post-merge ja-JP markdown anchor repair, Zed install-target support, Mini Shai-Hulud/TanStack protection recheck, the Windows-path CI fix, AgentShield policy-promotion Action output mirror, ECC-Tools hosted promotion judge audit-trace mirror, ECC-Tools billing announcement preflight mirror, and ECC-Tools production Marketplace readback-state mirror |
 | Local status caveat | `git status --short --branch` showed `## main...origin/main` plus unrelated untracked `docs/drafts/` |
 
 The actual release operator should repeat all publish-facing checks from the
@@ -53,6 +53,7 @@ Tracked repositories in the platform audit were:
 | ECC-Tools policy-promotion operator UX slice | Pushed ECC-Tools `16c537fd385458c438ff32fb4211079b2f8ea1c4` to render policy-promotion Action output status, pack, review item count, remaining action count, and digest in hosted security job comments and check-runs |
 | ECC-Tools hosted promotion judge audit trace slice | Pushed ECC-Tools `05d4e8296e37ba72e471beaa23ea4c81eb2aa31f` to render hosted promotion judge request fingerprints and allowed-citation audit traces without exposing raw provider output |
 | ECC-Tools billing announcement preflight slice | Pushed ECC-Tools `91a441b92342b842832ac28b018ee46f0c4a906f` to add `npm run billing:announcement-gate -- --preflight` for safe Marketplace readback input and endpoint verification before privileged API calls |
+| ECC-Tools production Marketplace readback-state slice | Pushed ECC-Tools `eb6941290b2fa70db01a51084e9e79a160238468` to record that production Cloudflare secret names include `INTERNAL_API_SECRET`, but production KV currently has no `account-billing:*` or `billing-state:*` records |
 
 ## Release Gate Commands
 
@@ -73,6 +74,7 @@ Tracked repositories in the platform audit were:
 | ECC-Tools policy-promotion operator UX slice | ECC-Tools local focused vitest checks for policy-promotion Action output values in hosted findings/comments/checks, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25997300046` | Local gates passed; remote CI completed successfully for `16c537f` |
 | ECC-Tools hosted promotion judge audit trace slice | ECC-Tools local focused vitest checks for hosted model-judge audit traces, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25997840703` | Local gates passed; remote CI completed successfully for `05d4e82` |
 | ECC-Tools billing announcement preflight slice | ECC-Tools local focused vitest preflight tests, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25998238507` | Local gates passed; remote CI completed successfully for `91a441b` |
+| ECC-Tools production Marketplace readback-state slice | ECC-Tools local `npm test` and `git diff --check`; Cloudflare `wrangler secret list` confirmed `INTERNAL_API_SECRET` exists by name; `wrangler kv key list` for `account-billing:` and `billing-state:` both returned empty lists; GitHub Actions `25998610438` | Local gates passed; remote CI completed successfully for `eb69412`; live announcement remains blocked until Marketplace purchase/webhook records populate KV |
 | GitHub queues | `gh pr list`; `gh issue list`; `node scripts/platform-audit.js --json --allow-untracked docs/drafts/` | 0 open PRs, 0 open issues, and platform audit ready across the tracked repo set |
 | Operator dashboard | `npm run operator:dashboard -- --allow-untracked docs/drafts/ --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-17.md` | Dashboard generated for the current commit; macro publication gates still incomplete |
 
@@ -85,9 +87,10 @@ Tracked repositories in the platform audit were:
 - Codex repo-marketplace distribution is verified for rc.1, but official
   Plugin Directory publishing remains blocked on OpenAI's self-serve publishing
   surface.
-- ECC Tools billing/native-payments copy remains blocked until
-  `npm run billing:announcement-gate -- --account <github-login>` returns an
-  announcement-ready gate for a live Marketplace-managed test account.
+- ECC Tools billing/native-payments copy remains blocked until a Marketplace
+  purchase/webhook path writes production `account-billing:*` and
+  `billing-state:*` records, then `npm run billing:announcement-gate --
+  --account <github-login>` returns an announcement-ready gate.
 - Release notes, X, LinkedIn, GitHub release, and longform copy still need final
   live URLs after release/package/plugin URLs exist.
 - The local checkout still has unrelated untracked `docs/drafts/`, so a strict

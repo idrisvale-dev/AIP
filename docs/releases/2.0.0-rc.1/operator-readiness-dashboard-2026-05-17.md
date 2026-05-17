@@ -30,7 +30,7 @@ Status: work remaining
 | Prepare name-change, Claude plugin, and Codex plugin paths | naming-and-publication-matrix plus publication-readiness | in_progress | naming matrix and plugin readiness gates exist | real tag/push, marketplace submission, and final channel choice remain approval-gated |
 | Prepare release notes, articles, tweets, and push notifications | docs/releases/2.0.0-rc.1 social and release-copy files | in_progress | release notes, X thread, and LinkedIn draft are present | URL-backed refresh and publish approval still pending |
 | Advance AgentShield enterprise iteration | AgentShield PR evidence plus enterprise roadmap | in_progress | AgentShield policy promotion `reviewItems` landed in `87aec47`; package-manager hardening drift detection landed in `28d08c7`; workflow action runtime pins were refreshed in `659f569`; npm age-gate guidance was corrected in `ee585cd`; package-manager hardening Action outputs landed in `1124535`; policy-promotion Action outputs and runtime-smoke job-summary evidence landed in `1593925`; ECC-Tools consumes those outputs in `8658951`, surfaces operator-readable status/pack/count/digest telemetry in `16c537f`, and renders hosted promotion judge audit traces in `05d4e82`; all are mirrored in the GA roadmap | next enterprise slice should deepen live operator approval/readback after Marketplace/payment gates |
-| Advance ECC Tools native payments and AI-native harness-agnostic app | ECC Tools PR evidence, billing gate, hosted analysis lanes | in_progress | billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, and billing announcement preflight are mirrored in the GA roadmap | live Marketplace test-account readback pending |
+| Advance ECC Tools native payments and AI-native harness-agnostic app | ECC Tools PR evidence, billing gate, hosted analysis lanes | in_progress | billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, and production KV readback state are mirrored in the GA roadmap | production KV currently has no `account-billing:*` or `billing-state:*` records; complete Marketplace purchase/webhook readback before announcement |
 | Audit, prune, or attach legacy work | docs/stale-pr-salvage-ledger.md and legacy inventory | in_progress | legacy salvage ledger and ITO-55 tracking are present | final translation/manual-review tail remains |
 | Keep Linear roadmap detailed and progress tracking synchronized | Linear project mirror plus progress-sync contract | in_progress | repo mirror and progress-sync contract are present | recurring Linear status sync and productized realtime sync remain pending |
 | Provide ECC 2.0 observability for self-use | observability readiness gate | complete | observability:ready command and readiness doc exist | runtime/dashboard implementation can continue after release gates |
@@ -43,7 +43,7 @@ Status: work remaining
 - `naming-and-plugin-publication`: real tag/push, marketplace submission, and final channel choice remain approval-gated
 - `release-notes-and-notifications`: URL-backed refresh and publish approval still pending
 - `agentshield-enterprise-iteration`: deepen live operator approval/readback after Marketplace/payment gates
-- `ecc-tools-next-level`: live Marketplace test-account readback pending
+- `ecc-tools-next-level`: Marketplace purchase/webhook readback pending; production KV currently has no billing-state records
 - `legacy-salvage`: final translation/manual-review tail remains
 - `linear-roadmap-and-progress`: recurring Linear status sync and productized realtime sync remain pending
 
@@ -51,5 +51,5 @@ Status: work remaining
 
 1. Regenerate this dashboard from the final release commit before publication evidence is recorded.
 2. Continue ITO-57 after the next significant supply-chain/advisory-source merge batch.
-3. Advance ECC Tools live Marketplace test-account readback with `npm run billing:announcement-gate -- --preflight --account <github-login>` before publishing native-payments announcement copy.
+3. Complete ECC Tools Marketplace purchase/webhook readback, confirm production `account-billing:*` and `billing-state:*` KV records exist, then run `npm run billing:announcement-gate -- --preflight --account <github-login>` and the live gate before publishing native-payments announcement copy.
 4. Resume ITO-45, ITO-46, and ITO-56 only after the generated dashboard and final release gates are refreshed.
