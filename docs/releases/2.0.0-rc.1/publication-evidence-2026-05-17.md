@@ -49,6 +49,7 @@ Tracked repositories in the platform audit were:
 | Discussion #1896 | Added a maintainer update confirming Zed support on `main`, documenting the dry-run command, and clarifying that BYOK/OpenRouter secrets stay in Zed/local user settings rather than ECC-managed project files |
 | AgentShield hardening-output slice | Pushed AgentShield `1124535345d7040242ecd3803f65bcd4dcaf6ec2` to expose package-manager hardening status/count outputs and redacted GitHub Action job-summary evidence for registry credentials, lifecycle-script drift, and release-age gate drift |
 | AgentShield policy-promotion Action slice | Pushed AgentShield `1593925dca025632dd8a6454509fce3fe7517cdf` to expose policy-promotion status/count/digest outputs plus GitHub Action job-summary review items for owner approval, protected rollout, and runtime smoke; the same Action job marks runtime smoke verified when it scans with the promoted policy |
+| ECC-Tools policy-promotion telemetry slice | Pushed ECC-Tools `86589517b11b95f1b0216ae7737563fb67ee1604` to route AgentShield policy-promotion Action outputs into hosted security review findings and Hosted Promotion Readiness scoring |
 
 ## Release Gate Commands
 
@@ -65,6 +66,7 @@ Tracked repositories in the platform audit were:
 | npm signatures | `npm audit signatures` | 213 verified registry signatures; 17 verified attestations |
 | AgentShield enterprise CI output slice | AgentShield local `npm run build`, focused action tests, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25994354007`, `25994354011`, `25994354026` | Local gates passed; remote CI, Test GitHub Action, and Self-Scan completed successfully for `1124535` |
 | AgentShield policy-promotion Action output slice | AgentShield local `npm run build`, `npx vitest run tests/action-promotion.test.ts tests/action.test.ts`, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25995929182`, `25995929190`, `25995929161` | Local gates passed; remote CI, Test GitHub Action, and Self-Scan completed successfully for `1593925` |
+| ECC-Tools policy-promotion hosted telemetry slice | ECC-Tools local focused vitest checks for policy-promotion Action-output routing and hosted-promotion readiness, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25996758218` | Local gates passed; remote CI completed successfully for `8658951` |
 | GitHub queues | `gh pr list`; `gh issue list`; `node scripts/platform-audit.js --json --allow-untracked docs/drafts/` | 0 open PRs, 0 open issues, and platform audit ready across the tracked repo set |
 | Operator dashboard | `npm run operator:dashboard -- --allow-untracked docs/drafts/ --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-17.md` | Dashboard generated for the current commit; macro publication gates still incomplete |
 
