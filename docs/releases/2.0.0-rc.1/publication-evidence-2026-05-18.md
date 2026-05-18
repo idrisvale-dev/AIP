@@ -86,12 +86,16 @@ Tracked repositories in the platform audit and work-items sync were:
   surface.
 - ECC Tools billing/native-payments copy remains blocked until a Marketplace
   Pro purchase/webhook path writes ready production `billing-state:*`
-  provenance, then `npm run billing:kv-readback -- --wrangler --require-ready`
+  provenance for the target Marketplace test account, then
+  `npm run billing:kv-readback -- --wrangler --account <github-login> --require-ready`
   and `npm run billing:announcement-gate -- --account <github-login>` return
   announcement-ready gates. The latest Wrangler OAuth aggregate readback from
   ECC-Tools commit `42653f9` found 253 `account-billing:*` records, 253
   `billing-state:*` records, 0 Marketplace Pro states, 0 ready-like
-  Marketplace Pro states, and 0 parse failures.
+  Marketplace Pro states, and 0 parse failures. ECC-Tools commit `632e059`
+  adds the follow-up target-account readback mode, redacts the account login
+  and raw KV key names, and requires both target key families before
+  `--require-ready` can pass.
 - Release notes, X, LinkedIn, GitHub release, and longform copy still need final
   live URLs after release/package/plugin URLs exist.
 - The local checkout still has unrelated untracked `docs/drafts/`, so a strict
@@ -101,6 +105,7 @@ Tracked repositories in the platform audit and work-items sync were:
 
 The tracked public PR queue, issue queue, discussion queue, local work-items
 bridge, and Mini Shai-Hulud/TanStack protection loop are current on
-May 18, 2026 for `04d4d819`. This improves publication readiness but does not
-replace the approval-gated release, package, plugin, billing, and announcement
-steps in `publication-readiness.md`.
+May 18, 2026 for current `main` through `aa634df9`, with follow-up ECC Tools
+billing-gate hardening in `632e059`. This improves publication readiness but
+does not replace the approval-gated release, package, plugin, billing, and
+announcement steps in `publication-readiness.md`.

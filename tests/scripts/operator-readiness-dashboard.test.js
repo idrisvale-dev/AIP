@@ -68,6 +68,8 @@ function seedRepo(rootDir, overrides = {}) {
       '2859678',
       'Wrangler OAuth readback',
       '42653f9',
+      'target account billing readback',
+      '632e059',
       'announcementGate',
       'ITO-55',
       'Linear live sync is current for the May 17 merge batch',
@@ -262,12 +264,13 @@ function runTests() {
       )));
       assert.ok(report.requirements.some(item => (
         item.id === 'ecc-tools-next-level'
-          && item.gap === 'create or verify Marketplace-managed Pro billing-state with webhook provenance, then run `billing:kv-readback -- --wrangler --require-ready` and the live announcement gate'
+          && item.gap === 'create or verify Marketplace-managed Pro target billing-state with webhook provenance, then run `billing:kv-readback -- --wrangler --account <github-login> --require-ready` and the live announcement gate'
           && item.evidence.includes('operator-visible promotion output details')
           && item.evidence.includes('hosted promotion judge audit traces')
           && item.evidence.includes('billing announcement preflight')
           && item.evidence.includes('aggregate production billing KV readback')
           && item.evidence.includes('Wrangler OAuth readback')
+          && item.evidence.includes('target-account billing readback')
           && item.evidence.includes('provenance-aware Marketplace billing-state gates')
       )));
       assert.ok(report.requirements.some(item => (
