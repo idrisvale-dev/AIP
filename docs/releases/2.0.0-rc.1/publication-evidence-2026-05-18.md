@@ -7,9 +7,9 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 
 | Field | Evidence |
 | --- | --- |
-| Upstream main | `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b` |
+| Upstream main | `4470e2e6702f17099d6feb137ba03ff00582c202` |
 | Git remote | `https://github.com/affaan-m/everything-claude-code.git` |
-| Evidence scope | Current `main` after PR #1970 workflow-security validator bypass fixes, PR #1971 metrics bridge cost-reporting fixes, PR #1972 `uncloud` skill merge, PR #1973 stale script cleanup, issue #1974 cost-reporting verification/closure, PR #1976 OpenAI/AstraFlow provider response guards, PR #1978 review/closure, catalog/operator dashboard refresh, ECC-Tools Wrangler OAuth billing readback mirror, AgentShield `840952a` fleet-ticket and Mini Shai-Hulud IOC evidence mirror, Mini Shai-Hulud/TanStack protection recheck, defensive-deny IOC scanner hardening, release name/plugin publication checklist, readiness/smoke gate enforcement for that checklist, release OIDC publishing-scope hardening, workflow line-ending normalization, current-head CI/security scan, work-items sync, Linear progress sync, and the ITO-46 publication-path dry-run refresh |
+| Evidence scope | Current `main` after PR #1970 workflow-security validator bypass fixes, PR #1971 metrics bridge cost-reporting fixes, PR #1972 `uncloud` skill merge, PR #1973 stale script cleanup, issue #1974 cost-reporting verification/closure, PR #1976 OpenAI/AstraFlow provider response guards, PR #1978 review/closure, catalog/operator dashboard refresh, ECC-Tools Wrangler OAuth billing readback mirror, AgentShield `840952a` fleet-ticket and Mini Shai-Hulud IOC evidence mirror, Mini Shai-Hulud/TanStack protection recheck, defensive-deny IOC scanner hardening, release name/plugin publication checklist, readiness/smoke gate enforcement for that checklist, release OIDC publishing-scope hardening, workflow line-ending normalization, current-head CI/security scan, work-items sync, Linear progress sync, the ITO-46 publication-path dry-run refresh, ITO-46 Linear closure, and the post-closure operator dashboard refresh |
 | Local status caveat | `git status --short --branch` was clean at dashboard generation time; generated evidence files are committed after the source snapshot they describe |
 
 The actual release operator should repeat all publish-facing checks from the
@@ -24,7 +24,7 @@ final release commit with a strictly clean checkout before publishing.
 | Discussion audit | `npm run discussion:audit -- --json` | Ready; 58 sampled discussions in `affaan-m/everything-claude-code`, 0 needing maintainer touch, 0 answerable discussions missing accepted answer, and 0 fetch errors |
 | Platform audit | `node scripts/platform-audit.js --json --allow-untracked docs/drafts/` | Ready; tracked repos report 0 open PRs, 0 open issues, 0 discussion maintainer-touch gaps, 0 answerable Q&A missing accepted answers, and 0 blocking dirty files |
 | Work-items sync | `node scripts/work-items.js sync-github --repo <tracked-repo>` for five tracked repos; `node scripts/status.js --json`; `node scripts/work-items.js list --json` | All five tracked repos synced with 0 open PRs/issues and no changed work items; local status reports 0 open, 0 blocked, and 0 closed work items |
-| Operator dashboard | `npm run operator:dashboard -- --markdown --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-18.md` | Regenerated the current dashboard in `fe7b4f2b` from clean snapshot `0f1775e30b4caa08489761417cad0033c5e6e705`; dashboard ready true, publication ready false because release, npm, plugin, billing, and announcement gates are approval-gated; AgentShield enterprise evidence includes `840952a`; ECC Tools native-payments gate now names the operational ITO-61 blocker: authorize Cloudflare API or 1Password CLI access, configure the target Marketplace Pro account and `INTERNAL_API_SECRET`, create or replay Marketplace Pro webhook state, then rerun target readback and the live announcement gate |
+| Operator dashboard | `npm run operator:dashboard -- --markdown --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-18.md` | Regenerated at `4470e2e6702f17099d6feb137ba03ff00582c202`; dashboard ready true, publication ready false because release, npm, plugin, billing, and announcement gates are approval-gated; 0 PRs, 0 issues, and 0 discussion gaps remain across tracked repos; AgentShield enterprise evidence includes `840952a`; ECC Tools native-payments gate still names the operational ITO-61 blocker: authorize Cloudflare API or 1Password CLI access, configure the target Marketplace Pro account and `INTERNAL_API_SECRET`, create or replay Marketplace Pro webhook state, then rerun target readback and the live announcement gate |
 
 Tracked repositories in the platform audit and work-items sync were:
 
@@ -56,7 +56,7 @@ Tracked repositories in the platform audit and work-items sync were:
 | Public queues | Rechecked after the merge and issue-closure batch; 0 PRs, 0 issues, and 0 discussion gaps remain across tracked repos |
 | Release OIDC publishing scope | Pushed `7911af4a` to keep the release workflow's trusted-publishing path scoped to release publication instead of broadening OIDC permissions across unrelated jobs; local workflow security validation passed |
 | Release workflow normalization | Pushed `97567a91` to normalize release workflow line endings after the OIDC hardening slice; current-head CI `26050727969` passed for `97567a91e79e1ee4c291eb78f5f9c30c2046ac94` |
-| Operator readiness evidence refresh | Pushed `0f1775e3`, `fe7b4f2b`, and `67e63e63` to refresh blocker evidence, regenerate the operator dashboard, and align publication readiness to the latest CI/security evidence; current-head CI `26056018725` passed for `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b` |
+| Operator readiness evidence refresh | Pushed `0f1775e3`, `fe7b4f2b`, and `67e63e63` to refresh blocker evidence, regenerate the operator dashboard, and align publication readiness to the latest CI/security evidence; pushed `4470e2e6` to close ITO-46 publication-path evidence, then regenerated the dashboard at `4470e2e6702f17099d6feb137ba03ff00582c202`; current-head CI `26057806361` passed for `4470e2e6702f17099d6feb137ba03ff00582c202` |
 
 ## Supply-Chain And Security Evidence
 
@@ -73,7 +73,7 @@ Tracked repositories in the platform audit and work-items sync were:
 | npm signatures | `npm audit signatures` | 213 verified registry signatures; 17 verified attestations |
 | Workflow security | `node scripts/ci/validate-workflow-security.js` | Validated 8 workflow files after the release OIDC publishing-scope hardening |
 | AgentShield project scan | `npx --no-install ecc-agentshield scan --format json` | Grade A / 99; 0 critical, 0 high, 0 medium; 6 low docs-example skill telemetry/governance findings |
-| Current-head CI security scan | `gh run view 26056018725 --repo affaan-m/everything-claude-code --json status,conclusion,headSha,jobs,url` | Completed successfully for `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b`; 37/37 CI jobs passed, including lint, workflow/component validation, coverage, cross-platform package-manager tests, npm audit, and supply-chain IOC scan |
+| Current-head CI security scan | `gh run view 26057806361 --repo affaan-m/everything-claude-code --json status,conclusion,headSha,jobs,url` | Completed successfully for `4470e2e6702f17099d6feb137ba03ff00582c202`; 37/37 CI jobs passed, including lint, workflow/component validation, coverage, cross-platform package-manager tests, npm audit, and supply-chain IOC scan |
 | Latest Supply-Chain Watch | `gh run view 26010432490 --repo affaan-m/everything-claude-code --json status,conclusion,headSha,url` | Completed successfully for `25ac57ac40e9fc5a0606e76e6339e72c79748c99`; rerun from the final release commit before publication |
 
 ## ITO-46 Publication Path Refresh
@@ -94,6 +94,7 @@ Tracked repositories in the platform audit and work-items sync were:
 | OpenCode package build | `npm run build:opencode` | Passed |
 | Preview pack smoke | `npm run preview-pack:smoke` | Ready yes; digest `0ed831dbd0cf`; 5 passed, 0 failed |
 | Official docs check | Anthropic `https://code.claude.com/docs/en/plugins` and `https://code.claude.com/docs/en/plugin-marketplaces`; OpenAI `https://developers.openai.com/codex/plugins/build` | Anthropic documents self-hosted marketplace sources; OpenAI documents repo/personal marketplaces and the official Plugin Directory. ECC has not created a real release tag, official listing, or npm publication in this pass |
+| ITO-46 closure | Linear ITO-46 comment `9ef92056-ab23-4eed-bfdb-932dddc2b056`; Linear issue status `Done`; GitHub Actions `26057806361` | Publication-path docs now record every channel, name conflicts, package/plugin dry-run commands, and blocker register; Codex repo-marketplace distribution is verified but official Plugin Directory listing is not claimed before OpenAI submission/listing evidence |
 
 ## Linear Progress Sync
 
