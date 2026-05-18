@@ -94,14 +94,15 @@ function extractFilePaths(toolName, toolInput) {
  * even cheaper.
  */
 function readSessionCost(sessionId) {
+  const costsPath = path.join(getClaudeDir(), 'metrics', 'costs.jsonl');
   try {
-    const costsPath = path.join(getClaudeDir(), 'metrics', 'costs.jsonl');
     const content = fs.readFileSync(costsPath, 'utf8');
     const lines = content.split('\n').filter(Boolean);
 
     let totalCost = 0;
     let totalIn = 0;
     let totalOut = 0;
+    let malformed = 0;
     for (const line of lines) {
       try {
         const row = JSON.parse(line);
@@ -111,11 +112,23 @@ function readSessionCost(sessionId) {
           totalOut = toNumber(row.output_tokens);
         }
       } catch {
-        /* skip malformed lines */
+        malformed += 1;
       }
     }
+    // One aggregated breadcrumb per call rather than one per bad row, so a
+    // log-flooded costs.jsonl stays diagnosable without overwhelming stderr.
+    if (malformed > 0) {
+      process.stderr.write(`[ecc-metrics-bridge] skipped ${malformed} malformed line(s) in ${costsPath}\n`);
+    }
     return { totalCost, totalIn, totalOut };
-  } catch {
+  } catch (err) {
+    // ENOENT is the common case (no Stop event has fired yet this session)
+    // and is not actually a failure — stay silent on it. Anything else
+    // (permission, EISDIR, malformed read) deserves a breadcrumb because
+    // the bridge will silently report zero cost otherwise.
+    if (err && err.code !== 'ENOENT') {
+      process.stderr.write(`[ecc-metrics-bridge] failing open after ${err.name || 'error'} reading ${costsPath}: ${err.message || String(err)}\n`);
+    }
     return { totalCost: 0, totalIn: 0, totalOut: 0 };
   }
 }

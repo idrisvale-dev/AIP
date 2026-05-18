@@ -226,6 +226,89 @@ function runTests() {
   else failed++;
 
   if (
+    test('readSessionCost writes a stderr breadcrumb when malformed lines are skipped', () => {
+      // Reviewer (coderabbitai) asked for diagnosability when the inner
+      // catch silently skips malformed JSON rows. Verify the aggregated
+      // "skipped N malformed line(s)" breadcrumb appears on stderr while
+      // the function still recovers the last valid matching row.
+      const tmpHome = makeTempHome();
+      const originalHome = process.env.HOME;
+      const originalUserProfile = process.env.USERPROFILE;
+      const originalStderrWrite = process.stderr.write.bind(process.stderr);
+      let captured = '';
+      process.stderr.write = chunk => {
+        captured += String(chunk);
+        return true;
+      };
+      try {
+        process.env.HOME = tmpHome;
+        process.env.USERPROFILE = tmpHome;
+        const metricsDir = path.join(tmpHome, '.claude', 'metrics');
+        fs.mkdirSync(metricsDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(metricsDir, 'costs.jsonl'),
+          [
+            JSON.stringify({ session_id: 'S1', estimated_cost_usd: 0.5, input_tokens: 500, output_tokens: 250 }),
+            'NOT_JSON',
+            '{"truncated":',
+            JSON.stringify({ session_id: 'S1', estimated_cost_usd: 0.7, input_tokens: 700, output_tokens: 350 }),
+          ].join('\n') + '\n',
+          'utf8'
+        );
+        const result = readSessionCost('S1');
+        assert.strictEqual(result.totalCost, 0.7, 'last valid row should still win');
+        assert.ok(/skipped 2 malformed line\(s\)/.test(captured),
+          `expected aggregated malformed-line breadcrumb on stderr, got: ${captured}`);
+      } finally {
+        process.stderr.write = originalStderrWrite;
+        if (originalHome === undefined) delete process.env.HOME;
+        else process.env.HOME = originalHome;
+        if (originalUserProfile === undefined) delete process.env.USERPROFILE;
+        else process.env.USERPROFILE = originalUserProfile;
+        fs.rmSync(tmpHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('readSessionCost stays silent when costs.jsonl does not exist (ENOENT)', () => {
+      // ENOENT is the common case before any Stop event has fired — it is
+      // not a failure and should not produce stderr noise. Other errors
+      // (permission, EISDIR, etc.) DO produce a breadcrumb, covered by the
+      // malformed-line test above's surrounding harness.
+      const tmpHome = makeTempHome();
+      const originalHome = process.env.HOME;
+      const originalUserProfile = process.env.USERPROFILE;
+      const originalStderrWrite = process.stderr.write.bind(process.stderr);
+      let captured = '';
+      process.stderr.write = chunk => {
+        captured += String(chunk);
+        return true;
+      };
+      try {
+        process.env.HOME = tmpHome;
+        process.env.USERPROFILE = tmpHome;
+        // Do NOT create the metrics dir or file — readSessionCost should
+        // hit ENOENT and return zeros silently.
+        const result = readSessionCost('S1');
+        assert.deepStrictEqual(result, { totalCost: 0, totalIn: 0, totalOut: 0 });
+        assert.strictEqual(captured, '', `expected no stderr on ENOENT, got: ${captured}`);
+      } finally {
+        process.stderr.write = originalStderrWrite;
+        if (originalHome === undefined) delete process.env.HOME;
+        else process.env.HOME = originalHome;
+        if (originalUserProfile === undefined) delete process.env.USERPROFILE;
+        else process.env.USERPROFILE = originalUserProfile;
+        fs.rmSync(tmpHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
     test('readSessionCost does not include unrelated default-session rows', () => {
       const tmpHome = makeTempHome();
       const originalHome = process.env.HOME;
