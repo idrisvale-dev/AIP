@@ -29,6 +29,7 @@ surfaces, or posting announcements.
 | `docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-18.md` | Current prompt-to-artifact operator dashboard | Shows PR/issue/discussion/platform/supply-chain gates current and publication, plugin, billing, AgentShield, ECC Tools, legacy, and Linear productization gaps still open |
 | `docs/releases/2.0.0-rc.1/release-url-ledger-2026-05-18.md` | Live URL and approval-gated URL ledger for release copy | Must be regenerated from the final release commit before public announcements |
 | `docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md` | Naming, slug, and publication-path decision record | Keeps `Everything Claude Code / ECC`, npm `ecc-universal`, and plugin slug `ecc` for rc.1 |
+| `docs/releases/2.0.0-rc.1/release-name-plugin-publication-checklist-2026-05-18.md` | Release name, package, Claude plugin, Codex plugin, and publication-order checklist | Freezes rc.1 identity and requires final commit evidence before release, npm, plugin, billing, or announcement actions |
 | `docs/releases/2.0.0-rc.1/x-thread.md` | X launch draft | Must replace placeholders with live URLs after release/package/plugin publication |
 | `docs/releases/2.0.0-rc.1/linkedin-post.md` | LinkedIn launch draft | Must replace placeholders with live URLs after release/package/plugin publication |
 | `docs/releases/2.0.0-rc.1/article-outline.md` | Longform launch outline | Must stay release-candidate framed until GA evidence exists |
@@ -91,6 +92,8 @@ The preview pack is assembled, but publication is still blocked until these live
 surfaces exist and are recorded in a final evidence file:
 
 - final release URL ledger regenerated from the intended release commit;
+- final release name/plugin publication checklist rerun from the intended
+  release commit;
 - GitHub prerelease `v2.0.0-rc.1`;
 - npm `ecc-universal@2.0.0-rc.1` on the `next` dist-tag;
 - Claude plugin tag / marketplace propagation for `ecc@ecc`;
