@@ -234,6 +234,8 @@ uc caddy config   # device.example.com block should appear
 
 > `--caddyfile` cannot be combined with non-`@host` published ports.
 
+**DNS tip:** A wildcard record (`*.yourdomain.com → cluster-public-ip`) means any new subdomain works immediately — no DNS change needed per service.
+
 ---
 
 ## Service DNS (Internal)
