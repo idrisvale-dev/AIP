@@ -89,7 +89,7 @@ function extractFilePaths(toolName, toolInput) {
  *
  * costs.jsonl is append-only and unbounded today (no rotation in
  * cost-tracker.js). At a typical ~150 bytes per row, even 100k rows
- * is ~15 MB and a single sync read on every PreToolUse hook is in
+ * is ~15 MB and a single sync read on every PostToolUse hook is in
  * the low milliseconds. If rotation lands later, this scan becomes
  * even cheaper.
  */
