@@ -42,9 +42,9 @@ As of 2026-05-18:
   and Publication, AgentShield Enterprise Iteration, ECC Tools Next-Level
   Platform, and Legacy Audit and Salvage.
 - Linear live sync is current for the May 18 merge and supply-chain batch:
-  ITO-57 has a new current-head supply-chain protection comment
-  (`0b9931b9-1556-4ebc-a70c-f3635557625d`), and the ECC platform project has
-  a new operator progress comment (`e32e5b7a-287b-4bf4-9ed7-314389a157e1`).
+  ITO-57 has a final emergency supply-chain refresh comment
+  (`3fe5b2b7-c4fe-401c-a317-b40d72119cb3`), and the ECC platform project has
+  the latest operator progress comment (`e32e5b7a-287b-4bf4-9ed7-314389a157e1`).
   Linear project status updates are disabled in this workspace, so the project
   comment is the supported external status surface.
 - The latest May 18 merge batch on `main` includes PR #1970 workflow-security
@@ -52,15 +52,17 @@ As of 2026-05-18:
   de-dup fixes, PR #1972 `uncloud` skill activation structure, PR #1976
   OpenAI/AstraFlow provider response guards, ECC-Tools Wrangler OAuth billing
   readback mirror evidence, the `04d4d819` defensive-deny IOC scanner hardening
-  recheck, and release evidence with a refreshed operator dashboard.
+  recheck, `7911af4a` release OIDC publishing-scope hardening, `97567a91`
+  release workflow line-ending normalization, and release evidence with a
+  refreshed operator dashboard.
 - `docs/releases/2.0.0-rc.1/publication-evidence-2026-05-18.md` records the
   May 18 queue-zero state, current-head TanStack/Mini Shai-Hulud protection
   recheck, no-lifecycle npm install, npm audit/signature checks, AgentShield
   project `.claude` scan, Linear sync, work-items sync, operator dashboard
   refresh, PR #1976 provider-guard validation, ECC-Tools Wrangler OAuth billing
   readback evidence, defensive-deny IOC scanner coverage, and current-head CI
-  success for `04d4d819`; a detached clean-worktree preview-pack smoke from
-  `742bc58d` passed 5/5 with digest `59bbf2630a44`.
+  success for `97567a91`; a detached clean-worktree preview-pack smoke from
+  `680aeff0` passed 5/5 with digest `0ed831dbd0cf`.
 - `docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-18.md`
   regenerates the ITO-44 prompt-to-artifact dashboard from live platform audit
   evidence: PR queue, issue queue, discussion queue, local worktree gate,
@@ -976,7 +978,9 @@ Acceptance:
    remaining action count, and digest in hosted security comments/check-runs.
    AgentShield commit `840952a` adds Linear/operator-ready fleet review ticket
    payloads and expands current Mini Shai-Hulud IOC breadcrumbs, with green
-   local and remote CI.
+   local and remote CI. AgentShield commit `4e36aab` hardens CI package installs
+   after the expanded Mini Shai-Hulud refresh, with CI, Test GitHub Action,
+   Self-Scan, and Dependabot Update workflows green.
    ECC-Tools commit `05d4e82` adds hosted promotion judge audit traces with
    deterministic request fingerprints and allowed-citation counts, without
    exposing raw provider output.
