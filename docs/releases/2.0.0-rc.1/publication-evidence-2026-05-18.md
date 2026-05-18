@@ -47,6 +47,7 @@ Tracked repositories in the platform audit and work-items sync were:
 | PR #1976 | Merged provider response hardening for OpenAI-compatible and AstraFlow providers; main includes `eb0d8939` follow-up guards for empty/filtered provider choices, missing OpenAI `response.usage`, shared filtered-response error text, and credential-less provider construction validation |
 | Provider guard validation | `uv run --extra dev pytest -q tests/test_provider_tools.py tests/test_astraflow_provider.py`, `uv run --extra dev pytest -q`, `node tests/run-all.js`, and `git diff --check` passed before merging #1976 follow-up into main: 11 provider-focused Python tests, 76 full Python tests, 2509 Node tests, and clean whitespace checks |
 | Defensive-deny IOC scanner hardening | Pushed `04d4d819` so explicit Claude `permissions.deny` IOC entries are treated as defensive controls while the same IOC still fails in hooks, tasks, scripts, locks, and payload files; local `npm test` passed 2511/2511 and current-head CI `26017368895` passed 37/37 |
+| Clean-worktree preview-pack smoke | Detached worktree at `742bc58d9748184dc6fd54ef42ffcf165c9d1360`; `node scripts/preview-pack-smoke.js --root <worktree> --format json` passed 5/5 with digest `59bbf2630a44`; required artifacts, final verification commands, Hermes public sanitization boundary, and approval-gated publication blockers were all preserved |
 | Public queues | Rechecked after the merge and issue-closure batch; 0 PRs, 0 issues, and 0 discussion gaps remain across tracked repos |
 
 ## Supply-Chain And Security Evidence
