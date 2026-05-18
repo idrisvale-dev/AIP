@@ -231,6 +231,7 @@ test('launch checklist records the ecc2 alpha version policy', () => {
 test('publication readiness checklist gates public release actions on evidence', () => {
   const source = read('docs/releases/2.0.0-rc.1/publication-readiness.md');
   const may15Evidence = read('docs/releases/2.0.0-rc.1/publication-evidence-2026-05-15.md');
+  const discussionPlaybook = read('docs/architecture/discussion-response-playbook.md');
 
   for (const section of [
     '## Release Identity Matrix',
@@ -295,6 +296,17 @@ test('publication readiness checklist gates public release actions on evidence',
   assert.ok(may15Evidence.includes('| Trunk discussions | GraphQL discussion count and maintainer-touch sweep | 58 total discussions;'));
   assert.ok(source.includes('platform audit sampled 58 trunk discussions'));
   assert.ok(source.includes('0 needing maintainer touch'));
+  assert.ok(source.includes('discussion-response-playbook.md'));
+  for (const expected of [
+    'Public Support',
+    'Maintainer Coordination',
+    'Stale Or Concluded',
+    'Release Announcement',
+    'Security Escalation',
+    'classified as informational',
+  ]) {
+    assert.ok(discussionPlaybook.includes(expected), `discussion playbook missing ${expected}`);
+  }
   assert.ok(may15Evidence.includes('env -u GITHUB_TOKEN'));
   assert.ok(may15Evidence.includes('ITO-44'));
   assert.ok(may15Evidence.includes('0 open PRs, 0 open issues'));

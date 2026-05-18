@@ -36,7 +36,9 @@ As of 2026-05-18:
   `affaan-m/everything-claude-code` has 58 total discussions and 0 without
   maintainer touch after May 15 maintainer updates on #73 and #1239; AgentShield,
   JARVIS, ECC Tools, and the ECC Tools website have discussions disabled or 0
-  total discussions.
+  total discussions. `docs/architecture/discussion-response-playbook.md` now
+  supplies the ITO-59 response categories, public templates, security-escalation
+  path, and readback rules for future discussion batches.
 - The current Linear roadmap contains 16 issue lanes (`ITO-44` through
   `ITO-59`) and five milestones: Security and Access Baseline, ECC 2.0 Preview
   and Publication, AgentShield Enterprise Iteration, ECC Tools Next-Level
@@ -696,7 +698,7 @@ is not complete unless the evidence column exists and has been freshly verified.
 | --- | --- | --- | --- |
 | Keep public PRs below 20 | Repo-family PR recheck | 0 open PRs across `everything-claude-code`, AgentShield, JARVIS, `ECC-Tools/ECC-Tools`, and `ECC-Tools/ECC-website` on 2026-05-18 after merging PR #1976 and refreshing platform audit evidence | Complete |
 | Keep public issues below 20 | Repo-family issue recheck | 0 open issues across `everything-claude-code`, AgentShield, JARVIS, `ECC-Tools/ECC-Tools`, and `ECC-Tools/ECC-website` on 2026-05-18 after the live platform audit refresh | Complete |
-| Manage repository discussions | Repo-family discussion recheck | Platform audit reports 0 discussion maintainer-touch gaps and 0 answerable Q&A missing accepted answers; trunk still has 58 total discussions | Complete |
+| Manage repository discussions | Repo-family discussion recheck plus response playbook | Platform audit reports 0 discussion maintainer-touch gaps and 0 answerable Q&A missing accepted answers; trunk still has 58 total discussions; `docs/architecture/discussion-response-playbook.md` distinguishes support, maintainer coordination, stale/concluded, release, informational, and security-sensitive response paths | Complete |
 | Manage PR discussions | PR review/comment closure plus merge/close state | ECC #1976 merged after maintainer follow-up validation; no open tracked PRs remain | Complete |
 | Salvage useful stale work | `docs/stale-pr-salvage-ledger.md` plus `docs/legacy-artifact-inventory.md` | Ledger records salvaged, superseded, skipped, and manual-review tails; #1815-#1818 added cost tracking, skill scout, frontend design guidance, code-reviewer false-positive guardrails, and the May 12 gap pass; #1687, #1609, #1563, #1564, and #1565 localization tails are attached to Linear ITO-55 for language-owner review and no automatic import remains release-blocking | Complete; repeat legacy scan before release |
 | ECC 2.0 preview pack ready | Release docs, quickstart, publication readiness, release notes | `docs/releases/2.0.0-rc.1/` and readiness docs are in-tree; May 18 evidence records queue-zero state, #1970/#1971/#1972/#1976 merge batch, supply-chain recheck, defensive-deny IOC scanner hardening, npm no-lifecycle install/audit/signature gates, Linear sync, refreshed operator dashboard, provider-guard validation, ECC-Tools Wrangler OAuth billing readback evidence, successful current-head CI on `04d4d819`, and detached clean-worktree preview-pack smoke digest `59bbf2630a44` | Needs final release approval |
