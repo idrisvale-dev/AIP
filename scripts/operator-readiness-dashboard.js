@@ -342,6 +342,11 @@ function agentShieldEnterpriseEvidence(roadmap) {
 }
 
 function eccToolsNextLevelEvidence(roadmap) {
+  if (roadmap.includes('Marketplace webhook provenance')
+    || roadmap.includes('2859678')) {
+    return 'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, aggregate production billing KV readback, and provenance-aware Marketplace billing-state gates are mirrored in the GA roadmap';
+  }
+
   if (roadmap.includes('billing:kv-readback')
     || roadmap.includes('95d0bec')) {
     return 'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, and aggregate production billing KV readback are mirrored in the GA roadmap';
@@ -361,6 +366,11 @@ function eccToolsNextLevelEvidence(roadmap) {
 }
 
 function eccToolsNextLevelGap(roadmap) {
+  if (roadmap.includes('Marketplace webhook provenance')
+    || roadmap.includes('2859678')) {
+    return 'replace the invalid Cloudflare credential, create or verify Marketplace-managed Pro billing-state with webhook provenance, then run `billing:kv-readback -- --require-ready` and the live announcement gate';
+  }
+
   if (roadmap.includes('billing:kv-readback')
     || roadmap.includes('95d0bec')) {
     return 'create or verify a Marketplace-managed Pro billing-state, then run the official live announcement gate';
@@ -730,7 +740,7 @@ function buildReport(options) {
     next_work_order: [
       'Regenerate this dashboard from the final release commit before publication evidence is recorded.',
       'Repeat ITO-57 Linear/project status sync after the next significant merge batch or advisory-source refresh.',
-      'Create or verify a Marketplace-managed Pro billing-state, then run the official live announcement gate before publishing native-payments copy.',
+      'Replace the invalid Cloudflare credential, create or verify Marketplace-managed Pro billing-state with webhook provenance, then run `billing:kv-readback -- --require-ready` and the live announcement gate before publishing native-payments copy.',
       'Resume ITO-45, ITO-46, and ITO-56 only after the generated dashboard and final release gates are refreshed.',
     ],
   };
