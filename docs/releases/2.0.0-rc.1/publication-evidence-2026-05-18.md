@@ -24,7 +24,7 @@ final release commit with a strictly clean checkout before publishing.
 | Discussion audit | `npm run discussion:audit -- --json` | Ready; 58 sampled discussions in `affaan-m/everything-claude-code`, 0 needing maintainer touch, 0 answerable discussions missing accepted answer, and 0 fetch errors |
 | Platform audit | `node scripts/platform-audit.js --json --allow-untracked docs/drafts/` | Ready; tracked repos report 0 open PRs, 0 open issues, 0 discussion maintainer-touch gaps, 0 answerable Q&A missing accepted answers, and 0 blocking dirty files |
 | Work-items sync | `node scripts/work-items.js sync-github --repo <tracked-repo>` for five tracked repos; `node scripts/status.js --json`; `node scripts/work-items.js list --json` | All five tracked repos synced with 0 open PRs/issues and no changed work items; local status reports 0 open, 0 blocked, and 0 closed work items |
-| Operator dashboard | `npm run operator:dashboard -- --markdown --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-18.md` | Regenerated at `4470e2e6702f17099d6feb137ba03ff00582c202`; dashboard ready true, publication ready false because release, npm, plugin, billing, and announcement gates are approval-gated; 0 PRs, 0 issues, and 0 discussion gaps remain across tracked repos; AgentShield enterprise evidence includes `840952a`; ECC Tools native-payments gate still names the operational ITO-61 blocker: authorize Cloudflare API or 1Password CLI access, configure the target Marketplace Pro account and `INTERNAL_API_SECRET`, create or replay Marketplace Pro webhook state, then rerun target readback and the live announcement gate |
+| Operator dashboard | `npm run operator:dashboard -- --markdown --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-18.md` | Regenerated at `4470e2e6702f17099d6feb137ba03ff00582c202`; dashboard ready true, publication ready false because release, npm, plugin, billing, and announcement gates are approval-gated; 0 PRs, 0 issues, and 0 discussion gaps remain across tracked repos; AgentShield enterprise evidence includes `840952a`; ECC Tools native-payments gate now names the narrowed ITO-61 blocker: create or verify Marketplace-managed Pro target billing-state with webhook provenance, configure the target account and `INTERNAL_API_SECRET`, then rerun target readback and the live announcement gate |
 
 Tracked repositories in the platform audit and work-items sync were:
 
@@ -102,7 +102,7 @@ Tracked repositories in the platform audit and work-items sync were:
 | --- | --- |
 | ITO-57 issue comments | `0b9931b9-1556-4ebc-a70c-f3635557625d` records May 18 queue counts, #1970/#1971/#1972/#1976 merge evidence, supply-chain verification, current-head CI URL, deferred gates, and next slices; reply `6fa15367-d994-4e53-ade3-9462477e1100` records the expanded TanStack/Mini Shai-Hulud recheck, defensive-deny scanner fix, current-head CI `26017368895`, and post-push platform audit; comment `3fe5b2b7-c4fe-401c-a317-b40d72119cb3` records the final emergency refresh against `97567a91`, AgentShield `4e36aab`, clean ECC/Ito/Documents workspace IOC scans, absent dead-man/persistence artifacts, and package-manager/Claude deny-wall posture; comment `43837404-c01c-4aaa-b5e2-1e784c136d69` records ECC-Tools `brace-expansion` alert 44 fixed in `e56fc1a` with CI `26054671308` and Dependabot API `state: fixed` |
 | ITO-52 issue status | `f2e5a208-de91-4a3a-960b-5362d12aa5a4` records ECC-Tools `69ca535` team-learning feedback controls, local verification, and CI `26054455434`; Linear ITO-52 is Done |
-| ITO-61 issue status | `8c366592-1c9a-48ad-b9a9-2908a0463fa5` records the latest native-payments readback blocker: Wrangler Cloudflare auth `10000`, 1Password CLI authorization timeout, missing Marketplace target account, and missing `INTERNAL_API_SECRET` |
+| ITO-61 issue status | `6904e4fb-bec7-4787-90e2-759f077a628c` records the narrowed native-payments readback blocker: Wrangler OAuth now works, aggregate readback is clean, but there is still no Marketplace-managed Pro target billing-state with webhook provenance and the local announcement preflight is missing the target account plus `INTERNAL_API_SECRET` |
 | ECC platform project comment | `e32e5b7a-287b-4bf4-9ed7-314389a157e1` records the earlier current public queue, security, #1976, and remaining-gate state at the project level; follow-up ITO-44 comments `a01eeef3-c69b-48c0-8804-a4682acfc1ef` and `6b0885cc-c4e9-40db-899b-f7b88b4aa046` record ITO-52 completion and the fixed ECC-Tools Dependabot alert |
 | Project status update caveat | Linear returned "Project status updates are not enabled for this workspace"; project comment was used as the supported status surface |
 
@@ -121,19 +121,18 @@ Tracked repositories in the platform audit and work-items sync were:
   `npm run billing:kv-readback -- --account <github-login> --require-ready`
   with working Cloudflare API auth or repaired Wrangler OAuth, followed by
   `npm run billing:announcement-gate -- --account <github-login>`, return
-  announcement-ready gates. The latest API-authenticated aggregate readback
-  from the ECC vault Cloudflare credential found 253 `account-billing:*`
-  records, 253 `billing-state:*` records, 0 Marketplace Pro states, 0
-  ready-like Marketplace Pro states, and 0 parse failures; local Wrangler OAuth
-  currently fails with Cloudflare authentication error `10000`. ECC-Tools
+  announcement-ready gates. The latest Wrangler OAuth aggregate readback found
+  256 `account-billing:*` records, 256 `billing-state:*` records, 197
+  Marketplace-source records, 59 Stripe-source records, 53 Pro records, 4
+  Marketplace webhook-provenance records, all `Open Source`, 0 Marketplace Pro
+  states, 0 ready-like Marketplace Pro states, and 0 parse failures. ECC-Tools
   commit `632e059` adds the follow-up target-account readback mode, redacts
   the account login and raw KV key names, and requires both target key families
   before `--require-ready` can pass. ECC-Tools commit `13cd3fc` normalizes
-  billing-state key casing. The latest ITO-61 retry still fails before readback
-  because Wrangler Cloudflare auth returns `10000`, 1Password CLI authorization
-  timed out, and the announcement preflight is missing the target account and
-  `INTERNAL_API_SECRET`; Linear ITO-61 tracks the exact target-account
-  acceptance criteria.
+  billing-state key casing. The latest ITO-61 retry fails because no
+  Marketplace-managed Pro state exists and the announcement preflight is
+  missing the target account plus `INTERNAL_API_SECRET`; Linear ITO-61 tracks
+  the exact target-account acceptance criteria.
 - Release notes, X, LinkedIn, GitHub release, and longform copy still need final
   live URLs after release/package/plugin URLs exist.
 - The local checkout is clean after the dashboard/evidence refresh, but a
