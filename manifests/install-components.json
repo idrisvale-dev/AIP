@@ -531,31 +531,31 @@
       "family": "locale",
       "description": "Japanese (ja-JP) translated reference docs installed to ~/.claude/docs/ja-JP/.",
       "modules": [
-        "docs-ja-JP"
+        "docs-ja-jp"
       ]
     },
     {
-      "id": "locale:zh-CN",
+      "id": "locale:zh-cn",
       "family": "locale",
       "description": "Simplified Chinese (zh-CN) translated reference docs installed to ~/.claude/docs/zh-CN/.",
       "modules": [
-        "docs-zh-CN"
+        "docs-zh-cn"
       ]
     },
     {
-      "id": "locale:ko-KR",
+      "id": "locale:ko-kr",
       "family": "locale",
       "description": "Korean (ko-KR) translated reference docs installed to ~/.claude/docs/ko-KR/.",
       "modules": [
-        "docs-ko-KR"
+        "docs-ko-kr"
       ]
     },
     {
-      "id": "locale:pt-BR",
+      "id": "locale:pt-br",
       "family": "locale",
       "description": "Brazilian Portuguese (pt-BR) translated reference docs installed to ~/.claude/docs/pt-BR/.",
       "modules": [
-        "docs-pt-BR"
+        "docs-pt-br"
       ]
     },
     {
@@ -575,19 +575,19 @@
       ]
     },
     {
-      "id": "locale:vi-VN",
+      "id": "locale:vi-vn",
       "family": "locale",
       "description": "Vietnamese (vi-VN) translated reference docs installed to ~/.claude/docs/vi-VN/.",
       "modules": [
-        "docs-vi-VN"
+        "docs-vi-vn"
       ]
     },
     {
-      "id": "locale:zh-TW",
+      "id": "locale:zh-tw",
       "family": "locale",
       "description": "Traditional Chinese (zh-TW) translated reference docs installed to ~/.claude/docs/zh-TW/.",
       "modules": [
-        "docs-zh-TW"
+        "docs-zh-tw"
       ]
     }
   ]

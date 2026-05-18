@@ -695,7 +695,7 @@
       "stability": "stable"
     },
     {
-      "id": "docs-ja-JP",
+      "id": "docs-ja-jp",
       "kind": "docs",
       "description": "Japanese (ja-JP) translated reference docs for agents, commands, skills, and rules.",
       "paths": [
@@ -710,7 +710,7 @@
       "stability": "stable"
     },
     {
-      "id": "docs-zh-CN",
+      "id": "docs-zh-cn",
       "kind": "docs",
       "description": "Simplified Chinese (zh-CN) translated reference docs for agents, commands, skills, and rules.",
       "paths": [
@@ -725,7 +725,7 @@
       "stability": "stable"
     },
     {
-      "id": "docs-ko-KR",
+      "id": "docs-ko-kr",
       "kind": "docs",
       "description": "Korean (ko-KR) translated reference docs for agents, commands, skills, and rules.",
       "paths": [
@@ -740,7 +740,7 @@
       "stability": "stable"
     },
     {
-      "id": "docs-pt-BR",
+      "id": "docs-pt-br",
       "kind": "docs",
       "description": "Brazilian Portuguese (pt-BR) translated reference docs for agents, commands, skills, and rules.",
       "paths": [
@@ -785,7 +785,7 @@
       "stability": "stable"
     },
     {
-      "id": "docs-vi-VN",
+      "id": "docs-vi-vn",
       "kind": "docs",
       "description": "Vietnamese (vi-VN) translated reference docs for agents, commands, skills, and rules.",
       "paths": [
@@ -800,7 +800,7 @@
       "stability": "stable"
     },
     {
-      "id": "docs-zh-TW",
+      "id": "docs-zh-tw",
       "kind": "docs",
       "description": "Traditional Chinese (zh-TW) translated reference docs for agents, commands, skills, and rules.",
       "paths": [

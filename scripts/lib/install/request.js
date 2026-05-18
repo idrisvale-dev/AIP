@@ -62,7 +62,11 @@ function parseInstallArgs(argv) {
       }
       index += 1;
     } else if (arg === '--locale') {
-      parsed.locale = args[index + 1] || null;
+      const locale = args[index + 1] || '';
+      if (!locale || locale.startsWith('--')) {
+        throw new Error('Missing value for --locale');
+      }
+      parsed.locale = locale;
       index += 1;
     } else if (arg === '--dry-run') {
       parsed.dryRun = true;
@@ -85,6 +89,7 @@ function normalizeInstallRequest(options = {}) {
     ? options.config
     : null;
   const profileId = options.profileId || config?.profileId || null;
+  const target = options.target || config?.target || 'claude';
   const moduleIds = validateInstallModuleIds(
     dedupeStrings([...(config?.moduleIds || []), ...(options.moduleIds || [])])
   );
@@ -95,9 +100,15 @@ function normalizeInstallRequest(options = {}) {
       `Unsupported locale: "${locale}". Supported locales: ${listSupportedLocales().join(', ')}`
     );
   }
-  const includeComponentIds = dedupeStrings([
+  if (locale && target !== 'claude') {
+    throw new Error('--locale can only be used with --target claude');
+  }
+  const requestedIncludeComponentIds = dedupeStrings([
     ...(config?.includeComponentIds || []),
     ...(options.includeComponentIds || []),
+  ]);
+  const includeComponentIds = dedupeStrings([
+    ...requestedIncludeComponentIds,
     ...(localeComponentId ? [localeComponentId] : []),
   ]);
   const excludeComponentIds = dedupeStrings([
@@ -108,13 +119,16 @@ function normalizeInstallRequest(options = {}) {
     ...(Array.isArray(options.legacyLanguages) ? options.legacyLanguages : []),
     ...(Array.isArray(options.languages) ? options.languages : []),
   ]).map(language => language.toLowerCase()));
-  const target = options.target || config?.target || 'claude';
   const hasManifestBaseSelection = Boolean(profileId) || moduleIds.length > 0 || includeComponentIds.length > 0;
+  const hasNonLocaleManifestSelection = Boolean(profileId)
+    || moduleIds.length > 0
+    || requestedIncludeComponentIds.length > 0
+    || excludeComponentIds.length > 0;
   const usingManifestMode = hasManifestBaseSelection || excludeComponentIds.length > 0;
 
-  if (usingManifestMode && legacyLanguages.length > 0) {
+  if (hasNonLocaleManifestSelection && legacyLanguages.length > 0) {
     throw new Error(
-      'Legacy language arguments cannot be combined with --profile, --modules, --with, --without, --locale, or manifest config selections'
+      'Legacy language arguments cannot be combined with --profile, --modules, --with, --without, or manifest config selections'
     );
   }
 
@@ -123,7 +137,9 @@ function normalizeInstallRequest(options = {}) {
   }
 
   return {
-    mode: usingManifestMode ? 'manifest' : 'legacy-compat',
+    mode: legacyLanguages.length > 0
+      ? 'legacy-compat'
+      : (usingManifestMode ? 'manifest' : 'legacy-compat'),
     target,
     profileId,
     moduleIds,
