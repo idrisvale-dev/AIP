@@ -79,8 +79,10 @@ Tracked repositories in the platform audit and work-items sync were:
 
 | Surface | Evidence |
 | --- | --- |
-| ITO-57 issue comments | `0b9931b9-1556-4ebc-a70c-f3635557625d` records May 18 queue counts, #1970/#1971/#1972/#1976 merge evidence, supply-chain verification, current-head CI URL, deferred gates, and next slices; reply `6fa15367-d994-4e53-ade3-9462477e1100` records the expanded TanStack/Mini Shai-Hulud recheck, defensive-deny scanner fix, current-head CI `26017368895`, and post-push platform audit; comment `3fe5b2b7-c4fe-401c-a317-b40d72119cb3` records the final emergency refresh against `97567a91`, AgentShield `4e36aab`, clean ECC/Ito/Documents workspace IOC scans, absent dead-man/persistence artifacts, and package-manager/Claude deny-wall posture |
-| ECC platform project comment | `e32e5b7a-287b-4bf4-9ed7-314389a157e1` records the same current public queue, security, #1976, and remaining-gate state at the project level |
+| ITO-57 issue comments | `0b9931b9-1556-4ebc-a70c-f3635557625d` records May 18 queue counts, #1970/#1971/#1972/#1976 merge evidence, supply-chain verification, current-head CI URL, deferred gates, and next slices; reply `6fa15367-d994-4e53-ade3-9462477e1100` records the expanded TanStack/Mini Shai-Hulud recheck, defensive-deny scanner fix, current-head CI `26017368895`, and post-push platform audit; comment `3fe5b2b7-c4fe-401c-a317-b40d72119cb3` records the final emergency refresh against `97567a91`, AgentShield `4e36aab`, clean ECC/Ito/Documents workspace IOC scans, absent dead-man/persistence artifacts, and package-manager/Claude deny-wall posture; comment `43837404-c01c-4aaa-b5e2-1e784c136d69` records ECC-Tools `brace-expansion` alert 44 fixed in `e56fc1a` with CI `26054671308` and Dependabot API `state: fixed` |
+| ITO-52 issue status | `f2e5a208-de91-4a3a-960b-5362d12aa5a4` records ECC-Tools `69ca535` team-learning feedback controls, local verification, and CI `26054455434`; Linear ITO-52 is Done |
+| ITO-61 issue status | `8c366592-1c9a-48ad-b9a9-2908a0463fa5` records the latest native-payments readback blocker: Wrangler Cloudflare auth `10000`, 1Password CLI authorization timeout, missing Marketplace target account, and missing `INTERNAL_API_SECRET` |
+| ECC platform project comment | `e32e5b7a-287b-4bf4-9ed7-314389a157e1` records the earlier current public queue, security, #1976, and remaining-gate state at the project level; follow-up ITO-44 comments `a01eeef3-c69b-48c0-8804-a4682acfc1ef` and `6b0885cc-c4e9-40db-899b-f7b88b4aa046` record ITO-52 completion and the fixed ECC-Tools Dependabot alert |
 | Project status update caveat | Linear returned "Project status updates are not enabled for this workspace"; project comment was used as the supported status surface |
 
 ## Current Publication Blockers
@@ -105,8 +107,12 @@ Tracked repositories in the platform audit and work-items sync were:
   currently fails with Cloudflare authentication error `10000`. ECC-Tools
   commit `632e059` adds the follow-up target-account readback mode, redacts
   the account login and raw KV key names, and requires both target key families
-  before `--require-ready` can pass. Linear ITO-61 now tracks the exact
-  target-account acceptance criteria.
+  before `--require-ready` can pass. ECC-Tools commit `13cd3fc` normalizes
+  billing-state key casing. The latest ITO-61 retry still fails before readback
+  because Wrangler Cloudflare auth returns `10000`, 1Password CLI authorization
+  timed out, and the announcement preflight is missing the target account and
+  `INTERNAL_API_SECRET`; Linear ITO-61 tracks the exact target-account
+  acceptance criteria.
 - Release notes, X, LinkedIn, GitHub release, and longform copy still need final
   live URLs after release/package/plugin URLs exist.
 - The local checkout is clean after the dashboard/evidence refresh, but a

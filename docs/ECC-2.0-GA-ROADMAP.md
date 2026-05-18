@@ -340,6 +340,24 @@ As of 2026-05-18:
   real Marketplace-managed Pro webhook creates target account provenance and
   `billing:kv-readback -- --wrangler --wrangler-bin ./node_modules/.bin/wrangler --account <github-login> --require-ready`
   plus the official internal announcement gate pass.
+- ECC-Tools commit `13cd3fc` normalizes billing-state key casing so
+  Marketplace webhook writes and announcement readbacks agree on GitHub login
+  case; current-head CI `26037611421` passed. The code-side readback hardening
+  remains green, but it does not create live Marketplace Pro state.
+- ECC-Tools commit `69ca535` surfaces hosted team-learning feedback controls:
+  harness compatibility and team-backlog routing now show retention days,
+  deletion route/SLA, and opt-out route before adaptive recommendations are
+  routed into team-owned queues. Linear ITO-52 is Done with CI `26054455434`.
+- ECC-Tools commit `e56fc1a` updates the lockfile for
+  `brace-expansion@5.0.6` and fixed Dependabot alert 44 for CVE-2026-45149;
+  GitHub API reported `state: fixed` at `2026-05-18T19:10:15Z` and current-head
+  CI `26054671308` passed.
+- The latest ITO-61 readback retry remains operationally blocked: Wrangler
+  Cloudflare API auth returned `Authentication error [code: 10000]`,
+  1Password CLI authorization timed out, `billing:announcement-gate -- --preflight`
+  is missing the target Marketplace account plus `INTERNAL_API_SECRET`, and
+  native-payments copy remains blocked until the target readback and live
+  announcement gate pass.
 - Handoff `ecc-supply-chain-audit-20260513-0645.md` under
   `~/.cluster-swarm/handoffs/`
   records the May 13 supply-chain sweep: no active lockfile/manifest hit for
