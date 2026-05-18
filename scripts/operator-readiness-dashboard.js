@@ -378,12 +378,12 @@ function eccToolsNextLevelEvidence(roadmap) {
 function eccToolsNextLevelGap(roadmap) {
   if (roadmap.includes('target account billing readback')
     || roadmap.includes('632e059')) {
-    return 'create or verify Marketplace-managed Pro target billing-state with webhook provenance, then run `billing:kv-readback -- --wrangler --account <github-login> --require-ready` and the live announcement gate';
+    return 'create or verify Marketplace-managed Pro target billing-state with webhook provenance, then run `billing:kv-readback -- --account <github-login> --require-ready` with working Cloudflare API auth or repaired Wrangler OAuth, followed by the live announcement gate';
   }
 
   if (roadmap.includes('Wrangler OAuth readback')
     || roadmap.includes('42653f9')) {
-    return 'create or verify Marketplace-managed Pro billing-state with webhook provenance, then run `billing:kv-readback -- --wrangler --require-ready` and the live announcement gate';
+    return 'create or verify Marketplace-managed Pro billing-state with webhook provenance, then run `billing:kv-readback -- --require-ready` with working Cloudflare API auth or repaired Wrangler OAuth, followed by the live announcement gate';
   }
 
   if (roadmap.includes('Marketplace webhook provenance')
@@ -760,7 +760,7 @@ function buildReport(options) {
     next_work_order: [
       'Regenerate this dashboard from the final release commit before publication evidence is recorded.',
       'Repeat ITO-57 Linear/project status sync after the next significant merge batch or advisory-source refresh.',
-      'Create or verify Marketplace-managed Pro target billing-state with webhook provenance, then run `billing:kv-readback -- --wrangler --account <github-login> --require-ready` and the live announcement gate before publishing native-payments copy.',
+      'Create or verify Marketplace-managed Pro target billing-state with webhook provenance, then run `billing:kv-readback -- --account <github-login> --require-ready` with working Cloudflare API auth or repaired Wrangler OAuth, followed by the live announcement gate before publishing native-payments copy.',
       'Resume ITO-45, ITO-46, and ITO-56 only after the generated dashboard and final release gates are refreshed.',
     ],
   };

@@ -264,7 +264,7 @@ function runTests() {
       )));
       assert.ok(report.requirements.some(item => (
         item.id === 'ecc-tools-next-level'
-          && item.gap === 'create or verify Marketplace-managed Pro target billing-state with webhook provenance, then run `billing:kv-readback -- --wrangler --account <github-login> --require-ready` and the live announcement gate'
+          && item.gap === 'create or verify Marketplace-managed Pro target billing-state with webhook provenance, then run `billing:kv-readback -- --account <github-login> --require-ready` with working Cloudflare API auth or repaired Wrangler OAuth, followed by the live announcement gate'
           && item.evidence.includes('operator-visible promotion output details')
           && item.evidence.includes('hosted promotion judge audit traces')
           && item.evidence.includes('billing announcement preflight')

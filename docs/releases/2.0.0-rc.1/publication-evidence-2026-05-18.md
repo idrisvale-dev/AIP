@@ -87,15 +87,18 @@ Tracked repositories in the platform audit and work-items sync were:
 - ECC Tools billing/native-payments copy remains blocked until a Marketplace
   Pro purchase/webhook path writes ready production `billing-state:*`
   provenance for the target Marketplace test account, then
-  `npm run billing:kv-readback -- --wrangler --account <github-login> --require-ready`
-  and `npm run billing:announcement-gate -- --account <github-login>` return
-  announcement-ready gates. The latest Wrangler OAuth aggregate readback from
-  ECC-Tools commit `42653f9` found 253 `account-billing:*` records, 253
-  `billing-state:*` records, 0 Marketplace Pro states, 0 ready-like
-  Marketplace Pro states, and 0 parse failures. ECC-Tools commit `632e059`
-  adds the follow-up target-account readback mode, redacts the account login
-  and raw KV key names, and requires both target key families before
-  `--require-ready` can pass.
+  `npm run billing:kv-readback -- --account <github-login> --require-ready`
+  with working Cloudflare API auth or repaired Wrangler OAuth, followed by
+  `npm run billing:announcement-gate -- --account <github-login>`, return
+  announcement-ready gates. The latest API-authenticated aggregate readback
+  from the ECC vault Cloudflare credential found 253 `account-billing:*`
+  records, 253 `billing-state:*` records, 0 Marketplace Pro states, 0
+  ready-like Marketplace Pro states, and 0 parse failures; local Wrangler OAuth
+  currently fails with Cloudflare authentication error `10000`. ECC-Tools
+  commit `632e059` adds the follow-up target-account readback mode, redacts
+  the account login and raw KV key names, and requires both target key families
+  before `--require-ready` can pass. Linear ITO-61 now tracks the exact
+  target-account acceptance criteria.
 - Release notes, X, LinkedIn, GitHub release, and longform copy still need final
   live URLs after release/package/plugin URLs exist.
 - The local checkout still has unrelated untracked `docs/drafts/`, so a strict
