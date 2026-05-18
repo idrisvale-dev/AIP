@@ -342,6 +342,11 @@ function agentShieldEnterpriseEvidence(roadmap) {
 }
 
 function eccToolsNextLevelEvidence(roadmap) {
+  if (roadmap.includes('billing:kv-readback')
+    || roadmap.includes('95d0bec')) {
+    return 'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, and aggregate production billing KV readback are mirrored in the GA roadmap';
+  }
+
   if (roadmap.includes('production Marketplace readback state')
     || roadmap.includes('eb69412')) {
     return 'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, and production KV readback state are mirrored in the GA roadmap';
@@ -356,6 +361,11 @@ function eccToolsNextLevelEvidence(roadmap) {
 }
 
 function eccToolsNextLevelGap(roadmap) {
+  if (roadmap.includes('billing:kv-readback')
+    || roadmap.includes('95d0bec')) {
+    return 'create or verify a Marketplace-managed Pro billing-state, then run the official live announcement gate';
+  }
+
   if (roadmap.includes('production Marketplace readback state')
     || roadmap.includes('eb69412')) {
     return 'complete Marketplace purchase/webhook readback, then run the live announcement gate';
@@ -720,7 +730,7 @@ function buildReport(options) {
     next_work_order: [
       'Regenerate this dashboard from the final release commit before publication evidence is recorded.',
       'Repeat ITO-57 Linear/project status sync after the next significant merge batch or advisory-source refresh.',
-      'Complete ECC Tools Marketplace purchase/webhook readback, then run preflight and the live announcement gate before publishing native-payments copy.',
+      'Create or verify a Marketplace-managed Pro billing-state, then run the official live announcement gate before publishing native-payments copy.',
       'Resume ITO-45, ITO-46, and ITO-56 only after the generated dashboard and final release gates are refreshed.',
     ],
   };
