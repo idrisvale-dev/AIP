@@ -79,6 +79,8 @@ class _AstraflowBaseProvider(LLMProvider):
                 params["tools"] = [tool.to_openai_tool() for tool in llm_input.tools]
 
             response = self.client.chat.completions.create(**params)
+            if not response.choices or response.choices[0].message is None:
+                raise ValueError("LLM returned empty or filtered response")
             choice = response.choices[0]
 
             tool_calls = None
