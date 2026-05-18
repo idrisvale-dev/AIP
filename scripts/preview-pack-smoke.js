@@ -40,7 +40,7 @@ const REQUIRED_ARTIFACTS = [
 
 const REQUIRED_VERIFICATION_COMMANDS = [
   'git status --short --branch',
-  'node scripts/platform-audit.js --format json --allow-untracked docs/drafts/',
+  'node scripts/platform-audit.js --json',
   'npm run preview-pack:smoke',
   'npm run harness:adapters -- --check',
   'npm run harness:audit -- --format json',
