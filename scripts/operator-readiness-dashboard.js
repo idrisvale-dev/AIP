@@ -531,6 +531,7 @@ function buildRequirements(rootDir, platformReport) {
   const roadmap = readText(rootDir, 'docs/ECC-2.0-GA-ROADMAP.md');
   const publicationReadiness = readText(rootDir, 'docs/releases/2.0.0-rc.1/publication-readiness.md');
   const namingMatrix = readText(rootDir, 'docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md');
+  const releasePublicationChecklist = readText(rootDir, 'docs/releases/2.0.0-rc.1/release-name-plugin-publication-checklist-2026-05-18.md');
   const releaseUrlLedger = readText(rootDir, 'docs/releases/2.0.0-rc.1/release-url-ledger-2026-05-18.md');
   const ownerQueueCleanup = readText(rootDir, 'docs/releases/2.0.0-rc.1/owner-queue-cleanup-2026-05-18.md');
   const previewManifest = readText(rootDir, 'docs/releases/2.0.0-rc.1/preview-pack-manifest.md');
@@ -665,12 +666,19 @@ function buildRequirements(rootDir, platformReport) {
     buildRequirement(
       'naming-and-plugin-publication',
       'Prepare name-change, Claude plugin, and Codex plugin paths',
-      'naming-and-publication-matrix plus publication-readiness',
+      'naming-and-publication-matrix plus release-name-plugin-publication checklist plus publication-readiness',
       includesAll(namingMatrix, ['Claude plugin', 'Codex plugin', 'npm package', 'Publication Paths'])
+        && includesAll(releasePublicationChecklist, [
+          'Everything Claude Code (ECC)',
+          'ecc-universal',
+          'claude plugin tag .claude-plugin --dry-run',
+          'codex plugin marketplace add',
+          'Do not rename the repo or package until rc.1 is published'
+        ])
         && includesAll(publicationReadiness, ['Claude plugin', 'Codex plugin'])
         ? 'in_progress'
         : 'not_complete',
-      'naming matrix and plugin readiness gates exist',
+      'naming matrix, release publication checklist, and plugin readiness gates exist',
       'real tag/push, marketplace submission, and final channel choice remain approval-gated'
     ),
     buildRequirement(
