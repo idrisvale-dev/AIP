@@ -96,8 +96,8 @@ function seedRepo(rootDir, overrides = {}) {
       'Not complete'
     ].join('\n'),
     'docs/releases/2.0.0-rc.1/owner-queue-cleanup-2026-05-18.md': [
-      'Owner-wide open PRs after cleanup: 9.',
-      'Owner-wide open issues after cleanup: 5.',
+      'Owner-wide open PRs after cleanup: 0.',
+      'Owner-wide open issues after cleanup: 0.',
       'Stale dependency-bot PRs closed: 24.',
       'Stale legacy payments/0EM roadmap issues closed: 72.'
     ].join('\n'),

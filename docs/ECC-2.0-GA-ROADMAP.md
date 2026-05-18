@@ -27,9 +27,11 @@ As of 2026-05-18:
 - Owner-wide queue cleanup is also inside the requested budget:
   `docs/releases/2.0.0-rc.1/owner-queue-cleanup-2026-05-18.md` records the
   live `gh search` sweep that closed 24 stale dependency-bot PRs and 72 stale
-  legacy payments/0EM roadmap issues, leaving 9 open PRs and 5 open issues
-  across the `affaan-m` owner namespace. Archived repos touched during stale
-  PR closure were restored to archived state.
+  legacy payments/0EM roadmap issues, then closed the 9 remaining stale,
+  generated, conflicting, or test/noise PRs and the 5 remaining legacy,
+  outreach, or placeholder issues. The broader `affaan-m` owner namespace is
+  now at 0 open PRs and 0 open issues by live `gh search`. Archived repos
+  touched during closure were restored to archived state.
 - GitHub discussions are current across those tracked repos:
   `affaan-m/everything-claude-code` has 58 total discussions and 0 without
   maintainer touch after May 15 maintainer updates on #73 and #1239; AgentShield,

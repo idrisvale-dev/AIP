@@ -113,8 +113,10 @@ porting.
 The ECC release repos were already clean, but an owner-wide `gh search` sweep
 found stale queues in older public/private projects. The cleanup closed 24
 stale dependency-bot PRs and 72 stale legacy payments/0EM roadmap issues,
-leaving 9 open PRs and 5 open issues across the `affaan-m` owner namespace.
-The detailed before/after evidence and remaining queue are recorded in
+then closed the final 9 stale/generated/conflicting/test PRs and 5
+legacy/outreach/placeholder issues. The `affaan-m` owner namespace is now at 0
+open PRs and 0 open issues by live `gh search`. The detailed before/after
+evidence and final queue disposition are recorded in
 `docs/releases/2.0.0-rc.1/owner-queue-cleanup-2026-05-18.md`.
 
 | Scope | Disposition |
@@ -122,6 +124,7 @@ The detailed before/after evidence and remaining queue are recorded in
 | Dependabot PRs in `stoictradingAI`, `Behavioral_RL`, `dprc-autotrader-v2`, `x-algorithm-score`, `polycule-secure`, and `pragmAItism_defAInce` | Skipped as stale generated dependency bumps; regenerate from current base if still needed. |
 | Legacy issues in `payments0-api`, `payments0-sdk`, `agent-payments-gateway`, `0EM_Frontend`, `0em-payments-dashboard`, and `yield-optimizer` | Superseded by ECC Tools native-payments, hosted analysis, billing-readback, and Linear/project roadmap lanes. |
 | Archived repos touched for PR closure | `stoictradingAI`, `dprc-autotrader-v2`, `polycule-secure`, and `pragmAItism_defAInce` were restored to archived state after stale PR closure. |
+| Final PR/issue sweep | Closed the remaining generated ECC bundles, stale Cloudflare rename PRs, stale README-card PR, test/noise PR, public outreach issues, and empty placeholder issue. Preserved `dexploy#25` findings in Linear `ITO-62` before closure. |
 
 ## Skipped
 
