@@ -19,6 +19,7 @@ const MAX_STDIN = 1024 * 1024;
 const MAX_FILES_TRACKED = 200;
 const RECENT_TOOLS_SIZE = 5;
 const HASH_INPUT_LIMIT = 2048;
+const costWarningSignatures = new Map();
 
 function toNumber(value) {
   const n = Number(value);
@@ -76,6 +77,13 @@ function extractFilePaths(toolName, toolInput) {
   return paths;
 }
 
+function writeCostWarningOnce(kind, costsPath, signature, message) {
+  const key = `${kind}:${costsPath}`;
+  if (costWarningSignatures.get(key) === signature) return;
+  costWarningSignatures.set(key, signature);
+  process.stderr.write(message);
+}
+
 /**
  * Read cumulative cost for a session from costs.jsonl.
  *
@@ -117,8 +125,15 @@ function readSessionCost(sessionId) {
     }
     // One aggregated breadcrumb per call rather than one per bad row, so a
     // log-flooded costs.jsonl stays diagnosable without overwhelming stderr.
+    // Suppress repeats for the same malformed-line count; this hook runs after
+    // every tool invocation, so a persistent bad row should not spam stderr.
     if (malformed > 0) {
-      process.stderr.write(`[ecc-metrics-bridge] skipped ${malformed} malformed line(s) in ${costsPath}\n`);
+      writeCostWarningOnce(
+        'malformed',
+        costsPath,
+        String(malformed),
+        `[ecc-metrics-bridge] skipped ${malformed} malformed line(s) in ${costsPath}\n`
+      );
     }
     return { totalCost, totalIn, totalOut };
   } catch (err) {
@@ -127,7 +142,12 @@ function readSessionCost(sessionId) {
     // (permission, EISDIR, malformed read) deserves a breadcrumb because
     // the bridge will silently report zero cost otherwise.
     if (err && err.code !== 'ENOENT') {
-      process.stderr.write(`[ecc-metrics-bridge] failing open after ${err.name || 'error'} reading ${costsPath}: ${err.message || String(err)}\n`);
+      writeCostWarningOnce(
+        'read-error',
+        costsPath,
+        err.code || err.name || 'error',
+        `[ecc-metrics-bridge] failing open after ${err.name || 'error'} reading ${costsPath}: ${err.message || String(err)}\n`
+      );
     }
     return { totalCost: 0, totalIn: 0, totalOut: 0 };
   }

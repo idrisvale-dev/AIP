@@ -226,11 +226,13 @@ function runTests() {
   else failed++;
 
   if (
-    test('readSessionCost writes a stderr breadcrumb when malformed lines are skipped', () => {
+    test('readSessionCost writes one stderr breadcrumb when malformed lines persist across calls', () => {
       // Reviewer (coderabbitai) asked for diagnosability when the inner
       // catch silently skips malformed JSON rows. Verify the aggregated
       // "skipped N malformed line(s)" breadcrumb appears on stderr while
-      // the function still recovers the last valid matching row.
+      // the function still recovers the last valid matching row. Because
+      // this hook runs after every tool invocation, the same bad rows should
+      // not emit the same warning on every call.
       const tmpHome = makeTempHome();
       const originalHome = process.env.HOME;
       const originalUserProfile = process.env.USERPROFILE;
@@ -257,8 +259,11 @@ function runTests() {
         );
         const result = readSessionCost('S1');
         assert.strictEqual(result.totalCost, 0.7, 'last valid row should still win');
-        assert.ok(/skipped 2 malformed line\(s\)/.test(captured),
-          `expected aggregated malformed-line breadcrumb on stderr, got: ${captured}`);
+        const secondResult = readSessionCost('S1');
+        assert.deepStrictEqual(secondResult, result);
+        const matches = captured.match(/skipped 2 malformed line\(s\)/g) || [];
+        assert.strictEqual(matches.length, 1,
+          `expected one aggregated malformed-line breadcrumb on stderr, got: ${captured}`);
       } finally {
         process.stderr.write = originalStderrWrite;
         if (originalHome === undefined) delete process.env.HOME;
