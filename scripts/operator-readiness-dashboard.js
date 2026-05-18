@@ -417,7 +417,7 @@ function linearProgressStatus(context) {
 
 function linearProgressEvidence(context) {
   if (hasCurrentLinearProgressSync(context)) {
-    return 'Linear live sync and project progress snapshot are current; progress-sync contract defines the file-backed work-items/status path';
+    return 'Linear live sync and project progress surface are current; progress-sync contract defines the file-backed work-items/status path';
   }
 
   return 'repo mirror and progress-sync contract are present';
