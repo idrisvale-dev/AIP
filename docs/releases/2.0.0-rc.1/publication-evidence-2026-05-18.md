@@ -83,9 +83,13 @@ Tracked repositories in the platform audit and work-items sync were:
   Plugin Directory publishing remains blocked on OpenAI's self-serve publishing
   surface.
 - ECC Tools billing/native-payments copy remains blocked until a Marketplace
-  purchase/webhook path writes production `account-billing:*` and
-  `billing-state:*` records, then `npm run billing:announcement-gate --
-  --account <github-login>` returns an announcement-ready gate.
+  Pro purchase/webhook path writes ready production `billing-state:*`
+  provenance, then `npm run billing:kv-readback -- --wrangler --require-ready`
+  and `npm run billing:announcement-gate -- --account <github-login>` return
+  announcement-ready gates. The latest Wrangler OAuth aggregate readback from
+  ECC-Tools commit `42653f9` found 253 `account-billing:*` records, 253
+  `billing-state:*` records, 0 Marketplace Pro states, 0 ready-like
+  Marketplace Pro states, and 0 parse failures.
 - Release notes, X, LinkedIn, GitHub release, and longform copy still need final
   live URLs after release/package/plugin URLs exist.
 - The local checkout still has unrelated untracked `docs/drafts/`, so a strict
