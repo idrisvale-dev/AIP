@@ -5,22 +5,24 @@ valid after the approval-gated release, package, plugin, and announcement
 steps. Regenerate it from the final release commit before posting any public
 announcement.
 
-Captured from commit `25ac57ac40e9fc5a0606e76e6339e72c79748c99` on
-2026-05-18.
+Captured from source snapshot
+`81fca2cea6f1399c52c8faa70f9a17e42f0bd447` on 2026-05-18. The ledger file
+may be committed in a later docs-only refresh after the evidence snapshot it
+describes.
 
 ## Live Now
 
 | Surface | URL | Verification |
 | --- | --- | --- |
 | Repository | <https://github.com/affaan-m/everything-claude-code> | `git remote get-url origin` |
-| Current evidence commit | <https://github.com/affaan-m/everything-claude-code/commit/25ac57ac40e9fc5a0606e76e6339e72c79748c99> | `git rev-parse HEAD` |
-| Release pack folder | <https://github.com/affaan-m/everything-claude-code/tree/main/docs/releases/2.0.0-rc.1> | Pushed to `main` at `25ac57ac` |
+| Evidence source commit | <https://github.com/affaan-m/everything-claude-code/commit/81fca2cea6f1399c52c8faa70f9a17e42f0bd447> | `git rev-parse HEAD` at evidence capture |
+| Release pack folder | <https://github.com/affaan-m/everything-claude-code/tree/main/docs/releases/2.0.0-rc.1> | Release pack evidence captured from `81fca2ce` |
 | Release notes draft | <https://github.com/affaan-m/everything-claude-code/blob/main/docs/releases/2.0.0-rc.1/release-notes.md> | In-tree release copy |
 | Hermes setup guide | <https://github.com/affaan-m/everything-claude-code/blob/main/docs/HERMES-SETUP.md> | In-tree sanitized Hermes guide |
 | May 18 evidence snapshot | <https://github.com/affaan-m/everything-claude-code/blob/main/docs/releases/2.0.0-rc.1/publication-evidence-2026-05-18.md> | Current strongest readiness evidence |
 | May 18 operator dashboard | <https://github.com/affaan-m/everything-claude-code/blob/main/docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-18.md> | Prompt-to-artifact dashboard |
-| Pushed-head CI | <https://github.com/affaan-m/everything-claude-code/actions/runs/26010421566> | CI passed for `25ac57ac` |
-| Pushed-head Supply-Chain Watch | <https://github.com/affaan-m/everything-claude-code/actions/runs/26010432490> | Supply-Chain Watch passed for `25ac57ac` |
+| Pushed-head CI | <https://github.com/affaan-m/everything-claude-code/actions/runs/26011460500> | CI passed 37/37 jobs for `81fca2ce`, including the supply-chain IOC scan job |
+| Latest Supply-Chain Watch | <https://github.com/affaan-m/everything-claude-code/actions/runs/26010432490> | Supply-Chain Watch passed for `25ac57ac`; rerun from the final release commit before publication |
 | npm package page | <https://www.npmjs.com/package/ecc-universal> | `npm view ecc-universal name version dist-tags --json` returned `latest: 1.10.0`; rc.1 is not published yet |
 | Codex marketplace CLI docs | <https://developers.openai.com/codex/cli/reference#codex-plugin-marketplace> | Official docs list `codex plugin marketplace add` for GitHub shorthand, Git URLs, SSH URLs, and local marketplace roots |
 | Codex official Plugin Directory status | <https://developers.openai.com/codex/plugins/build#publish-official-public-plugins> | Official docs say public Plugin Directory publishing and self-serve management are coming soon |
