@@ -290,7 +290,7 @@ test('publication readiness checklist gates public release actions on evidence',
   assert.ok(may15Evidence.includes('Plugin Directory publishing is still blocked'));
   assert.ok(may15Evidence.includes('announcementGate.ready === true'));
   assert.ok(source.includes('ECC-Tools #73 added announcementGate'));
-  assert.ok(source.includes('official Plugin Directory publishing and self-serve management are documented as coming soon'));
+  assert.ok(source.includes('do not claim official Plugin Directory listing before OpenAI submission evidence'));
   assert.ok(source.includes('release-name-plugin-publication-checklist-2026-05-18.md'));
   assert.ok(source.includes('Release name and plugin publication checklist'));
   assert.ok(may15Evidence.includes('| Trunk discussions | GraphQL discussion count and maintainer-touch sweep | 58 total discussions;'));
@@ -327,7 +327,7 @@ test('release name and plugin publication checklist freezes rc.1 surfaces', () =
     '`@affaan-m/ecc` is unclaimed on npm',
     'Claude plugin',
     'Codex plugin',
-    'self-serve plugin management are coming soon',
+    'do not claim official directory listing until OpenAI publishing path is available',
     'Do not rename the repo or package until rc.1 is published',
     'Do not announce billing, Marketplace, or native payments',
   ]) {

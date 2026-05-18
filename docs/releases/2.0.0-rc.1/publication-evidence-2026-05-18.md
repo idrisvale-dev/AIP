@@ -7,9 +7,9 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 
 | Field | Evidence |
 | --- | --- |
-| Upstream main | `97567a91e79e1ee4c291eb78f5f9c30c2046ac94` |
+| Upstream main | `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b` |
 | Git remote | `https://github.com/affaan-m/everything-claude-code.git` |
-| Evidence scope | Current `main` after PR #1970 workflow-security validator bypass fixes, PR #1971 metrics bridge cost-reporting fixes, PR #1972 `uncloud` skill merge, PR #1973 stale script cleanup, issue #1974 cost-reporting verification/closure, PR #1976 OpenAI/AstraFlow provider response guards, PR #1978 review/closure, catalog/operator dashboard refresh, ECC-Tools Wrangler OAuth billing readback mirror, AgentShield `840952a` fleet-ticket and Mini Shai-Hulud IOC evidence mirror, Mini Shai-Hulud/TanStack protection recheck, defensive-deny IOC scanner hardening, release name/plugin publication checklist, readiness/smoke gate enforcement for that checklist, release OIDC publishing-scope hardening, workflow line-ending normalization, current-head CI/security scan, work-items sync, and Linear progress sync |
+| Evidence scope | Current `main` after PR #1970 workflow-security validator bypass fixes, PR #1971 metrics bridge cost-reporting fixes, PR #1972 `uncloud` skill merge, PR #1973 stale script cleanup, issue #1974 cost-reporting verification/closure, PR #1976 OpenAI/AstraFlow provider response guards, PR #1978 review/closure, catalog/operator dashboard refresh, ECC-Tools Wrangler OAuth billing readback mirror, AgentShield `840952a` fleet-ticket and Mini Shai-Hulud IOC evidence mirror, Mini Shai-Hulud/TanStack protection recheck, defensive-deny IOC scanner hardening, release name/plugin publication checklist, readiness/smoke gate enforcement for that checklist, release OIDC publishing-scope hardening, workflow line-ending normalization, current-head CI/security scan, work-items sync, Linear progress sync, and the ITO-46 publication-path dry-run refresh |
 | Local status caveat | `git status --short --branch` was clean at dashboard generation time; generated evidence files are committed after the source snapshot they describe |
 
 The actual release operator should repeat all publish-facing checks from the
@@ -56,6 +56,7 @@ Tracked repositories in the platform audit and work-items sync were:
 | Public queues | Rechecked after the merge and issue-closure batch; 0 PRs, 0 issues, and 0 discussion gaps remain across tracked repos |
 | Release OIDC publishing scope | Pushed `7911af4a` to keep the release workflow's trusted-publishing path scoped to release publication instead of broadening OIDC permissions across unrelated jobs; local workflow security validation passed |
 | Release workflow normalization | Pushed `97567a91` to normalize release workflow line endings after the OIDC hardening slice; current-head CI `26050727969` passed for `97567a91e79e1ee4c291eb78f5f9c30c2046ac94` |
+| Operator readiness evidence refresh | Pushed `0f1775e3`, `fe7b4f2b`, and `67e63e63` to refresh blocker evidence, regenerate the operator dashboard, and align publication readiness to the latest CI/security evidence; current-head CI `26056018725` passed for `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b` |
 
 ## Supply-Chain And Security Evidence
 
@@ -72,8 +73,27 @@ Tracked repositories in the platform audit and work-items sync were:
 | npm signatures | `npm audit signatures` | 213 verified registry signatures; 17 verified attestations |
 | Workflow security | `node scripts/ci/validate-workflow-security.js` | Validated 8 workflow files after the release OIDC publishing-scope hardening |
 | AgentShield project scan | `npx --no-install ecc-agentshield scan --format json` | Grade A / 99; 0 critical, 0 high, 0 medium; 6 low docs-example skill telemetry/governance findings |
-| Current-head CI security scan | `gh run view 26050727969 --repo affaan-m/everything-claude-code --json status,conclusion,headSha,jobs,url` | Completed successfully for `97567a91e79e1ee4c291eb78f5f9c30c2046ac94`; 37/37 CI jobs passed, including lint, workflow/component validation, coverage, cross-platform package-manager tests, npm audit, and supply-chain IOC scan |
+| Current-head CI security scan | `gh run view 26056018725 --repo affaan-m/everything-claude-code --json status,conclusion,headSha,jobs,url` | Completed successfully for `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b`; 37/37 CI jobs passed, including lint, workflow/component validation, coverage, cross-platform package-manager tests, npm audit, and supply-chain IOC scan |
 | Latest Supply-Chain Watch | `gh run view 26010432490 --repo affaan-m/everything-claude-code --json status,conclusion,headSha,url` | Completed successfully for `25ac57ac40e9fc5a0606e76e6339e72c79748c99`; rerun from the final release commit before publication |
+
+## ITO-46 Publication Path Refresh
+
+| Gate | Command | Result |
+| --- | --- | --- |
+| Clean publication-path baseline | `git status --short --branch`; `git rev-parse HEAD`; `git remote get-url origin` | Clean `main` at `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b`; remote `https://github.com/affaan-m/everything-claude-code.git` |
+| Package/plugin identity readback | `node -p "JSON.stringify({pkg, claude, codex, opencode}, null, 2)"` | `ecc-universal@2.0.0-rc.1`; Claude plugin `ecc@2.0.0-rc.1`; Codex plugin `ecc@2.0.0-rc.1`; OpenCode package `ecc-universal@2.0.0-rc.1` |
+| Name availability | `npm view ecc name version description repository.url --json`; `npm view @affaan-m/ecc name version --json`; `npm view ecc-universal name version dist-tags --json` | `ecc` is occupied by unrelated `ecc@0.0.2`; `@affaan-m/ecc` returns 404; `ecc-universal` registry latest remains `1.10.0` with no `next` dist-tag |
+| Plugin manifest tests | `node tests/plugin-manifest.test.js` | 54 passed, 0 failed |
+| Release surface tests | `node tests/docs/ecc2-release-surface.test.js` | 21 passed, 0 failed |
+| Claude plugin validation | `claude plugin validate .claude-plugin/plugin.json`; `claude plugin validate .`; `claude plugin tag .claude-plugin --dry-run` | Claude Code `2.1.143`; manifest validation passed; full plugin validation passed with one expected root `CLAUDE.md` context warning; tag dry run would create `ecc--v2.0.0-rc.1` |
+| Claude marketplace source help | `claude plugin marketplace add --help`; `claude plugin marketplace update --help` | Marketplace add supports URL, local path, GitHub repo, `--scope`, and `--sparse`; update supports targeted or all-marketplace refresh |
+| Codex marketplace help | `codex plugin marketplace add --help` | Codex CLI `0.131.0`; marketplace add supports local paths, `owner/repo[@ref]`, HTTPS Git URL, SSH Git URL, `--ref`, and `--sparse` |
+| Codex local marketplace smoke | `HOME="$(mktemp -d)" codex plugin marketplace add ./` | Added marketplace `ecc` from the local checkout without touching the real Codex config |
+| Codex GitHub-ref marketplace smoke | `HOME="$(mktemp -d)" codex plugin marketplace add affaan-m/everything-claude-code --ref "$(git rev-parse HEAD)"` | Added marketplace `ecc` from the public GitHub repo pinned to `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b` without touching the real Codex config |
+| npm package dry-run | `NPM_CONFIG_USERCONFIG=/dev/null npm pack --dry-run --json`; `NPM_CONFIG_USERCONFIG=/dev/null npm publish --tag next --dry-run` | Pack produced `ecc-universal-2.0.0-rc.1.tgz`, 2228 files, 4,348,504 bytes packed, 13,024,929 bytes unpacked, shasum `29d6a17029d80f5cb1df068880ba86c55a5d60f1`; publish dry-run would publish `ecc-universal@2.0.0-rc.1` with tag `next` |
+| OpenCode package build | `npm run build:opencode` | Passed |
+| Preview pack smoke | `npm run preview-pack:smoke` | Ready yes; digest `0ed831dbd0cf`; 5 passed, 0 failed |
+| Official docs check | Anthropic `https://code.claude.com/docs/en/plugins` and `https://code.claude.com/docs/en/plugin-marketplaces`; OpenAI `https://developers.openai.com/codex/plugins/build` | Anthropic documents self-hosted marketplace sources; OpenAI documents repo/personal marketplaces and the official Plugin Directory. ECC has not created a real release tag, official listing, or npm publication in this pass |
 
 ## Linear Progress Sync
 
