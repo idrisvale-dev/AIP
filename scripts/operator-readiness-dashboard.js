@@ -470,6 +470,7 @@ function buildRequirements(rootDir, platformReport) {
   const roadmap = readText(rootDir, 'docs/ECC-2.0-GA-ROADMAP.md');
   const publicationReadiness = readText(rootDir, 'docs/releases/2.0.0-rc.1/publication-readiness.md');
   const namingMatrix = readText(rootDir, 'docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md');
+  const releaseUrlLedger = readText(rootDir, 'docs/releases/2.0.0-rc.1/release-url-ledger-2026-05-18.md');
   const previewManifest = readText(rootDir, 'docs/releases/2.0.0-rc.1/preview-pack-manifest.md');
   const previewPackSmoke = readText(rootDir, 'scripts/preview-pack-smoke.js');
   const progressSync = readText(rootDir, 'docs/architecture/progress-sync-contract.md');
@@ -598,8 +599,12 @@ function buildRequirements(rootDir, platformReport) {
         && fileExists(rootDir, 'docs/releases/2.0.0-rc.1/linkedin-post.md')
         ? 'in_progress'
         : 'not_complete',
-      'release notes, X thread, and LinkedIn draft are present',
-      'URL-backed refresh and publish approval still pending'
+      includesAll(releaseUrlLedger, ['Live Now', 'Approval-Gated URLs', 'Codex marketplace CLI docs'])
+        ? 'release notes, X thread, LinkedIn draft, and URL ledger are present'
+        : 'release notes, X thread, and LinkedIn draft are present',
+      includesAll(releaseUrlLedger, ['Live Now', 'Approval-Gated URLs', 'Codex marketplace CLI docs'])
+        ? 'final live release/npm/plugin/billing URLs and publish approval still pending'
+        : 'URL-backed refresh and publish approval still pending'
     ),
     buildRequirement(
       'agentshield-enterprise-iteration',
