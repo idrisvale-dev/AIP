@@ -8,6 +8,28 @@ origin: ECC
 
 Reference for the `uc` CLI — a decentralised self-hosting platform using Docker containers, WireGuard mesh networking, and Caddy reverse proxy.
 
+## When to Activate
+
+Use this skill when working with Uncloud clusters, especially when:
+- Bootstrapping or joining machines with `uc machine`
+- Deploying services from Compose files with `uc deploy`
+- Publishing HTTP, HTTPS, TCP, or UDP ports through Uncloud
+- Configuring Caddy ingress with `x-caddy`, `x-ports`, or `--caddyfile`
+- Routing external LAN devices through the cluster proxy
+- Inspecting logs, service state, volumes, DNS, or machine placement
+
+## How It Works
+
+Uncloud runs Docker services across peer machines connected by a WireGuard mesh. Each machine is an equal cluster member; services communicate on the overlay network and Caddy runs globally to terminate public HTTP/HTTPS traffic. Compose files can use Uncloud extensions for ingress, placement, and generated Caddy configuration, while the `uc` CLI handles image distribution, scheduling, scaling, logs, and cluster state.
+
+## Examples
+
+```bash
+uc machine init user@host --name machine-1
+uc service run --name web -p app.example.com:8080/https nginx:latest
+uc deploy
+```
+
 ## Core Concepts
 
 - **No central control plane** — all machines are equal peers connected by WireGuard
@@ -38,6 +60,8 @@ Key `init` flags: `--name`, `--network 10.210.0.0/16`, `--no-caddy`, `--no-dns`,
 | `uc service ls` / `uc ls` | List services |
 | `uc service run IMAGE` | Run a single container service |
 | `uc deploy` | Deploy from `compose.yaml` |
+| `uc deploy --no-build` | Deploy already-pushed images without rebuilding |
+| `uc deploy --recreate` | Force service recreation |
 | `uc scale SERVICE N` | Set replica count |
 | `uc service logs SERVICE` | View logs |
 | `uc service exec SERVICE` | Shell into container |
