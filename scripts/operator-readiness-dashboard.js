@@ -372,7 +372,7 @@ function eccToolsNextLevelGap(roadmap) {
 function supplyChainLocalProtectionEvidence({ roadmap, scripts }) {
   if (scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
     && roadmap.includes('package-manager hardening Action outputs')) {
-    return 'scheduled supply-chain watch emits IOC/advisory-source refresh artifacts; ECC scanner covers gh-token-monitor token-store persistence; AgentShield now detects known AI-tool persistence IOCs, npm lifecycle/token drift, unsupported npm age-key drift, and pnpm/Yarn cooldown drift; ITO-57 has May 17 Linear evidence updates';
+    return 'scheduled supply-chain watch emits IOC/advisory-source refresh artifacts; ECC scanner covers gh-token-monitor token-store persistence; AgentShield now detects known AI-tool persistence IOCs, npm lifecycle/token drift, unsupported npm age-key drift, and pnpm/Yarn cooldown drift; current-head watch evidence and ITO-57 May 18 Linear evidence updates are current';
   }
 
   return scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
@@ -390,10 +390,12 @@ function supplyChainLocalProtectionGap({ roadmap, scripts }) {
 }
 
 function hasCurrentLinearProgressSync({ roadmap, progressSync }) {
-  return includesAll(roadmap, [
-    'Linear live sync is current',
-    'operator progress snapshot',
-  ]) && includesAll(progressSync, [
+  const hasOperatorProgressSurface = roadmap.includes('operator progress snapshot')
+    || roadmap.includes('operator progress comment');
+
+  return roadmap.includes('Linear live sync is current')
+    && hasOperatorProgressSurface
+    && includesAll(progressSync, [
     'node scripts/work-items.js sync-github --repo <owner/repo>',
     'node scripts/status.js --json',
     'Linear remains the external status surface',
