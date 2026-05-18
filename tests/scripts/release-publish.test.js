@@ -22,7 +22,7 @@ function test(name, fn) {
 }
 
 function load(relativePath) {
-  return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+  return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8').replace(/\r\n/g, '\n');
 }
 
 console.log('\n=== Testing release publish workflow ===\n');
@@ -32,7 +32,8 @@ for (const workflow of [
   '.github/workflows/reusable-release.yml',
 ]) {
   const content = load(workflow);
-  const workflowHeader = content.slice(0, content.indexOf('\njobs:\n'));
+  const jobsIndex = content.search(/^jobs:\s*$/m);
+  const workflowHeader = jobsIndex >= 0 ? content.slice(0, jobsIndex) : content;
 
   test(`${workflow} scopes id-token to the publish job for npm provenance`, () => {
     assert.doesNotMatch(workflowHeader, /id-token:\s*write/);
