@@ -42,14 +42,15 @@ As of 2026-05-18:
 - The latest May 18 merge batch on `main` includes PR #1970 workflow-security
   validator bypass fixes, PR #1971 metrics bridge cost-reporting and warning
   de-dup fixes, PR #1972 `uncloud` skill activation structure, PR #1976
-  OpenAI/AstraFlow provider response guards, and `80f6c279` provider-guard
-  merge evidence with a refreshed operator dashboard.
+  OpenAI/AstraFlow provider response guards, ECC-Tools Wrangler OAuth billing
+  readback mirror evidence, and `f010f783` release evidence with a refreshed
+  operator dashboard.
 - `docs/releases/2.0.0-rc.1/publication-evidence-2026-05-18.md` records the
   May 18 queue-zero state, current-head TanStack/Mini Shai-Hulud protection
   recheck, no-lifecycle npm install, npm audit/signature checks, AgentShield
   project `.claude` scan, Linear sync, work-items sync, operator dashboard
-  refresh, PR #1976 provider-guard validation, and current-head CI success for
-  `80f6c279`.
+  refresh, PR #1976 provider-guard validation, ECC-Tools Wrangler OAuth billing
+  readback evidence, and current-head CI success for `f010f783`.
 - `docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-18.md`
   regenerates the ITO-44 prompt-to-artifact dashboard from live platform audit
   evidence: PR queue, issue queue, discussion queue, local worktree gate,
@@ -78,8 +79,8 @@ As of 2026-05-18:
 - `npm run harness:audit -- --format json` reports 70/70 on current `main`.
 - `npm run observability:ready` reports 21/21 readiness on current `main`,
   including the GitHub/Linear/handoff/roadmap progress-sync contract.
-- GitHub CI run `26014623528` completed successfully for
-  `80f6c27957cb2bee7614f093ec7237afd93c3c9f`, including Validate Components,
+- GitHub CI run `26016495976` completed successfully for
+  `f010f7833212794da7ba74c0f88d8e05723efe1f`, including Validate Components,
   Coverage, Lint, Security Scan, and the full Node/package-manager matrix.
 - Supply-Chain Watch run `26009825837` completed successfully for
   `3b7e0ba30a027ffd3319c2f145c63076c296d80a`, including no-lifecycle install,
@@ -665,7 +666,7 @@ is not complete unless the evidence column exists and has been freshly verified.
 | Manage repository discussions | Repo-family discussion recheck | Platform audit reports 0 discussion maintainer-touch gaps and 0 answerable Q&A missing accepted answers; trunk still has 58 total discussions | Complete |
 | Manage PR discussions | PR review/comment closure plus merge/close state | ECC #1976 merged after maintainer follow-up validation; no open tracked PRs remain | Complete |
 | Salvage useful stale work | `docs/stale-pr-salvage-ledger.md` plus `docs/legacy-artifact-inventory.md` | Ledger records salvaged, superseded, skipped, and manual-review tails; #1815-#1818 added cost tracking, skill scout, frontend design guidance, code-reviewer false-positive guardrails, and the May 12 gap pass; #1687, #1609, #1563, #1564, and #1565 localization tails are attached to Linear ITO-55 for language-owner review and no automatic import remains release-blocking | Complete; repeat legacy scan before release |
-| ECC 2.0 preview pack ready | Release docs, quickstart, publication readiness, release notes | `docs/releases/2.0.0-rc.1/` and readiness docs are in-tree; May 18 evidence records queue-zero state, #1970/#1971/#1972/#1976 merge batch, supply-chain recheck, npm no-lifecycle install/audit/signature gates, Linear sync, refreshed operator dashboard, provider-guard validation, and successful current-head CI on `80f6c279` | Needs final clean-checkout release approval |
+| ECC 2.0 preview pack ready | Release docs, quickstart, publication readiness, release notes | `docs/releases/2.0.0-rc.1/` and readiness docs are in-tree; May 18 evidence records queue-zero state, #1970/#1971/#1972/#1976 merge batch, supply-chain recheck, npm no-lifecycle install/audit/signature gates, Linear sync, refreshed operator dashboard, provider-guard validation, ECC-Tools Wrangler OAuth billing readback evidence, and successful current-head CI on `f010f783` | Needs final clean-checkout release approval |
 | Hermes specialized skills included safely | Hermes setup/import docs and sanitized skill surface | Hermes setup and import playbook are public; secrets stay local | Needs final release review |
 | Naming and rename readiness | Naming matrix across package/plugin/docs/social surfaces | `docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md` records current package, repo, Claude plugin, Codex plugin, OpenCode, and npm availability evidence | Complete for rc.1; post-rc rename remains future work |
 | Claude and Codex plugin publication | Contact/submission path with required artifacts and status | Publication readiness, naming matrix, and May 12 dry-run evidence document plugin validation, clean-checkout Claude tag/install smoke, and Codex marketplace CLI shape | Needs explicit approval for real tag/push and marketplace submission |
