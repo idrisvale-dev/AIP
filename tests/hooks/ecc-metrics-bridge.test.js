@@ -5,6 +5,7 @@
  */
 
 const assert = require('assert');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -266,6 +267,48 @@ function runTests() {
           `expected one aggregated malformed-line breadcrumb on stderr, got: ${captured}`);
       } finally {
         process.stderr.write = originalStderrWrite;
+        if (originalHome === undefined) delete process.env.HOME;
+        else process.env.HOME = originalHome;
+        if (originalUserProfile === undefined) delete process.env.USERPROFILE;
+        else process.env.USERPROFILE = originalUserProfile;
+        fs.rmSync(tmpHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('readSessionCost suppresses repeated malformed breadcrumbs across hook subprocesses', () => {
+      const tmpHome = makeTempHome();
+      const originalHome = process.env.HOME;
+      const originalUserProfile = process.env.USERPROFILE;
+      try {
+        process.env.HOME = tmpHome;
+        process.env.USERPROFILE = tmpHome;
+        const metricsDir = path.join(tmpHome, '.claude', 'metrics');
+        fs.mkdirSync(metricsDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(metricsDir, 'costs.jsonl'),
+          [
+            JSON.stringify({ session_id: 'S1', estimated_cost_usd: 0.7, input_tokens: 700, output_tokens: 350 }),
+            'NOT_JSON',
+            '{"truncated":'
+          ].join('\n') + '\n',
+          'utf8'
+        );
+
+        const bridgePath = path.resolve(__dirname, '../../scripts/hooks/ecc-metrics-bridge');
+        const code = "const { readSessionCost } = require(process.argv[1]); readSessionCost('S1');";
+        const env = { ...process.env, HOME: tmpHome, USERPROFILE: tmpHome };
+        const first = spawnSync(process.execPath, ['-e', code, bridgePath], { env, encoding: 'utf8' });
+        const second = spawnSync(process.execPath, ['-e', code, bridgePath], { env, encoding: 'utf8' });
+
+        assert.strictEqual(first.status, 0, first.stderr || first.stdout);
+        assert.strictEqual(second.status, 0, second.stderr || second.stdout);
+        assert.match(first.stderr, /skipped 2 malformed line\(s\)/);
+        assert.strictEqual(second.stderr, '', `expected repeat subprocess warning suppression, got: ${second.stderr}`);
+      } finally {
         if (originalHome === undefined) delete process.env.HOME;
         else process.env.HOME = originalHome;
         if (originalUserProfile === undefined) delete process.env.USERPROFILE;

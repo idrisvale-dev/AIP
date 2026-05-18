@@ -11,6 +11,7 @@
 
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { sanitizeSessionId, readBridge, writeBridgeAtomic } = require('../lib/session-bridge');
 const { getClaudeDir } = require('../lib/utils');
@@ -19,7 +20,7 @@ const MAX_STDIN = 1024 * 1024;
 const MAX_FILES_TRACKED = 200;
 const RECENT_TOOLS_SIZE = 5;
 const HASH_INPUT_LIMIT = 2048;
-const costWarningSignatures = new Map();
+const WARNING_CACHE_PREFIX = 'ecc-metrics-cost-warnings-';
 
 function toNumber(value) {
   const n = Number(value);
@@ -77,11 +78,34 @@ function extractFilePaths(toolName, toolInput) {
   return paths;
 }
 
-function writeCostWarningOnce(kind, costsPath, signature, message) {
-  const key = `${kind}:${costsPath}`;
-  if (costWarningSignatures.get(key) === signature) return;
-  costWarningSignatures.set(key, signature);
+function getCostWarningCachePath(costsPath) {
+  const hash = crypto.createHash('sha256').update(costsPath).digest('hex').slice(0, 16);
+  return path.join(os.tmpdir(), `${WARNING_CACHE_PREFIX}${hash}.json`);
+}
+
+function readCostWarningCache(cachePath) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeCostWarningIfChanged(kind, costsPath, signature, message) {
+  const cachePath = getCostWarningCachePath(costsPath);
+  const cache = readCostWarningCache(cachePath);
+  if (cache[kind] === signature) return;
+
   process.stderr.write(message);
+  try {
+    const next = { ...cache, [kind]: signature };
+    const tmp = `${cachePath}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(next), 'utf8');
+    fs.renameSync(tmp, cachePath);
+  } catch {
+    // Warning-cache persistence is best effort; never block hook execution.
+  }
 }
 
 /**
@@ -102,8 +126,9 @@ function writeCostWarningOnce(kind, costsPath, signature, message) {
  * even cheaper.
  */
 function readSessionCost(sessionId) {
-  const costsPath = path.join(getClaudeDir(), 'metrics', 'costs.jsonl');
+  let costsPath = path.join('metrics', 'costs.jsonl');
   try {
+    costsPath = path.join(getClaudeDir(), 'metrics', 'costs.jsonl');
     const content = fs.readFileSync(costsPath, 'utf8');
     const lines = content.split('\n').filter(Boolean);
 
@@ -111,6 +136,7 @@ function readSessionCost(sessionId) {
     let totalIn = 0;
     let totalOut = 0;
     let malformed = 0;
+    const malformedHasher = crypto.createHash('sha256');
     for (const line of lines) {
       try {
         const row = JSON.parse(line);
@@ -121,17 +147,18 @@ function readSessionCost(sessionId) {
         }
       } catch {
         malformed += 1;
+        malformedHasher.update(line).update('\0');
       }
     }
     // One aggregated breadcrumb per call rather than one per bad row, so a
     // log-flooded costs.jsonl stays diagnosable without overwhelming stderr.
-    // Suppress repeats for the same malformed-line count; this hook runs after
-    // every tool invocation, so a persistent bad row should not spam stderr.
+    // Suppress repeats for the same malformed-line signature across hook
+    // subprocesses, so a persistent bad row should not spam stderr.
     if (malformed > 0) {
-      writeCostWarningOnce(
+      writeCostWarningIfChanged(
         'malformed',
         costsPath,
-        String(malformed),
+        `${malformed}:${malformedHasher.digest('hex').slice(0, 16)}`,
         `[ecc-metrics-bridge] skipped ${malformed} malformed line(s) in ${costsPath}\n`
       );
     }
@@ -142,10 +169,10 @@ function readSessionCost(sessionId) {
     // (permission, EISDIR, malformed read) deserves a breadcrumb because
     // the bridge will silently report zero cost otherwise.
     if (err && err.code !== 'ENOENT') {
-      writeCostWarningOnce(
+      writeCostWarningIfChanged(
         'read-error',
         costsPath,
-        err.code || err.name || 'error',
+        `${err.code || err.name || 'error'}:${err.message || String(err)}`,
         `[ecc-metrics-bridge] failing open after ${err.name || 'error'} reading ${costsPath}: ${err.message || String(err)}\n`
       );
     }
