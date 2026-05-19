@@ -944,6 +944,13 @@ function runTests() {
     });
 
     assert.ok(
+      plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === 'rules'
+        && operation.destinationPath === path.join(projectRoot, '.claude', 'rules', 'ecc')
+      )),
+      'Should still include non-foreign rules path (guards against empty-plan regression)'
+    );
+    assert.ok(
       !plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === '.cursor'
         || normalizedRelativePath(operation.sourceRelativePath).startsWith('.cursor/')
