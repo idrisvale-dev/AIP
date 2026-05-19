@@ -13,7 +13,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { sanitizeSessionId, readBridge } = require('../lib/session-bridge');
+const { sanitizeSessionId, readBridge, renameWithRetry } = require('../lib/session-bridge');
 
 const CONTEXT_WARNING_PCT = 35;
 const CONTEXT_CRITICAL_PCT = 25;
@@ -81,7 +81,7 @@ function writeWarnState(sessionId, state) {
   const tmp = `${target}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(state), 'utf8');
   try {
-    fs.renameSync(tmp, target);
+    renameWithRetry(tmp, target);
   } catch (err) {
     try { fs.unlinkSync(tmp); } catch { /* ignore */ }
     throw err;
