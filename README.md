@@ -494,7 +494,7 @@ Windows PowerShell:
 This repo is a **Claude Code plugin** - install it directly or copy components manually.
 
 ```
-everything-claude-code/
+ECC/
 |-- .claude-plugin/   # Plugin and marketplace manifests
 |   |-- plugin.json         # Plugin metadata and component paths
 |   |-- marketplace.json    # Marketplace catalog for /plugin marketplace add
@@ -855,19 +855,20 @@ This gives you instant access to all commands, agents, skills, and hooks.
 > ```bash
 > # Clone the repo first
 > git clone https://github.com/affaan-m/ECC.git
+> cd ECC
 >
 > # Option A: User-level rules (applies to all projects)
 > mkdir -p ~/.claude/rules/ecc
-> cp -r everything-claude-code/rules/common ~/.claude/rules/ecc/
-> cp -r everything-claude-code/rules/typescript ~/.claude/rules/ecc/   # pick your stack
-> cp -r everything-claude-code/rules/python ~/.claude/rules/ecc/
-> cp -r everything-claude-code/rules/golang ~/.claude/rules/ecc/
-> cp -r everything-claude-code/rules/php ~/.claude/rules/ecc/
+> cp -r rules/common ~/.claude/rules/ecc/
+> cp -r rules/typescript ~/.claude/rules/ecc/   # pick your stack
+> cp -r rules/python ~/.claude/rules/ecc/
+> cp -r rules/golang ~/.claude/rules/ecc/
+> cp -r rules/php ~/.claude/rules/ecc/
 >
 > # Option B: Project-level rules (applies to current project only)
 > mkdir -p .claude/rules/ecc
-> cp -r everything-claude-code/rules/common .claude/rules/ecc/
-> cp -r everything-claude-code/rules/typescript .claude/rules/ecc/     # pick your stack
+> cp -r rules/common .claude/rules/ecc/
+> cp -r rules/typescript .claude/rules/ecc/     # pick your stack
 > ```
 
 ---
@@ -879,33 +880,34 @@ If you prefer manual control over what's installed:
 ```bash
 # Clone the repo
 git clone https://github.com/affaan-m/ECC.git
+cd ECC
 
 # Copy agents to your Claude config
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp agents/*.md ~/.claude/agents/
 
 # Copy rules directories (common + language-specific)
 mkdir -p ~/.claude/rules/ecc
-cp -r everything-claude-code/rules/common ~/.claude/rules/ecc/
-cp -r everything-claude-code/rules/typescript ~/.claude/rules/ecc/   # pick your stack
-cp -r everything-claude-code/rules/python ~/.claude/rules/ecc/
-cp -r everything-claude-code/rules/golang ~/.claude/rules/ecc/
-cp -r everything-claude-code/rules/php ~/.claude/rules/ecc/
-cp -r everything-claude-code/rules/arkts ~/.claude/rules/ecc/
+cp -r rules/common ~/.claude/rules/ecc/
+cp -r rules/typescript ~/.claude/rules/ecc/   # pick your stack
+cp -r rules/python ~/.claude/rules/ecc/
+cp -r rules/golang ~/.claude/rules/ecc/
+cp -r rules/php ~/.claude/rules/ecc/
+cp -r rules/arkts ~/.claude/rules/ecc/
 
 # Copy skills first (primary workflow surface)
 # Recommended (new users): core/general skills only
 mkdir -p ~/.claude/skills/ecc
-cp -r everything-claude-code/.agents/skills/* ~/.claude/skills/ecc/
-cp -r everything-claude-code/skills/search-first ~/.claude/skills/ecc/
+cp -r .agents/skills/* ~/.claude/skills/ecc/
+cp -r skills/search-first ~/.claude/skills/ecc/
 
 # Optional: add niche/framework-specific skills only when needed
 # for s in django-patterns django-tdd laravel-patterns springboot-patterns quarkus-patterns; do
-# cp -r everything-claude-code/skills/$s ~/.claude/skills/ecc/
+# cp -r skills/$s ~/.claude/skills/ecc/
 # done
 
 # Optional: keep maintained slash-command compatibility during migration
 mkdir -p ~/.claude/commands
-cp everything-claude-code/commands/*.md ~/.claude/commands/
+cp commands/*.md ~/.claude/commands/
 
 # Retired shims live in legacy-command-shims/commands/.
 # Copy individual files from there only if you still need old names such as /tdd.
@@ -1128,11 +1130,11 @@ Yes. Use Option 2 (manual installation) and copy only what you need:
 
 ```bash
 # Just agents
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp agents/*.md ~/.claude/agents/
 
 # Just rules
 mkdir -p ~/.claude/rules/ecc/
-cp -r everything-claude-code/rules/common ~/.claude/rules/ecc/
+cp -r rules/common ~/.claude/rules/ecc/
 ```
 
 Each component is fully independent.
@@ -1488,7 +1490,7 @@ OpenCode's plugin system is MORE sophisticated than Claude Code with 20+ event t
 
 **Option 1: Use directly**
 ```bash
-cd everything-claude-code
+cd ECC
 opencode
 ```
 
