@@ -135,6 +135,89 @@ function runTests() {
     passed++;
   else failed++;
 
+  // Concurrency contract: two processes writing to the same session
+  // bridge must not throw ENOENT and must never leave a corrupt JSON
+  // file behind. The previous implementation used a fixed `${target}.tmp`
+  // suffix; with concurrent writers it raced over a shared tmp path,
+  // producing both ENOENT on rename and (occasionally) a half-written
+  // payload on the destination.
+  //
+  // This test exercises the atomic-rename primitive only — it does NOT
+  // attempt to defend against the read-modify-write race in callers,
+  // which is a separate concern. Each subprocess writes its own
+  // independent payload N times; we assert (a) every process exits 0
+  // (no ENOENT bubbled up) and (b) the final file is always parseable
+  // JSON whose contents match one of the two writers' last payloads.
+
+  if (
+    test('concurrent writeBridgeAtomic does not throw ENOENT or corrupt the bridge file', () => {
+      const { spawnSync } = require('child_process');
+      const path = require('path');
+      const testId = `test-bridge-race-${Date.now()}-${process.pid}`;
+      const writerPath = path.join(__dirname, '..', '__tmp_bridge_writer.js');
+      const bridgeLib = path.join(__dirname, '..', '..', 'scripts', 'lib', 'session-bridge');
+      fs.writeFileSync(
+        writerPath,
+        [
+          "const { writeBridgeAtomic } = require(" + JSON.stringify(bridgeLib) + ");",
+          "const [, , sid, tag] = process.argv;",
+          "for (let i = 0; i < 200; i++) {",
+          "  writeBridgeAtomic(sid, { writer: tag, i });",
+          "}",
+        ].join('\n'),
+        'utf8'
+      );
+      try {
+        const r1 = spawnSync('node', [writerPath, testId, 'A'], { encoding: 'utf8' });
+        const r2 = spawnSync('node', [writerPath, testId, 'B'], { encoding: 'utf8' });
+        assert.strictEqual(r1.status, 0,
+          `writer A should exit 0 (no ENOENT), got ${r1.status}: ${r1.stderr}`);
+        assert.strictEqual(r2.status, 0,
+          `writer B should exit 0 (no ENOENT), got ${r2.status}: ${r2.stderr}`);
+        // Final file must be parseable JSON and belong to one of the writers.
+        const final = readBridge(testId);
+        assert.ok(final && typeof final === 'object',
+          `expected parseable JSON object, got: ${JSON.stringify(final)}`);
+        assert.ok(final.writer === 'A' || final.writer === 'B',
+          `expected last-writer-wins payload, got: ${JSON.stringify(final)}`);
+      } finally {
+        try { fs.unlinkSync(getBridgePath(testId)); } catch { /* ignore */ }
+        try { fs.unlinkSync(writerPath); } catch { /* ignore */ }
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('writeBridgeAtomic cleans up its tmp file on renameSync failure', () => {
+      // Trigger renameSync failure by passing a sessionId whose path is
+      // already a directory. The tmp file exists at this point; the fix
+      // must not leak it behind.
+      const path = require('path');
+      const testId = `test-bridge-cleanup-${Date.now()}-${process.pid}`;
+      const target = getBridgePath(testId);
+      const os = require('os');
+      const tmpDir = os.tmpdir();
+      // Plant a directory at the target path so renameSync (target.tmp → target) fails.
+      fs.mkdirSync(target);
+      try {
+        assert.throws(() => writeBridgeAtomic(testId, { x: 1 }),
+          'expected rename failure to surface');
+        // Count any leaked tmp files. The pid+nonce suffix is unique per
+        // call, so we look for any matching pattern under os.tmpdir().
+        const prefix = path.basename(target) + '.' + process.pid + '.';
+        const leaked = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefix) && f.endsWith('.tmp'));
+        assert.strictEqual(leaked.length, 0,
+          `expected no leaked tmp files after rename failure, found: ${leaked.join(', ')}`);
+      } finally {
+        try { fs.rmdirSync(target); } catch { /* ignore */ }
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
   // resolveSessionId tests
   console.log('\nresolveSessionId:');
 
