@@ -8,6 +8,7 @@
  * without scanning large JSONL logs on every invocation.
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -51,15 +52,35 @@ function readBridge(sessionId) {
 }
 
 /**
- * Write bridge data atomically (write .tmp then rename).
+ * Write bridge data atomically (write unique-suffix tmp then rename).
+ *
+ * The tmp path includes `process.pid` plus a random nonce so concurrent
+ * writers (e.g. PostToolUse `ecc-metrics-bridge` and the background
+ * `ecc-statusline`, both writing to the same session bridge) do not
+ * clobber each other's tmp file mid-write. With a fixed `.tmp` suffix
+ * two writers could both call `writeFileSync` against the same path
+ * before either reaches `renameSync`, causing one writer's payload to
+ * silently overwrite the other and the second `renameSync` to throw
+ * ENOENT once the rename consumes the file.
+ *
+ * Same pattern already used by `writeCostWarningIfChanged` in
+ * `scripts/hooks/ecc-metrics-bridge.js` (commit 9b1d8918) for the
+ * cost-warning cache; this commit applies it to the session-bridge
+ * primitive too.
+ *
  * @param {string} sessionId - Already-sanitized session ID
  * @param {object} data
  */
 function writeBridgeAtomic(sessionId, data) {
   const target = getBridgePath(sessionId);
-  const tmp = `${target}.tmp`;
+  const tmp = `${target}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(data), 'utf8');
-  fs.renameSync(tmp, target);
+  try {
+    fs.renameSync(tmp, target);
+  } catch (err) {
+    try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+    throw err;
+  }
 }
 
 /**
