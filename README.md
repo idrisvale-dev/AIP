@@ -296,7 +296,7 @@ This is intentional. Anthropic marketplace/plugin installs are keyed by a canoni
 ```bash
 # Clone the repo first
 git clone https://github.com/affaan-m/ECC.git
-cd everything-claude-code
+cd ECC
 
 # Install dependencies (pick your package manager)
 npm install        # or: pnpm install | yarn install | bun install
