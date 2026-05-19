@@ -9,6 +9,7 @@
 
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -61,15 +62,30 @@ function readWarnState(sessionId) {
 }
 
 /**
- * Write debounce state.
+ * Write debounce state atomically (unique-suffix tmp then rename).
+ *
+ * The tmp path includes `process.pid` plus a random nonce so concurrent
+ * PostToolUse subprocesses writing to the same session's warn-state
+ * file do not clobber each other's tmp mid-write. Without the unique
+ * suffix, two writers race over a shared `${target}.tmp` and produce
+ * either a corrupted payload or an ENOENT throw on the second rename.
+ *
+ * Same pattern as `writeBridgeAtomic` in `scripts/lib/session-bridge.js`
+ * and `writeCostWarningIfChanged` in `scripts/hooks/ecc-metrics-bridge.js`.
+ *
  * @param {string} sessionId
  * @param {object} state
  */
 function writeWarnState(sessionId, state) {
   const target = getWarnPath(sessionId);
-  const tmp = `${target}.tmp`;
+  const tmp = `${target}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(state), 'utf8');
-  fs.renameSync(tmp, target);
+  try {
+    fs.renameSync(tmp, target);
+  } catch (err) {
+    try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+    throw err;
+  }
 }
 
 /**
