@@ -151,10 +151,19 @@ function runTests() {
 
   if (
     test('concurrent writeBridgeAtomic does not throw ENOENT or corrupt the bridge file', () => {
+      // Spawn two child processes that BOTH stay alive at the same time
+      // and call writeBridgeAtomic in a tight loop. `spawnSync` would
+      // run them sequentially (blocking on each), which would never
+      // exercise the race the fix targets. Instead a sync runner script
+      // launches both as async `spawn` children inside its own process,
+      // waits for both to exit, and reports their statuses on stdout —
+      // and the test calls *that* runner via `spawnSync`. The runner is
+      // the only place that needs the event loop.
       const { spawnSync } = require('child_process');
       const path = require('path');
       const testId = `test-bridge-race-${Date.now()}-${process.pid}`;
       const writerPath = path.join(__dirname, '..', '__tmp_bridge_writer.js');
+      const runnerPath = path.join(__dirname, '..', '__tmp_bridge_race_runner.js');
       const bridgeLib = path.join(__dirname, '..', '..', 'scripts', 'lib', 'session-bridge');
       fs.writeFileSync(
         writerPath,
@@ -167,13 +176,38 @@ function runTests() {
         ].join('\n'),
         'utf8'
       );
+      fs.writeFileSync(
+        runnerPath,
+        [
+          "'use strict';",
+          "const { spawn } = require('child_process');",
+          "const [, , writerPath, sid] = process.argv;",
+          "const c1 = spawn(process.execPath, [writerPath, sid, 'A'], { stdio: ['ignore','pipe','pipe'] });",
+          "const c2 = spawn(process.execPath, [writerPath, sid, 'B'], { stdio: ['ignore','pipe','pipe'] });",
+          "const exits = {};",
+          "const stderrs = { A: '', B: '' };",
+          "c1.stderr.on('data', chunk => { stderrs.A += chunk.toString(); });",
+          "c2.stderr.on('data', chunk => { stderrs.B += chunk.toString(); });",
+          "let done = 0;",
+          "function onExit(tag) { return function(code) { exits[tag] = code; if (++done === 2) finish(); }; }",
+          "c1.on('exit', onExit('A'));",
+          "c2.on('exit', onExit('B'));",
+          "function finish() {",
+          "  process.stdout.write(JSON.stringify({ exits, stderrs }));",
+          "  process.exit(0);",
+          "}",
+        ].join('\n'),
+        'utf8'
+      );
       try {
-        const r1 = spawnSync('node', [writerPath, testId, 'A'], { encoding: 'utf8' });
-        const r2 = spawnSync('node', [writerPath, testId, 'B'], { encoding: 'utf8' });
-        assert.strictEqual(r1.status, 0,
-          `writer A should exit 0 (no ENOENT), got ${r1.status}: ${r1.stderr}`);
-        assert.strictEqual(r2.status, 0,
-          `writer B should exit 0 (no ENOENT), got ${r2.status}: ${r2.stderr}`);
+        const result = spawnSync('node', [runnerPath, writerPath, testId], { encoding: 'utf8' });
+        assert.strictEqual(result.status, 0,
+          `race runner should exit 0, got ${result.status}: ${result.stderr}`);
+        const parsed = JSON.parse(result.stdout);
+        assert.strictEqual(parsed.exits.A, 0,
+          `writer A should exit 0 (no ENOENT), got ${parsed.exits.A}: ${parsed.stderrs.A}`);
+        assert.strictEqual(parsed.exits.B, 0,
+          `writer B should exit 0 (no ENOENT), got ${parsed.exits.B}: ${parsed.stderrs.B}`);
         // Final file must be parseable JSON and belong to one of the writers.
         const final = readBridge(testId);
         assert.ok(final && typeof final === 'object',
@@ -183,6 +217,7 @@ function runTests() {
       } finally {
         try { fs.unlinkSync(getBridgePath(testId)); } catch { /* ignore */ }
         try { fs.unlinkSync(writerPath); } catch { /* ignore */ }
+        try { fs.unlinkSync(runnerPath); } catch { /* ignore */ }
       }
     })
   )
@@ -202,8 +237,14 @@ function runTests() {
       // Plant a directory at the target path so renameSync (target.tmp → target) fails.
       fs.mkdirSync(target);
       try {
-        assert.throws(() => writeBridgeAtomic(testId, { x: 1 }),
-          'expected rename failure to surface');
+        assert.throws(
+          () => writeBridgeAtomic(testId, { x: 1 }),
+          // renameSync of a regular file onto an existing directory throws
+          // EISDIR on Linux, EPERM on macOS, ENOTDIR on some BSDs. Accept
+          // any of those so the test stays portable across CI runners.
+          /EISDIR|EPERM|ENOTDIR|ENOENT/,
+          'expected rename failure to surface'
+        );
         // Count any leaked tmp files. The pid+nonce suffix is unique per
         // call, so we look for any matching pattern under os.tmpdir().
         const prefix = path.basename(target) + '.' + process.pid + '.';
