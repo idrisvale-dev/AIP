@@ -110,8 +110,9 @@ surfaces exist and are recorded in a final evidence file:
 - Codex repo-marketplace distribution evidence plus official Plugin Directory
   availability status;
 - final announcement URLs in X, LinkedIn, GitHub release, and longform copy;
-- ECC Tools billing/product readiness evidence before any native-payments
-  announcement copy is published.
+- ECC Tools billing/product readiness evidence, the local/internal announcement
+  bearer-token path, and a live announcement gate pass before any
+  native-payments announcement copy is published.
 
 ## Result
 

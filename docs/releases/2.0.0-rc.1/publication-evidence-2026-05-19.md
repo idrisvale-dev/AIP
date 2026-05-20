@@ -138,9 +138,12 @@ Tracked repositories in the platform audit were:
 - Codex repo-marketplace distribution is verified by prior evidence, but
   official Plugin Directory publishing remains blocked on OpenAI submission or
   listing evidence.
-- ECC Tools billing/native-payments copy remains blocked until a Marketplace
-  Pro purchase/webhook path writes ready production billing state for a target
-  Marketplace test account and the billing announcement gate passes.
+- ECC Tools billing/native-payments copy remains blocked until the
+  local/internal `INTERNAL_API_SECRET` bearer-token path is available and the
+  billing announcement gate passes for the ready Marketplace Pro target.
+  ECC-Tools PR #89 (`512bca6`) added `billing:kv-readback --
+  --select-ready-target --require-ready`; its 2026-05-20 production run cleared
+  the old missing-target-state blocker without printing the account login.
 - Release notes, X, LinkedIn, GitHub release, GitHub Discussion, longform copy,
   sponsor outreach, partner outreach, consulting copy, conference pitches, and
   podcast pitches still need final live URLs plus human approval before posting
