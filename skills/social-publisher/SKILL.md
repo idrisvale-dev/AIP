@@ -112,4 +112,4 @@ socialclaw posts list --json
 ## Source
 
 - npm: `npm install -g socialclaw@0.1.12`
-- Dashboard: https://getsocialclaw.com/dashboard
+- Dashboard: [SocialClaw dashboard](https://getsocialclaw.com/dashboard)

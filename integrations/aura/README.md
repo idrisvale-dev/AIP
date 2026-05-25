@@ -123,4 +123,4 @@ composite score. No DID yet? The bare badge is a generic mark:
 [AURA Open Protocol](https://auraopenprotocol.org) — W3C DID identity plus 8
 on-chain reputation dimensions on Base L2 (`task_completion`, `delivery_speed`,
 `output_quality`, `honesty`, `financial_integrity`, `security_compliance`,
-`collaboration`, `dispute_history`). Docs: https://dev.auraopenprotocol.org
+`collaboration`, `dispute_history`). Docs: [AURA developer docs](https://dev.auraopenprotocol.org)
