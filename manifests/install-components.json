@@ -605,6 +605,14 @@
       "modules": [
         "docs-zh-tw"
       ]
+    },
+    {
+      "id": "locale:de-de",
+      "family": "locale",
+      "description": "German (de-DE) translated reference docs installed to ~/.claude/docs/de-DE/.",
+      "modules": [
+        "docs-de-de"
+      ]
     }
   ]
 }

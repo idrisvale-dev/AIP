@@ -907,6 +907,22 @@
       "defaultInstall": false,
       "cost": "heavy",
       "stability": "stable"
+    },
+    {
+      "id": "docs-de-de",
+      "kind": "docs",
+      "description": "German (de-DE) translated reference docs for agents, commands, skills, and rules.",
+      "paths": [
+        "docs/de-DE"
+      ],
+      "targets": [
+        "claude",
+        "claude-project"
+      ],
+      "dependencies": [],
+      "defaultInstall": false,
+      "cost": "heavy",
+      "stability": "stable"
     }
   ]
 }
