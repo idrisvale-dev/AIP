@@ -49,11 +49,11 @@ if v.dimensions and v.dimensions.get("financial_integrity", 1) < 0.4:
 
 | verdict | meaning | `ok` |
 |---|---|---|
-| `trusted` | strong on-chain track record (composite ≥ 0.70) | ✅ |
-| `caution` | mixed history (0.40–0.70) | ✅ |
-| `high_risk` | poor track record (< 0.40) | ❌ |
-| `new` | registered identity, no interactions yet | ❌ |
-| `unknown` | no track record — or AURA was unreachable | ❌ |
+| `trusted` | strong on-chain track record (composite >= 0.70) | yes |
+| `caution` | mixed history (0.40-0.70) | yes |
+| `high_risk` | poor track record (< 0.40) | no |
+| `new` | registered identity, no interactions yet | no |
+| `unknown` | no track record, or AURA was unreachable | no |
 
 ## Policy knobs
 
