@@ -48,7 +48,7 @@ The filename change is tied to the **Next.js version**, not to which bundler (Tu
 
 **Do not flag `proxy.ts` as a misnamed or missing middleware file in Next.js 16 projects.** The file is correct and intentional. Suggesting a rename to `middleware.ts` will break middleware execution.
 
-Reference: https://nextjs.org/docs/app/getting-started/proxy
+Reference: [Next.js proxy docs](https://nextjs.org/docs/app/getting-started/proxy)
 
 ## Best Practices
 
