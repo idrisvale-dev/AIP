@@ -1415,7 +1415,19 @@ function runTests() {
     const realFile = path.join(tmpDir, 'real.txt');
     fs.writeFileSync(realFile, 'content');
     const brokenLink = path.join(tmpDir, 'broken.txt');
-    fs.symlinkSync('/nonexistent/path/does/not/exist', brokenLink);
+    try {
+      fs.symlinkSync('/nonexistent/path/does/not/exist', brokenLink);
+    } catch (err) {
+      // Skip only where symlink creation is blocked (e.g. Windows without
+      // Developer Mode / admin rights → EPERM/EACCES); rethrow anything else
+      // so real failures aren't masked.
+      if (err && (err.code === 'EPERM' || err.code === 'EACCES')) {
+        console.log('    (skipped — symlinks not supported)');
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+        return;
+      }
+      throw err;
+    }
 
     try {
       const results = utils.findFiles(tmpDir, '*.txt');
