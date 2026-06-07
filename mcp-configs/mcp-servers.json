@@ -109,6 +109,14 @@
       "args": ["-y", "@upstash/context7-mcp@latest"],
       "description": "Live documentation lookup — use with /docs command and documentation-lookup skill (resolve-library-id, query-docs)."
     },
+    "codescene": {
+      "command": "npx",
+      "args": ["-y", "@codescene/codehealth-mcp"],
+      "env": {
+        "CS_ACCESS_TOKEN": "YOUR_CS_ACCESS_TOKEN_HERE"
+      },
+      "description": "Optional. CodeScene Code Health MCP (community skill: codehealth-mcp). Not enabled by default — copy only if you opt in. Requires your own CS_ACCESS_TOKEN (no bundled credentials). See skills/codehealth-mcp/SKILL.md for data boundaries and failure behavior."
+    },
     "magic": {
       "command": "npx",
       "args": ["-y", "@magicuidesign/mcp@latest"],
