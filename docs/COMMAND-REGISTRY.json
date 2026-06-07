@@ -637,8 +637,8 @@
     },
     {
       "command": "quality-gate",
-      "description": "Run the ECC quality pipeline for a file or project scope and report remediation steps.",
-      "type": "general",
+      "description": "Run the ECC formatter quality gate for a single file and report remediation steps.",
+      "type": "testing",
       "primaryAgents": [],
       "allAgents": [],
       "skills": [],
@@ -863,12 +863,12 @@
   "statistics": {
     "byType": {
       "build": 2,
-      "general": 8,
+      "general": 7,
       "orchestration": 6,
       "planning": 2,
       "refactoring": 1,
       "review": 9,
-      "testing": 51
+      "testing": 52
     },
     "topAgents": [
       {
