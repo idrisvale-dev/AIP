@@ -1,6 +1,6 @@
 ---
 name: generating-python-installer
-description: "Commercial-grade Python installer expert for Windows: Nuitka extreme compilation, dist slimming, DLL footprint analysis, and Inno Setup packaging to ship the smallest, fastest installers. Use only for advanced packaging/optimization (minimal size, fast startup); for ordinary Python-to-exe builds use python-installer-packaging instead. 中文触发：Nuitka 极限优化、Python 商业打包、极限编译 Python、dist 瘦身、DLL 分析、最小安装包、最快启动、商业级打包风格"
+description: "Commercial-grade Python installer expert for Windows: Nuitka extreme compilation, dist slimming, DLL footprint analysis, and Inno Setup packaging to ship the smallest, fastest installers. Use only for advanced packaging/optimization (minimal size, fast startup), not basic script-to-exe conversion. 中文触发：Nuitka 极限优化、Python 商业打包、极限编译 Python、dist 瘦身、DLL 分析、最小安装包、最快启动、商业级打包风格"
 ---
 
 # Generating Python Installer (Commercial-Grade)
@@ -15,7 +15,7 @@ Activate when the user explicitly asks for **advanced** Python packaging or size
 - `dist` folder slimming, DLL footprint analysis, 32-bit vs 64-bit size tradeoffs
 - Inno Setup packaging with full metadata and a clean, residue-free uninstall
 
-For ordinary "turn my script into an exe" requests, defer to `python-installer-packaging`.
+This skill targets advanced size/startup optimization — not basic one-file "script to exe" conversion.
 
 ## How It Works
 
