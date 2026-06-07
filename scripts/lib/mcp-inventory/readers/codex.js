@@ -19,7 +19,6 @@ function loadTomlParser(parseTomlImpl) {
   }
 
   try {
-    // eslint-disable-next-line global-require
     return require('@iarna/toml').parse;
   } catch {
     return null;

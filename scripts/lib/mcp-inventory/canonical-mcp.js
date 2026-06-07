@@ -219,7 +219,7 @@ function mergeServers(serverRecords) {
 
   return Array.from(byName.values()).map(server => {
     const uniqueSignatures = Array.from(new Set(server.signatures));
-    const { signatures, ...rest } = server;
+    const { signatures: _signatures, ...rest } = server;
     return {
       ...rest,
       harnessCount: server.sources.length,

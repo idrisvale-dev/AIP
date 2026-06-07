@@ -257,9 +257,16 @@ function resolveGitBranch(cwd, resolveBranchImpl) {
   }
 
   try {
+    // Strip inherited git env (GIT_DIR etc., set when running inside a git
+    // hook) so the -C target is honored instead of the host repo.
+    const gitEnv = { ...process.env };
+    for (const key of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_PREFIX']) {
+      delete gitEnv[key];
+    }
     const branch = execFileSync('git', ['-C', cwd, 'rev-parse', '--abbrev-ref', 'HEAD'], {
       stdio: ['ignore', 'pipe', 'ignore'],
-      encoding: 'utf8'
+      encoding: 'utf8',
+      env: gitEnv
     }).trim();
 
     return branch.length > 0 ? branch : null;
