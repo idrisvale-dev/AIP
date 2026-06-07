@@ -2071,9 +2071,9 @@ file.ts
   // ── Round 112: appendSessionContent with read-only file — returns false ──
   console.log('\nRound 112: appendSessionContent (read-only file):');
   if (test('appendSessionContent returns false when file is read-only (EACCES)', () => {
-    if (process.platform === 'win32') {
-      // chmod doesn't work reliably on Windows — skip
-      assert.ok(true, 'Skipped on Windows');
+    if (process.platform === 'win32' || process.getuid?.() === 0) {
+      // chmod ineffective on Windows/root — skip
+      assert.ok(true, 'Skipped on Windows/root');
       return;
     }
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'r112-readonly-'));
