@@ -5006,6 +5006,103 @@ async function runTests() {
     passed++;
   else failed++;
 
+  if (
+    await asyncTest('disables pruning when ECC_SESSION_RETENTION_DAYS=0', async () => {
+      const isoHome = path.join(os.tmpdir(), `ecc-start-prune-off-${Date.now()}`);
+      const sessionsDir = getCanonicalSessionsDir(isoHome);
+      fs.mkdirSync(sessionsDir, { recursive: true });
+      fs.mkdirSync(path.join(isoHome, '.claude', 'skills', 'learned'), { recursive: true });
+
+      const expiredFile = path.join(sessionsDir, '2026-01-01-keepme-session.tmp');
+      fs.writeFileSync(expiredFile, '# Old Session\n\nSHOULD STILL EXIST');
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      fs.utimesSync(expiredFile, ninetyDaysAgo, ninetyDaysAgo);
+
+      try {
+        const result = await runScript(path.join(scriptsDir, 'session-start.js'), '', {
+          HOME: isoHome,
+          USERPROFILE: isoHome,
+          ECC_SESSION_RETENTION_DAYS: '0',
+        });
+
+        assert.strictEqual(result.code, 0);
+        assert.ok(fs.existsSync(expiredFile), 'Should keep all sessions when retention is opt-out=0');
+        assert.ok(result.stderr.includes('Pruning disabled via ECC_SESSION_RETENTION_DAYS'),
+          `Should log pruning disabled, stderr: ${result.stderr}`);
+        assert.ok(!result.stderr.includes('Pruned'), `Should not log any pruning, stderr: ${result.stderr}`);
+      } finally {
+        fs.rmSync(isoHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    await asyncTest('disables pruning when ECC_SESSION_RETENTION_DAYS=off', async () => {
+      const isoHome = path.join(os.tmpdir(), `ecc-start-prune-offstr-${Date.now()}`);
+      const sessionsDir = getCanonicalSessionsDir(isoHome);
+      fs.mkdirSync(sessionsDir, { recursive: true });
+      fs.mkdirSync(path.join(isoHome, '.claude', 'skills', 'learned'), { recursive: true });
+
+      const expiredFile = path.join(sessionsDir, '2025-12-15-keepme-session.tmp');
+      fs.writeFileSync(expiredFile, '# Forensic Session\n\nKEEP ME');
+      const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+      fs.utimesSync(expiredFile, sixtyDaysAgo, sixtyDaysAgo);
+
+      try {
+        const result = await runScript(path.join(scriptsDir, 'session-start.js'), '', {
+          HOME: isoHome,
+          USERPROFILE: isoHome,
+          ECC_SESSION_RETENTION_DAYS: 'off',
+        });
+
+        assert.strictEqual(result.code, 0);
+        assert.ok(fs.existsSync(expiredFile), 'Should keep all sessions when retention is opt-out=off');
+        assert.ok(result.stderr.includes('Pruning disabled via ECC_SESSION_RETENTION_DAYS'),
+          `Should log pruning disabled, stderr: ${result.stderr}`);
+      } finally {
+        fs.rmSync(isoHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    await asyncTest('falls back to default retention when ECC_SESSION_RETENTION_DAYS is garbage', async () => {
+      const isoHome = path.join(os.tmpdir(), `ecc-start-prune-garbage-${Date.now()}`);
+      const sessionsDir = getCanonicalSessionsDir(isoHome);
+      fs.mkdirSync(sessionsDir, { recursive: true });
+      fs.mkdirSync(path.join(isoHome, '.claude', 'skills', 'learned'), { recursive: true });
+
+      const expiredFile = path.join(sessionsDir, '2026-01-01-pruneme-session.tmp');
+      fs.writeFileSync(expiredFile, '# Old Session\n\nDELETE ME');
+      const fortyDaysAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+      fs.utimesSync(expiredFile, fortyDaysAgo, fortyDaysAgo);
+
+      try {
+        const result = await runScript(path.join(scriptsDir, 'session-start.js'), '', {
+          HOME: isoHome,
+          USERPROFILE: isoHome,
+          ECC_SESSION_RETENTION_DAYS: 'bogus-value',
+        });
+
+        assert.strictEqual(result.code, 0);
+        assert.ok(!fs.existsSync(expiredFile),
+          'Should fall back to default 30-day retention and prune the 40-day-old file');
+        assert.ok(result.stderr.includes('Pruned 1 expired session'),
+          `Should log pruning at default retention, stderr: ${result.stderr}`);
+        assert.ok(!result.stderr.includes('Pruning disabled'),
+          'Should NOT treat garbage as opt-out');
+      } finally {
+        fs.rmSync(isoHome, { recursive: true, force: true });
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
   console.log('\nRound 55: session-start.js (newest session selection):');
 
   if (

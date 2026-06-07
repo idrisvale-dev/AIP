@@ -479,6 +479,10 @@ export ECC_SESSION_START_MAX_CHARS=4000
 # Disable SessionStart additional context entirely for low-context/local-model setups
 export ECC_SESSION_START_CONTEXT=off
 
+# Session-tmp retention window in days (default: 30).
+# Set to 0, off, false, disabled, never, or none to keep all sessions (disable pruning).
+export ECC_SESSION_RETENTION_DAYS=14
+
 # Keep context/scope/loop warnings but suppress API-rate cost estimates
 export ECC_CONTEXT_MONITOR_COST_WARNINGS=off
 ```
@@ -487,6 +491,7 @@ Windows PowerShell:
 
 ```powershell
 [Environment]::SetEnvironmentVariable('ECC_CONTEXT_MONITOR_COST_WARNINGS', 'off', 'User')
+[Environment]::SetEnvironmentVariable('ECC_SESSION_RETENTION_DAYS', '14', 'User')
 ```
 
 ---
