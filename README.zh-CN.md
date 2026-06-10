@@ -82,7 +82,7 @@
 
 ### v2.0.0 — 智能体 Harness 操作系统（2026年6月）
 
-2.0 主线稳定版：261 个技能、control-pane 基底（会话适配器 + MCP 清单）、worktree 生命周期服务，以及 [ECC Discord 社区](https://discord.gg/36yGMHGFbR)。
+2.0 主线稳定版：265 个技能、control-pane 基底（会话适配器 + MCP 清单）、worktree 生命周期服务，以及 [ECC Discord 社区](https://discord.gg/36yGMHGFbR)。
 
 ### v2.0.0-rc.1 — 表面同步、运营工作流与 ECC 2.0 Alpha（2026年4月）
 
@@ -164,7 +164,7 @@ Copy-Item -Recurse rules/typescript "$HOME/.claude/rules/"
 /plugin list ecc@ecc
 ```
 
-**完成！** 你现在可以使用 64 个代理、262 个技能和 84 个命令。
+**完成！** 你现在可以使用 64 个代理、269 个技能和 84 个命令。
 
 ### multi-* 命令需要额外配置
 
