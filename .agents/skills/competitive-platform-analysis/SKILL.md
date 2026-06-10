@@ -6,6 +6,7 @@ description: >-
   counts as a competitor, which tier they belong to, and which sources to mine.
   First step in the three-skill competitive pipeline; precedes
   benchmark-methodology.
+origin: community
 ---
 
 # Competitive Platform Analysis
@@ -110,7 +111,7 @@ report:
   that pressures at the edges.
 - **Aspirational** — players the client is not competing with today but whose
   brand or commercial maturity sets the bar to aim at.
-- *(Watch also for substitutes:* no-code/AI tools, in-house teams, generalist
+- *(Watch also for substitutes: no-code/AI tools, in-house teams, generalist
   freelancers — note as a threat vector, not a profiled competitor unless
   materially relevant.)*
 

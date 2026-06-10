@@ -21,8 +21,7 @@
 
 ### Three adjectives the founder uses most naturally to describe the brand's character
 
-### One brand or public figure the founder admires but the brand should NOT become
-(and specifically what to avoid)
+### One brand or public figure the founder admires but the brand should NOT become (and specifically what to avoid)
 
 ### One brand or public figure whose personality register the brand aspires to
 

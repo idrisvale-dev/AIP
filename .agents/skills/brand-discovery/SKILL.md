@@ -111,13 +111,23 @@ Schema:
 
 After writing, confirm: "Module X saved. State updated. Next: Y."
 
+**Terminal module (90_SYNTHESIS.md):** when writing the final synthesis,
+set `inProgressModule` to `"90_SYNTHESIS.md"` and `nextModule` to `null`
+in `state.json`. After writing, set `completedModules` to include
+`"90_SYNTHESIS.md"` and confirm: "Brandbook complete. All modules saved."
+
 ## Multi-founder mode
 
 When more than one founder participates, write each founder's answers to
-`founders/{participant}.md` instead of the main module files. After all
-founders complete a module, run a reconciliation pass: summarise
-convergences and divergences in the module file, flag "productive tensions"
-for the group alignment workshop.
+`founders/{participant}.md` instead of the main module files. Validate the
+`participant` name before writing: accept only alphanumeric characters and
+hyphens (e.g. `founder-a`, `anna`); reject names containing path separators
+(`/`, `\`, `..`) or special characters. Validate `moduleFile` against the
+enumerated module sequence (10 through 90 only). Validate `outputPath` to
+ensure it is an absolute path within the project directory — reject relative
+paths and paths that escape via `..` segments. After all founders complete a
+module, run a reconciliation pass: summarise convergences and divergences in
+the module file, flag "productive tensions" for the group alignment workshop.
 
 ## Anti-Patterns
 

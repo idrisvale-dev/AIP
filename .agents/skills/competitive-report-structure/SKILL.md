@@ -6,6 +6,7 @@ description: >-
   profiles, benchmarking matrix, white-space analysis, strategic recommendations,
   and team alignment trigger questions. Final step in the three-skill competitive
   pipeline.
+origin: community
 ---
 
 # Competitive Report Structure
@@ -72,8 +73,10 @@ the detail.
 
 ### 4. Benchmarking matrix
 The full **competitors × dimensions** table — the quantitative spine. Rows =
-competitors (grouped by tier), columns = the nine dimensions. Include the
-client's own honest self-assessment as a row for contrast. Use a **heatmap**
+competitors (grouped by tier), columns = the nine benchmark dimensions (note:
+dimension 9 — strategic tension — has two poles: Memorability and Hireability;
+represent them as two separate sub-columns rather than averaging them). Include
+the client's own honest self-assessment as a row for contrast. Use a **heatmap**
 (color or symbol scale) so strength/weakness patterns are scannable. Do **not**
 add a blended total column — report dimensions separately (per the bias
 controls). Call out the columns where the client leads and where it trails.
