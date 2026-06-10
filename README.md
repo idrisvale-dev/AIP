@@ -80,7 +80,7 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
   <sub><strong>Business sponsors</strong></sub><br />
   <a href="https://www.coderabbit.ai"><img src="assets/images/sponsors/coderabbit.png" width="72" alt="CodeRabbit logo" /></a>
   &nbsp;&nbsp;
-  <a href="https://greptile.com"><img src="assets/images/sponsors/greptile.png" width="72" alt="Greptile logo" /></a>
+  <a href="https://www.greptile.com/go/ecc"><img src="assets/images/sponsors/greptile.png" width="72" alt="Greptile logo" /></a>
 </div>
 
 ---
@@ -1776,7 +1776,7 @@ ECC stays free because paid sponsors fund the work. Featured README placement is
 <div align="center">
   <a href="https://www.coderabbit.ai"><img src="assets/images/sponsors/coderabbit.png" width="80" alt="CodeRabbit logo" /></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://greptile.com"><img src="assets/images/sponsors/greptile.png" width="80" alt="Greptile logo" /></a>
+  <a href="https://www.greptile.com/go/ecc"><img src="assets/images/sponsors/greptile.png" width="80" alt="Greptile logo" /></a>
   <br />
   <sub><strong>CodeRabbit</strong> · <strong>Greptile</strong></sub>
 </div>
