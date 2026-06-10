@@ -38,18 +38,20 @@ To integrate it into hooks, capture the last agent output to a file first, then 
 
 ```json
 {
-  "PostToolUse": [
-    {
-      "matcher": "Bash",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "echo '[Self-Eval] If this command completed verification for a non-trivial task, consider running agent-self-evaluation.'"
-        }
-      ],
-      "description": "Remind agent to self-evaluate after shell verification"
-    }
-  ]
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[Self-Eval] If this command completed verification for a non-trivial task, consider running agent-self-evaluation.'"
+          }
+        ],
+        "description": "Remind agent to self-evaluate after shell verification"
+      }
+    ]
+  }
 }
 ```
 

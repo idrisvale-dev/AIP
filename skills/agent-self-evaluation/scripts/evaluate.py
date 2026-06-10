@@ -24,6 +24,13 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
+# Tunable thresholds for evaluation heuristics
+WALL_OF_TEXT_WORDS = 200
+SUMMARY_CHECK_WORDS = 300
+SUMMARY_CHECK_FIRST_N = 100
+TASK_OUTPUT_RATIO_HIGH = 15
+TASK_OUTPUT_RATIO_MEDIUM = 8
+
 
 @dataclass
 class AxisScore:
@@ -144,8 +151,8 @@ def _check_jargon(text: str) -> tuple[int, list[str]]:
 def _check_summary(text: str) -> tuple[int, list[str]]:
     """Return clarity deduction when long output lacks an early summary."""
     summary_terms = ["summary", "tldr", "overview", "in short"]
-    has_early_summary = any(term in ' '.join(text.split()[:100]).lower() for term in summary_terms)
-    if not has_early_summary and count_words(text) > 300:
+    has_early_summary = any(term in ' '.join(text.split()[:SUMMARY_CHECK_FIRST_N]).lower() for term in summary_terms)
+    if not has_early_summary and count_words(text) > SUMMARY_CHECK_WORDS:
         return 1, ["- No summary/TLDR in first 100 words (text is 300+ words)"]
     return 0, []
 
@@ -163,7 +170,7 @@ def check_clarity(text: str) -> AxisScore:
         evidence.append("+ Uses bullet points")
 
     for paragraph in [p for p in text.split("\n\n") if p.strip()]:
-        if count_words(paragraph) > 200:
+        if count_words(paragraph) > WALL_OF_TEXT_WORDS:
             deductions += 1
             evidence.append("- Wall-of-text paragraph (>200 words without break)")
             break
@@ -245,10 +252,10 @@ def check_conciseness(text: str, task: Optional[str] = None) -> AxisScore:
     if task:
         task_wc = count_words(task)
         ratio = wc / max(task_wc, 1)
-        if ratio > 15:
+        if ratio > TASK_OUTPUT_RATIO_HIGH:
             evidence.append(f"- Output is {ratio:.0f}x longer than task description (high ratio)")
             score = min(score, 3)
-        elif ratio > 8:
+        elif ratio > TASK_OUTPUT_RATIO_MEDIUM:
             evidence.append(f"- Output is {ratio:.0f}x longer than task description")
             score = min(score, 4)
 
