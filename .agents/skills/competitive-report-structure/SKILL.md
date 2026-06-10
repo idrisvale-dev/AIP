@@ -74,7 +74,8 @@ the detail.
 ### 4. Benchmarking matrix
 The full **competitors × dimensions** table — the quantitative spine. Rows =
 competitors (grouped by tier), columns = the nine benchmark dimensions (note:
-dimension 9 — strategic tension — has two poles: Memorability and Hireability;
+dimension 9 — strategic tension — has two poles (e.g., Memorability and
+Hireability for a brand-studio client; substitute the client's own paired axes);
 represent them as two separate sub-columns rather than averaging them). Include
 the client's own honest self-assessment as a row for contrast. Use a **heatmap**
 (color or symbol scale) so strength/weakness patterns are scannable. Do **not**

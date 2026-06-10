@@ -115,7 +115,9 @@ After writing, confirm: "Module X saved. State updated. Next: Y."
 **Terminal module (90_SYNTHESIS.md):** when writing the final synthesis,
 set `inProgressModule` to `"90_SYNTHESIS.md"` and `nextModule` to `null`
 in `state.json`. After writing, set `completedModules` to include
-`"90_SYNTHESIS.md"` and confirm: "Brandbook complete. All modules saved."
+`"90_SYNTHESIS.md"`, then set `inProgressModule` to `null` — leaving it
+populated would cause a future resumption to treat the completed brandbook
+as still in progress. Confirm: "Brandbook complete. All modules saved."
 
 ## Multi-founder mode
 
