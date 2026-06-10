@@ -6,6 +6,7 @@ Copy this template and fill in after completing a task. The format matches `scri
 ============================================================
 AGENT SELF-EVALUATION REPORT
 ============================================================
+Summary: Overall score X.X/5 across 5 quality axes.
 
   Accuracy         █████ 5/5    or    ███░░ 3/5
     + [Evidence: passing tests, verified claims]
@@ -37,6 +38,8 @@ AGENT SELF-EVALUATION REPORT
 CRITICAL ISSUES (axes ≤ 2):
   [Axis] Score N/5 — specific fix needed
   (or "None" if no axis ≤ 2)
+
+Self-check: Would the user agree with this assessment? [Yes/No + brief justification]
 
 TOP IMPROVEMENTS:
   1. [Highest impact fix]

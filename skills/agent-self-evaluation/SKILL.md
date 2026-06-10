@@ -15,7 +15,7 @@ After completing a complex task, the agent pauses to rate its own output against
 - After a debugging session that involved 3+ attempts
 - After producing a design document, architecture decision, or written analysis
 - When the user asks "how good was that?" or "rate yourself"
-- At the end of any session Stop hook (if configured — see References)
+- At the end of any session Stop hook (if configured — see `references/hook-integration.md`)
 
 ## Core Concepts
 

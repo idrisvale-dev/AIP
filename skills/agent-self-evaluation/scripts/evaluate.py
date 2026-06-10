@@ -83,7 +83,7 @@ def check_accuracy(text: str) -> AxisScore:
     return result
 
 
-def check_completeness(text: str, task: Optional[str] = None) -> AxisScore:
+def check_completeness(text: str) -> AxisScore:
     """Check for requirement coverage, edge cases, error handling."""
     evidence = []
     score = 5
@@ -125,13 +125,36 @@ def check_completeness(text: str, task: Optional[str] = None) -> AxisScore:
     return result
 
 
+def _check_jargon(text: str) -> tuple[int, list[str]]:
+    """Return clarity deductions for unexplained domain jargon."""
+    jargon = [
+        (r"\b(idempotent|race condition|deadlock|thundering herd)\b", "concurrency"),
+        (r"\b(exponential backoff|circuit breaker|bulkhead)\b", "resilience"),
+        (r"\b(ACID|CAP|eventual consistency|linearizability)\b", "database theory"),
+    ]
+    explanation_pattern = r"(?i)({domain}|means|refers to|i\.e\.|in other words)"
+    for pattern, domain in jargon:
+        has_term = re.search(pattern, text, re.IGNORECASE)
+        explains_term = re.search(explanation_pattern.format(domain=domain), text)
+        if has_term and not explains_term:
+            return 1, [f"- Domain term used without explanation ({domain})"]
+    return 0, []
+
+
+def _check_summary(text: str) -> tuple[int, list[str]]:
+    """Return clarity deduction when long output lacks an early summary."""
+    summary_terms = ["summary", "tldr", "overview", "in short"]
+    has_early_summary = any(term in text[:100].lower() for term in summary_terms)
+    if not has_early_summary and count_words(text) > 300:
+        return 1, ["- No summary/TLDR in first 100 words (text is 300+ words)"]
+    return 0, []
+
+
 def check_clarity(text: str) -> AxisScore:
     """Check for structure, readability, jargon handling."""
     evidence = []
-    score = 5
     deductions = 0
 
-    # Positive signals
     if re.search(r"^#{1,3}\s+", text, re.MULTILINE):
         evidence.append("+ Uses headings for structure")
     if re.search(r"```", text):
@@ -139,33 +162,16 @@ def check_clarity(text: str) -> AxisScore:
     if re.search(r"^\s*[-*]\s+", text, re.MULTILINE):
         evidence.append("+ Uses bullet points")
 
-    # Negative signals
-    # Wall of text: long paragraph without breaks
-    paragraphs = [p for p in text.split("\n\n") if p.strip()]
-    for p in paragraphs:
-        if count_words(p) > 200:
+    for paragraph in [p for p in text.split("\n\n") if p.strip()]:
+        if count_words(paragraph) > 200:
             deductions += 1
             evidence.append("- Wall-of-text paragraph (>200 words without break)")
             break
 
-    # Jargon without definition
-    jargon = [
-        (r"\b(idempotent|race condition|deadlock|thundering herd)\b", "concurrency"),
-        (r"\b(exponential backoff|circuit breaker|bulkhead)\b", "resilience"),
-        (r"\b(ACID|CAP|eventual consistency|linearizability)\b", "database theory"),
-    ]
-    for pattern, domain in jargon:
-        if re.search(pattern, text, re.IGNORECASE):
-            if not re.search(rf"(?i)({domain}|means|refers to|i\.e\.|in other words)", text):
-                deductions += 1
-                evidence.append(f"- Domain term used without explanation ({domain})")
-                break
-
-    if not any(t in text[:100].lower() for t in ["summary", "tldr", "overview", "in short"]):
-        # No early summary — penalize only if text is long
-        if count_words(text) > 300:
-            deductions += 1
-            evidence.append("- No summary/TLDR in first 100 words (text is 300+ words)")
+    jargon_deductions, jargon_evidence = _check_jargon(text)
+    summary_deductions, summary_evidence = _check_summary(text)
+    deductions += jargon_deductions + summary_deductions
+    evidence.extend(jargon_evidence + summary_evidence)
 
     if deductions >= 3:
         score = 2
@@ -173,6 +179,8 @@ def check_clarity(text: str) -> AxisScore:
         score = 3
     elif deductions == 1:
         score = 4
+    else:
+        score = 5
 
     if not evidence:
         evidence.append("+ Well-structured with no clarity issues detected")
@@ -227,7 +235,7 @@ def check_actionability(text: str) -> AxisScore:
     return result
 
 
-def check_concision(text: str, task: Optional[str] = None) -> AxisScore:
+def check_conciseness(text: str, task: Optional[str] = None) -> AxisScore:
     """Check for redundancy, filler, information density."""
     evidence = []
     score = 5
@@ -278,10 +286,10 @@ def evaluate(task: Optional[str], output: str) -> list[AxisScore]:
     """Run all 5 axis checks and return scored results."""
     return [
         check_accuracy(output),
-        check_completeness(output, task),
+        check_completeness(output),
         check_clarity(output),
         check_actionability(output),
-        check_concision(output, task),
+        check_conciseness(output, task),
     ]
 
 
@@ -292,13 +300,13 @@ def format_report(scores: list[AxisScore]) -> str:
     lines.append("=" * 60)
     lines.append("AGENT SELF-EVALUATION REPORT")
     lines.append("=" * 60)
+    lines.append(f"Summary: Overall score {avg:.1f}/5 across 5 quality axes.")
     lines.append("")
 
     for s in scores:
         bar = "█" * s.score + "░" * (5 - s.score)
         lines.append(f"  {s.name:<15} {bar} {s.score}/5")
-        for e in s.evidence:
-            lines.append(f"    {e}")
+        lines.extend(f"    {e}" for e in s.evidence)
         if s.improvement:
             lines.append(f"    → {s.improvement}")
         lines.append("")
@@ -315,6 +323,8 @@ def format_report(scores: list[AxisScore]) -> str:
     else:
         lines.append("  None")
 
+    lines.append("")
+    lines.append("Self-check: Would the user agree with this assessment? [Yes/No + brief justification]")
     lines.append("")
 
     # Top improvements (axes scoring < 4, ranked by impact)
@@ -344,6 +354,31 @@ def format_report(scores: list[AxisScore]) -> str:
     return "\n".join(lines)
 
 
+def _read_file_or_text(path: Optional[str], required: bool = False) -> Optional[str]:
+    """Read a file path or return inline text when allowed."""
+    if path is None:
+        return None
+    try:
+        with open(path) as f:
+            return f.read()
+    except FileNotFoundError:
+        if required:
+            print(f"Error: output file '{path}' not found", file=sys.stderr)
+            sys.exit(1)
+        return path
+
+
+def _read_input(args: argparse.Namespace) -> tuple[Optional[str], str]:
+    """Read task and output for interactive, file, or pipe mode."""
+    if args.interactive:
+        task = input("Task description: ").strip()
+        print("Paste agent output (Ctrl+D to finish):")
+        return task, sys.stdin.read()
+    if args.output:
+        return _read_file_or_text(args.task), _read_file_or_text(args.output, required=True) or ""
+    return _read_file_or_text(args.task), sys.stdin.read()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Evaluate agent output against the 5-axis rubric"
@@ -353,38 +388,7 @@ def main():
     parser.add_argument("--interactive", action="store_true", help="Prompt for task and read output from stdin")
     args = parser.parse_args()
 
-    task = None
-    output = None
-
-    if args.interactive:
-        task = input("Task description: ").strip()
-        print("Paste agent output (Ctrl+D to finish):")
-        output = sys.stdin.read()
-    elif args.task and args.output:
-        # Read task
-        try:
-            with open(args.task) as f:
-                task = f.read()
-        except FileNotFoundError:
-            task = args.task  # Treat as inline text
-
-        # Read output
-        try:
-            with open(args.output) as f:
-                output = f.read()
-        except FileNotFoundError:
-            print(f"Error: output file '{args.output}' not found", file=sys.stderr)
-            sys.exit(1)
-    else:
-        # Pipe mode: read output from stdin
-        output = sys.stdin.read()
-        if args.task:
-            try:
-                with open(args.task) as f:
-                    task = f.read()
-            except FileNotFoundError:
-                task = args.task
-
+    task, output = _read_input(args)
     if not output:
         print("Error: no output to evaluate", file=sys.stderr)
         sys.exit(1)

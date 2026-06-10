@@ -1,13 +1,12 @@
 # Hook Integration for Session-Stop Self-Evaluation
 
-Add this hook to `hooks/hooks.json` to automatically trigger self-evaluation at the end of every session:
+Add this hook to `hooks/hooks.json` to remind the agent to self-evaluate at the end of every session:
 
 ```json
 {
   "hooks": {
     "Stop": [
       {
-        "matcher": "true",
         "hooks": [
           {
             "type": "command",
@@ -21,6 +20,8 @@ Add this hook to `hooks/hooks.json` to automatically trigger self-evaluation at 
 }
 ```
 
+`Stop` events do not use a `matcher` field. Keep the hook object limited to `hooks` and metadata such as `description`.
+
 ## Integration with the Python Evaluator
 
 The `scripts/evaluate.py` script can be used as a standalone tool:
@@ -33,24 +34,26 @@ echo "Your agent response here" | python3 skills/agent-self-evaluation/scripts/e
 python3 skills/agent-self-evaluation/scripts/evaluate.py --task task.txt --output response.txt
 ```
 
-To integrate it into hooks, capture the last agent output to a file first, then run the evaluator:
+To integrate it into hooks, capture the last agent output to a file first, then run the evaluator. For lightweight reminders after shell-based verification, use a simple supported matcher string:
 
 ```json
 {
   "PostToolUse": [
     {
-      "matcher": "tool == \"Bash\" && tool_input.command matches \"(test|pytest|npm test|go test)\"",
+      "matcher": "Bash",
       "hooks": [
         {
           "type": "command",
-          "command": "echo '[Self-Eval] Tests completed. Consider running agent-self-evaluation.'"
+          "command": "echo '[Self-Eval] If this command completed verification for a non-trivial task, consider running agent-self-evaluation.'"
         }
       ],
-      "description": "Remind agent to self-evaluate after test runs"
+      "description": "Remind agent to self-evaluate after shell verification"
     }
   ]
 }
 ```
+
+This avoids documenting unsupported command-expression matcher syntax. If your harness supports command-level matcher expressions, prefer a word-boundary regex such as `\b(pytest|npm test|go test)\b` rather than a broad `test` substring.
 
 These hooks are opt-in. Add them to your local `hooks/hooks.json` if you want automated evaluation prompts.
 
