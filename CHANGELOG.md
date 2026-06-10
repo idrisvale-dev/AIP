@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.0.0 - 2026-06-09
+
+### Added
+
+- Discord community launch: server + GitHub PR/issue/release feed, `release-announce.yml` workflow (announce + pin + Discussions cross-post), and a dependency-free community bot (`scripts/discord/ecc-bot.mjs`) with `/ecc`, `/help`, `/skill`, `/docs`, `/release`.
+- `orch-*` orchestrator skill family and dynamic workflow team orchestration.
+- `kubernetes-patterns` skill, worktree-lifecycle service, MCP inventory (`ecc.mcp.v1`), codex-worktree and opencode session adapters.
+
+### Fixed
+
+- Plugin hooks silently no-oped on Node 21+ (`require.main` undefined under `node -e`).
+- Windows reliability: `CLAUDE_PLUGIN_ROOT` normalization, stdin prompt passing, symlink/chmod test guards.
+- Session-end `$`-sequence corruption, project-detect boundary matching, install manifest gaps, corrupted legacy shim truncation.
+
+### Changed
+
+- Version graduated to 2.0.0 stable across package, plugin, marketplace, OpenCode, and agent metadata.
+- Smaller default OpenCode install surface; `rules/zh` removed from the always-loaded default install.
+
 ## 2.0.0-rc.1 - 2026-04-28
 
 ### Highlights
