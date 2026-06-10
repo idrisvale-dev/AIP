@@ -20,7 +20,7 @@ Add this hook to `hooks/hooks.json` to remind the agent to self-evaluate at the 
 }
 ```
 
-`Stop` events do not use a `matcher` field. Keep the hook object limited to `hooks` and metadata such as `description`.
+`Stop` events do not require a `matcher` field (it is optional for `Stop`, `Notification`, `UserPromptSubmit`, and `SubagentStop` per `scripts/ci/validate-hooks.js`). If omitted, the hook object only needs `hooks` and metadata such as `description`.
 
 ## Integration with the Python Evaluator
 
