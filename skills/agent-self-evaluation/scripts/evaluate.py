@@ -144,7 +144,7 @@ def _check_jargon(text: str) -> tuple[int, list[str]]:
 def _check_summary(text: str) -> tuple[int, list[str]]:
     """Return clarity deduction when long output lacks an early summary."""
     summary_terms = ["summary", "tldr", "overview", "in short"]
-    has_early_summary = any(term in text[:100].lower() for term in summary_terms)
+    has_early_summary = any(term in ' '.join(text.split()[:100]).lower() for term in summary_terms)
     if not has_early_summary and count_words(text) > 300:
         return 1, ["- No summary/TLDR in first 100 words (text is 300+ words)"]
     return 0, []
@@ -354,7 +354,7 @@ def format_report(scores: list[AxisScore]) -> str:
     return "\n".join(lines)
 
 
-def _read_file_or_text(path: Optional[str], required: bool = False) -> Optional[str]:
+def _read_file_or_text(path: Optional[str], *, required: bool = False) -> Optional[str]:
     """Read a file path or return inline text when allowed."""
     if path is None:
         return None
@@ -379,7 +379,7 @@ def _read_input(args: argparse.Namespace) -> tuple[Optional[str], str]:
     return _read_file_or_text(args.task), sys.stdin.read()
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Evaluate agent output against the 5-axis rubric"
     )

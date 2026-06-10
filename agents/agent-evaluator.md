@@ -63,24 +63,20 @@ AGENT SELF-EVALUATION REPORT
 Summary: Overall score X.X/5 across 5 quality axes.
 
   Accuracy         █████ 5/5
-    + [Evidence: passing tests, verified claims]
-    → [Improvement if score < 5]
+    + [Evidence: passing tests, verified claims]  (no → when score = 5)
 
-  Completeness      █████ 5/5
+  Completeness      ████░ 4/5
     + [What's covered]
-    → [Improvement if score < 5]
+    → [Improvement: only shown when score < 5]
 
   Clarity           █████ 5/5
-    + [Structure signals]
-    → [Improvement if score < 5]
+    + [Structure signals]  (no → when score = 5)
 
   Actionability     █████ 5/5
-    + [User can act immediately]
-    → [Improvement if score < 5]
+    + [User can act immediately]  (no → when score = 5)
 
   Conciseness       █████ 5/5
-    + [Information density]
-    → [Improvement if score < 5]
+    + [Information density]  (no → when score = 5)
 
   OVERALL           X.X/5
 
@@ -115,7 +111,7 @@ Summary: Overall score X.X/5 across 5 quality axes.
 
   Accuracy         █████ 5/5
     + Tests passing
-    + grep confirms httpx.Retry used correctly
+    + grep confirms httpx transport configured correctly
     + Import verified
 
   Completeness      ████░ 4/5
@@ -192,13 +188,13 @@ Summary: Overall score X.X/5 across 5 quality axes.
   OVERALL           2.8/5
 
 CRITICAL ISSUES (axes ≤ 2):
-  [Accuracy] Score 2/5 — Wrong library. Use httpx.Retry, not urllib3.Retry.
+  [Accuracy] Score 2/5 — Wrong library. Use httpx, not urllib3.
   [Actionability] Score 2/5 — No deliverable. Create a PR with test file.
 
 Self-check: Would the user agree with this assessment? Yes — the report cites the wrong library, lack of tests, and missing deliverable.
 
 TOP IMPROVEMENTS:
-  1. [Accuracy] Switch to httpx.Retry — grep the codebase first
+  1. [Accuracy] Switch to httpx — grep the codebase first
   2. [Actionability] Create a PR with src/api_client.py + tests
   3. [Completeness] Handle 429, connection errors, and timeout
 

@@ -6,8 +6,8 @@ This reference provides concrete scoring anchors for each axis. Use it when you'
 
 | Score | Anchor | Example |
 |---|---|---|
-| 5 | All facts verified against tool output, docs, or authoritative sources. No errors. | Used `httpx.Retry` — confirmed in httpx docs. All method names verified with grep against codebase. |
-| 4 | One minor inaccuracy that doesn't affect correctness. | Correct library, wrong default value for one parameter (httpx defaults to 1.0s, claimed 0.5s). |
+| 5 | All facts verified against tool output, docs, or authoritative sources. No errors. | Configured retry via httpx transport — confirmed in httpx docs. All method names verified with grep against codebase. |
+| 4 | One minor inaccuracy that doesn't affect correctness. | Correct library, wrong default value for one parameter (claimed 0.5s, docs say 1.0s). |
 | 3 | One significant factual error, or 3+ minor inaccuracies. | Used `urllib3.Retry` in an httpx codebase. Works in this one case but wrong library. |
 | 2 | Multiple significant errors. Output would fail if followed. | Claimed "add this to package.json" but project uses pyproject.toml. Two other config claims also wrong. |
 | 1 | Fundamentally incorrect. Output contradicts itself or known facts. | Code has syntax errors. API endpoint doesn't exist. Claims a function signature that grep disproves. |

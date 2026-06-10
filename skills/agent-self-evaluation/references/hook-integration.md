@@ -1,6 +1,6 @@
 # Hook Integration for Session-Stop Self-Evaluation
 
-Add this hook to `hooks/hooks.json` to remind the agent to self-evaluate at the end of every session:
+Add this hook to `hooks/hooks.json` to remind the agent to self-evaluate at the end of every session (the hook echoes a reminder; it does not run the evaluator automatically):
 
 ```json
 {

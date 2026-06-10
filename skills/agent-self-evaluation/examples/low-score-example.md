@@ -7,7 +7,7 @@
 
 Here's a retry implementation. I think this should work for most cases.
 
-I used the urllib3 library since it has built-in retry support. The Retry class handles backoff automatically so we just need to configure it.
+I used the urllib3 library since it has built-in retry support. The Retry class handles backoff automatically.
 
 ```python
 from urllib3.util import Retry
@@ -38,7 +38,7 @@ AGENT SELF-EVALUATION REPORT
     - Untested ("I haven't tested the timeout behavior")
     - Speculation without evidence ("those are probably fine")
     → Wrong library used. Project uses httpx, not urllib3.
-      urllib3.util.Retry is incompatible with httpx transport.
+                      urllib3.util.Retry is incompatible with httpx.
 
   Completeness      ███░░ 3/5
     - Explicit gap acknowledged ("might be edge cases with POST")
@@ -70,7 +70,7 @@ AGENT SELF-EVALUATION REPORT
   OVERALL           2.8/5
 
 TOP IMPROVEMENTS (axes scoring < 4):
-  [Accuracy] Switch to httpx.Retry — grep the codebase to confirm the HTTP
+  [Accuracy] Switch to httpx — grep the codebase to confirm the HTTP
     library before writing code.
   [Actionability] Create a PR with the changed file + test file. Run the
     tests. End with "PR #N ready to merge."

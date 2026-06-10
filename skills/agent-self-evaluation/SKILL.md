@@ -114,7 +114,7 @@ Overall: 4.6 — One gap (timeout handling). Fix before merging.
 Task: Add retry logic to HTTP client
 
 Scorecard:
-  Accuracy:    2 — Used urllib3.Retry which doesn't exist in our
+  Accuracy:    2 — Used urllib3 which doesn't match our
                   httpx-based codebase. Wrong library.
   Completeness: 3 — Works for GET. POST/PUT not handled (user
                   said "all HTTP requests").
@@ -125,7 +125,7 @@ Scorecard:
                   3 places instead of one shared RetryConfig object.
 
 Overall: 2.8 — Wrong library used. Needs httpx rewrite.
-  Fix accuracy first (switch to httpx.Retry), then extend to all
+  Fix accuracy first (switch to httpx), then extend to all
   HTTP methods, then consolidate config.
 ```
 
@@ -171,7 +171,7 @@ The evaluation is about the delivered output, not about re-arguing design decisi
 - **Evaluate the output, not the process.** The user cares about what you delivered, not how many iterations you took.
 - **One improvement per weak axis.** Don't list 5 things for one axis — pick the highest-impact gap.
 - **Tie improvements to user impact.** "Missing error handling means the user's API call will crash silently" beats "add error handling."
-- **Be specific about what 'fixed' looks like.** "Re-run with httpx.Retry( total=3, backoff_factor=1.0 )" beats "fix the library issue."
+- **Be specific about what 'fixed' looks like.** "Re-run with httpx transport configured for retries" beats "fix the library issue."
 - **Use tool outputs as evidence.** If tests passed, cite them. If lint is clean, cite it. Don't guess — grep for the proof.
 - **If you can't find any gaps, try harder.** A perfect score across all 5 axes is rare. Ask: "If I were the user, what would annoy me about this output?"
 
