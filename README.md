@@ -1240,7 +1240,6 @@ Please contribute! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - Testing strategies (different frameworks, visual regression)
 - Domain-specific knowledge (ML, data engineering, mobile)
 
-
 ---
 
 ## Cursor IDE Support
@@ -1763,7 +1762,6 @@ These configs work for my workflow. You should:
 3. Remove what you don't use
 4. Add your own patterns
 
-
 ---
 
 ## Sponsors
@@ -1779,7 +1777,6 @@ ECC stays free because paid sponsors fund the work. Featured README placement is
 </div>
 
 [**Become a Sponsor**](https://github.com/sponsors/affaan-m) | [Sponsor Tiers](SPONSORS.md) | [Sponsorship Program](SPONSORING.md)
-
 
 ---
 
