@@ -1,6 +1,6 @@
 # Agent Self-Evaluation Report Template
 
-Copy this template and fill in after completing a task. Keep it in your conversation — the user sees it inline.
+Copy this template and fill in after completing a task. The format matches `scripts/evaluate.py` output.
 
 ```
 ============================================================
@@ -10,27 +10,40 @@ AGENT SELF-EVALUATION REPORT
   Accuracy         █████ 5/5    or    ███░░ 3/5
     + [Evidence: passing tests, verified claims]
     - [Gaps: unverified claims, hedging language]
+    → [Improvement if score < 5]
 
   Completeness      █████ 5/5
     + [What's covered: all requirements + edge cases]
     - [What's missing: explicitly acknowledge gaps]
+    → [Improvement if score < 5]
 
   Clarity           █████ 5/5
     + [Structure: headings, code blocks, bullet points]
     - [Issues: undefined terms, wall of text, no summary]
+    → [Improvement if score < 5]
 
   Actionability     █████ 5/5
     + [User can: merge PR, run command, review file]
     - [Blockers: missing steps, vague suggestions]
+    → [Improvement if score < 5]
 
   Conciseness       █████ 5/5
     + [Tight: no repetition, high information density]
     - [Bloat: filler, meta-commentary, repeated points]
+    → [Improvement if score < 5]
 
   OVERALL           X.X/5
 
+CRITICAL ISSUES (axes ≤ 2):
+  [Axis] Score N/5 — specific fix needed
+  (or "None" if no axis ≤ 2)
+
 TOP IMPROVEMENTS:
-  [Only list axes scoring < 4, ranked by user impact]
+  1. [Highest impact fix]
+  2. [Second highest]
+  (Only list axes scoring < 4, ranked by user impact)
+
+VERDICT: [Deliver as-is / Fix N issues then deliver / Redo from scratch]
 ```
 
 ## Quick Reference: Scoring Triggers
@@ -64,7 +77,7 @@ Skip the evaluation if:
 
 | Overall Score | What to do |
 |---|---|
-| ≥4.5 | Deliver. No changes needed. |
-| 3.5–4.4 | Flag the top improvement but deliver. Fix if <30 seconds. |
+| ≥4.5 | Deliver as-is. No changes needed. |
+| 3.5–4.4 | Flag top improvement but deliver. Fix if <30 seconds. |
 | 2.5–3.4 | State what you'd change. Ask user: "Should I redo [axis] or deliver as-is?" |
 | <2.5 | Don't deliver. Say: "This scored __ because __. Let me redo this with [specific fix]." Then redo. |

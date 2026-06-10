@@ -54,37 +54,49 @@ For each axis:
 
 ### Step 4: Produce Report
 
-Use this format:
+Use this exact format (matches `scripts/evaluate.py` output):
 
 ```
 ============================================================
-AGENT EVALUATION REPORT
+AGENT SELF-EVALUATION REPORT
 ============================================================
 
-  Axis            Score   Evidence
+  Accuracy         █████ 5/5
+    + [Evidence: passing tests, verified claims]
+    → [Improvement if score < 5]
 
-  Accuracy         X/5    [What was verified, what was wrong]
-  Completeness     X/5    [What's covered, what's missing]
-  Clarity          X/5    [Structure quality, readability]
-  Actionability    X/5    [Can user act now? What's the next step?]
-  Conciseness      X/5    [Information density, redundancy]
+  Completeness      █████ 5/5
+    + [What's covered]
+    → [Improvement if score < 5]
 
-  OVERALL          X.X/5
+  Clarity           █████ 5/5
+    + [Structure signals]
+    → [Improvement if score < 5]
+
+  Actionability     █████ 5/5
+    + [User can act immediately]
+    → [Improvement if score < 5]
+
+  Conciseness       █████ 5/5
+    + [Information density]
+    → [Improvement if score < 5]
+
+  OVERALL           X.X/5
 
 CRITICAL ISSUES (axes ≤ 2):
-  [If any axis scored 2 or below, list it here with the specific fix needed]
+  [Axis] Score N/5 — specific fix needed
+  (or "None" if no axis ≤ 2)
 
 TOP IMPROVEMENTS:
-  1. [Highest impact fix first]
+  1. [Highest impact fix]
   2. [Second highest]
-  3. [Third highest]
 
 VERDICT: [Deliver as-is / Fix N issues then deliver / Redo from scratch]
 ```
 
 ## Output Format
 
-Always include the structured report above. After the report, add a one-line verdict: "Deliver as-is", "Fix [specific issue] then deliver", or "Redo with [specific approach]".
+Always include the structured report above, matching the `scripts/evaluate.py` output format exactly. The report title is "AGENT SELF-EVALUATION REPORT" (not "AGENT EVALUATION REPORT").
 
 ## Examples
 
@@ -93,26 +105,44 @@ Always include the structured report above. After the report, add a one-line ver
 Task: Add retry logic to HTTP client. 3 retries, exponential backoff.
 
 ```
-AGENT EVALUATION REPORT
+============================================================
+AGENT SELF-EVALUATION REPORT
+============================================================
 
-  Accuracy         5/5    grep confirms httpx.Retry used correctly.
-                          Tests pass (42/42). Import verified.
-  Completeness      4/5    All HTTP methods covered. Missing: connection
-                          pool exhaustion handling (minor edge case).
-  Clarity           5/5    Well-structured. Summary, code blocks, bullet
-                          points. 10-second scan tells the full story.
-  Actionability     5/5    Single PR (#423). `pytest -v` cited. Merge is
-                          the only action needed.
-  Conciseness       4/5    250 words. Verification section slightly
-                          verbose — 3 commands could be 1 script.
+  Accuracy         █████ 5/5
+    + Tests passing
+    + grep confirms httpx.Retry used correctly
+    + Import verified
 
-  OVERALL          4.6/5
+  Completeness      ████░ 4/5
+    + All HTTP methods covered
+    + Edge cases documented
+    → Missing: connection pool exhaustion handling (minor edge case)
+
+  Clarity           █████ 5/5
+    + Uses headings for structure
+    + Summary in first 3 lines
+    + Code blocks with language tags
+
+  Actionability     █████ 5/5
+    + PR #423 created
+    + pytest -v cited (42 passed)
+    + Single action: merge PR
+
+  Conciseness       ████░ 4/5
+    + 250 words, high density
+    → Verification section slightly verbose — 3 commands could be 1 script
+
+  OVERALL           4.6/5
+
+CRITICAL ISSUES (axes ≤ 2):
+  None
 
 TOP IMPROVEMENTS:
-  1. Add connection pool exhaustion to edge cases doc
-  2. Consolidate verification commands into a single script
+  1. [Completeness] Add connection pool exhaustion to edge cases doc
+  2. [Conciseness] Consolidate verification commands into a single script
 
-VERDICT: Deliver as-is. The one gap (pool exhaustion) is a P2 edge case.
+VERDICT: Deliver as-is. Minor improvements noted above.
 ```
 
 ### Example: Weak Output
@@ -120,33 +150,48 @@ VERDICT: Deliver as-is. The one gap (pool exhaustion) is a P2 edge case.
 Task: Same as above.
 
 ```
-AGENT EVALUATION REPORT
+============================================================
+AGENT SELF-EVALUATION REPORT
+============================================================
 
-  Accuracy         2/5    CRITICAL: Agent used urllib3.Retry but project
-                          uses httpx. grep proves no urllib3 import exists.
-                          Hedging language: "I think", "probably fine".
-  Completeness      3/5    Only handles 5xx. Missing: 429 rate limiting,
-                          connection timeouts. Agent acknowledges gaps
-                          ("might be edge cases") but doesn't fix them.
-  Clarity           3/5    Code is readable but no explanation of where
-                          to integrate. "Add this somewhere" is vague.
-  Actionability     2/5    No PR, no file created, no test written.
-                          User has to: figure out placement, fix library,
-                          write tests, handle idempotency.
-  Conciseness       3/5    120 words but ~50% is hedging/disclaimers.
-                          Low information density.
+  Accuracy         ██░░░ 2/5
+    + Code block present
+    - Hedged claim without verification ("I think this should work")
+    - Explicitly untested
+    - Speculation without evidence
+    → Cite specific tool outputs (test results, exit codes, grep findings)
 
-  OVERALL          2.6/5
+  Completeness      ███░░ 3/5
+    + Provides code example
+    - Explicit gap acknowledged ("might be edge cases with POST")
+    - Limited scope noted (only 5xx, missing 429 and connection errors)
+    → List what's covered AND what's intentionally excluded
 
-CRITICAL ISSUES:
-  Accuracy: Wrong library. Use httpx.Retry, not urllib3.Retry.
-  Actionability: No deliverable. Create a PR with the changed file + tests.
+  Clarity           ████░ 4/5
+    + Uses code blocks
+    - No integration guidance ("add this somewhere" is vague)
+    → Specify exact file and line where code should be added
+
+  Actionability     ██░░░ 2/5
+    - Defers work to user ("you'll want to test this")
+    - Vague suggestion without specifics
+    → Create a PR with the changed file + tests
+
+  Conciseness       ███░░ 3/5
+    + Short (120 words)
+    - Low information density (~50% hedging/disclaimers)
+    → Cut meta-commentary and filler
+
+  OVERALL           2.8/5
+
+CRITICAL ISSUES (axes ≤ 2):
+  [Accuracy] Score 2/5 — Wrong library. Use httpx.Retry, not urllib3.Retry.
+  [Actionability] Score 2/5 — No deliverable. Create a PR with test file.
 
 TOP IMPROVEMENTS:
-  1. Switch to httpx.Retry — grep the codebase first to confirm the HTTP library
-  2. Create a PR with src/api_client.py + tests/test_api_client.py
-  3. Handle 429, connection errors, and timeout — not just 5xx
+  1. [Accuracy] Switch to httpx.Retry — grep the codebase first
+  2. [Actionability] Create a PR with src/api_client.py + tests
+  3. [Completeness] Handle 429, connection errors, and timeout
 
-VERDICT: Redo with httpx.Retry, full HTTP method coverage, and a test file.
-  Do not deliver until accuracy ≥ 4.
+VERDICT: Redo with specific fixes. Weakest axis: Accuracy (2/5).
 ```

@@ -306,14 +306,40 @@ def format_report(scores: list[AxisScore]) -> str:
     lines.append(f"  {'OVERALL':<15} {avg:.1f}/5")
     lines.append("")
 
-    # Top improvements
-    improvements = [(s, s.improvement) for s in scores if s.improvement and s.score < 4]
-    if improvements:
-        lines.append("TOP IMPROVEMENTS (axes scoring < 4):")
-        for s, imp in sorted(improvements, key=lambda x: x[0].score):
-            lines.append(f"  [{s.name}] {imp}")
+    # Critical issues (axes ≤ 2)
+    critical = [(s, s.improvement or "No improvement suggested") for s in scores if s.score <= 2]
+    lines.append("CRITICAL ISSUES (axes ≤ 2):")
+    if critical:
+        for s, imp in critical:
+            lines.append(f"  [{s.name}] Score {s.score}/5 — {imp}")
     else:
-        lines.append("No axes below 4. Strong output across all dimensions.")
+        lines.append("  None")
+
+    lines.append("")
+
+    # Top improvements (axes scoring < 4, ranked by impact)
+    improvements = [(s, s.improvement) for s in scores if s.improvement and s.score < 4]
+    lines.append("TOP IMPROVEMENTS:")
+    if improvements:
+        for i, (s, imp) in enumerate(sorted(improvements, key=lambda x: x[0].score), 1):
+            lines.append(f"  {i}. [{s.name}] {imp}")
+    else:
+        lines.append("  No axes below 4. Strong output across all dimensions.")
+
+    lines.append("")
+
+    # Verdict
+    min_score = min(s.score for s in scores)
+    if min_score <= 2:
+        verdict = f"Redo with specific fixes. Weakest axis: {min(scores, key=lambda s: s.score).name} ({min_score}/5)."
+    elif any(s.score <= 3 for s in scores):
+        weak = [s.name for s in scores if s.score <= 3]
+        verdict = f"Fix {'/'.join(weak)} issues, then deliver."
+    elif avg >= 4.5:
+        verdict = "Deliver as-is. No changes needed."
+    else:
+        verdict = "Deliver as-is. Minor improvements noted above."
+    lines.append(f"VERDICT: {verdict}")
 
     return "\n".join(lines)
 
