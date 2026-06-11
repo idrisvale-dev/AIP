@@ -36,7 +36,13 @@ function defaultCoordinationState(issue, policy = DEFAULT_POLICY) {
 
 function getCoordinationState(issue, policy = DEFAULT_POLICY) {
   const { extractCoordinationState } = require('./parsing'); // lazy to avoid circular init order
-  const existing = extractCoordinationState(issue && issue.body, policy);
+  let existing;
+  try {
+    existing = extractCoordinationState(issue && issue.body, policy);
+  } catch (error) {
+    process.stderr.write(`[github-coordination] Warning: ${error.message} (issue #${issue && issue.number})\n`);
+    existing = null;
+  }
   if (existing) {
     return {
       ...defaultCoordinationState(issue, policy),
@@ -205,8 +211,8 @@ function assertIssueClaimable(issue, state) {
     throw new Error(`Issue #${issue.number} is not open`);
   }
 
-  if (state.status === 'claimed' && state.owner) {
-    throw new Error(`Issue #${issue.number} is already claimed by ${state.owner}`);
+  if (state.status === 'claimed') {
+    throw new Error(`Issue #${issue.number} is already claimed by ${state.owner || 'unknown'}`);
   }
 }
 

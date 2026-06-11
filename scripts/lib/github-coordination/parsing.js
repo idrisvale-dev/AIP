@@ -7,7 +7,7 @@ function escapeRegExp(str) {
 }
 
 function normalizeBodyForComparison(body) {
-  return (body || '').replace(/lastSyncAt:\s*[^\n]+/g, 'lastSyncAt: NORMALIZED');
+  return (body || '').replace(/"lastSyncAt"\s*:\s*[^,\}\n]+/g, '"lastSyncAt": NORMALIZED');
 }
 
 function extractCoordinationState(body, policy = DEFAULT_POLICY) {
@@ -27,8 +27,10 @@ function extractCoordinationState(body, policy = DEFAULT_POLICY) {
   try {
     const parsed = JSON.parse(match[1]);
     return parsed && typeof parsed === 'object' ? parsed : null;
-  } catch (_error) {
-    return null;
+  } catch (error) {
+    throw new SyntaxError(
+      `Malformed coordination JSON in body: ${error.message} — raw: ${match[1].slice(0, 120)}`
+    );
   }
 }
 

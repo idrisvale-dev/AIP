@@ -16,6 +16,18 @@ const {
 const { upsertCoordinationWorkItem } = require('./store');
 const { extractIssueReferences, extractTasks } = require('./parsing');
 
+function assertValidRepo(repo) {
+  if (typeof repo !== 'string' || !repo.trim()) {
+    throw new Error(`invalid repo: expected non-empty string, got ${JSON.stringify(repo)}`);
+  }
+}
+
+function assertValidIssueNumber(issueNumber) {
+  if (!Number.isFinite(issueNumber) || issueNumber <= 0 || !Number.isInteger(issueNumber)) {
+    throw new Error(`invalid issueNumber: expected positive integer, got ${JSON.stringify(issueNumber)}`);
+  }
+}
+
 // applyClaim performs a read (getIssue) → check (assertIssueClaimable) → write
 // (editIssue) sequence that is NOT atomic. Two concurrent callers can both read
 // an unclaimed issue, pass the check, and both succeed — resulting in a
@@ -24,6 +36,8 @@ const { extractIssueReferences, extractTasks } = require('./parsing');
 // branch-protection rule that allows only one actor at a time, or a
 // serialized job queue).
 function applyClaim(repo, issueNumber, options = {}, context = {}) {
+  assertValidRepo(repo);
+  assertValidIssueNumber(issueNumber);
   const policy = context.policy || loadPolicy(context.rootDir || process.cwd(), options.configPath);
   const store = context.store || null;
   const issue = getIssue(repo, issueNumber, options);
@@ -59,6 +73,7 @@ function applyClaim(repo, issueNumber, options = {}, context = {}) {
 }
 
 function applySync(repo, options = {}, context = {}) {
+  assertValidRepo(repo);
   const policy = context.policy || loadPolicy(context.rootDir || process.cwd(), options.configPath);
   const store = context.store || null;
   const issues = listIssues(repo, { ...options, state: options.state || 'all', limit: options.limit || 100 });
@@ -107,6 +122,8 @@ function applySync(repo, options = {}, context = {}) {
 }
 
 function applyValidate(repo, issueNumber, options = {}, context = {}, existingIssue = null) {
+  assertValidRepo(repo);
+  assertValidIssueNumber(issueNumber);
   const policy = context.policy || loadPolicy(context.rootDir || process.cwd(), options.configPath);
   const issue = existingIssue || getIssue(repo, issueNumber, options);
   const state = getCoordinationState(issue, policy);
@@ -129,7 +146,7 @@ function applyValidate(repo, issueNumber, options = {}, context = {}, existingIs
 
   const ok = validations.every(entry => entry.ok);
   const nextState = buildIssueStateFromAction(issue, state, 'validate', {
-    status: ok ? (state.status === 'blocked' ? 'blocked' : 'validated') : state.status,
+    status: ok ? 'validated' : state.status,
     validation: ok ? 'passed' : 'failed',
     projectState: ok ? 'ready' : (state.project && state.project.state) || 'backlog',
   }, policy);
@@ -157,6 +174,8 @@ function applyValidate(repo, issueNumber, options = {}, context = {}, existingIs
 }
 
 function applyPublish(repo, issueNumber, options = {}, context = {}) {
+  assertValidRepo(repo);
+  assertValidIssueNumber(issueNumber);
   const policy = context.policy || loadPolicy(context.rootDir || process.cwd(), options.configPath);
   const issue = getIssue(repo, issueNumber, options);
   const state = getCoordinationState(issue, policy);
@@ -194,6 +213,8 @@ function applyPublish(repo, issueNumber, options = {}, context = {}) {
 }
 
 function applyReview(repo, issueNumber, options = {}, context = {}) {
+  assertValidRepo(repo);
+  assertValidIssueNumber(issueNumber);
   const policy = context.policy || loadPolicy(context.rootDir || process.cwd(), options.configPath);
   const issue = getIssue(repo, issueNumber, options);
   const state = getCoordinationState(issue, policy);
@@ -225,6 +246,8 @@ function applyReview(repo, issueNumber, options = {}, context = {}) {
 }
 
 function applyDecompose(repo, issueNumber, options = {}, context = {}) {
+  assertValidRepo(repo);
+  assertValidIssueNumber(issueNumber);
   const policy = context.policy || loadPolicy(context.rootDir || process.cwd(), options.configPath);
   const issue = getIssue(repo, issueNumber, options);
   const state = getCoordinationState(issue, policy);
@@ -264,6 +287,7 @@ function applyDecompose(repo, issueNumber, options = {}, context = {}) {
 }
 
 function applyUnblock(repo, options = {}, context = {}) {
+  assertValidRepo(repo);
   const policy = context.policy || loadPolicy(context.rootDir || process.cwd(), options.configPath);
   const store = context.store || null;
   const issues = listIssues(repo, { ...options, state: 'all', limit: options.limit || 100 });

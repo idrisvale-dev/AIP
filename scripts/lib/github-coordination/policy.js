@@ -65,32 +65,26 @@ function loadPolicy(rootDir = process.cwd(), configPath = null) {
   } catch (error) {
     throw new Error(`Failed to load policy from ${resolvedPath}: ${error.message}`);
   }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`Policy file ${resolvedPath} must contain a JSON object, got ${Array.isArray(parsed) ? 'array' : typeof parsed}`);
+  }
+  const labels = typeof parsed.labels === 'object' && parsed.labels !== null && !Array.isArray(parsed.labels) ? parsed.labels : {};
+  const review = typeof parsed.review === 'object' && parsed.review !== null && !Array.isArray(parsed.review) ? parsed.review : {};
+  const validation = typeof parsed.validation === 'object' && parsed.validation !== null && !Array.isArray(parsed.validation) ? parsed.validation : {};
+  const branchModel = typeof parsed.branchModel === 'object' && parsed.branchModel !== null && !Array.isArray(parsed.branchModel) ? parsed.branchModel : {};
+  const project = typeof parsed.project === 'object' && parsed.project !== null && !Array.isArray(parsed.project) ? parsed.project : {};
+  const fieldNames = typeof project.fieldNames === 'object' && project.fieldNames !== null && !Array.isArray(project.fieldNames) ? project.fieldNames : {};
   return {
     ...DEFAULT_POLICY,
     ...parsed,
-    labels: {
-      ...DEFAULT_LABELS,
-      ...(parsed.labels || {}),
-    },
-    review: {
-      ...DEFAULT_POLICY.review,
-      ...(parsed.review || {}),
-    },
-    validation: {
-      ...DEFAULT_POLICY.validation,
-      ...(parsed.validation || {}),
-    },
-    branchModel: {
-      ...DEFAULT_POLICY.branchModel,
-      ...(parsed.branchModel || {}),
-    },
+    labels: { ...DEFAULT_LABELS, ...labels },
+    review: { ...DEFAULT_POLICY.review, ...review },
+    validation: { ...DEFAULT_POLICY.validation, ...validation },
+    branchModel: { ...DEFAULT_POLICY.branchModel, ...branchModel },
     project: {
       ...DEFAULT_POLICY.project,
-      ...(parsed.project || {}),
-      fieldNames: {
-        ...DEFAULT_POLICY.project.fieldNames,
-        ...((parsed.project || {}).fieldNames || {}),
-      },
+      ...project,
+      fieldNames: { ...DEFAULT_POLICY.project.fieldNames, ...fieldNames },
     },
     sourcePath: resolvedPath,
   };

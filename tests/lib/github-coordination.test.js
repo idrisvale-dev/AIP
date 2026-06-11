@@ -100,7 +100,7 @@ const DESCRIPTORS = [
   },
   {
     group: 'extractCoordinationState',
-    name: 'extractCoordinationState returns null when JSON block is malformed',
+    name: 'extractCoordinationState throws SyntaxError when JSON block is malformed',
     fn: () => {
       const body = [
         '<!-- ecc-coordination:start -->',
@@ -109,8 +109,7 @@ const DESCRIPTORS = [
         '```',
         '<!-- ecc-coordination:end -->',
       ].join('\n');
-      const result = extractCoordinationState(body);
-      assert.strictEqual(result, null);
+      assert.throws(() => extractCoordinationState(body), SyntaxError);
     },
   },
 

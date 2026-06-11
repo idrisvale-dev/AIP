@@ -64,7 +64,7 @@ function runGh(args, options = {}) {
   const commandArgs = shimPath ? [shimPath, ...args] : args;
   const env = { ...process.env };
 
-  if (!options.useEnvGithubToken) {
+  if (options.stripGithubToken) {
     delete env.GITHUB_TOKEN;
   }
 
