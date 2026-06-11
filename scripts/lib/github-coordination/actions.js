@@ -104,11 +104,13 @@ function applySync(repo, options = {}, context = {}) {
     const body = mergeIssueBody(issue, nextState, policy);
     const labelPlan = syncIssueLabels(repo, issue, nextState, policy, options);
 
-    if (!options.dryRun && normalizeBodyForComparison(body) !== normalizeBodyForComparison(issue.body)) {
-      editIssue(repo, issue.number, { body }, options);
+    let snapshot = null;
+    if (!options.dryRun) {
+      if (normalizeBodyForComparison(body) !== normalizeBodyForComparison(issue.body)) {
+        editIssue(repo, issue.number, { body }, options);
+      }
+      snapshot = upsertCoordinationWorkItem(store, repo, trackedIssue, nextState, 'sync', { ...context, policy });
     }
-
-    const snapshot = upsertCoordinationWorkItem(store, repo, trackedIssue, nextState, 'sync', { ...context, policy });
     results.push({
       ...summarizeStateForOutput(repo, trackedIssue, nextState, 'sync', policy),
       syncedAt,
