@@ -183,6 +183,10 @@ function applyPublish(repo, issueNumber, options = {}, context = {}) {
     throw new Error(`Issue #${issueNumber} is not ready to publish: ${validation.validations.map(entry => `${entry.check}=${entry.ok}`).join(', ')}`);
   }
 
+  if (policy.review && policy.review.required && state.review !== 'approved') {
+    throw new Error(`Issue #${issueNumber} cannot be published: review approval required (current: ${state.review})`);
+  }
+
   const nextState = buildIssueStateFromAction(issue, state, 'publish', {
     status: 'published',
     validation: 'passed',
