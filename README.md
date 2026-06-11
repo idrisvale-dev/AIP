@@ -1,14 +1,6 @@
 **Language:** English | [Português (Brasil)](docs/pt-BR/README.md) | [简体中文](README.zh-CN.md) | [繁體中文](docs/zh-TW/README.md) | [日本語](docs/ja-JP/README.md) | [한국어](docs/ko-KR/README.md) | [Türkçe](docs/tr/README.md) | [Русский](docs/ru/README.md) | [Tiếng Việt](docs/vi-VN/README.md) | [ไทย](docs/th/README.md) | [Deutsch](docs/de-DE/README.md) | [Español](docs/es/README.md)
 
-<div align="center">
-
-<a href="https://ecc.tools"><img src="assets/ecc-icon.svg" width="120" alt="ECC logo" /></a>
-
-<h1>ECC</h1>
-
-<p><strong>The harness-native operator system for agentic work.</strong></p>
-
-</div>
+![ECC — the agent harness operating system](assets/hero.png)
 
 [![Stars](https://img.shields.io/github/stars/affaan-m/ECC?style=flat)](https://github.com/affaan-m/ECC/stargazers)
 [![Forks](https://img.shields.io/github/forks/affaan-m/ECC?style=flat)](https://github.com/affaan-m/ECC/network/members)
