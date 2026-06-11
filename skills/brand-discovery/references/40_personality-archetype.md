@@ -50,9 +50,9 @@
 
 ### Personality in action (3 behavioural guidelines derived from the archetype)
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ### What the brand must never sound or look like (the anti-personality)
 

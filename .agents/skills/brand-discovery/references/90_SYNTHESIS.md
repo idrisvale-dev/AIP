@@ -24,9 +24,9 @@
 ### 1. The Why (from Module 10)
 
 > **Core belief:**
-
+>
 > **Behavioural How (values in action):**
-
+>
 > **What we refuse to be:**
 
 ---
@@ -37,7 +37,7 @@
 > For **[target client]** who **[situation]**, **[brand name]** is the
 > **[category]** that **[unique value]**. Unlike **[alternatives]**, we
 > **[key differentiator]**.
-
+>
 > **White-space the brand owns:**
 
 ---
@@ -45,9 +45,9 @@
 ### 3. Audience (from Module 30)
 
 > **Ideal Client Profile (one-paragraph portrait):**
-
+>
 > **Niche the brand is building toward:**
-
+>
 > **Red-flag / disqualifier:**
 
 ---
@@ -68,17 +68,17 @@
 ### 4b. Aaker Brand System (from Module 40)
 
 > **Primary archetype** (Mark & Pearson):
-
+>
 > **Secondary archetype** (if present):
-
+>
 > **Aaker brand identity** — four dimensions:
 > - *Brand as product:*
 > - *Brand as organisation:*
 > - *Brand as person (personality):*
 > - *Brand as symbol:*
-
+>
 > **Brand associations** (3–5 key associations the brand should own):
-
+>
 > **Brand equity signals** (what clients would lose if this brand disappeared):
 
 ---
@@ -86,18 +86,18 @@
 ### 5. Voice & Tone summary (from Module 50)
 
 > **Voice statement (one paragraph):**
-
+>
 > **The three checks every draft must pass:**
-> 1. 
-> 2. 
-> 3. 
+> 1.
+> 2.
+> 3.
 
 ---
 
 ### 6. Narrative assets (from Module 60)
 
 > **Trueline:**
-
+>
 > **Brand story arc (one paragraph, usable as an About page starting point):**
 
 ---
@@ -105,7 +105,7 @@
 ### 7. Founder / organisation brand boundary (from Module 70)
 
 > **What the founder brand owns:**
-
+>
 > **What the organisation brand owns:**
 
 ---
@@ -128,6 +128,6 @@
 
 <!-- 3–5 concrete actions the brand can take based on this brandbook. -->
 
-1. 
-2. 
-3. 
+1.
+2.
+3.

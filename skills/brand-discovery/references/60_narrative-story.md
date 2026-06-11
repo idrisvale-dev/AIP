@@ -32,13 +32,13 @@
 
 ### Trueline draft (Neumeier: "[Brand] is the only [category] that [unique claim].")
 
-> 
+>
 
 ### Alternative truelines (2–3 variations, vary level of abstraction)
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ### Brand story arc
 

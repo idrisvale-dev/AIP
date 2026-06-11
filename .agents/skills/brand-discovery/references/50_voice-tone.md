@@ -1,7 +1,7 @@
 # Module 50 — Voice & Tone
 
-> **Frameworks:** Brand voice spectrum (formal ↔ casual, serious ↔ playful,
-> distant ↔ warm, conventional ↔ irreverent) · Content-type tone matrix
+> **Frameworks:** Brand voice spectrum (formal <-> casual, serious <-> playful,
+> distant <-> warm, conventional <-> irreverent) · Content-type tone matrix
 >
 > **Goal:** Codify the brand's verbal register precisely enough that two different
 > writers produce copy that sounds like the same person. Voice is constant;
@@ -54,8 +54,8 @@
 
 ### The three things to check every draft against
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ### Open questions / tensions with Module 40 Personality

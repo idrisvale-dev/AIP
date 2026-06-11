@@ -6,7 +6,6 @@ description: >-
   profiles, benchmarking matrix, white-space analysis, strategic recommendations,
   and team alignment trigger questions. Final step in the three-skill competitive
   pipeline.
-origin: community
 ---
 
 # Competitive Report Structure
@@ -59,7 +58,7 @@ this and knows what to do. No methodology here.
 
 ### 2. Market landscape & category framing
 Define the category and map it. Use a **multi-axis map** — at minimum a 2×2
-(e.g., *brand-led ↔ capability-led* × *boutique ↔ enterprise-scale*), and
+(e.g., *brand-led <-> capability-led* × *boutique <-> enterprise-scale*), and
 ideally the **client's tension plot** from `benchmark-methodology` as the
 headline map. Place every profiled competitor and the client. The map should
 make the client's intended position visually obvious and show how crowded (or

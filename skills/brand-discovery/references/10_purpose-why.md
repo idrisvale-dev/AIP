@@ -31,9 +31,9 @@
 
 ### Candidate Why formulations (offer 2–3 versions, vary register and specificity)
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ### Open questions / threads to pursue in later modules
 

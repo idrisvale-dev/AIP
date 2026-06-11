@@ -36,7 +36,7 @@
 [Founder IS the brand] ←————————→ [Organisation brand stands alone]
          1         2         3         4         5
 ```
-Current position: ___   Target position (3-year): ___
+Current position: `___`   Target position (3-year): `___`
 
 ### What the founder brand should own (and keeps owning)
 
