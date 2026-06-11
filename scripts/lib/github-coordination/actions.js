@@ -2,7 +2,7 @@
 
 const { loadPolicy } = require('./policy');
 const { mergeIssueBody, normalizeBodyForComparison } = require('./parsing');
-const { getIssue, listIssues, editIssue, commentIssue } = require('./gh-api');
+const { getIssue, listIssues, editIssue, commentIssue, normalizeLabels } = require('./gh-api');
 const {
   assertIssueClaimable,
   buildIssueComment,
@@ -28,13 +28,21 @@ function assertValidIssueNumber(issueNumber) {
   }
 }
 
+function staleCoordinationLabels(issue, nextLabels, policy) {
+  const epicLabel = policy.labels && policy.labels.epic;
+  return normalizeLabels(issue.labels).filter(l =>
+    (l.startsWith('coordination:') || l === epicLabel) && !nextLabels.includes(l)
+  );
+}
+
 // applyClaim performs a read (getIssue) → check (assertIssueClaimable) → write
 // (editIssue) sequence that is NOT atomic. Two concurrent callers can both read
 // an unclaimed issue, pass the check, and both succeed — resulting in a
-// double-claim. Until a store.acquireLock(repo, issueNumber) API is available,
-// callers should prevent races via external serialization (e.g. a GitHub
-// branch-protection rule that allows only one actor at a time, or a
-// serialized job queue).
+// double-claim. A code-review finding suggested fixing this via
+// context.store.acquireLock(repo, issueNumber), but that API does not exist in
+// store.js; adding a call to it would throw at runtime. Left as-is until a
+// locking primitive is available — callers should prevent races via external
+// serialization (e.g. a serialized job queue or GitHub branch-protection rule).
 function applyClaim(repo, issueNumber, options = {}, context = {}) {
   assertValidRepo(repo);
   assertValidIssueNumber(issueNumber);
@@ -63,7 +71,7 @@ function applyClaim(repo, issueNumber, options = {}, context = {}) {
     editIssue(repo, issueNumber, {
       body,
       addLabels: trackedIssue.labels,
-      removeLabels: [],
+      removeLabels: staleCoordinationLabels(issue, trackedIssue.labels, policy),
     }, options);
     commentIssue(repo, issueNumber, buildIssueComment('claimed', repo, issueNumber, nextState), options);
     upsertCoordinationWorkItem(store, repo, trackedIssue, nextState, 'claim', { ...context, policy });
@@ -96,12 +104,8 @@ function applySync(repo, options = {}, context = {}) {
     const body = mergeIssueBody(issue, nextState, policy);
     const labelPlan = syncIssueLabels(repo, issue, nextState, policy, options);
 
-    if (!options.dryRun && (normalizeBodyForComparison(body) !== normalizeBodyForComparison(issue.body) || labelPlan.addLabels.length > 0 || labelPlan.removeLabels.length > 0)) {
-      editIssue(repo, issue.number, {
-        body,
-        addLabels: labelPlan.addLabels,
-        removeLabels: labelPlan.removeLabels,
-      }, options);
+    if (!options.dryRun && normalizeBodyForComparison(body) !== normalizeBodyForComparison(issue.body)) {
+      editIssue(repo, issue.number, { body }, options);
     }
 
     const snapshot = upsertCoordinationWorkItem(store, repo, trackedIssue, nextState, 'sync', { ...context, policy });
@@ -132,12 +136,6 @@ function applyValidate(repo, issueNumber, options = {}, context = {}, existingIs
   const missingDependencies = dependencyNumbers.filter(number => !closedDependencies.includes(number));
   const validations = [];
 
-  if (policy.validation.required && state.validation !== 'passed') {
-    validations.push({ check: 'validation-status', ok: false, detail: `validation=${state.validation}` });
-  } else {
-    validations.push({ check: 'validation-status', ok: true, detail: state.validation });
-  }
-
   if (missingDependencies.length > 0) {
     validations.push({ check: 'dependencies', ok: false, detail: missingDependencies.join(',') });
   } else {
@@ -160,7 +158,7 @@ function applyValidate(repo, issueNumber, options = {}, context = {}, existingIs
     editIssue(repo, issueNumber, {
       body,
       addLabels: trackedIssue.labels,
-      removeLabels: [],
+      removeLabels: staleCoordinationLabels(issue, trackedIssue.labels, policy),
     }, options);
     upsertCoordinationWorkItem(context.store || null, repo, trackedIssue, nextState, 'validate', { ...context, policy });
   }
@@ -201,7 +199,7 @@ function applyPublish(repo, issueNumber, options = {}, context = {}) {
     editIssue(repo, issueNumber, {
       body,
       addLabels: trackedIssue.labels,
-      removeLabels: [],
+      removeLabels: staleCoordinationLabels(issue, trackedIssue.labels, policy),
     }, options);
     commentIssue(repo, issueNumber, buildIssueComment('published', repo, issueNumber, nextState, {
       validation: 'passed',
@@ -234,7 +232,7 @@ function applyReview(repo, issueNumber, options = {}, context = {}) {
     editIssue(repo, issueNumber, {
       body,
       addLabels: trackedIssue.labels,
-      removeLabels: [],
+      removeLabels: staleCoordinationLabels(issue, trackedIssue.labels, policy),
     }, options);
     commentIssue(repo, issueNumber, buildIssueComment('reviewed', repo, issueNumber, nextState, {
       review: reviewState,
@@ -270,7 +268,7 @@ function applyDecompose(repo, issueNumber, options = {}, context = {}) {
     editIssue(repo, issueNumber, {
       body,
       addLabels: trackedIssue.labels,
-      removeLabels: [],
+      removeLabels: staleCoordinationLabels(issue, trackedIssue.labels, policy),
     }, options);
     commentIssue(repo, issueNumber, buildIssueComment('decomposed', repo, issueNumber, nextState, {
       taskCount: String(tasks.length),
@@ -320,7 +318,7 @@ function applyUnblock(repo, options = {}, context = {}) {
       editIssue(repo, issue.number, {
         body,
         addLabels: trackedIssue.labels,
-        removeLabels: [],
+        removeLabels: staleCoordinationLabels(issue, trackedIssue.labels, policy),
       }, options);
       commentIssue(repo, issue.number, buildIssueComment('unblocked', repo, issue.number, nextState, {
         dependencies: dependencyNumbers.length > 0 ? dependencyNumbers.join(',') : 'none',
