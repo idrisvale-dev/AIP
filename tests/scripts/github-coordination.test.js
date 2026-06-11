@@ -66,11 +66,11 @@ function parseJson(stdout) {
 async function test(name, fn) {
   try {
     await fn();
-    console.log(`  PASS ${name}`);
+    process.stdout.write(`  PASS ${name}\n`);
     return true;
   } catch (error) {
-    console.log(`  FAIL ${name}`);
-    console.log(`    Error: ${error.message}`);
+    process.stdout.write(`  FAIL ${name}\n`);
+    process.stdout.write(`    Error: ${error.message}\n`);
     return false;
   }
 }
@@ -85,7 +85,7 @@ async function readStore(dbPath) {
 }
 
 async function runTests() {
-  console.log('\n=== Testing github-coordination.js ===\n');
+  process.stdout.write('\n=== Testing github-coordination.js ===\n\n');
 
   let passed = 0;
   let failed = 0;
@@ -228,7 +228,7 @@ async function runTests() {
     }
   })) passed++; else failed++;
 
-  console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
+  process.stdout.write(`\nResults: Passed: ${passed}, Failed: ${failed}\n`);
   process.exit(failed > 0 ? 1 : 0);
 }
 

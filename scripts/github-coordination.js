@@ -55,25 +55,37 @@ function readValue(args, index, flagName) {
   return value;
 }
 
+// Boolean flags: map flag string → setter(parsed)
+const BOOL_FLAGS = new Map([
+  ['--help',    p => { p.help = true; }],
+  ['-h',        p => { p.help = true; }],
+  ['--json',    p => { p.json = true; }],
+  ['--dry-run', p => { p.dryRun = true; }],
+]);
+
+// Value flags: map flag string → setter(parsed, value)
+const VALUE_FLAGS = new Map([
+  ['--repo',          (p, v) => { p.repo = v; }],
+  ['--actor',         (p, v) => { p.actor = v; }],
+  ['--branch',        (p, v) => { p.branch = v; }],
+  ['--config',        (p, v) => { p.configPath = v; }],
+  ['--db',            (p, v) => { p.dbPath = v; }],
+  ['--home',          (p, v) => { p.homeDir = v; }],
+  ['--validation',    (p, v) => { p.validation = v; }],
+  ['--review',        (p, v) => { p.review = v; }],
+  ['--status',        (p, v) => { p.status = v; }],
+  ['--project-state', (p, v) => { p.projectState = v; }],
+  ['--issue',         (p, v) => { p.issueNumber = normalizeIssueNumber(v); }],
+  ['--limit',         (p, v) => { p.limit = normalizeIssueNumber(v); }],
+]);
+
 function parseArgs(argv) {
   const args = argv.slice(2);
   const parsed = {
-    command: null,
-    actor: null,
-    branch: null,
-    configPath: null,
-    dbPath: null,
-    dryRun: false,
-    help: false,
-    homeDir: null,
-    issueNumber: null,
-    json: false,
-    limit: 100,
-    repo: null,
-    validation: null,
-    review: null,
-    status: null,
-    projectState: null,
+    command: null, actor: null, branch: null, configPath: null,
+    dbPath: null, dryRun: false, help: false, homeDir: null,
+    issueNumber: null, json: false, limit: 100, repo: null,
+    validation: null, review: null, status: null, projectState: null,
     positionals: [],
   };
 
@@ -81,94 +93,21 @@ function parseArgs(argv) {
     parsed.command = args.shift();
   }
 
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-
-    if (arg === '--help' || arg === '-h') {
-      parsed.help = true;
-      continue;
-    }
-    if (arg === '--json') {
-      parsed.json = true;
-      continue;
-    }
-    if (arg === '--dry-run') {
-      parsed.dryRun = true;
-      continue;
-    }
-    if (arg === '--repo') {
-      parsed.repo = readValue(args, index, arg);
-      index += 1;
-      continue;
-    }
-    if (arg === '--issue') {
-      parsed.issueNumber = normalizeIssueNumber(readValue(args, index, arg));
-      index += 1;
-      continue;
-    }
-    if (arg === '--actor') {
-      parsed.actor = readValue(args, index, arg);
-      index += 1;
-      continue;
-    }
-    if (arg === '--branch') {
-      parsed.branch = readValue(args, index, arg);
-      index += 1;
-      continue;
-    }
-    if (arg === '--config') {
-      parsed.configPath = readValue(args, index, arg);
-      index += 1;
-      continue;
-    }
-    if (arg === '--db') {
-      parsed.dbPath = readValue(args, index, arg);
-      index += 1;
-      continue;
-    }
-    if (arg === '--home') {
-      parsed.homeDir = readValue(args, index, arg);
-      index += 1;
-      continue;
-    }
-    if (arg === '--limit') {
-      parsed.limit = normalizeIssueNumber(readValue(args, index, arg));
-      index += 1;
-      continue;
-    }
-    if (arg === '--validation') {
-      parsed.validation = readValue(args, index, arg);
-      index += 1;
-      continue;
-    }
-    if (arg === '--review') {
-      parsed.review = readValue(args, index, arg);
-      index += 1;
-      continue;
-    }
-    if (arg === '--status') {
-      parsed.status = readValue(args, index, arg);
-      index += 1;
-      continue;
-    }
-    if (arg === '--project-state') {
-      parsed.projectState = readValue(args, index, arg);
-      index += 1;
-      continue;
-    }
-
-    if (!arg.startsWith('-')) {
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (BOOL_FLAGS.has(arg)) {
+      BOOL_FLAGS.get(arg)(parsed);
+    } else if (VALUE_FLAGS.has(arg)) {
+      VALUE_FLAGS.get(arg)(parsed, readValue(args, i, arg));
+      i += 1;
+    } else if (!arg.startsWith('-')) {
       parsed.positionals.push(arg);
-      continue;
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
     }
-
-    throw new Error(`Unknown argument: ${arg}`);
   }
 
-  if (!parsed.command) {
-    parsed.command = 'sync';
-  }
-
+  if (!parsed.command) parsed.command = 'sync';
   if (!parsed.issueNumber && parsed.positionals.length > 0) {
     parsed.issueNumber = normalizeIssueNumber(parsed.positionals[0]);
   }
@@ -176,18 +115,59 @@ function parseArgs(argv) {
   return parsed;
 }
 
+function dispatchCommand(options, ctx) {
+  const { store, policy, rootDir } = ctx;
+  const base = { configPath: options.configPath, dryRun: options.dryRun };
+
+  if (options.command === 'claim') {
+    if (!options.issueNumber) throw new Error('Missing issue number.');
+    return applyClaim(options.repo, options.issueNumber, {
+      ...base, actor: options.actor, branch: options.branch, owner: options.actor,
+      projectState: options.projectState, review: options.review,
+      status: options.status, validation: options.validation,
+    }, { store, policy, rootDir });
+  }
+  if (options.command === 'sync') {
+    return applySync(options.repo, { ...base, limit: options.limit }, { store, policy, rootDir });
+  }
+  if (options.command === 'validate') {
+    if (!options.issueNumber) throw new Error('Missing issue number.');
+    return applyValidate(options.repo, options.issueNumber, base, { store, policy, rootDir });
+  }
+  if (options.command === 'publish') {
+    if (!options.issueNumber) throw new Error('Missing issue number.');
+    return applyPublish(options.repo, options.issueNumber, base, { store, policy, rootDir });
+  }
+  if (options.command === 'review') {
+    if (!options.issueNumber) throw new Error('Missing issue number.');
+    return applyReview(options.repo, options.issueNumber, { ...base, review: options.review }, { store, policy, rootDir });
+  }
+  if (options.command === 'unblock') {
+    return applyUnblock(options.repo, { ...base, limit: options.limit }, { store, policy, rootDir });
+  }
+  if (options.command === 'decompose') {
+    if (!options.issueNumber) throw new Error('Missing issue number.');
+    return applyDecompose(options.repo, options.issueNumber, base, { store, policy, rootDir });
+  }
+  throw new Error(`Unknown command: ${options.command}`);
+}
+
+function formatOutput(payload, options) {
+  if (options.json) {
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  } else if (options.command === 'sync' || options.command === 'unblock') {
+    process.stdout.write(formatCollection(payload));
+  } else {
+    process.stdout.write(formatSummary(payload));
+  }
+}
+
 async function main() {
   let store = null;
-
   try {
     const options = parseArgs(process.argv);
-    if (options.help) {
-      usage(0);
-    }
-
-    if (!options.repo) {
-      throw new Error('Missing --repo <owner/repo>.');
-    }
+    if (options.help) usage(0);
+    if (!options.repo) throw new Error('Missing --repo <owner/repo>.');
 
     const policy = loadPolicy(process.cwd(), options.configPath);
     store = await openStore({
@@ -195,76 +175,13 @@ async function main() {
       homeDir: options.homeDir || process.env.HOME || os.homedir(),
     });
 
-    let payload;
-
-    if (options.command === 'claim') {
-      if (!options.issueNumber) throw new Error('Missing issue number.');
-      payload = applyClaim(options.repo, options.issueNumber, {
-        actor: options.actor,
-        branch: options.branch,
-        configPath: options.configPath,
-        dryRun: options.dryRun,
-        owner: options.actor,
-        projectState: options.projectState,
-        review: options.review,
-        status: options.status,
-        validation: options.validation,
-      }, { store, policy, rootDir: process.cwd() });
-    } else if (options.command === 'sync') {
-      payload = applySync(options.repo, {
-        configPath: options.configPath,
-        dryRun: options.dryRun,
-        limit: options.limit,
-      }, { store, policy, rootDir: process.cwd() });
-    } else if (options.command === 'validate') {
-      if (!options.issueNumber) throw new Error('Missing issue number.');
-      payload = applyValidate(options.repo, options.issueNumber, {
-        configPath: options.configPath,
-        dryRun: options.dryRun,
-      }, { store, policy, rootDir: process.cwd() });
-    } else if (options.command === 'publish') {
-      if (!options.issueNumber) throw new Error('Missing issue number.');
-      payload = applyPublish(options.repo, options.issueNumber, {
-        configPath: options.configPath,
-        dryRun: options.dryRun,
-      }, { store, policy, rootDir: process.cwd() });
-    } else if (options.command === 'review') {
-      if (!options.issueNumber) throw new Error('Missing issue number.');
-      payload = applyReview(options.repo, options.issueNumber, {
-        configPath: options.configPath,
-        dryRun: options.dryRun,
-        review: options.review,
-      }, { store, policy, rootDir: process.cwd() });
-    } else if (options.command === 'unblock') {
-      payload = applyUnblock(options.repo, {
-        configPath: options.configPath,
-        dryRun: options.dryRun,
-        limit: options.limit,
-      }, { store, policy, rootDir: process.cwd() });
-    } else if (options.command === 'decompose') {
-      if (!options.issueNumber) throw new Error('Missing issue number.');
-      payload = applyDecompose(options.repo, options.issueNumber, {
-        configPath: options.configPath,
-        dryRun: options.dryRun,
-      }, { store, policy, rootDir: process.cwd() });
-    } else {
-      throw new Error(`Unknown command: ${options.command}`);
-    }
-
-    if (options.json) {
-      process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-    } else if (options.command === 'sync' || options.command === 'unblock') {
-      process.stdout.write(formatCollection(payload));
-    } else {
-      process.stdout.write(formatSummary(payload));
-    }
+    const payload = dispatchCommand(options, { store, policy, rootDir: process.cwd() });
+    formatOutput(payload, options);
   } catch (error) {
     console.error(`Error: ${error.message}`);
     process.exit(1);
   } finally {
-    if (store) {
-      store.close();
-    }
+    if (store) store.close();
   }
 }
 
