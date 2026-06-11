@@ -85,7 +85,7 @@ If any axis scored 3 or below:
 
 1. State what you would do differently
 2. If the gap is fixable in < 30 seconds (missing link, unclear phrasing), fix it now
-3. If the gap requires rework, flag it explicitly: "This axis scored __ because __. Re-running with __ would likely raise it to __."
+3. If the gap requires rework, flag it explicitly: "This axis scored [reason] because [evidence]. Re-running with [specific fix] would likely raise it to [score]."
 
 ## Code Examples
 
@@ -134,7 +134,7 @@ Overall: 2.8 — Wrong library used. Needs httpx rewrite.
 ### "Everything is a 5"
 
 ```
-❌ Accuracy:    5 — All good.
+FAIL: Accuracy:    5 — All good.
    Completeness: 5 — Everything covered.
    Clarity:      5 — Clear.
 ```
@@ -144,7 +144,7 @@ No evidence cited. This is self-congratulation, not evaluation. A real 5 require
 ### Over-penalizing for scope creep
 
 ```
-❌ Completeness: 2 — Didn't handle WebSocket connections or
+FAIL: Completeness: 2 — Didn't handle WebSocket connections or
    gRPC streaming (user didn't ask for these)
 ```
 
@@ -153,7 +153,7 @@ Only evaluate against what the user actually requested, not what you could have 
 ### Using the evaluation to re-litigate
 
 ```
-❌ "As I said earlier, this approach is wrong. Score: 1"
+FAIL: "As I said earlier, this approach is wrong. Score: 1"
 ```
 
 The evaluation is about the delivered output, not about re-arguing design decisions that were already made. If the approach was wrong, that should have been caught before delivery.
@@ -161,7 +161,7 @@ The evaluation is about the delivered output, not about re-arguing design decisi
 ### Mixing personal preference with objective gaps
 
 ```
-❌ "Score: 3. I don't like Python decorators."
+FAIL: "Score: 3. I don't like Python decorators."
 ```
 
 "Don't like" is not evidence. Cite a concrete readability, testability, or correctness concern, or leave the score at 4+.

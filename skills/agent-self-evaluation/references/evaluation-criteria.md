@@ -56,7 +56,7 @@ This reference provides concrete scoring anchors for each axis. Use it when you'
 
 ### When the user gave unclear instructions
 
-If the user's request was ambiguous, do NOT penalize completeness for not reading minds. Instead, note in the evaluation: "User's request was ambiguous about __. I chose interpretation __. If they meant __, this score would drop to __."
+If the user's request was ambiguous, do NOT penalize completeness for not reading minds. Instead, note in the evaluation: "User's request was ambiguous about [scope]. I chose interpretation [chosen interpretation]. If they meant [alternative interpretation], this score would drop to [score]."
 
 ### When the task is inherently simple
 

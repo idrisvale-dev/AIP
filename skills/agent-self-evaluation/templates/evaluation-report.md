@@ -83,4 +83,4 @@ Skip the evaluation if:
 | ≥4.5 | Deliver as-is. No changes needed. |
 | 3.5–4.4 | Flag top improvement but deliver. Fix if <30 seconds. |
 | 2.5–3.4 | State what you'd change. Ask user: "Should I redo [axis] or deliver as-is?" |
-| <2.5 | Don't deliver. Say: "This scored __ because __. Let me redo this with [specific fix]." Then redo. |
+| <2.5 | Don't deliver. Say: "This scored [score] because [evidence]. Let me redo this with [specific fix]." Then redo. |
