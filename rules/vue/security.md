@@ -83,7 +83,7 @@ app.directive("render-html", (el, binding) => {
 
 ```ts
 // CRITICAL: secret leaked to client bundle (Vite)
-const apiKey = import.meta.env.VITE_STRIPE_SECRET; // ❌ VITE_ prefix = public
+const apiKey = import.meta.env.VITE_STRIPE_SECRET; // FAIL VITE_ prefix = public
 
 // CORRECT: server-side only
 // vite.config.ts — never pass VITE_ prefixed secrets
@@ -158,7 +158,7 @@ export default defineEventHandler(async (event) => {
 
 ```ts
 // CRITICAL: session tokens in localStorage
-localStorage.setItem("token", jwt); // ❌ any XSS can read this
+localStorage.setItem("token", jwt); // FAIL any XSS can read this
 
 // CORRECT: httpOnly cookie set by server
 // Client never touches the token directly.

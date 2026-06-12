@@ -317,7 +317,7 @@ Use `<Teleport>` for modals, tooltips, notifications — content that must escap
 
 ```vue
 <!-- defer: target can appear after the Teleport in the DOM -->
-<Teleport defer target="#container">
+<Teleport defer to="#container">
   <p>Teleported content</p>
 </Teleport>
 <div id="container"></div>

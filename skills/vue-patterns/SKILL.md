@@ -201,7 +201,7 @@ export const useCartStore = defineStore("cart", () => {
 ```
 
 - Use Setup Store syntax (not Options Store).
-- Actions: only place to mutate state.
+- Prefer actions for business-level mutations and `$patch()` for grouped updates.
 - Every async action: handle loading + success + error.
 
 ---
@@ -385,7 +385,7 @@ const { count = 0, msg = "hello" } = defineProps<{
 }>();
 
 // Limitation: cannot watch destructured prop directly
-watch(() => count, (newVal) => { ... }); // ✅ getter required
+watch(() => count, (newVal) => { ... }); // PASS getter required
 ```
 
 ### `useTemplateRef()`
@@ -402,7 +402,7 @@ Supports dynamic ref IDs: `useTemplateRef(dynamicRefId)`.
 
 ### `onWatcherCleanup()`
 
-Globally importable watcher cleanup API (Vue 3.5+):
+Globally importable watcher cleanup API (Vue 3.5+). It must be called synchronously inside the watcher callback:
 
 ```ts
 import { watch, onWatcherCleanup } from "vue";
@@ -428,7 +428,7 @@ const id = useId();
 `<Teleport defer>` allows teleporting to targets rendered in the same cycle:
 
 ```vue
-<Teleport defer target="#container">Content</Teleport>
+<Teleport defer to="#container">Content</Teleport>
 <div id="container"></div>
 ```
 

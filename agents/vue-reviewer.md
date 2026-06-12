@@ -103,7 +103,7 @@ You DO NOT refactor or rewrite code — you report findings only.
 
 ### HIGH — State Management (Pinia)
 
-- **Direct store property mutation without `$patch` or action**: Mutations outside actions lose devtools tracking and make state flow non-obvious.
+- **Scattered complex store mutations outside actions or `$patch()`**: Pinia allows direct state writes, but multi-field business mutations should live in actions or grouped `$patch()` calls so devtools history and state flow stay understandable.
 - **Storing non-serializable data in Pinia state**: Saved state (SSR hydration, devtools, local persistence) won't survive round-trip.
 - **`mapState` / `mapActions` in Options API without proper typing**: Type inference breaks — prefer Composition API or declare full types.
 - **Store action without error boundary**: Async store actions should handle failures and not leave state inconsistent.

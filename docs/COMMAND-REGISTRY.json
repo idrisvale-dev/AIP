@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "totalCommands": 84,
+  "totalCommands": 85,
   "commands": [
     {
       "command": "aside",
@@ -919,6 +919,23 @@
       "allAgents": [],
       "skills": [],
       "path": "commands/update-docs.md"
+    },
+    {
+      "command": "vue-review",
+      "description": "Comprehensive Vue.js code review for Composition API correctness, reactivity, composable patterns, template security, accessibility, and Vue-specific performance. Invokes the vue-reviewer agent (and typescript-reviewer alongside on .vue/.ts changes).",
+      "type": "testing",
+      "primaryAgents": [
+        "typescript-reviewer",
+        "vue-reviewer"
+      ],
+      "allAgents": [
+        "typescript-reviewer",
+        "vue-reviewer"
+      ],
+      "skills": [
+        "vue-patterns"
+      ],
+      "path": "commands/vue-review.md"
     }
   ],
   "statistics": {
@@ -929,7 +946,7 @@
       "planning": 2,
       "refactoring": 1,
       "review": 9,
-      "testing": 52
+      "testing": 53
     },
     "topAgents": [
       {
@@ -938,6 +955,10 @@
       },
       {
         "agent": "flutter-reviewer",
+        "count": 2
+      },
+      {
+        "agent": "typescript-reviewer",
         "count": 2
       },
       {
@@ -966,10 +987,6 @@
       },
       {
         "agent": "planner",
-        "count": 1
-      },
-      {
-        "agent": "python-reviewer",
         "count": 1
       }
     ],

@@ -165,7 +165,6 @@ Recommendation: FAIL: Block merge until CRITICAL issue is fixed
 - Run tests to ensure component tests pass
 - Run `/vue-review` before merging Vue code
 - Use `/code-review` for non-Vue-specific concerns on the same PR
-- Use `/vue-test` (if created) for Vue-specific test generation
 
 ## Related
 

@@ -75,7 +75,7 @@ watch(() => count, (newVal) => { ... });
 When passing a destructured prop to a composable that needs reactivity, wrap in a getter and use `toValue()` inside the composable:
 
 ```ts
-useDynamicCount(() => count); // ✅ preserves reactivity
+useDynamicCount(() => count); // preserves reactivity
 ```
 
 ### Replacing reactive() Objects
@@ -132,7 +132,7 @@ const fullName = computed({
 
 // WRONG: side effect in computed
 const displayName = computed(() => {
-  analytics.track("name-computed"); // ❌ side effect
+  analytics.track("name-computed"); // side effect
   return user.value.name;
 });
 ```
@@ -164,23 +164,19 @@ watchEffect(() => {
 ## Watcher Source Pitfalls
 
 ```ts
-// WRONG: watching a ref object (never changes)
+// CORRECT: watching a ref tracks its value
 const u = ref({ name: "Alice" });
-watch(u, (val) => {}); // ❌ watches the ref wrapper, not the value
+watch(u, (val) => {});
 
-// CORRECT: getter returning .value
+// ALSO CORRECT: getter returning .value
 watch(() => u.value, (val) => {});
 
-// ALSO WRONG: reactive getter that doesn't track
-watch(() => state.name, (val) => {}); // ❌ val is snapshot at setup
-
 // CORRECT: getter that accesses property on reactive object
-watch(() => state.name, (val) => {}); // ✅ .name access inside getter is tracked
-// Wait — careful: `() => state.name` DOES track correctly because the getter
-// accesses `.name` on the reactive proxy. The getter is re-evaluated by Vue.
+watch(() => state.name, (val) => {}); // .name access inside getter is tracked
+// The getter is re-evaluated because it accesses `.name` on the reactive proxy.
 
-// ACTUALLY WRONG case: direct reactive property
-watch(state.name, ...); // ❌ state.name evaluates to a primitive, not trackable
+// WRONG: direct reactive property
+watch(state.name, ...); // state.name evaluates to a primitive, not trackable
 
 // CORRECT: getter returning reactive property
 watch(() => state.name, (newName) => { ... });
@@ -190,7 +186,7 @@ watch(() => state.name, (newName) => { ... });
 
 Every watcher that creates subscriptions, intervals, or fetch requests must clean up.
 
-**Vue 3.5+**: Use `onWatcherCleanup()` (globally importable from `vue`) for watcher-side-effect cleanup:
+**Vue 3.5+**: Use `onWatcherCleanup()` (globally importable from `vue`) for watcher-side-effect cleanup. It must be called synchronously inside the watcher callback:
 
 ```ts
 import { watch, onWatcherCleanup } from "vue";
@@ -319,7 +315,7 @@ Never initialize state, start timers, or subscribe to external systems in the mo
 
 ```ts
 // WRONG: module scope side effect
-const globalCount = ref(0); // ❌ shared across all components
+const globalCount = ref(0); // FAIL shared across all components
 setInterval(() => globalCount.value++, 1000);
 
 export function useGlobalCount() {
@@ -342,7 +338,7 @@ Use `shallowRef()` for large immutable data structures that are replaced as a wh
 ```ts
 const items = shallowRef<Item[]>([]);
 // items.value = await fetchItems(); // replacement works
-// items.value[0].name = "new";     // ❌ inner mutations are NOT reactive
+// items.value[0].name = "new";     // FAIL inner mutations are NOT reactive
 ```
 
 Use `shallowReactive()` when only top-level properties should be reactive.
