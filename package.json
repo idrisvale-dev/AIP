@@ -95,6 +95,7 @@
     "scripts/preview-pack-smoke.js",
     "scripts/release-approval-gate.js",
     "scripts/release-video-suite.js",
+    "scripts/dashboard-web.js",
     "scripts/skills-health.js",
     "scripts/hooks/",
     "scripts/install-apply.js",
@@ -350,7 +351,8 @@
     "coverage": "c8 --all --include=\"scripts/**/*.js\" --check-coverage --lines 80 --functions 80 --branches 80 --statements 80 --reporter=text --reporter=lcov node tests/run-all.js",
     "build:opencode": "node scripts/build-opencode.js",
     "prepack": "npm run build:opencode",
-    "dashboard": "python3 ./ecc_dashboard.py"
+    "dashboard": "python3 ./ecc_dashboard.py",
+    "dashboard:web": "node scripts/dashboard-web.js"
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
