@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "totalCommands": 85,
+  "totalCommands": 92,
   "commands": [
     {
       "command": "aside",
@@ -110,6 +110,72 @@
         "security-scan"
       ],
       "path": "commands/ecc-guide.md"
+    },
+    {
+      "command": "epic-claim",
+      "description": "Claim an epic issue, stamp coordination state, and sync local ownership.",
+      "type": "review",
+      "primaryAgents": [],
+      "allAgents": [],
+      "skills": [
+        "orch-add-feature",
+        "orch-change-feature"
+      ],
+      "path": "commands/epic-claim.md"
+    },
+    {
+      "command": "epic-decompose",
+      "description": "Break an epic into task children without creating task branches.",
+      "type": "review",
+      "primaryAgents": [],
+      "allAgents": [],
+      "skills": [],
+      "path": "commands/epic-decompose.md"
+    },
+    {
+      "command": "epic-publish",
+      "description": "Publish a validated epic update back to the issue and local cache.",
+      "type": "general",
+      "primaryAgents": [],
+      "allAgents": [],
+      "skills": [],
+      "path": "commands/epic-publish.md"
+    },
+    {
+      "command": "epic-review",
+      "description": "Mark epic review requested, approved, or changes requested.",
+      "type": "review",
+      "primaryAgents": [],
+      "allAgents": [],
+      "skills": [],
+      "path": "commands/epic-review.md"
+    },
+    {
+      "command": "epic-sync",
+      "description": "Sync epic issue bodies, labels, and local coordination snapshots from GitHub.",
+      "type": "general",
+      "primaryAgents": [],
+      "allAgents": [],
+      "skills": [],
+      "path": "commands/epic-sync.md"
+    },
+    {
+      "command": "epic-unblock",
+      "description": "Sweep blocked epic issues and reopen anything whose dependencies are closed.",
+      "type": "general",
+      "primaryAgents": [],
+      "allAgents": [],
+      "skills": [],
+      "path": "commands/epic-unblock.md"
+    },
+    {
+      "command": "epic-validate",
+      "description": "Validate epic readiness, dependencies, and coordination policy.",
+      "type": "review",
+      "primaryAgents": [],
+      "allAgents": [],
+      "skills": [],
+      "path": "commands/epic-validate.md"
     },
     {
       "command": "evolve",
@@ -941,11 +1007,11 @@
   "statistics": {
     "byType": {
       "build": 2,
-      "general": 7,
+      "general": 10,
       "orchestration": 11,
       "planning": 2,
       "refactoring": 1,
-      "review": 9,
+      "review": 13,
       "testing": 53
     },
     "topAgents": [
@@ -996,6 +1062,14 @@
         "count": 6
       },
       {
+        "skill": "orch-add-feature",
+        "count": 4
+      },
+      {
+        "skill": "orch-change-feature",
+        "count": 4
+      },
+      {
         "skill": "tdd-workflow",
         "count": 4
       },
@@ -1005,14 +1079,6 @@
       },
       {
         "skill": "flutter-dart-code-review",
-        "count": 3
-      },
-      {
-        "skill": "orch-add-feature",
-        "count": 3
-      },
-      {
-        "skill": "orch-change-feature",
         "count": 3
       },
       {
