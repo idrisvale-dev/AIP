@@ -52,8 +52,6 @@
 
 1.
 2.
-3.
-
-### What the brand must never sound or look like (the anti-personality)
+3. ### What the brand must never sound or look like (the anti-personality)
 
 ### Open questions / tensions with Module 50 Voice

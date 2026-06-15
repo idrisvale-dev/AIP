@@ -33,9 +33,7 @@
 
 1.
 2.
-3.
-
-### Open questions / threads to pursue in later modules
+3. ### Open questions / threads to pursue in later modules
 
 ### Contradictions or tensions between participants (multi-founder only)
 

@@ -37,9 +37,7 @@
 ### Alternative framings (vary the category or the differentiator)
 
 1.
-2.
-
-### White-space hypothesis (what no competitor is claiming that this brand could own)
+2. ### White-space hypothesis (what no competitor is claiming that this brand could own)
 
 ### Open questions / ambiguities
 

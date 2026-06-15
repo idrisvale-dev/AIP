@@ -56,6 +56,4 @@
 
 1.
 2.
-3.
-
-### Open questions / tensions with Module 40 Personality
+3. ### Open questions / tensions with Module 40 Personality

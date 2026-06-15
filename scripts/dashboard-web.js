@@ -363,20 +363,20 @@ function renderHTML(data) {
       <div class="suggest" id="suggest"></div>
     </div>
     <div class="lang-wrap">
-      <button class="lang-btn" onclick="toggleLang()">🌐 <span id="lang-label">EN</span></button>
+      <button class="lang-btn" onclick="toggleLang()"> <span id="lang-label">EN</span></button>
       <div class="lang-drop" id="lang-drop"></div>
     </div>
-    <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
+    <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme"></button>
   </div>
 </div>
 
 <div class="nav" id="nav">
-  <button class="nav-it active" data-tab="agents" onclick="showTab('agents',this)"><span id="nav-agents">🤖 Agents</span> <span class="ct" id="nav-ct-agents"></span></button>
-  <button class="nav-it" data-tab="skills" onclick="showTab('skills',this)"><span id="nav-skills">📚 Skills</span> <span class="ct" id="nav-ct-skills"></span></button>
-  <button class="nav-it" data-tab="commands" onclick="showTab('commands',this)"><span id="nav-commands">⚡ Commands</span> <span class="ct" id="nav-ct-commands"></span></button>
-  <button class="nav-it" data-tab="rules" onclick="showTab('rules',this)"><span id="nav-rules">📏 Rules</span> <span class="ct" id="nav-ct-rules"></span></button>
-  <button class="nav-it" data-tab="mcps" onclick="showTab('mcps',this)"><span id="nav-mcps">🔌 MCPs</span> <span class="ct" id="nav-ct-mcps"></span></button>
-  <button class="nav-it" data-tab="hooks" onclick="showTab('hooks',this)"><span id="nav-hooks">🪝 Hooks</span> <span class="ct" id="nav-ct-hooks"></span></button>
+  <button class="nav-it active" data-tab="agents" onclick="showTab('agents',this)"><span id="nav-agents"> Agents</span> <span class="ct" id="nav-ct-agents"></span></button>
+  <button class="nav-it" data-tab="skills" onclick="showTab('skills',this)"><span id="nav-skills"> Skills</span> <span class="ct" id="nav-ct-skills"></span></button>
+  <button class="nav-it" data-tab="commands" onclick="showTab('commands',this)"><span id="nav-commands"> Commands</span> <span class="ct" id="nav-ct-commands"></span></button>
+  <button class="nav-it" data-tab="rules" onclick="showTab('rules',this)"><span id="nav-rules"> Rules</span> <span class="ct" id="nav-ct-rules"></span></button>
+  <button class="nav-it" data-tab="mcps" onclick="showTab('mcps',this)"><span id="nav-mcps"> MCPs</span> <span class="ct" id="nav-ct-mcps"></span></button>
+  <button class="nav-it" data-tab="hooks" onclick="showTab('hooks',this)"><span id="nav-hooks"> Hooks</span> <span class="ct" id="nav-ct-hooks"></span></button>
 </div>
 
 <div class="out" id="app"></div>
@@ -456,12 +456,12 @@ function applyLang() {
   document.getElementById('t-contribution').textContent = t('contribution');
   document.getElementById('search').placeholder = t('search');
   // Update label text only — counter spans are separate siblings
-  document.getElementById('nav-agents').childNodes[0].textContent = '🤖 ' + t('agents');
-  document.getElementById('nav-skills').childNodes[0].textContent = '📚 ' + t('skills');
-  document.getElementById('nav-commands').childNodes[0].textContent = '⚡ ' + t('commands');
-  document.getElementById('nav-rules').childNodes[0].textContent = '📏 ' + t('rules');
-  document.getElementById('nav-mcps').childNodes[0].textContent = '🔌 ' + t('mcps');
-  document.getElementById('nav-hooks').childNodes[0].textContent = '🪝 ' + t('hooks');
+  document.getElementById('nav-agents').childNodes[0].textContent = ' ' + t('agents');
+  document.getElementById('nav-skills').childNodes[0].textContent = ' ' + t('skills');
+  document.getElementById('nav-commands').childNodes[0].textContent = ' ' + t('commands');
+  document.getElementById('nav-rules').childNodes[0].textContent = ' ' + t('rules');
+  document.getElementById('nav-mcps').childNodes[0].textContent = ' ' + t('mcps');
+  document.getElementById('nav-hooks').childNodes[0].textContent = ' ' + t('hooks');
   // Update counter spans by their own IDs (avoids duplicate IDs in DOM)
   document.getElementById('nav-ct-agents').textContent = AGENTS.length;
   document.getElementById('nav-ct-skills').textContent = SKILLS.length;
@@ -514,7 +514,7 @@ function renderMain() {
 
   const recent = recents().filter(r => r.n && /^[\\w\\-./@]+$/.test(r.n));
   if (recent.length) {
-    const icons = {agents:'🤖',skills:'📚',commands:'⚡',rules:'📏',mcps:'🔌',hooks:'🪝'};
+    const icons = {agents:'',skills:'',commands:'',rules:'',mcps:'',hooks:''};
     const rb = document.createElement('div');
     rb.className = 'recent-bar';
     rb.innerHTML = '<span class="rb-lbl">'+t('recentlyViewed')+'</span><span class="rb-items"></span><span class="rb-clear" onclick="clearRecents()">✕ '+t('clearHistory')+'</span>';
@@ -551,21 +551,21 @@ function renderAgents(list) {
   const el = document.getElementById('panel-agents');
   if (!el) return;
   const cats = ['all','reviewer','builder','architect','security'];
-  const lbls = [t('all'),'👁️ '+t('reviewers'),'🔧 '+t('buildResolvers'),'🏗️ '+t('architects'),'🔒 '+t('security')];
+  const lbls = [t('all'),' '+t('reviewers'),' '+t('buildResolvers'),' '+t('architects'),' '+t('security')];
   el.innerHTML = '<div class="filters" id="af">'+cats.map((c,i)=>'<button'+(i===0?' class="active"':'')+' onclick="filterAgents(\\''+c+'\\',this)">'+lbls[i]+'</button>').join('')+
     '</div><div class="grid" id="ag">'+
     list.map((a,i)=>{const m=(a.m||'').toLowerCase(),bd=m.includes('opus')?'opus':m.includes('sonnet')?'sonnet':m.includes('haiku')?'haiku':'';const tag=aType(a.n),ic=tag==='reviewer'?0:tag==='builder'?1:tag==='architect'?2:tag==='security'?3:4;
     return '<div class="card" data-tag="'+tag+'" data-model="'+a.m+'" onclick="location.hash=\\'#/agents/'+encodeURIComponent(a.n)+'\\'">'+
       '<div class="top"><div class="il"><div class="ic '+iBg(ic)+'">'+ICONS[ic]+'</div><span class="nm">'+esc(a.n)+'</span></div>'+(bd?'<span class="bd '+bd+'">'+a.m+'</span>':'')+'</div>'+
       '<div class="desc">'+esc(a.d.slice(0,150))+'</div>'+
-      '<div class="tags">'+a.t.slice(0,5).map(t=>'<span class="t">'+esc(t)+'</span>').join('')+'</div><span class="ar">↗</span></div>';}).join('')+'</div>';
+      '<div class="tags">'+a.t.slice(0,5).map(t=>'<span class="t">'+esc(t)+'</span>').join('')+'</div><span class="ar"></span></div>';}).join('')+'</div>';
 }
 function renderSkills(list) {
   const el = document.getElementById('panel-skills'); if (!el) return;
-  el.innerHTML = '<div class="filters" id="sf">'+['all','sec','test','pattern','design','research','data','agent','devops'].map((c,i)=>'<button'+(i===0?' class="active"':'')+' onclick="filterSkills(\\''+c+'\\',this)">'+[t('all'),'🔒 '+t('security'),'🧪 '+t('testing'),'📐 '+t('patterns'),'🎨 '+t('design'),'🔬 '+t('research'),'🗄️ '+t('data'),'🤖 '+t('agent'),'⚙️ '+t('devops')][i]+'</button>').join('')+
+  el.innerHTML = '<div class="filters" id="sf">'+['all','sec','test','pattern','design','research','data','agent','devops'].map((c,i)=>'<button'+(i===0?' class="active"':'')+' onclick="filterSkills(\\''+c+'\\',this)">'+[t('all'),' '+t('security'),' '+t('testing'),' '+t('patterns'),' '+t('design'),' '+t('research'),' '+t('data'),' '+t('agent'),' '+t('devops')][i]+'</button>').join('')+
     '</div><div class="grid" id="sg">'+list.map((s,i)=>'<div class="card" onclick="location.hash=\\'#/skills/'+encodeURIComponent(s.n)+'\\'">'+
       '<div class="top"><div class="il"><div class="ic '+iBg(i%6)+'">'+ICONS[i%6]+'</div><span class="nm">'+esc(s.n)+'</span></div></div>'+
-      '<div class="desc">'+esc(s.d||'—')+'</div><span class="ar">↗</span></div>').join('')+'</div>';
+      '<div class="desc">'+esc(s.d||'—')+'</div><span class="ar"></span></div>').join('')+'</div>';
 }
 function renderCommands(list) {
   const el = document.getElementById('panel-commands'); if (!el) return;
@@ -616,19 +616,19 @@ function renderRules(list) {
 }
 function renderMcps(list) {
   const el = document.getElementById('panel-mcps'); if (!el) return;
-  if (!list.length) { el.innerHTML = '<div class="empty"><div class="eic">🔌</div><h3>'+esc(t('noMcps'))+'</h3><p>'+esc(t('checkMcps'))+'</p></div>'; return; }
+  if (!list.length) { el.innerHTML = '<div class="empty"><div class="eic"></div><h3>'+esc(t('noMcps'))+'</h3><p>'+esc(t('checkMcps'))+'</p></div>'; return; }
   const grid = document.createElement('div'); grid.className = 'mcp-grid';
   list.forEach(m => {
     const div = document.createElement('div'); div.className = 'mcp-cd';
     div.onclick = () => { location.hash = '#/mcps/'+encodeURIComponent(m.f); };
-    div.innerHTML = '<h3>📄 '+esc(m.f)+'</h3>'+m.s.map(s => '<span class="st">'+esc(s.n)+' <small>'+esc((s.cmd||'').slice(0,40))+'</small></span>').join('');
+    div.innerHTML = '<h3> '+esc(m.f)+'</h3>'+m.s.map(s => '<span class="st">'+esc(s.n)+' <small>'+esc((s.cmd||'').slice(0,40))+'</small></span>').join('');
     grid.appendChild(div);
   });
   el.innerHTML = ''; el.appendChild(grid);
 }
 function renderHooks(list) {
   const el = document.getElementById('panel-hooks'); if (!el) return;
-  if (!list.length) { el.innerHTML = '<div class="empty"><div class="eic">🪝</div><h3>'+esc(t('noHooks'))+'</h3></div>'; return; }
+  if (!list.length) { el.innerHTML = '<div class="empty"><div class="eic"></div><h3>'+esc(t('noHooks'))+'</h3></div>'; return; }
   const wrap = document.createElement('div'); wrap.className = 'hw';
   const tbl = document.createElement('table'); tbl.className = 'ht';
   tbl.innerHTML = '<thead><tr><th>'+esc(t('event'))+'</th><th>'+esc(t('matcher'))+'</th><th>'+esc(t('description'))+'</th><th>'+esc(t('id'))+'</th></tr></thead><tbody></tbody>';
@@ -730,7 +730,7 @@ function showSuggestions() {
   const groups = {};
   results.forEach(r=>{if(!groups[r.t])groups[r.t]=[];groups[r.t].push(r);});
   sug.innerHTML = Object.entries(groups).map(([type,items]) =>
-    '<div class="sg"><div class="sg-label">'+(type==='agents'?'🤖 '+t('agents'):type==='skills'?'📚 '+t('skills'):'⚡ '+t('commands'))+'</div>'+
+    '<div class="sg"><div class="sg-label">'+(type==='agents'?' '+t('agents'):type==='skills'?' '+t('skills'):' '+t('commands'))+'</div>'+
     items.map(r=>'<div class="si" onclick="location.hash=\\'#/'+r.t+'/'+encodeURIComponent(r.n)+'\\';document.getElementById(\\'suggest\\').classList.remove(\\'show\\');document.getElementById(\\'search\\').blur()">'+
       '<span class="ic '+r.ic+'">'+r.e+'</span><span class="sn">'+esc(r.n)+'</span><span class="sd">'+esc(r.d)+'</span></div>').join('')+'</div>'
   ).join('');
@@ -767,7 +767,7 @@ const server = http.createServer((req, res) => {
 
 if (require.main === module) {
   server.listen(PORT, () => {
-    console.log(`\n  🧩  ECC Capabilities  →  http://localhost:${PORT}\n`);
+    console.log(`\n    ECC Capabilities  →  http://localhost:${PORT}\n`);
     try { const { spawn } = require('child_process'); const p = process.platform; const c = p === 'darwin' ? 'open' : p === 'win32' ? 'start' : 'xdg-open'; if (c === 'start') spawn('cmd', ['/c', 'start', `http://localhost:${PORT}`], { stdio: 'ignore' }); else spawn(c, [`http://localhost:${PORT}`], { stdio: 'ignore' }); } catch { /* best-effort auto-open */ }
   });
 }
