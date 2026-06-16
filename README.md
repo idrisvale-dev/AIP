@@ -20,7 +20,7 @@
 > [!WARNING]
 > **Official sources only.** Install ECC only from verified channels: the GitHub repository [github.com/affaan-m/ECC](https://github.com/affaan-m/ECC), the npm packages [`ecc-universal`](https://www.npmjs.com/package/ecc-universal) and [`ecc-agentshield`](https://www.npmjs.com/package/ecc-agentshield), the [GitHub App](https://github.com/apps/ecc-tools), the plugin slug `ecc@ecc`, and the project website [ecc.tools](https://ecc.tools). Third-party re-uploads and unofficial mirrors are not maintained or reviewed by the project and may contain malware.
 
-> **211.9K+ stars** | **32.5K+ forks** | **230+ contributors** | **12+ language ecosystems** | **Cross-harness agent workflows**
+**211.9K+ stars** | **32.5K+ forks** | **230+ contributors** | **12+ language ecosystems** | **Cross-harness agent workflows**
 
 ---
 
@@ -1805,6 +1805,17 @@ These configs work for my workflow. You should:
 2. Modify for your stack
 3. Remove what you don't use
 4. Add your own patterns
+
+---
+
+## Security
+
+ECC takes supply-chain and agent safety seriously.
+
+- **Official sources only.** Install ECC only from the verified channels listed in the banner at the top of this README — the [GitHub repo](https://github.com/affaan-m/ECC), the `ecc-universal` / `ecc-agentshield` npm packages, the [GitHub App](https://github.com/apps/ecc-tools), the plugin slug `ecc@ecc`, and [ecc.tools](https://ecc.tools). Third-party re-uploads and mirrors are unreviewed and may ship malware.
+- **Report a vulnerability.** Use the private process in [SECURITY.md](SECURITY.md) (GitHub private vulnerability reporting). Please do not open public issues for security reports.
+- **Built-in guardrails.** GateGuard gates destructive shell commands (including `rm`, force/path `git checkout`, and destructive `find -exec`) before they run; the supply-chain IOC scanner runs in CI; and [AgentShield](#agentshield--security-auditor) audits your own agent, hook, MCP, permission, and secret surfaces (`/security-scan`).
+- **Deep dive.** See the [Security Guide](./the-security-guide.md).
 
 ---
 
