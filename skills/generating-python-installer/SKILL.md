@@ -229,7 +229,9 @@ set MAIN_FILE=main.py
 set ICON_FILE=icon.ico
 
 REM === 自动检测 CPU 核心数 ===
-for /f "tokens=2 delims==" %%a in ('wmic cpu get NumberOfLogicalProcessors /value ^| find "="') do set CPU_CORES=%%a
+REM 用 Windows 自带环境变量（wmic 在 Win11 22H2+ 已移除，探不到会让 --jobs=0 单线程编译）
+set CPU_CORES=%NUMBER_OF_PROCESSORS%
+if not defined CPU_CORES set CPU_CORES=4
 set /a BUILD_JOBS=%CPU_CORES%
 
 REM === 参考项目的模块排除清单 ===
@@ -297,7 +299,7 @@ param(
     [string]$DistPath
 )
 
-$ErrorActionPreference = "SilentlyContinue"
+$ErrorActionPreference = "Continue"  # 不静默吞错：删除失败会显示出来，避免假成功
 
 Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "dist 瘦身清理（参考 参考项目策略）" -ForegroundColor Cyan
