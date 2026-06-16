@@ -97,7 +97,7 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
 </td>
 <td align="center" width="220">
   <a href="https://www.atlascloud.ai/developer">
-    <img src="assets/images/sponsors/atlascloud.svg" width="96" alt="Atlas Cloud logo" /><br />
+    <img src="assets/images/sponsors/atlascloud.png" width="96" alt="Atlas Cloud logo" /><br />
     <strong>Atlas Cloud</strong>
   </a>
 </td>

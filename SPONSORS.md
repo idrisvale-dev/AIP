@@ -12,7 +12,7 @@ Thank you to everyone funding ECC's open-source work. Your sponsorship is what l
 |---------|------|-------|
 | [**CodeRabbit**](https://www.coderabbit.ai) | <img src="assets/images/sponsors/coderabbit.png" width="60" alt="CodeRabbit logo" /> | 2026 |
 | [**Greptile**](https://www.greptile.com/go/ecc) | <img src="assets/images/sponsors/greptile.png" width="60" alt="Greptile logo" /> | 2026 |
-| [**Atlas Cloud**](https://www.atlascloud.ai/developer) | <img src="assets/images/sponsors/atlascloud.svg" width="60" alt="Atlas Cloud logo" /> | 2026 |
+| [**Atlas Cloud**](https://www.atlascloud.ai/developer) | <img src="assets/images/sponsors/atlascloud.png" width="60" alt="Atlas Cloud logo" /> | 2026 |
 
 *[Become a Business sponsor](https://github.com/sponsors/affaan-m) to get README sponsor placement + SPONSORS.md listing. Current public Business tier is $800/mo. Existing $500/mo Business sponsors are grandfathered. No seats, SLA, custom development, or preferential technical placement is bundled unless separately agreed.*
 
