@@ -519,12 +519,24 @@ function renderControlPaneHtml() {
         const blocker = item.blocker || (item.metadata && item.metadata.blocker) || '';
         const assigneeKind = item.assigneeKind || 'unassigned';
         const owner = item.assignee || item.owner || (assigneeKind === 'unassigned' ? 'unassigned (JIT)' : item.source) || 'unassigned';
+        const idJs = "'" + String(item.id).replace(/'/g, "\\'") + "'";
+        const moveButtons = ['ready', 'running', 'blocked', 'done'].map(lane => {
+          const call = 'eccMoveItem(' + idJs + ", '" + lane + "')";
+          return '<button type="button" onclick="' + call + '">' + escapeHtml(lane) + '</button>';
+        }).join('');
+        const controls = state.allowActions
+          ? '<div class="row">'
+            + (assigneeKind === 'unassigned' ? '<button type="button" onclick="eccClaimItem(' + idJs + ')">Claim</button>' : '')
+            + moveButtons
+            + '</div>'
+          : '';
         return '<div class="work-item">' +
           '<div class="row"><strong>' + escapeHtml(item.title || item.id) + '</strong>' + statePill(item.kanbanState || item.status) + '</div>' +
           '<div class="subtle">[' + escapeHtml(assigneeKind) + '] ' + escapeHtml(owner) + ' - ' + escapeHtml(item.source || 'manual') + (item.priority ? ' - ' + escapeHtml(item.priority) : '') + '</div>' +
           (branch ? '<div class="subtle">branch: ' + escapeHtml(branch) + '</div>' : '') +
           (mergeGate ? '<div class="subtle">merge gate: ' + escapeHtml(mergeGate) + '</div>' : '') +
           (blocker ? '<div class="subtle">blocker: ' + escapeHtml(blocker) + '</div>' : '') +
+          controls +
         '</div>';
       }).join('');
     }
@@ -606,7 +618,8 @@ function renderControlPaneHtml() {
       const snapshot = await readJsonResponse(response);
       $('#query').value = snapshot.knowledge.query || state.query;
       $('#db-path').textContent = snapshot.database.exists ? snapshot.dbPath : 'database missing';
-      $('#action-status').textContent = snapshot.execution.allowActions ? 'local allowlist' : 'read-only';
+      state.allowActions = Boolean(snapshot.execution.allowActions);
+      $('#action-status').textContent = state.allowActions ? 'local allowlist' : 'read-only';
       renderMetrics(snapshot.summary);
       renderSessions(snapshot.sessions);
       renderWorkItems(snapshot.workItems);
@@ -627,6 +640,38 @@ function renderControlPaneHtml() {
     $('#refresh').addEventListener('click', () => {
       load().catch(error => showError('#app', error));
     });
+
+    async function postWorkItem(pathSuffix, payload) {
+      const response = await fetch('/api/work-items/' + pathSuffix, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload || {})
+      });
+      const result = await readJsonResponse(response);
+      if (!result.ok) throw new Error(result.error || 'request failed');
+      await load();
+    }
+
+    window.eccClaimItem = function (id) {
+      if (!state.allowActions) return;
+      const owner = window.prompt('Claim "' + id + '" as (owner name):');
+      if (!owner) return;
+      const as = (window.prompt("Owner kind: 'agent' or 'human'", 'human') || '').trim().toLowerCase();
+      postWorkItem(encodeURIComponent(id) + '/claim', { owner: owner.trim(), as: as === 'agent' ? 'agent' : 'human' })
+        .catch(error => showError('#app', error));
+    };
+    window.eccMoveItem = function (id, lane) {
+      if (!state.allowActions) return;
+      postWorkItem(encodeURIComponent(id) + '/move', { lane })
+        .catch(error => showError('#app', error));
+    };
+
+    // Live board: refresh on a gentle interval; pause while a prompt/tab is hidden.
+    setInterval(() => {
+      if (document.hidden) return;
+      load().catch(() => {});
+    }, 15000);
+
     load().catch(error => showError('#app', error));
   </script>
 </body>

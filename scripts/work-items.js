@@ -4,6 +4,7 @@
 const os = require('os');
 const { spawnSync } = require('child_process');
 const { createStateStore } = require('./lib/state-store');
+const { claimWorkItem } = require('./lib/control-pane/work-item-mutations');
 
 const VALUE_FLAGS = new Set([
   '--as',
@@ -388,73 +389,23 @@ function printGithubSyncResult(payload) {
   }
 }
 
-const CLAIM_DONE_STATUSES = new Set(['done', 'closed', 'resolved', 'merged', 'cancelled']);
-const CLAIM_PRIORITY_RANK = { critical: 0, high: 1, urgent: 1, medium: 2, normal: 2, low: 3 };
-
-function isOpenWorkItemStatus(status) {
-  return !CLAIM_DONE_STATUSES.has(
-    String(status || '')
-      .trim()
-      .toLowerCase()
-  );
-}
-
-// Resolve which work item a `claim` targets: an explicit id, otherwise the
-// highest-priority unassigned open item (the JIT pickup queue the control-pane
-// board surfaces).
-function selectClaimTarget(store, options) {
-  const explicitId = resolveWorkItemId(options);
-  if (explicitId) {
-    const item = store.getWorkItemById(explicitId);
-    if (!item) {
-      throw new Error(`Work item not found: ${explicitId}`);
-    }
-    return item;
-  }
-  const { items } = store.listWorkItems({ limit: 100 });
-  return (
-    items
-      .filter(item => !item.owner && isOpenWorkItemStatus(item.status))
-      .sort((a, b) => {
-        const ra = CLAIM_PRIORITY_RANK[String(a.priority || '').toLowerCase()] ?? 2;
-        const rb = CLAIM_PRIORITY_RANK[String(b.priority || '').toLowerCase()] ?? 2;
-        return ra - rb;
-      })[0] || null
-  );
-}
-
-// Claim an unassigned work item for an agent or human — the just-in-time pickup
-// primitive. Sets the owner (+ optional assigneeKind) and moves the card to
-// running so the board reflects that work has started.
-function claimWorkItem(store, options) {
-  const owner = options.owner;
-  if (!owner) {
+// Thin CLI adapter over the shared claimWorkItem helper, preserving the
+// flag-specific error messages (--owner / --as) for the command line.
+function claimWorkItemCli(store, options) {
+  if (!options.owner) {
     throw new Error('claim requires --owner <name>.');
   }
   const assigneeKind = options.claimAs ? String(options.claimAs).toLowerCase() : null;
   if (assigneeKind && assigneeKind !== 'agent' && assigneeKind !== 'human') {
     throw new Error("--as must be 'agent' or 'human'.");
   }
-  const target = selectClaimTarget(store, options);
-  if (!target) {
-    return { claimed: false, reason: 'no-unassigned-open-items' };
-  }
-  if (!isOpenWorkItemStatus(target.status)) {
-    throw new Error(`Work item ${target.id} is already done; cannot claim.`);
-  }
-  const metadata = { ...(target.metadata || {}) };
-  if (assigneeKind) {
-    metadata.assigneeKind = assigneeKind;
-  }
-  const item = store.upsertWorkItem({
-    ...target,
-    owner,
-    sessionId: options.sessionId ?? target.sessionId ?? null,
-    status: options.status ?? 'running',
-    metadata,
-    updatedAt: new Date().toISOString()
+  return claimWorkItem(store, {
+    id: resolveWorkItemId(options),
+    owner: options.owner,
+    assigneeKind,
+    sessionId: options.sessionId,
+    status: options.status
   });
-  return { claimed: true, item };
 }
 
 async function main() {
@@ -538,7 +489,7 @@ async function main() {
     }
 
     if (options.command === 'claim') {
-      const result = claimWorkItem(store, options);
+      const result = claimWorkItemCli(store, options);
       if (options.json) {
         console.log(JSON.stringify(result, null, 2));
       } else if (!result.claimed) {
