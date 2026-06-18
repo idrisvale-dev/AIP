@@ -205,6 +205,10 @@ async function runTests() {
           assert.ok(html.includes('function renderWorkItems'));
           assert.ok(html.includes('function showError'));
           assert.ok(html.includes('response.ok'));
+          // Board controls must use escaped data-* attributes + delegated
+          // listeners, never ids concatenated into inline onclick JS (XSS).
+          assert.ok(html.includes('data-wi-action'));
+          assert.ok(!/onclick="ecc(Claim|Move)Item\(/.test(html), 'no inline onclick handlers with interpolated ids');
 
           const snapshot = await fetchLocal(`${app.url}/api/snapshot?query=control`).then(response => response.json());
           assert.strictEqual(snapshot.schemaVersion, 'ecc.control-pane.snapshot.v1');

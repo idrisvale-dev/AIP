@@ -519,14 +519,16 @@ function renderControlPaneHtml() {
         const blocker = item.blocker || (item.metadata && item.metadata.blocker) || '';
         const assigneeKind = item.assigneeKind || 'unassigned';
         const owner = item.assignee || item.owner || (assigneeKind === 'unassigned' ? 'unassigned (JIT)' : item.source) || 'unassigned';
-        const idJs = "'" + String(item.id).replace(/'/g, "\\'") + "'";
-        const moveButtons = ['ready', 'running', 'blocked', 'done'].map(lane => {
-          const call = 'eccMoveItem(' + idJs + ", '" + lane + "')";
-          return '<button type="button" onclick="' + call + '">' + escapeHtml(lane) + '</button>';
-        }).join('');
+        // Ids/lanes go into HTML-escaped data-* attributes and are read back via
+        // dataset in delegated listeners below — never concatenated into inline
+        // JS handlers — so a crafted work-item id cannot inject script (XSS).
+        const idAttr = escapeHtml(item.id);
+        const moveButtons = ['ready', 'running', 'blocked', 'done'].map(lane =>
+          '<button type="button" data-wi-action="move" data-wi-id="' + idAttr + '" data-wi-lane="' + lane + '">' + escapeHtml(lane) + '</button>'
+        ).join('');
         const controls = state.allowActions
           ? '<div class="row">'
-            + (assigneeKind === 'unassigned' ? '<button type="button" onclick="eccClaimItem(' + idJs + ')">Claim</button>' : '')
+            + (assigneeKind === 'unassigned' ? '<button type="button" data-wi-action="claim" data-wi-id="' + idAttr + '">Claim</button>' : '')
             + moveButtons
             + '</div>'
           : '';
@@ -539,6 +541,17 @@ function renderControlPaneHtml() {
           controls +
         '</div>';
       }).join('');
+
+      document.querySelectorAll('#work-items [data-wi-action]').forEach(button => {
+        button.addEventListener('click', () => {
+          const id = button.getAttribute('data-wi-id');
+          if (button.getAttribute('data-wi-action') === 'claim') {
+            eccClaimItem(id);
+          } else {
+            eccMoveItem(id, button.getAttribute('data-wi-lane'));
+          }
+        });
+      });
     }
 
     function renderKnowledge(knowledge) {
