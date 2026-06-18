@@ -6,6 +6,7 @@ const { spawnSync } = require('child_process');
 const { createStateStore } = require('./lib/state-store');
 
 const VALUE_FLAGS = new Set([
+  '--as',
   '--db',
   '--github-repo',
   '--id',
@@ -21,7 +22,7 @@ const VALUE_FLAGS = new Set([
   '--source-id',
   '--status',
   '--title',
-  '--url',
+  '--url'
 ]);
 
 function showHelp(exitCode = 0) {
@@ -31,6 +32,7 @@ Usage:
   node scripts/work-items.js show <id> [--db <path>] [--json]
   node scripts/work-items.js upsert [<id>] --title <title> [options] [--json]
   node scripts/work-items.js close <id> [--status done] [--db <path>] [--json]
+  node scripts/work-items.js claim [<id>] --owner <name> [--as agent|human] [--db <path>] [--json]
   node scripts/work-items.js sync-github --repo <owner/repo> [--db <path>] [--json]
 
 Track Linear, GitHub, handoff, and manual roadmap items in the ECC SQLite state
@@ -43,7 +45,8 @@ Options:
   --status <status>         Status such as open, in-progress, blocked, done
   --priority <priority>     Optional priority label
   --url <url>               Optional source URL
-  --owner <owner>           Optional owner label
+  --owner <owner>           Optional owner label (required for claim)
+  --as <agent|human>        On claim, record whether the owner is an agent or human
   --repo-root <path>        Optional repo root to associate with this item
   --repo <path>             GitHub repo for sync-github, otherwise alias for --repo-root
   --github-repo <owner/repo> Explicit GitHub repo for sync-github
@@ -57,7 +60,8 @@ Options:
 }
 
 function assignOption(options, flag, value) {
-  if (flag === '--db') options.dbPath = value;
+  if (flag === '--as') options.claimAs = value;
+  else if (flag === '--db') options.dbPath = value;
   else if (flag === '--github-repo') options.githubRepo = value;
   else if (flag === '--id') options.id = value;
   else if (flag === '--limit') options.limit = value;
@@ -83,7 +87,7 @@ function parseArgs(argv) {
     help: false,
     json: false,
     limit: 20,
-    positionals: [],
+    positionals: []
   };
 
   if (args[0] && !args[0].startsWith('-')) {
@@ -144,7 +148,7 @@ function runGhJson(args) {
   const displayCommand = shimPath ? `node ${shimPath} ${args.join(' ')}` : `gh ${args.join(' ')}`;
   const result = spawnSync(command, commandArgs, {
     encoding: 'utf8',
-    maxBuffer: 10 * 1024 * 1024,
+    maxBuffer: 10 * 1024 * 1024
   });
 
   if (result.error) {
@@ -163,10 +167,12 @@ function runGhJson(args) {
 }
 
 function slugifyWorkItemSegment(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'unknown';
+  return (
+    String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'unknown'
+  );
 }
 
 function githubWorkItemId(repo, type, number) {
@@ -204,8 +210,8 @@ function buildGithubPrWorkItem(repo, pr, options = {}) {
       isDraft: Boolean(pr.isDraft),
       headRefName: pr.headRefName || null,
       sourceUpdatedAt: pr.updatedAt || null,
-      syncedBy: 'ecc-work-items-sync-github',
-    },
+      syncedBy: 'ecc-work-items-sync-github'
+    }
   };
 }
 
@@ -226,8 +232,8 @@ function buildGithubIssueWorkItem(repo, issue, options = {}) {
       type: 'issue',
       labels: Array.isArray(issue.labels) ? issue.labels.map(label => label.name || label).filter(Boolean) : [],
       sourceUpdatedAt: issue.updatedAt || null,
-      syncedBy: 'ecc-work-items-sync-github',
-    },
+      syncedBy: 'ecc-work-items-sync-github'
+    }
   };
 }
 
@@ -244,15 +250,17 @@ function closeStaleGithubItems(store, repo, activeIds, options = {}) {
     if (item.status === 'closed' || item.status === 'done') {
       continue;
     }
-    closed.push(store.upsertWorkItem({
-      ...item,
-      status: 'closed',
-      updatedAt: new Date().toISOString(),
-      metadata: {
-        ...item.metadata,
-        sourceClosedAt: new Date().toISOString(),
-      },
-    }));
+    closed.push(
+      store.upsertWorkItem({
+        ...item,
+        status: 'closed',
+        updatedAt: new Date().toISOString(),
+        metadata: {
+          ...item.metadata,
+          sourceClosedAt: new Date().toISOString()
+        }
+      })
+    );
   }
   return closed;
 }
@@ -264,30 +272,8 @@ function syncGithubWorkItems(store, options) {
   }
 
   const limit = normalizeLimit(options.limit);
-  const prs = runGhJson([
-    'pr',
-    'list',
-    '--repo',
-    repo,
-    '--state',
-    'open',
-    '--limit',
-    String(limit),
-    '--json',
-    'number,title,author,url,updatedAt,mergeStateStatus,isDraft,headRefName',
-  ]);
-  const issues = runGhJson([
-    'issue',
-    'list',
-    '--repo',
-    repo,
-    '--state',
-    'open',
-    '--limit',
-    String(limit),
-    '--json',
-    'number,title,author,url,updatedAt,labels',
-  ]);
+  const prs = runGhJson(['pr', 'list', '--repo', repo, '--state', 'open', '--limit', String(limit), '--json', 'number,title,author,url,updatedAt,mergeStateStatus,isDraft,headRefName']);
+  const issues = runGhJson(['issue', 'list', '--repo', repo, '--state', 'open', '--limit', String(limit), '--json', 'number,title,author,url,updatedAt,labels']);
 
   const syncedAt = new Date().toISOString();
   const activeIds = new Set();
@@ -295,20 +281,24 @@ function syncGithubWorkItems(store, options) {
   for (const pr of prs) {
     const payload = buildGithubPrWorkItem(repo, pr, options);
     activeIds.add(payload.id);
-    items.push(store.upsertWorkItem({
-      ...payload,
-      createdAt: undefined,
-      updatedAt: syncedAt,
-    }));
+    items.push(
+      store.upsertWorkItem({
+        ...payload,
+        createdAt: undefined,
+        updatedAt: syncedAt
+      })
+    );
   }
   for (const issue of issues) {
     const payload = buildGithubIssueWorkItem(repo, issue, options);
     activeIds.add(payload.id);
-    items.push(store.upsertWorkItem({
-      ...payload,
-      createdAt: undefined,
-      updatedAt: syncedAt,
-    }));
+    items.push(
+      store.upsertWorkItem({
+        ...payload,
+        createdAt: undefined,
+        updatedAt: syncedAt
+      })
+    );
   }
 
   const closedItems = closeStaleGithubItems(store, repo, activeIds, { limit: Math.max(limit * 4, 1000) });
@@ -319,7 +309,7 @@ function syncGithubWorkItems(store, options) {
     issueCount: issues.length,
     closedCount: closedItems.length,
     items,
-    closedItems,
+    closedItems
   };
 }
 
@@ -345,11 +335,9 @@ function buildUpsertPayload(options, existing = null) {
     owner: options.owner ?? (existing && existing.owner) ?? null,
     repoRoot: options.repoRoot ?? (existing && existing.repoRoot) ?? process.cwd(),
     sessionId: options.sessionId ?? (existing && existing.sessionId) ?? null,
-    metadata: options.metadataJson !== undefined
-      ? parseMetadataJson(options.metadataJson)
-      : ((existing && existing.metadata) ?? null),
+    metadata: options.metadataJson !== undefined ? parseMetadataJson(options.metadataJson) : ((existing && existing.metadata) ?? null),
     createdAt: existing ? existing.createdAt : undefined,
-    updatedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
 }
 
@@ -400,6 +388,75 @@ function printGithubSyncResult(payload) {
   }
 }
 
+const CLAIM_DONE_STATUSES = new Set(['done', 'closed', 'resolved', 'merged', 'cancelled']);
+const CLAIM_PRIORITY_RANK = { critical: 0, high: 1, urgent: 1, medium: 2, normal: 2, low: 3 };
+
+function isOpenWorkItemStatus(status) {
+  return !CLAIM_DONE_STATUSES.has(
+    String(status || '')
+      .trim()
+      .toLowerCase()
+  );
+}
+
+// Resolve which work item a `claim` targets: an explicit id, otherwise the
+// highest-priority unassigned open item (the JIT pickup queue the control-pane
+// board surfaces).
+function selectClaimTarget(store, options) {
+  const explicitId = resolveWorkItemId(options);
+  if (explicitId) {
+    const item = store.getWorkItemById(explicitId);
+    if (!item) {
+      throw new Error(`Work item not found: ${explicitId}`);
+    }
+    return item;
+  }
+  const { items } = store.listWorkItems({ limit: 100 });
+  return (
+    items
+      .filter(item => !item.owner && isOpenWorkItemStatus(item.status))
+      .sort((a, b) => {
+        const ra = CLAIM_PRIORITY_RANK[String(a.priority || '').toLowerCase()] ?? 2;
+        const rb = CLAIM_PRIORITY_RANK[String(b.priority || '').toLowerCase()] ?? 2;
+        return ra - rb;
+      })[0] || null
+  );
+}
+
+// Claim an unassigned work item for an agent or human — the just-in-time pickup
+// primitive. Sets the owner (+ optional assigneeKind) and moves the card to
+// running so the board reflects that work has started.
+function claimWorkItem(store, options) {
+  const owner = options.owner;
+  if (!owner) {
+    throw new Error('claim requires --owner <name>.');
+  }
+  const assigneeKind = options.claimAs ? String(options.claimAs).toLowerCase() : null;
+  if (assigneeKind && assigneeKind !== 'agent' && assigneeKind !== 'human') {
+    throw new Error("--as must be 'agent' or 'human'.");
+  }
+  const target = selectClaimTarget(store, options);
+  if (!target) {
+    return { claimed: false, reason: 'no-unassigned-open-items' };
+  }
+  if (!isOpenWorkItemStatus(target.status)) {
+    throw new Error(`Work item ${target.id} is already done; cannot claim.`);
+  }
+  const metadata = { ...(target.metadata || {}) };
+  if (assigneeKind) {
+    metadata.assigneeKind = assigneeKind;
+  }
+  const item = store.upsertWorkItem({
+    ...target,
+    owner,
+    sessionId: options.sessionId ?? target.sessionId ?? null,
+    status: options.status ?? 'running',
+    metadata,
+    updatedAt: new Date().toISOString()
+  });
+  return { claimed: true, item };
+}
+
 async function main() {
   let store = null;
 
@@ -411,7 +468,7 @@ async function main() {
 
     store = await createStateStore({
       dbPath: options.dbPath,
-      homeDir: process.env.HOME || os.homedir(),
+      homeDir: process.env.HOME || os.homedir()
     });
 
     if (options.command === 'list') {
@@ -462,15 +519,33 @@ async function main() {
       if (!existing) {
         throw new Error(`Work item not found: ${id}`);
       }
-      const item = store.upsertWorkItem(buildUpsertPayload({
-        ...options,
-        id,
-        status: options.status || 'done',
-      }, existing));
+      const item = store.upsertWorkItem(
+        buildUpsertPayload(
+          {
+            ...options,
+            id,
+            status: options.status || 'done'
+          },
+          existing
+        )
+      );
       if (options.json) {
         console.log(JSON.stringify(item, null, 2));
       } else {
         printWorkItem(item);
+      }
+      return;
+    }
+
+    if (options.command === 'claim') {
+      const result = claimWorkItem(store, options);
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else if (!result.claimed) {
+        console.log('No unassigned open work items to claim.');
+      } else {
+        console.log(`Claimed by ${result.item.owner}:`);
+        printWorkItem(result.item);
       }
       return;
     }
@@ -506,5 +581,5 @@ module.exports = {
   buildGithubPrWorkItem,
   main,
   parseArgs,
-  syncGithubWorkItems,
+  syncGithubWorkItems
 };
