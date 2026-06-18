@@ -4,6 +4,7 @@ const path = require('path');
 
 const { resolveInstallPlan, loadInstallManifests } = require('./install-manifests');
 const { readInstallState, writeInstallState } = require('./install-state');
+const { assertWithinTrustedRoot } = require('./path-safety');
 const {
   createManifestInstallPlan,
 } = require('./install-executor');
@@ -309,7 +310,12 @@ function shouldRepairFromRecordedOperations(state) {
   return getManagedOperations(state).some(operation => operation.kind !== 'copy-file');
 }
 
-function executeRepairOperation(repoRoot, operation) {
+function executeRepairOperation(repoRoot, operation, trustedRoot) {
+  // Install-state is attacker-controllable; never write/delete outside the
+  // adapter-derived trusted root, regardless of what the state file claims
+  // (GHSA-hfpv-w6mp-5g95).
+  assertWithinTrustedRoot(operation.destinationPath, trustedRoot, 'repair');
+
   if (operation.kind === 'copy-file') {
     const sourcePath = resolveOperationSourcePath(repoRoot, operation);
     if (!sourcePath || !fs.existsSync(sourcePath)) {
@@ -360,7 +366,10 @@ function executeRepairOperation(repoRoot, operation) {
   throw new Error(`Unsupported repair operation kind: ${operation.kind}`);
 }
 
-function executeUninstallOperation(operation) {
+function executeUninstallOperation(operation, trustedRoot) {
+  // Confine deletes to the trusted install root (GHSA-hfpv-w6mp-5g95).
+  assertWithinTrustedRoot(operation.destinationPath, trustedRoot, 'uninstall');
+
   if (operation.kind === 'copy-file') {
     if (!fs.existsSync(operation.destinationPath)) {
       return {
@@ -1047,7 +1056,7 @@ function repairInstalledStates(options = {}) {
 
       if (repairOperations.length > 0) {
         for (const operation of repairOperations) {
-          executeRepairOperation(context.repoRoot, operation);
+          executeRepairOperation(context.repoRoot, operation, record.targetRoot);
         }
         writeInstallState(desiredPlan.installStatePath, desiredPlan.statePreview);
       } else {
@@ -1161,12 +1170,13 @@ function uninstallInstalledStates(options = {}) {
       const operations = getManagedOperations(state);
 
       for (const operation of operations) {
-        const outcome = executeUninstallOperation(operation);
+        const outcome = executeUninstallOperation(operation, record.targetRoot);
         removedPaths.push(...outcome.removedPaths);
         cleanupTargets.push(...outcome.cleanupTargets);
       }
 
       if (fs.existsSync(state.target.installStatePath)) {
+        assertWithinTrustedRoot(state.target.installStatePath, record.targetRoot, 'uninstall');
         fs.rmSync(state.target.installStatePath, { force: true });
         removedPaths.push(state.target.installStatePath);
         cleanupTargets.push(state.target.installStatePath);

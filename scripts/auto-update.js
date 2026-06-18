@@ -123,6 +123,12 @@ function determineInstallCwd(record, repoRoot) {
   return repoRoot;
 }
 
+// Recognized ECC package names. A repo root is only trusted to run its
+// install-apply.js if its package.json identifies it as ECC — otherwise a
+// cloned project that ships a nested `evil/{package.json,scripts/install-apply.js}`
+// could drive auto-update into executing attacker code (GHSA-hfpv-w6mp-5g95).
+const ECC_PACKAGE_NAMES = new Set(['ecc-universal', 'everything-claude-code']);
+
 function validateRepoRoot(repoRoot) {
   const normalized = path.resolve(repoRoot);
   const packageJsonPath = path.join(normalized, 'package.json');
@@ -134,6 +140,18 @@ function validateRepoRoot(repoRoot) {
 
   if (!fs.existsSync(installApplyPath)) {
     throw new Error(`Invalid ECC repo root: missing install script at ${installApplyPath}`);
+  }
+
+  let pkgName = null;
+  try {
+    pkgName = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).name;
+  } catch {
+    throw new Error(`Invalid ECC repo root: unreadable package.json at ${packageJsonPath}`);
+  }
+  if (!ECC_PACKAGE_NAMES.has(pkgName)) {
+    throw new Error(
+      `Refusing to run install from untrusted repo root ${normalized}: package.json name '${pkgName}' is not an official ECC package.`
+    );
   }
 
   return normalized;
