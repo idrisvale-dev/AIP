@@ -497,7 +497,11 @@ function renderControlPaneHtml() {
       const summary = workItems || { totalCount: 0, openCount: 0, blockedCount: 0, doneCount: 0, kanban: {}, items: [] };
       const items = Array.isArray(summary.items) ? summary.items : [];
       const kanban = summary.kanban || {};
-      $('#work-item-count').textContent = summary.openCount + ' open / ' + summary.blockedCount + ' blocked';
+      const needsAssignment = Array.isArray(summary.needsAssignment) ? summary.needsAssignment : [];
+      const assignment = summary.assignment || { agent: 0, human: 0, unassigned: 0 };
+      $('#work-item-count').textContent = summary.openCount + ' open / ' + summary.blockedCount + ' blocked'
+        + ' / ' + (assignment.agent || 0) + ' agent / ' + (assignment.human || 0) + ' human'
+        + (needsAssignment.length ? ' / ' + needsAssignment.length + ' need owner' : '');
 
       const lanes = ['ready', 'running', 'blocked', 'done'];
       const laneHtml = '<div class="kanban">' + lanes.map(lane =>
@@ -513,10 +517,11 @@ function renderControlPaneHtml() {
         const branch = item.branch || (item.metadata && item.metadata.branch) || '';
         const mergeGate = item.mergeGate || (item.metadata && item.metadata.mergeGate) || '';
         const blocker = item.blocker || (item.metadata && item.metadata.blocker) || '';
-        const owner = item.owner || item.source || 'unassigned';
+        const assigneeKind = item.assigneeKind || 'unassigned';
+        const owner = item.assignee || item.owner || (assigneeKind === 'unassigned' ? 'unassigned (JIT)' : item.source) || 'unassigned';
         return '<div class="work-item">' +
           '<div class="row"><strong>' + escapeHtml(item.title || item.id) + '</strong>' + statePill(item.kanbanState || item.status) + '</div>' +
-          '<div class="subtle">' + escapeHtml(owner) + ' - ' + escapeHtml(item.source || 'manual') + (item.priority ? ' - ' + escapeHtml(item.priority) : '') + '</div>' +
+          '<div class="subtle">[' + escapeHtml(assigneeKind) + '] ' + escapeHtml(owner) + ' - ' + escapeHtml(item.source || 'manual') + (item.priority ? ' - ' + escapeHtml(item.priority) : '') + '</div>' +
           (branch ? '<div class="subtle">branch: ' + escapeHtml(branch) + '</div>' : '') +
           (mergeGate ? '<div class="subtle">merge gate: ' + escapeHtml(mergeGate) + '</div>' : '') +
           (blocker ? '<div class="subtle">blocker: ' + escapeHtml(blocker) + '</div>' : '') +
@@ -629,5 +634,5 @@ function renderControlPaneHtml() {
 }
 
 module.exports = {
-  renderControlPaneHtml,
+  renderControlPaneHtml
 };
