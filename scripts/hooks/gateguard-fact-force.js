@@ -25,11 +25,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const {
-  extractCommandSubstitutions,
-  extractSubshellGroups,
-  extractBraceGroups
-} = require('../lib/shell-substitution');
+const { extractCommandSubstitutions, extractSubshellGroups, extractBraceGroups } = require('../lib/shell-substitution');
 
 // Session state — scoped per session to avoid cross-session races.
 const STATE_DIR = process.env.GATEGUARD_STATE_DIR || path.join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.gateguard');
@@ -88,10 +84,10 @@ function getExtraDestructiveRegex() {
     extraDestructiveCacheRegex = null;
     if (!extraDestructiveWarnLogged) {
       try {
-        process.stderr.write(
-          `[gateguard-fact-force] ignoring invalid GATEGUARD_BASH_EXTRA_DESTRUCTIVE regex: ${err.message}\n`
-        );
-      } catch (_) { /* stderr write failure is non-fatal */ }
+        process.stderr.write(`[gateguard-fact-force] ignoring invalid GATEGUARD_BASH_EXTRA_DESTRUCTIVE regex: ${err.message}\n`);
+      } catch (_) {
+        /* stderr write failure is non-fatal */
+      }
       extraDestructiveWarnLogged = true;
     }
   }
@@ -112,9 +108,7 @@ function isRoutineBashGateDisabled() {
  * @returns {string}
  */
 function stripQuotedStrings(input) {
-  return input
-    .replace(/'(?:[^'\\]|\\.)*'/g, "''")
-    .replace(/"(?:[^"\\]|\\.)*"/g, '""');
+  return input.replace(/'(?:[^'\\]|\\.)*'/g, "''").replace(/"(?:[^"\\]|\\.)*"/g, '""');
 }
 
 /**
@@ -167,7 +161,6 @@ function splitCommandSegments(input) {
 function tokenize(segment) {
   return segment.split(/\s+/).filter(Boolean);
 }
-
 
 /**
  * Tokenize a short allowlisted shell command while preserving quoted
@@ -236,7 +229,10 @@ function tokenizeAllowlistedShellWords(input) {
  */
 function commandBasename(token) {
   if (!token) return '';
-  return token.replace(/^.*[\\/]/, '').replace(/\.exe$/i, '').toLowerCase();
+  return token
+    .replace(/^.*[\\/]/, '')
+    .replace(/\.exe$/i, '')
+    .toLowerCase();
 }
 
 /**
@@ -553,7 +549,10 @@ function isDestructiveBash(command) {
   // that false-negative while also catching `&&`, `;`, `|`, and `||` compound forms.
   const bodies = collectExecutableBodies(raw);
   for (const body of bodies) {
-    for (const rawSeg of body.split(/[;|&]+/).map(s => s.trim()).filter(Boolean)) {
+    for (const rawSeg of body
+      .split(/[;|&]+/)
+      .map(s => s.trim())
+      .filter(Boolean)) {
       if (isDestructiveFindExec(rawSeg)) return true;
     }
   }
@@ -573,7 +572,9 @@ function isDestructiveBash(command) {
 // --- State management (per-session, atomic writes, bounded) ---
 
 function normalizeEnvValue(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase();
 }
 
 function isGateGuardDisabled() {
@@ -886,8 +887,7 @@ function isReadOnlyGitIntrospection(command) {
     if (args.length === 2) {
       const [first, second] = args;
       // ref + flag
-      if (!first.startsWith('--') && /^[a-zA-Z0-9._:/ -]+$/.test(first) &&
-          (second === '--stat' || second === '--name-only')) {
+      if (!first.startsWith('--') && /^[a-zA-Z0-9._:/ -]+$/.test(first) && (second === '--stat' || second === '--name-only')) {
         return true;
       }
       return false;
@@ -932,7 +932,7 @@ function writeGateMsg(filePath) {
     `Before creating ${safe}, present these facts:`,
     '',
     '1. Name the file(s) and line(s) that will call this new file',
-    '2. Confirm no existing file serves the same purpose (use Glob)',
+    '2. Confirm no existing file serves the same purpose (search the tree — Glob/Grep, or find/grep via Bash)',
     '3. If this file reads/writes data files, show field names, structure, and date format (use redacted or synthetic values, not raw production data)',
     "4. Quote the user's current instruction verbatim",
     '',
@@ -983,11 +983,7 @@ function routineBashMsg() {
 
 function withRecoveryHint(message, hookIds = [EDIT_WRITE_HOOK_ID]) {
   const disableTargets = hookIds.map(hookId => `\`${hookId}\``).join(' or ');
-  return [
-    message,
-    '',
-    `Recovery: if GateGuard is blocking setup or repair work, run this session with \`ECC_GATEGUARD=off\` or add ${disableTargets} to \`ECC_DISABLED_HOOKS\`.`
-  ].join('\n');
+  return [message, '', `Recovery: if GateGuard is blocking setup or repair work, run this session with \`ECC_GATEGUARD=off\` or add ${disableTargets} to \`ECC_DISABLED_HOOKS\`.`].join('\n');
 }
 
 function isSubagentInvocation(data) {
@@ -995,12 +991,7 @@ function isSubagentInvocation(data) {
     return false;
   }
 
-  const candidates = [
-    data.agent_id,
-    data.agentId,
-    data.parent_tool_use_id,
-    data.parentToolUseId
-  ];
+  const candidates = [data.agent_id, data.agentId, data.parent_tool_use_id, data.parentToolUseId];
 
   return candidates.some(candidate => typeof candidate === 'string' && candidate.trim());
 }
