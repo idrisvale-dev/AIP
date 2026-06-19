@@ -70,9 +70,7 @@ function assertWithinTrustedRoot(target, root, action = 'write') {
     throw new Error(`Refusing to ${action} '${target}': no trusted install root resolved.`);
   }
   if (!isWithinRoot(target, root)) {
-    throw new Error(
-      `Refusing to ${action} outside the install root: '${target}' is not within '${root}'.`
-    );
+    throw new Error(`Refusing to ${action} outside the install root: '${target}' is not within '${root}'.`);
   }
   return realpathNearestExisting(target);
 }
@@ -80,5 +78,5 @@ function assertWithinTrustedRoot(target, root, action = 'write') {
 module.exports = {
   realpathNearestExisting,
   isWithinRoot,
-  assertWithinTrustedRoot,
+  assertWithinTrustedRoot
 };
