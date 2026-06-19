@@ -13,11 +13,13 @@ Security fixes land on `main` first. Backports are best-effort and only for curr
 
 ## Reporting a Vulnerability
 
-Use GitHub private vulnerability reporting — it is the only monitored channel and reaches the maintainer directly:
+Use GitHub private vulnerability reporting whenever possible — it reaches the maintainer directly:
 
 - <https://github.com/affaan-m/ECC/security/advisories/new>
 
-Do **not** open a public GitHub issue for security vulnerabilities, and do not rely on email — there is no monitored security mailbox.
+You can also email **<affaan@ecc.tools>** (the `security@ecc.tools` alias is not monitored — use `affaan@ecc.tools`).
+
+Do **not** open a public GitHub issue for security vulnerabilities.
 
 Include:
 
