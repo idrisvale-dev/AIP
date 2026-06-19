@@ -220,6 +220,106 @@ function tokenizeAllowlistedShellWords(input) {
   return tokens;
 }
 
+const SHELL_SEGMENT_SEPARATORS = new Set([';', '|', '&', '\n', '\r']);
+
+/**
+ * Quote-aware split of a command line into segments, with quotes removed from
+ * the resulting words. Splits only on UNQUOTED `;`, `|`, `&`, and newlines so:
+ *  - a quoted command word (`'rm'`, `"rm"`) normalizes to `rm` (the shell
+ *    treats quotes around a command name as transparent), and
+ *  - a newline behaves as a command separator (the shell runs each line),
+ * neither of which `stripQuotedStrings` + naive splitting handles — both were
+ * destructive-classifier bypasses (GHSA-4v57-ph3x-gf55).
+ *
+ * @param {string} input
+ * @returns {string[][]} array of dequoted token arrays, one per segment
+ */
+function quoteAwareSegments(input) {
+  const segments = [];
+  let words = [];
+  let current = '';
+  let hasWord = false;
+  let quote = null;
+  let escaped = false;
+
+  const flushWord = () => {
+    if (hasWord) words.push(current);
+    current = '';
+    hasWord = false;
+  };
+  const flushSegment = () => {
+    flushWord();
+    if (words.length) segments.push(words);
+    words = [];
+  };
+
+  for (const ch of String(input || '')) {
+    if (escaped) {
+      current += ch;
+      hasWord = true;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      hasWord = true;
+      continue;
+    }
+    if (quote) {
+      if (ch === quote) quote = null;
+      else current += ch;
+      hasWord = true;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      hasWord = true; // entering a quote starts a word, even if its content is empty
+      continue;
+    }
+    if (SHELL_SEGMENT_SEPARATORS.has(ch)) {
+      flushSegment();
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      flushWord();
+      continue;
+    }
+    current += ch;
+    hasWord = true;
+  }
+  flushSegment();
+  return segments;
+}
+
+const SHELL_WRAPPERS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh']);
+
+/**
+ * Quote-aware destructive check: catches quoted command words, newline
+ * separators, quoted `find -exec`, and `sh -c`/`bash -c` wrappers that evade
+ * the quote-stripping path (GHSA-4v57-ph3x-gf55).
+ *
+ * @param {string} raw
+ * @param {number} [depth] recursion guard for shell -c wrappers
+ * @returns {boolean}
+ */
+function isDestructiveQuoteAware(raw, depth = 0) {
+  if (depth > 4) return false;
+  for (const tokens of quoteAwareSegments(raw)) {
+    if (tokens.length === 0) continue;
+    if (isDestructiveRm(tokens)) return true;
+    if (isDestructiveGit(tokens)) return true;
+    if (isDestructiveFindExec(tokens.join(' '))) return true;
+    const base = commandBasename(tokens[0]);
+    if (SHELL_WRAPPERS.has(base)) {
+      const ci = tokens.indexOf('-c');
+      if (ci !== -1 && tokens[ci + 1] && isDestructiveQuoteAware(tokens[ci + 1], depth + 1)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /**
  * Strip a leading path and trailing `.exe` from a command token so
  * `/usr/bin/git`, `git.exe`, and `GIT` all normalize to `git`.
@@ -566,6 +666,11 @@ function isDestructiveBash(command) {
     if (isDestructiveRm(tokens)) return true;
     if (isDestructiveGit(tokens)) return true;
   }
+
+  // Quote-aware pass: closes the quoted-command-word, newline-separator,
+  // quoted-find-exec, and sh/bash -c bypasses (GHSA-4v57-ph3x-gf55).
+  if (isDestructiveQuoteAware(raw)) return true;
+
   return false;
 }
 
