@@ -46,10 +46,14 @@ test('treeDistance: siblings are closer than cousins', () => {
 test('lineRangeOverlap: full overlap when whole-file (no ranges)', () => {
   assert.strictEqual(lineRangeOverlap([], []), 1);
 });
-test('lineRangeOverlap: partial overlapping ranges', () => {
+test('lineRangeOverlap: partial overlapping ranges (overlap coefficient)', () => {
   const r = lineRangeOverlap([[1, 10]], [[5, 14]]);
-  // overlap lines 5..10 = 6, union 1..14 = 14 → 6/14
-  assert.ok(Math.abs(r - 6 / 14) < 1e-9, `got ${r}`);
+  // overlap lines 5..10 = 6; min size = 10 → 6/10
+  assert.ok(Math.abs(r - 6 / 10) < 1e-9, `got ${r}`);
+});
+test('lineRangeOverlap: smaller edit fully inside the larger ⇒ 1', () => {
+  // overlap coefficient catches "B's whole edit is inside A's region".
+  assert.strictEqual(lineRangeOverlap([[1, 200]], [[40, 60]]), 1);
 });
 test('lineRangeOverlap: disjoint ranges are 0', () => {
   assert.strictEqual(lineRangeOverlap([[1, 5]], [[20, 25]]), 0);
@@ -78,11 +82,17 @@ test('graphDistance: direct edge is 1, two hops is 2, unreachable is Infinity', 
 
 // ── collision risk channels ──
 test('collisionRisk: two agents editing the SAME file ⇒ high risk', () => {
-  const a = { agentId: 'a', files: [{ path: 'src/api/users.js', lines: [[1, 50]] }] };
-  const b = { agentId: 'b', files: [{ path: 'src/api/users.js', lines: [[40, 90]] }] };
+  // Whole-file edits to the same file (no line info) ⇒ full overlap.
+  const a = { agentId: 'a', files: [{ path: 'src/api/users.js' }] };
+  const b = { agentId: 'b', files: [{ path: 'src/api/users.js' }] };
   const { risk, channels } = collisionRisk(a, b, {});
   assert.ok(risk > 0.5, `same-file risk ${risk} should be high`);
   assert.ok(channels.overlap > 0);
+});
+test('collisionRisk: same file but heavily-overlapping lines ⇒ still high', () => {
+  const a = { agentId: 'a', files: [{ path: 'src/api/users.js', lines: [[1, 50]] }] };
+  const b = { agentId: 'b', files: [{ path: 'src/api/users.js', lines: [[5, 55]] }] };
+  assert.ok(collisionRisk(a, b, {}).risk > 0.5);
 });
 test('collisionRisk: unrelated far-apart files ⇒ low risk', () => {
   const a = { agentId: 'a', files: [{ path: 'src/api/users.js' }] };

@@ -44,11 +44,15 @@ with channel weights *ω_i ∈ [0,1]*. The reported **distance** is the dual
 For shared files *S = files(W_a) ∩ files(W_b)*:
 
 ```
-lineOverlap(f) = |R_f^a ∩ R_f^b| / |R_f^a ∪ R_f^b|
-r_overlap = max( Jaccard(files_a, files_b),  max_{f∈S} lineOverlap(f) )   (3)
+lineOverlap(f) = |R_f^a ∩ R_f^b| / min(|R_f^a|, |R_f^b|)   (overlap coefficient)
+r_overlap = max_{f∈S} w_f^a·w_f^b · lineOverlap(f)                        (3)
 ```
 
-Same file, overlapping lines ⇒ imminent collision (*r_overlap → 1*).
+The overlap coefficient (not Jaccard) is the right measure: it stays high when one
+agent's small edit sits inside the other's large region (Jaccard would dilute it by
+union size). A whole-file edit (no line info) ⇒ `lineOverlap = 1`. Same file,
+overlapping lines ⇒ imminent collision; same file, *disjoint* line ranges (different
+functions) ⇒ low `r_overlap`. Different files ⇒ no shared `f` ⇒ `r_overlap = 0`.
 
 ### Channel 2 — dependency coupling *r_dep*
 

@@ -5,7 +5,7 @@
 
 const assert = require('assert');
 
-const { buildProximitySnapshot, sessionsToAgents } = require('../../scripts/lib/control-pane/proximity');
+const { buildProximitySnapshot, sessionsToAgents, parseDiffRanges, dispatchProximityTriggers } = require('../../scripts/lib/control-pane/proximity');
 
 let passed = 0;
 let failed = 0;
@@ -85,6 +85,65 @@ test('buildProximitySnapshot: advisories carry human-readable labels', () => {
   const prox = buildProximitySnapshot(sessions, { changedFilesFor, graph: { adjacency: {} } });
   const collision = prox.advisories[0];
   assert.ok(collision.aLabel && collision.bLabel, 'labels present');
+});
+
+test('parseDiffRanges: extracts new-side line ranges per file', () => {
+  const diff = ['diff --git a/src/x.js b/src/x.js', '--- a/src/x.js', '+++ b/src/x.js', '@@ -10,0 +11,3 @@', '+a', '+b', '+c', '@@ -40,2 +44,1 @@', '+z'].join('\n');
+  const ranges = parseDiffRanges(diff);
+  assert.deepStrictEqual(ranges.get('src/x.js'), [
+    [11, 13],
+    [44, 44]
+  ]);
+});
+
+test('line-range channel: same file but disjoint ranges ⇒ no resolution', () => {
+  // Two agents in the same file, far-apart functions. workingSetFor provides ranges.
+  const workingSetFor = s =>
+    ({
+      'lead-hermes': [{ path: 'src/api/users.js', lines: [[1, 20]] }],
+      'worker-kb': [{ path: 'src/api/users.js', lines: [[500, 540]] }]
+    })[s.id] || [];
+  const prox = buildProximitySnapshot([sessions[0], sessions[1]], { workingSetFor, graph: { adjacency: {} } });
+  const collision = prox.advisories.find(a => [a.a, a.b].includes('worker-kb'));
+  // Disjoint line ranges in the same file should NOT be a resolution-level collision.
+  assert.ok(!collision || collision.level !== 'resolution', `disjoint ranges should not force a steer (got ${collision && collision.level})`);
+});
+
+test('line-range channel: same file overlapping ranges ⇒ resolution', () => {
+  // worker's edit sits inside the lead's region — a definite conflict zone.
+  const workingSetFor = s =>
+    ({
+      'lead-hermes': [{ path: 'src/api/users.js', lines: [[1, 120]] }],
+      'worker-kb': [{ path: 'src/api/users.js', lines: [[30, 70]] }]
+    })[s.id] || [];
+  const prox = buildProximitySnapshot([sessions[0], sessions[1]], { workingSetFor, graph: { adjacency: {} } });
+  const collision = prox.advisories.find(a => [a.a, a.b].includes('worker-kb'));
+  assert.ok(collision && collision.level === 'resolution', 'overlapping ranges should force a steer');
+});
+
+test('triggers: resolution produces a steer message to the yielding agent and a hold notice', () => {
+  const prox = buildProximitySnapshot(sessions, { changedFilesFor, graph: { adjacency: {} } });
+  const steer = prox.triggers.find(t => t.type === 'proximity_steer');
+  const hold = prox.triggers.find(t => t.type === 'proximity_hold');
+  assert.ok(steer && steer.to === 'worker-kb', 'steer message goes to the yielding worker');
+  assert.ok(hold && hold.to === 'lead-hermes', 'hold notice goes to the lead');
+  assert.ok(/steer away/i.test(steer.content));
+});
+
+test('dispatchProximityTriggers: delivers each trigger through the injected sink', () => {
+  const prox = buildProximitySnapshot(sessions, { changedFilesFor, graph: { adjacency: {} } });
+  const sent = [];
+  const result = dispatchProximityTriggers(prox.triggers, {
+    sendMessage: m => sent.push(m)
+  });
+  assert.strictEqual(result.dispatched, prox.triggers.length);
+  assert.ok(sent.every(m => m.fromSession && m.toSession && m.content && m.msgType));
+});
+
+test('dispatchProximityTriggers: no sink ⇒ nothing thrown, all skipped', () => {
+  const r = dispatchProximityTriggers([{ to: 'a', from: 'b', type: 'x', content: 'c' }], {});
+  assert.strictEqual(r.dispatched, 0);
+  assert.strictEqual(r.skipped, 1);
 });
 
 console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);

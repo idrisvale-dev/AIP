@@ -31,11 +31,14 @@
  *   r_tree    — proximity in the directory tree (a soft prior)
  *
  * ── Channel 1: edit overlap ────────────────────────────────────────────────
- * For the shared files S = files(W_a) ∩ files(W_b):
- *   - same file, no line info → Jaccard of the file sets is the floor.
- *   - same file with line ranges → fraction of overlapping lines:
- *         lineOverlap(f) = |R_f^a ∩ R_f^b| / |R_f^a ∪ R_f^b|.
- *   r_overlap = max( jaccard(files_a, files_b), max_{f∈S} lineOverlap(f) ).  (3)
+ * For each shared file f ∈ files(W_a) ∩ files(W_b), the overlap COEFFICIENT
+ * (Szymkiewicz–Simpson) over the edited line ranges:
+ *         lineOverlap(f) = |R_f^a ∩ R_f^b| / min(|R_f^a|, |R_f^b|)
+ * (the right collision measure — high when one agent's edit sits inside the
+ * other's region even if that region is huge; =1 when either side is a whole-file
+ * edit). The channel risk is the recency-weighted max across shared files:
+ *   r_overlap = max_{f∈S} w_f^a·w_f^b · lineOverlap(f).                     (3)
+ * Different files ⇒ no shared f ⇒ r_overlap = 0 (tree/dep channels take over).
  *
  * ── Channel 2: dependency coupling ─────────────────────────────────────────
  * Build a directed dependency graph G=(V,E), V=files, edge f→g iff f imports g.
@@ -111,9 +114,11 @@ function treeDistance(a, b) {
 }
 
 /**
- * Line-range overlap fraction (Jaccard over covered lines) for two range lists.
- * Each range is [start, end] inclusive. Empty/absent ranges ⇒ treat the whole
- * file as touched, so two file-level edits to the same file count as full overlap.
+ * Line-range overlap as the overlap COEFFICIENT (Szymkiewicz–Simpson):
+ * |A ∩ B| / min(|A|, |B|). This is the right collision measure — if one agent's
+ * edit sits largely inside the other's region the score is high even when the
+ * other region is huge (Jaccard would dilute it by union size). Empty/absent
+ * ranges ⇒ whole-file edit ⇒ full overlap (1). Each range is [start,end] inclusive.
  */
 function lineRangeOverlap(rangesA, rangesB) {
   const a = Array.isArray(rangesA) ? rangesA : [];
@@ -130,14 +135,10 @@ function lineRangeOverlap(rangesA, rangesB) {
   };
   const ca = covered(a);
   const cb = covered(b);
+  if (ca.size === 0 || cb.size === 0) return 0;
   let inter = 0;
   for (const v of ca) if (cb.has(v)) inter += 1;
-  const union = ca.size + cb.size - inter;
-  return union === 0 ? 0 : inter / union;
-}
-
-function fileSet(workingSet) {
-  return new Set((workingSet.files || []).map(f => normalizePath(f.path)));
+  return inter / Math.min(ca.size, cb.size);
 }
 
 function jaccard(setA, setB) {
@@ -154,10 +155,13 @@ function jaccard(setA, setB) {
 function overlapRisk(a, b) {
   const filesA = a.files || [];
   const filesB = b.files || [];
-  const setA = fileSet(a);
-  const setB = fileSet(b);
-  let r = jaccard(setA, setB);
   const byPathB = new Map(filesB.map(f => [normalizePath(f.path), f]));
+  // Per shared file, the (line-precise) overlap — lineRangeOverlap returns 1 when
+  // either side lacks ranges (a whole-file edit). The risk is the max across
+  // shared files: even one fully-overlapping file is a collision, while the same
+  // file edited in disjoint line ranges scores low. No coarse file-set Jaccard
+  // floor (it would max out for any shared file and mask line-level disjointness).
+  let r = 0;
   for (const fa of filesA) {
     const fb = byPathB.get(normalizePath(fa.path));
     if (fb) {

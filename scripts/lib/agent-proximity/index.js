@@ -158,6 +158,58 @@ function scanAirspace(agents, graph = {}, options = {}) {
   };
 }
 
+function clamp01(x) {
+  return !Number.isFinite(x) ? 0 : x < 0 ? 0 : x > 1 ? 1 : x;
+}
+function pct(x) {
+  return Math.round(clamp01(x) * 100);
+}
+
+/**
+ * Turn airspace advisories into the messages to inject between agent sessions —
+ * the concrete "transmit intent / steer away" actions. Transport-agnostic: each
+ * trigger is { to, from, type, risk, content }; a dispatcher delivers them.
+ */
+function buildProximityTriggers(advisories) {
+  const triggers = [];
+  for (const adv of advisories || []) {
+    if (adv.level === 'advisory') {
+      // Traffic Advisory: both agents exchange intent.
+      triggers.push({
+        to: adv.a,
+        from: adv.b,
+        type: 'proximity_transmit',
+        risk: adv.risk,
+        content: `Proximity ${pct(adv.risk)}%: you and ${adv.b} are converging in code-space. Share what you're working on and check for overlap before continuing.`
+      });
+      triggers.push({
+        to: adv.b,
+        from: adv.a,
+        type: 'proximity_transmit',
+        risk: adv.risk,
+        content: `Proximity ${pct(adv.risk)}%: you and ${adv.a} are converging in code-space. Share what you're working on and check for overlap before continuing.`
+      });
+    } else if (adv.level === 'resolution') {
+      // Resolution Advisory: the lower-priority agent steers; the other holds.
+      triggers.push({
+        to: adv.steer,
+        from: adv.hold,
+        type: 'proximity_steer',
+        risk: adv.risk,
+        content: `Collision risk ${pct(adv.risk)}% with ${adv.hold}, which holds right-of-way. Steer away: move to a different file/area, or coordinate with ${adv.hold} before editing the shared region.`
+      });
+      triggers.push({
+        to: adv.hold,
+        from: adv.steer,
+        type: 'proximity_hold',
+        risk: adv.risk,
+        content: `Collision risk ${pct(adv.risk)}% with ${adv.steer}; you hold right-of-way. ${adv.steer} has been asked to steer away — continue, but expect a handoff if they can't.`
+      });
+    }
+  }
+  return triggers;
+}
+
 module.exports = {
   DEFAULTS,
   scanAirspace,
@@ -165,6 +217,7 @@ module.exports = {
   fileCoordinate,
   collisionRisk,
   advise,
+  buildProximityTriggers,
   buildDependencyGraph,
   buildDependencyGraphFromSources
 };

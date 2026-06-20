@@ -12,25 +12,74 @@
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { scanAirspace } = require('../agent-proximity');
+const { scanAirspace, buildProximityTriggers } = require('../agent-proximity');
 const { buildDependencyGraph } = require('../agent-proximity/graph');
 
 /**
- * Default working-set source: `git diff --name-only <base>` inside a session's
- * worktree, returning repo-relative changed files. Returns [] on any failure so
+ * Parse `git diff --unified=0` output into per-file NEW-side line ranges. Hunk
+ * headers look like `@@ -a,b +c,d @@`; we keep the +c,d (new) side so the overlap
+ * channel can tell that two agents touch the *same file* but *different line
+ * ranges* (different functions) and not flag a false collision.
+ *
+ * @param {string} diff
+ * @returns {Map<string, Array<[number,number]>>}
+ */
+function parseDiffRanges(diff) {
+  const byFile = new Map();
+  let current = null;
+  for (const line of String(diff || '').split('\n')) {
+    const fileMatch = line.match(/^\+\+\+ b\/(.+)$/);
+    if (fileMatch) {
+      const name = fileMatch[1].trim();
+      current = name === '/dev/null' ? null : name;
+      if (current && !byFile.has(current)) byFile.set(current, []);
+      continue;
+    }
+    const hunk = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+    if (hunk && current) {
+      const start = parseInt(hunk[1], 10);
+      const count = hunk[2] === undefined ? 1 : parseInt(hunk[2], 10);
+      if (count > 0) byFile.get(current).push([start, start + count - 1]);
+    }
+  }
+  return byFile;
+}
+
+function runGitDiff(worktreePath, base, extraArgs) {
+  return execFileSync('git', ['-C', worktreePath, 'diff', ...extraArgs, `${base}...HEAD`], {
+    encoding: 'utf8',
+    timeout: 5000,
+    maxBuffer: 8 * 1024 * 1024,
+    stdio: ['ignore', 'pipe', 'ignore']
+  });
+}
+
+/**
+ * Default working-set source: a session's worktree diff against its base, with
+ * per-file changed line ranges. Returns [{ path, lines? }], or [] on failure so
  * proximity degrades gracefully (never throws into the snapshot path).
+ */
+function defaultWorkingSetFor(session) {
+  const wt = session && session.worktree;
+  if (!wt || !wt.path) return [];
+  const base = wt.base || 'HEAD';
+  try {
+    const ranges = parseDiffRanges(runGitDiff(wt.path, base, ['--unified=0']));
+    return [...ranges.entries()].map(([path, lines]) => (lines.length > 0 ? { path, lines } : { path }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Back-compat file-name-only source (no line ranges).
  */
 function defaultChangedFilesFor(session) {
   const wt = session && session.worktree;
   if (!wt || !wt.path) return [];
   const base = wt.base || 'HEAD';
   try {
-    const out = execFileSync('git', ['-C', wt.path, 'diff', '--name-only', `${base}...HEAD`], {
-      encoding: 'utf8',
-      timeout: 4000,
-      stdio: ['ignore', 'pipe', 'ignore']
-    });
-    return out
+    return runGitDiff(wt.path, base, ['--name-only'])
       .split('\n')
       .map(s => s.trim())
       .filter(Boolean);
@@ -42,12 +91,14 @@ function defaultChangedFilesFor(session) {
 /**
  * Map sessions to agent working sets. Only sessions with a worktree and at least
  * one changed file participate (an agent with no edits cannot collide).
+ * Inject `workingSetFor` (returns [{path,lines?}]) or `changedFilesFor`
+ * (returns file-name strings) for tests.
  */
 function sessionsToAgents(sessions, deps = {}) {
-  const changedFilesFor = deps.changedFilesFor || defaultChangedFilesFor;
+  const workingSetFor = deps.workingSetFor || (deps.changedFilesFor ? session => deps.changedFilesFor(session).map(p => ({ path: p })) : defaultWorkingSetFor);
   const agents = [];
   for (const session of sessions || []) {
-    const files = changedFilesFor(session).map(p => ({ path: p, weight: 1 }));
+    const files = workingSetFor(session).map(f => ({ weight: 1, ...f }));
     if (files.length === 0) continue;
     agents.push({
       agentId: session.id,
@@ -91,21 +142,48 @@ function buildProximitySnapshot(sessions, options = {}) {
 
   const scan = scanAirspace(agents, graph, options);
   const labels = new Map(agents.map(a => [a.agentId, a.label]));
+  const advisories = scan.advisories.map(adv => ({
+    ...adv,
+    aLabel: labels.get(adv.a) || adv.a,
+    bLabel: labels.get(adv.b) || adv.b
+  }));
   return {
     enabled: true,
-    advisories: scan.advisories.map(adv => ({
-      ...adv,
-      aLabel: labels.get(adv.a) || adv.a,
-      bLabel: labels.get(adv.b) || adv.b
-    })),
+    advisories,
+    triggers: buildProximityTriggers(scan.advisories),
     positions: scan.positions,
     links: scan.links,
     counts: scan.counts
   };
 }
 
+/**
+ * Deliver proximity triggers via an injected message sink. The sink is
+ * `sendMessage({ fromSession, toSession, content, msgType })` — e.g. a writer
+ * for the ECC `messages` table the control pane already reads. Best-effort:
+ * a failing send is skipped, never thrown. Returns the dispatched count.
+ */
+function dispatchProximityTriggers(triggers, deps = {}) {
+  const send = deps.sendMessage;
+  if (typeof send !== 'function') return { dispatched: 0, skipped: (triggers || []).length };
+  let dispatched = 0;
+  let skipped = 0;
+  for (const t of triggers || []) {
+    try {
+      send({ fromSession: t.from, toSession: t.to, content: t.content, msgType: t.type });
+      dispatched += 1;
+    } catch {
+      skipped += 1;
+    }
+  }
+  return { dispatched, skipped };
+}
+
 module.exports = {
   buildProximitySnapshot,
   sessionsToAgents,
-  defaultChangedFilesFor
+  defaultWorkingSetFor,
+  defaultChangedFilesFor,
+  parseDiffRanges,
+  dispatchProximityTriggers
 };
