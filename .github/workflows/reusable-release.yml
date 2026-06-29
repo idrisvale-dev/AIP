@@ -62,6 +62,9 @@ jobs:
       - name: Verify OpenCode package payload
         run: node tests/scripts/build-opencode.test.js
 
+      - name: Verify OMP adapter payload
+        run: node tests/omp/omp-plugin.test.js
+
       - name: Validate version tag
         env:
           INPUT_TAG: ${{ inputs.tag }}
