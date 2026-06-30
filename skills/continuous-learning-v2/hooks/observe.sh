@@ -280,6 +280,7 @@ _SECRET_RE = re.compile(
 
 import signal
 def _ecc_bail(*_):
+    print("[observe] SIGALRM timeout: parse-error fallback observation dropped before write (#2300)", file=sys.stderr)
     sys.exit(0)
 try:
     signal.signal(signal.SIGALRM, _ecc_bail)
@@ -317,6 +318,7 @@ import json, sys, os, re
 import signal
 
 def _ecc_bail(*_):
+    print("[observe] SIGALRM timeout: in-flight observation dropped before write (#2300)", file=sys.stderr)
     sys.exit(0)
 try:
     signal.signal(signal.SIGALRM, _ecc_bail)
