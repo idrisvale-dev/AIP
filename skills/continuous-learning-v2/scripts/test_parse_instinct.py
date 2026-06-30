@@ -1047,6 +1047,70 @@ def test_update_registry_atomic_replaces_file(patch_globals):
     assert leftovers == []
 
 
+def test_update_registry_matches_shell_schema(patch_globals):
+    # Issue #2299: the Python writer must emit the same field set as the shell
+    # counterpart in detect-project.sh (id, name, root, remote, created_at,
+    # last_seen) so a projects.json entry has a consistent shape regardless of
+    # which path wrote it.
+    tree = patch_globals
+    _update_registry("abc123", "demo", "/repo", "https://example.com/repo.git")
+    entry = json.loads(tree["registry_file"].read_text())["abc123"]
+    assert set(entry) == {"id", "name", "root", "remote", "created_at", "last_seen"}
+    assert entry["id"] == "abc123"
+    assert entry["name"] == "demo"
+    assert entry["root"] == "/repo"
+    assert entry["remote"] == "https://example.com/repo.git"
+    # On the initial write both timestamps come from the same `now`, so the
+    # first-write contract is created_at == last_seen.
+    assert entry["created_at"]
+    assert entry["created_at"] == entry["last_seen"]
+
+
+def test_update_registry_preserves_created_at(patch_globals):
+    # created_at is stamped on first write and preserved on subsequent updates,
+    # while last_seen advances — matching entry.get("created_at", now) in the
+    # shell counterpart.
+    tree = patch_globals
+    _update_registry("abc123", "demo", "/repo", "https://example.com/repo.git")
+    first = json.loads(tree["registry_file"].read_text())["abc123"]
+
+    _update_registry("abc123", "demo-renamed", "/repo", "https://example.com/repo.git")
+    second = json.loads(tree["registry_file"].read_text())["abc123"]
+
+    assert second["created_at"] == first["created_at"]
+    assert second["name"] == "demo-renamed"
+    assert second["last_seen"] >= first["last_seen"]
+
+
+def test_update_registry_heals_malformed_entry(patch_globals):
+    # Issue #2299 follow-up: a non-dict value for the project id (e.g. a
+    # corrupt registry) must not crash _update_registry. The entry is healed by
+    # the rewrite, preserving the old unconditional-overwrite behavior.
+    tree = patch_globals
+    tree["registry_file"].write_text(json.dumps({"abc123": None}), encoding="utf-8")
+    _update_registry("abc123", "demo", "/repo", "https://example.com/repo.git")
+    entry = json.loads(tree["registry_file"].read_text())["abc123"]
+    assert isinstance(entry, dict)
+    assert entry["id"] == "abc123"
+    assert entry["created_at"]
+    assert entry["created_at"] == entry["last_seen"]
+
+
+def test_update_registry_heals_non_dict_registry(patch_globals):
+    # Issue #2299 follow-up: a top-level registry that is valid JSON but not a
+    # mapping (e.g. a list or string from a corrupt projects.json) must not
+    # crash _update_registry before the per-entry guard runs. The whole file is
+    # healed by the rewrite, preserving the old unconditional-overwrite behavior.
+    tree = patch_globals
+    tree["registry_file"].write_text(json.dumps(["oops"]), encoding="utf-8")
+    _update_registry("abc123", "demo", "/repo", "https://example.com/repo.git")
+    registry = json.loads(tree["registry_file"].read_text())
+    assert isinstance(registry, dict)
+    entry = registry["abc123"]
+    assert entry["id"] == "abc123"
+    assert entry["created_at"] == entry["last_seen"]
+
+
 def test_write_registry_atomic_no_tmp_leftovers(patch_globals):
     # Issue #2294: _write_registry now holds the registry lock like
     # _update_registry. It must still write atomically with no stray tmp files.
