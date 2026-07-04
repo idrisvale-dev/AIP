@@ -528,6 +528,12 @@ export ECC_SESSION_START_CONTEXT=off
 # Set to 0, off, false, disabled, never, or none to keep all sessions (disable pruning).
 export ECC_SESSION_RETENTION_DAYS=14
 
+# Cap how many learned instincts SessionStart injects into context (default: 6)
+export ECC_MAX_INJECTED_INSTINCTS=6
+
+# Minimum confidence an instinct needs to be injected, 0-1 (default: 0.7)
+export ECC_INSTINCT_CONFIDENCE_THRESHOLD=0.7
+
 # Keep context/scope/loop warnings but suppress API-rate cost estimates
 export ECC_CONTEXT_MONITOR_COST_WARNINGS=off
 ```
