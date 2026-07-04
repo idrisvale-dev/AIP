@@ -22,15 +22,40 @@ function writeStderr(stderr) {
   }
 }
 
-function passthrough(raw, result) {
+function passthrough(result) {
   const stdout = typeof result?.stdout === 'string' ? result.stdout : '';
   if (stdout) {
+    // Most ECC hook scripts follow a `run(rawInput) -> rawInput` passthrough
+    // pattern: they do their work, then return the original input so the hook
+    // chain's tool result is preserved. The harness then writes the verbatim
+    // raw input (tool_input + tool_response, often 1-275 KB) into the session
+    // transcript as a hook_success attachment -- ~89% of every ECC session's
+    // transcript is this bloat. Detect the passthrough and emit empty stdout
+    // instead; the harness falls back to the tool_use's original result, the
+    // same path #2240 established for bash-hook-dispatcher.
+    //
+    // IMPORTANT: a strict `stdout === raw` check misses the common case where
+    // child processes' synchronous `process.stdout.write()` writes hit the
+    // ~64 KB Node.js pipe buffer and get truncated -- stdout is then exactly
+    // 65536 bytes and a strict prefix of raw. So we also detect that
+    // truncation sentinel.
+    const raw = typeof result?.__rawInput === 'string' ? result.__rawInput : '';
+    const STDOUT_PIPE_CAP = 64 * 1024;
+    const looksLikePassthrough =
+      (stdout.length === STDOUT_PIPE_CAP && raw.startsWith(stdout)) ||
+      (raw.length > 0 && stdout === raw);
+    if (looksLikePassthrough) {
+      writeStderr(
+        '[Hook] bootstrap: hook returned raw input as stdout; emitting empty to avoid transcript bloat\n'
+      );
+      return;
+    }
     process.stdout.write(stdout);
     return;
   }
 
   if (!Number.isInteger(result?.status) || result.status === 0) {
-    process.stdout.write(raw);
+    writeStderr('[Hook] bootstrap: hook produced no output; emitting empty stdout\n');
   }
 }
 
@@ -146,7 +171,7 @@ function spawnNode(rootDir, relPath, raw, args) {
     CLAUDE_PLUGIN_ROOT: rootDir,
     ECC_PLUGIN_ROOT: rootDir,
   };
-  return spawnSync(process.execPath, [resolveTarget(rootDir, relPath), ...args], {
+  const result = spawnSync(process.execPath, [resolveTarget(rootDir, relPath), ...args], {
     input: raw,
     encoding: 'utf8',
     env: hookEnv,
@@ -154,6 +179,11 @@ function spawnNode(rootDir, relPath, raw, args) {
     timeout: 30000,
     windowsHide: true,
   });
+  // Tag result with the raw input so passthrough() can detect the
+  // "hook returned raw input as stdout" pattern and suppress it
+  // (the dominant source of session-transcript bloat).
+  result.__rawInput = raw;
+  return result;
 }
 
 // spawnShell is not used by any hook in the shipped hooks.json configuration
@@ -190,7 +220,7 @@ function spawnShell(rootDir, relPath, raw, args) {
         stderr: '[Hook] .sh script requested but no bash binary found on Windows; skipping\n',
       };
     }
-    return spawnSync(bash, [scriptPath, ...args], {
+    const bashResult = spawnSync(bash, [scriptPath, ...args], {
       input: raw,
       encoding: 'utf8',
       env: hookEnv,
@@ -198,6 +228,8 @@ function spawnShell(rootDir, relPath, raw, args) {
       timeout: 30000,
       windowsHide: true,
     });
+    bashResult.__rawInput = raw;
+    return bashResult;
   }
 
   const shellArgs = isPs
@@ -206,7 +238,7 @@ function spawnShell(rootDir, relPath, raw, args) {
     ? ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, ...args]
     : [scriptPath, ...args];
 
-  return spawnSync(shell, shellArgs, {
+  const result = spawnSync(shell, shellArgs, {
     input: raw,
     encoding: 'utf8',
     env: hookEnv,
@@ -214,6 +246,8 @@ function spawnShell(rootDir, relPath, raw, args) {
     timeout: 30000,
     windowsHide: true,
   });
+  result.__rawInput = raw;
+  return result;
 }
 
 function main() {
@@ -224,7 +258,9 @@ function main() {
   );
 
   if (!mode || !relPath || !rootDir) {
-    process.stdout.write(raw);
+    writeStderr(
+      '[Hook] bootstrap: missing required args (mode/relPath/rootDir); emitting empty stdout\n'
+    );
     process.exit(0);
   }
 
@@ -235,17 +271,15 @@ function main() {
     } else if (mode === 'shell') {
       result = spawnShell(rootDir, relPath, raw, args);
     } else {
-      writeStderr(`[Hook] unknown bootstrap mode: ${mode}\n`);
-      process.stdout.write(raw);
+      writeStderr(`[Hook] unknown bootstrap mode: ${mode}; emitting empty stdout\n`);
       process.exit(0);
     }
   } catch (error) {
-    writeStderr(`[Hook] bootstrap resolution failed: ${error.message}\n`);
-    process.stdout.write(raw);
+    writeStderr(`[Hook] bootstrap resolution failed: ${error.message}; emitting empty stdout\n`);
     process.exit(0);
   }
 
-  passthrough(raw, result);
+  passthrough(result);
   writeStderr(result.stderr);
 
   if (result.error || result.signal || result.status === null) {

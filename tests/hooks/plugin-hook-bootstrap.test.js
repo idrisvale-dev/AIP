@@ -61,12 +61,14 @@ function runTests() {
   let passed = 0;
   let failed = 0;
 
-  if (test('passes stdin through when required bootstrap inputs are missing', () => {
+  if (test('emits empty stdout and stderr warning when required bootstrap inputs are missing', () => {
     const result = run([], { input: '{"ok":true}' });
 
     assert.strictEqual(result.status, 0);
-    assert.strictEqual(result.stdout, '{"ok":true}');
-    assert.strictEqual(result.stderr, '');
+    // Empty stdout (not the raw input) so the harness falls back to the
+    // tool_use's original result -- prevents session-transcript bloat.
+    assert.strictEqual(result.stdout, '');
+    assert.ok(result.stderr.includes('missing required args'));
   })) passed++; else failed++;
 
   if (test('normalizes Windows Git Bash POSIX drive roots', () => {
@@ -143,7 +145,7 @@ process.stdout.write(JSON.stringify({
     }
   })) passed++; else failed++;
 
-  if (test('node mode passes original stdin when child exits cleanly without stdout', () => {
+  if (test('node mode emits empty stdout when child exits cleanly without stdout', () => {
     const root = createTempDir();
     try {
       writeFile(root, path.join('scripts', 'silent.js'), 'process.exit(0);\n');
@@ -154,7 +156,10 @@ process.stdout.write(JSON.stringify({
       });
 
       assert.strictEqual(result.status, 0);
-      assert.strictEqual(result.stdout, 'raw-input');
+      // Empty stdout (not the raw input) -- the dominant source of
+      // session-transcript bloat pre-fix.
+      assert.strictEqual(result.stdout, '');
+      assert.ok(result.stderr.includes('emitting empty stdout'));
     } finally {
       cleanup(root);
     }
@@ -225,7 +230,7 @@ process.exit(7);
     }
   })) passed++; else failed++;
 
-  if (test('shell mode fails open when no shell runtime is available', () => {
+  if (test('shell mode fails open with empty stdout when no shell runtime is available', () => {
     const root = createTempDir();
     try {
       writeFile(root, path.join('scripts', 'hook.sh'), 'printf unreachable\n');
@@ -237,14 +242,16 @@ process.exit(7);
       });
 
       assert.strictEqual(result.status, 0);
-      assert.strictEqual(result.stdout, 'raw-input');
+      // Empty stdout (not the raw input) so the harness falls back to the
+      // tool_use's original result.
+      assert.strictEqual(result.stdout, '');
       assert.ok(result.stderr.includes('shell runtime unavailable'));
     } finally {
       cleanup(root);
     }
   })) passed++; else failed++;
 
-  if (test('rejects target paths that escape the plugin root', () => {
+  if (test('rejects target paths that escape the plugin root with empty stdout', () => {
     const root = createTempDir();
     try {
       const result = run(['node', path.join('..', 'outside.js')], {
@@ -253,14 +260,16 @@ process.exit(7);
       });
 
       assert.strictEqual(result.status, 0);
-      assert.strictEqual(result.stdout, 'raw-input');
+      // Empty stdout (not the raw input) -- the resolver throws, fallthrough
+      // path emits empty + stderr explanation.
+      assert.strictEqual(result.stdout, '');
       assert.ok(result.stderr.includes('Path traversal rejected'));
     } finally {
       cleanup(root);
     }
   })) passed++; else failed++;
 
-  if (test('unknown mode fails open with stderr warning', () => {
+  if (test('unknown mode fails open with empty stdout and stderr warning', () => {
     const root = createTempDir();
     try {
       const result = run(['python', 'hook.py'], {
@@ -269,7 +278,9 @@ process.exit(7);
       });
 
       assert.strictEqual(result.status, 0);
-      assert.strictEqual(result.stdout, 'raw-input');
+      // Empty stdout (not the raw input) -- unknown mode fallthrough path
+      // emits empty + stderr explanation.
+      assert.strictEqual(result.stdout, '');
       assert.ok(result.stderr.includes('unknown bootstrap mode: python'));
     } finally {
       cleanup(root);
@@ -375,7 +386,7 @@ process.exit(7);
         });
 
         assert.strictEqual(result.status, 0);
-        assert.strictEqual(result.stdout, 'raw-input');
+        assert.strictEqual(result.stdout, '');
         assert.ok(
           result.stderr.includes('no bash binary found') ||
           result.stderr.includes('shell runtime unavailable'),
