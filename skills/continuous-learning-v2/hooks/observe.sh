@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Continuous Learning v2 - Observation Hook
 #
 # Captures tool use events for pattern analysis.

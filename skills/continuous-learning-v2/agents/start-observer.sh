@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Continuous Learning v2 - Observer Agent Launcher
 #
 # Starts the background observer agent that analyzes observations

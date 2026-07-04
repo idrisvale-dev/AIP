@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Continuous Learning v2 - Project Detection Helper
 #
 # Shared logic for detecting current project context.
