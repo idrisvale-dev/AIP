@@ -77,10 +77,16 @@ if (
 else failed++;
 
 if (
-  test('command markdown frontmatter uses plugin-scoped agent ids', () => {
+  test('command markdown frontmatter agent ids resolve to a registered opencode agent', () => {
     const commandsDir = path.join(opencodeDir, 'commands');
+    const registeredAgents = new Set(Object.keys(config.agent || {}));
+    assert.ok(registeredAgents.size > 0, 'Expected opencode.json to register at least one agent');
 
     for (const entry of fs.readdirSync(commandsDir)) {
+      if (!entry.endsWith('.md')) {
+        continue;
+      }
+
       const body = fs.readFileSync(path.join(commandsDir, entry), 'utf8');
       const match = body.match(/^agent:\s*(.+)$/m);
 
@@ -88,9 +94,21 @@ if (
         continue;
       }
 
+      const agentId = match[1].trim().replace(/^['"]|['"]$/g, '');
+
+      // Regression guard for #2477: the Claude Code plugin namespace
+      // (`everything-claude-code:`) is not a valid opencode agent scope.
+      // OpenCode registers these agents unscoped in opencode.json's `agent`
+      // map, so a scoped id fails to resolve ("Agent not found") and hard-
+      // breaks subtask commands like /code-review on opencode.
       assert.ok(
-        match[1].startsWith('everything-claude-code:'),
-        `Expected plugin-scoped agent id in ${entry}, got: ${match[1]}`
+        !agentId.includes('everything-claude-code:'),
+        `${entry}: command agent must be an unscoped opencode agent id, got: ${agentId}`
+      );
+
+      assert.ok(
+        registeredAgents.has(agentId),
+        `${entry}: command agent "${agentId}" is not registered in opencode.json's agent map`
       );
     }
   })
