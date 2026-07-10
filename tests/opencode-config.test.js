@@ -96,13 +96,14 @@ if (
 
       const agentId = match[1].trim().replace(/^['"]|['"]$/g, '');
 
-      // Regression guard for #2477: the Claude Code plugin namespace
-      // (`everything-claude-code:`) is not a valid opencode agent scope.
-      // OpenCode registers these agents unscoped in opencode.json's `agent`
-      // map, so a scoped id fails to resolve ("Agent not found") and hard-
-      // breaks subtask commands like /code-review on opencode.
+      // Regression guard for #2477: opencode registers these agents unscoped
+      // in opencode.json's `agent` map, so ANY namespace-scoped id
+      // (`<plugin>:<agent>` — e.g. the Claude Code `everything-claude-code:`
+      // prefix) fails to resolve ("Agent not found") and hard-breaks subtask
+      // commands like /code-review on opencode. Reject the whole scoped class,
+      // not just the one legacy prefix.
       assert.ok(
-        !agentId.includes('everything-claude-code:'),
+        !agentId.includes(':'),
         `${entry}: command agent must be an unscoped opencode agent id, got: ${agentId}`
       );
 
