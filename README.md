@@ -80,35 +80,50 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
 </tr>
 </table>
 
-<sub>**OSS stays free.** This repo is MIT-licensed forever. ECC Pro is the hosted GitHub App for private repos. <a href="https://github.com/sponsors/affaan-m">Sponsors</a> and <a href="https://ecc.tools/pricing">Pro subscribers</a> fund the work — that's why a single maintainer ships weekly across 7 harnesses.</sub>
+<sub>**OSS stays free.** This repo is MIT-licensed forever. ECC Pro is the hosted GitHub App for private repos. <a href="https://github.com/sponsors/affaan-m">Sponsors</a> and <a href="https://ecc.tools/pricing">Pro subscribers</a> fund the work. That's why a single maintainer ships weekly across 7 harnesses.</sub>
 
 <div align="center">
 
-<sub><strong>Business sponsors</strong></sub>
+<sub><strong>Partners &amp; sponsors</strong></sub>
 
 <table>
 <tr>
-<td align="center" width="220">
+<td align="center" width="20%">
   <a href="https://www.coderabbit.ai">
-    <img src="assets/images/sponsors/coderabbit.png" width="96" alt="CodeRabbit logo" /><br />
+    <img src="assets/images/sponsors/coderabbit.png" height="56" alt="CodeRabbit logo" /><br />
     <strong>CodeRabbit</strong>
   </a>
 </td>
-<td align="center" width="220">
+<td align="center" width="20%">
   <a href="https://www.greptile.com/go/ecc">
-    <img src="assets/images/sponsors/greptile.png" width="96" alt="Greptile logo" /><br />
+    <img src="assets/images/sponsors/greptile.png" height="56" alt="Greptile logo" /><br />
     <strong>Greptile</strong>
   </a>
 </td>
-<td align="center" width="220">
+<td align="center" width="20%">
   <a href="https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=ECC">
-    <img src="assets/images/sponsors/atlascloud.png" width="96" alt="Atlas Cloud logo" /><br />
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/atlascloud-dark.svg" />
+      <img src="assets/images/sponsors/atlascloud.svg" height="28" alt="Atlas Cloud logo" />
+    </picture><br />
     <strong>Atlas Cloud</strong>
   </a>
 </td>
-<td align="center" width="220">
+<td align="center" width="20%">
+  <a href="https://www.moonshot.ai">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/moonshot-dark.png" />
+      <img src="assets/images/sponsors/moonshot.png" height="44" alt="Moonshot AI Kimi logo" />
+    </picture><br />
+    <strong>Moonshot AI</strong>
+  </a>
+</td>
+<td align="center" width="20%">
   <a href="https://compute.itomarkets.com">
-    <img src="assets/images/sponsors/ito.svg" width="96" alt="Itô Markets logo" /><br />
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/ito-dark.svg" />
+      <img src="assets/images/sponsors/ito.svg" height="44" alt="Itô Markets logo" />
+    </picture><br />
     <strong>Itô</strong>
   </a>
 </td>
@@ -120,6 +135,10 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
 </td>
 </tr>
 </table>
+
+<sub><strong>Run or self-host any open-source model.</strong> Itô partners with ECC on compute: <a href="https://compute.itomarkets.com">open the Itô dashboard to sign in and rent or manage GPUs</a>. Any GPU provider works. ECC only provides this link; it does not provision compute or serving. Managed inference through Itô is not live yet.</sub>
+
+<sub><strong>Moonshot AI (Kimi)</strong> are open source friends of ECC.</sub>
 
 <sub><strong>Community sponsors:</strong> <a href="https://github.com/mikejmorgan-ai">Mike Morgan</a> · <a href="https://github.com/jasonwu513">@jasonwu513</a> · <a href="https://github.com/1anter">@1anter</a> · <a href="https://github.com/massimotodaro">@massimotodaro</a> · <a href="https://github.com/meadmccabe">@meadmccabe</a></sub>
 
@@ -1200,7 +1219,7 @@ claude
 
 If your gateway remaps model names, configure that in Claude Code rather than in ECC. ECC's hooks, skills, commands, and rules are model-provider agnostic once the `claude` CLI is already working.
 
-Run or self-host any open-source model behind that gateway using separate compute and serving setup. If you need GPU capacity, [Itô](https://compute.itomarkets.com) is ECC's preferred compute sponsor; any GPU provider works. That sponsorship link is passive: it does not invoke an RFQ, reserve capacity, provision compute, or configure serving. Separately, the opt-in `ecc ito find` bridge invokes the explicitly configured canonical Itô CLI and submits a live authenticated RFQ; it does not reserve capacity. Managed inference through Itô is not live yet.
+Run or self-host any open-source model behind that gateway using separate compute and serving setup. If you need GPU capacity, [Itô](https://compute.itomarkets.com) is ECC's compute partner; any GPU provider works. That sponsorship link is passive: it does not invoke an RFQ, reserve capacity, provision compute, or configure serving. Separately, the opt-in `ecc ito find` bridge invokes the explicitly configured canonical Itô CLI and submits a live authenticated RFQ; it does not reserve capacity. Managed inference through Itô is not live yet.
 
 ### Itô compute CLI bridge
 
@@ -1209,9 +1228,8 @@ not maintain a second API client or browser handoff. The available operations
 are `ecc ito auth`, `ecc ito find`, and `ecc ito status`. The matching MCP tools
 are `ito_auth`, `ito_find`, and `ito_status`.
 
-The `ito-compute-cli` package is currently unpublished. Build it locally from
-[`Ito-Markets/ito-cloud-runtime`](https://github.com/Ito-Markets/ito-cloud-runtime)
-under `cli/ito-compute-cli`, run `npm ci` and `npm run check`, then set
+The `ito-compute-cli` package is currently unpublished. Build it locally from the Itô runtime repo (private while the desk hardens;
+design partners get access) under `cli/ito-compute-cli`, run `npm ci` and `npm run check`, then set
 `ECC_ITO_CLI_EXECUTABLE` to that build's absolute `dist/bin/ito.js` path.
 Inject `ITO_API_KEY` from 1Password or the launching environment. ECC does not
 discover this credential-bearing client through `PATH`. See the [`ito-compute`
@@ -1872,7 +1890,9 @@ ECC takes supply-chain and agent safety seriously.
 
 ## Sponsors
 
-Featured sponsors are at the top of this README — full list and tiers in [SPONSORS.md](SPONSORS.md). [Become a sponsor](https://github.com/sponsors/affaan-m).
+Partner: [Itô Markets](https://itomarkets.com) (compute). Open source friends: [Moonshot AI (Kimi)](https://www.moonshot.ai). Business sponsors: [CodeRabbit](https://www.coderabbit.ai) · [Greptile](https://www.greptile.com/go/ecc) · [Atlas Cloud](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=ECC). Logos at the top of this README, full list and tiers in [SPONSORS.md](SPONSORS.md). [Become a sponsor](https://github.com/sponsors/affaan-m).
+
+For GPU capacity, [Itô's compute dashboard](https://compute.itomarkets.com) rents fixed-rate GPU blocks. Any provider works: ECC links to the dashboard and does not provision compute or serving.
 
 ---
 
