@@ -10,6 +10,12 @@ const { createSafeItoEnvironment } = require("./lib/ito-environment");
 const SUPPORTED_COMMANDS = Object.freeze(["auth", "find", "status"]);
 const CANONICAL_REPOSITORY = "https://github.com/Ito-Markets/ito-cloud-runtime.git";
 const CANONICAL_PACKAGE_PATH = "cli/ito-compute-cli";
+const CANONICAL_ENTRY_SEGMENTS = Object.freeze([
+  ...CANONICAL_PACKAGE_PATH.split("/"),
+  "dist",
+  "bin",
+  "ito.js",
+]);
 const EXECUTABLE_OVERRIDE = "ECC_ITO_CLI_EXECUTABLE";
 const MAX_OUTPUT_BYTES = 10 * 1024 * 1024;
 
@@ -127,6 +133,11 @@ function assertUsableExecutable(candidate) {
       `${EXECUTABLE_OVERRIDE} does not point to a readable local Itô CLI file.`
     );
   }
+  if (!isCanonicalItoEntry(canonicalCandidate)) {
+    throw new Error(
+      `${EXECUTABLE_OVERRIDE} must point to the canonical dist/bin/ito.js entry.`
+    );
+  }
   if (!isUsableExecutable(canonicalCandidate)) {
     throw new Error(
       `${EXECUTABLE_OVERRIDE} does not point to a readable local Itô CLI file.`
@@ -135,15 +146,26 @@ function assertUsableExecutable(candidate) {
   return canonicalCandidate;
 }
 
+function isCanonicalItoEntry(candidate) {
+  const pathSegments = path
+    .normalize(candidate)
+    .split(path.sep)
+    .filter(Boolean);
+  if (pathSegments.length < CANONICAL_ENTRY_SEGMENTS.length) return false;
+  const candidateTail = pathSegments.slice(-CANONICAL_ENTRY_SEGMENTS.length);
+  return candidateTail.every((segment, index) => {
+    const expected = CANONICAL_ENTRY_SEGMENTS[index];
+    return process.platform === "win32"
+      ? segment.toLowerCase() === expected.toLowerCase()
+      : segment === expected;
+  });
+}
+
 function isUsableExecutable(candidate) {
   try {
     const info = fs.statSync(candidate);
     if (!info.isFile()) return false;
-    if (process.platform !== "win32" && path.extname(candidate) !== ".js") {
-      fs.accessSync(candidate, fs.constants.X_OK);
-    } else {
-      fs.accessSync(candidate, fs.constants.R_OK);
-    }
+    fs.accessSync(candidate, fs.constants.R_OK);
     return true;
   } catch {
     return false;
@@ -151,21 +173,15 @@ function isUsableExecutable(candidate) {
 }
 
 function buildInvocation(executable, args) {
-  if (path.extname(executable).toLowerCase() === ".js") {
-    return Object.freeze({
-      executable: process.execPath,
-      args: Object.freeze([executable, ...args]),
-    });
-  }
-  if (
-    process.platform === "win32"
-    && /\.(?:bat|cmd|ps1)$/i.test(executable)
-  ) {
+  if (!isCanonicalItoEntry(executable)) {
     throw new Error(
-      `Refusing to invoke the Itô CLI through a shell shim. Set ${EXECUTABLE_OVERRIDE} to the absolute dist/bin/ito.js path.`
+      `Refusing to invoke an Itô CLI shim. Set ${EXECUTABLE_OVERRIDE} to the absolute dist/bin/ito.js path.`
     );
   }
-  return Object.freeze({ executable, args: Object.freeze([...args]) });
+  return Object.freeze({
+    executable: process.execPath,
+    args: Object.freeze([executable, ...args]),
+  });
 }
 
 function invokeIto(executable, args, environment = process.env) {
