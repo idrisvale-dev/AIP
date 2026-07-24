@@ -176,13 +176,19 @@ function main() {
       const readme = read('README.md');
       const primaryLinks = extractNamedTable(readme, 'ECC primary links');
       const guides = extractNamedTable(readme, 'ECC guides');
+      const centeredPrimaryLinks = readme.match(
+        /<div align="center">\s*<table[^>]*aria-label="ECC primary links"[^>]*>[\s\S]*?<\/table>\s*<\/div>/
+      );
 
+      assert.ok(centeredPrimaryLinks, 'The three primary-link cards should be centered as one group');
       assert.strictEqual((primaryLinks.match(/<td\b/g) || []).length, 3);
       assert.ok(primaryLinks.includes('assets/images/community/ecc-tools-mark.svg'));
       assertExactHref(primaryLinks, 'https://github.com/apps/ecc-tools');
       assertExactHref(primaryLinks, 'https://ecc.tools/pricing');
       assertExactHref(primaryLinks, 'https://github.com/sponsors/affaan-m');
       assert.ok(primaryLinks.includes('assets/images/community/heart.svg'));
+      assert.match(primaryLinks, /Fund the open-source project/);
+      assert.doesNotMatch(primaryLinks, /From \$5\/mo/);
       assertExactHref(primaryLinks, 'https://discord.gg/36yGMHGFbR');
       assert.ok(primaryLinks.includes('assets/images/community/discord.svg'));
 
@@ -226,6 +232,15 @@ function main() {
         eccToolsMark,
         /<script|<foreignObject|\son[a-z]+=|(?:href|xlink:href)=/i
       );
+    }],
+    ['sponsor docs match the current public tiers', () => {
+      const sponsors = read('SPONSORS.md');
+
+      assert.match(sponsors, /## Supporters — \$10\/mo/);
+      assert.match(sponsors, /\| Supporter \| \$10 \|/);
+      assert.match(sponsors, /\| Business Sponsor \| \$800 \|/);
+      assert.match(sponsors, /\| Strategic Sponsor \| \$3,700 \|/);
+      assert.doesNotMatch(sponsors, /Supporters — \$5\/mo|\| Supporter \| \$5 \|/);
     }],
     ['README shows the verified local Kimi via Ito path without claiming managed serving', () => {
       const readme = read('README.md');
