@@ -50,7 +50,9 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
 
 ---
 
-<table aria-label="ECC primary links" width="100%">
+<div align="center">
+
+<table aria-label="ECC primary links">
 <tr>
 <td width="33%" align="center">
   <a href="https://ecc.tools/pricing">
@@ -64,7 +66,7 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
     <img src="assets/images/community/heart.svg" height="42" alt="" /><br />
     <strong>Sponsor ECC</strong>
   </a><br />
-  <sub>Fund the OSS · From $5/mo</sub>
+  <sub>Fund the open-source project</sub>
 </td>
 <td width="33%" align="center">
   <a href="https://discord.gg/36yGMHGFbR">
@@ -75,6 +77,8 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
 </td>
 </tr>
 </table>
+
+</div>
 
 <sub>**OSS stays free.** This repo is MIT-licensed forever. ECC Pro is the hosted GitHub App for private repos. <a href="https://github.com/sponsors/affaan-m">Sponsors</a> and <a href="https://ecc.tools/pricing">Pro subscribers</a> fund the work. That's why a single maintainer ships weekly across 7 harnesses.</sub>
 
