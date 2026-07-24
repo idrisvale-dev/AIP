@@ -127,18 +127,8 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
     <strong>Itô</strong>
   </a>
 </td>
-<td align="center" width="220">
-  <a href="https://www.moonshot.ai/">
-    <img src="assets/images/sponsors/moonshot.svg" width="96" alt="Moonshot AI Kimi logo" /><br />
-    <strong>Moonshot AI</strong>
-  </a>
-</td>
 </tr>
 </table>
-
-<sub><strong>Run or self-host any open-source model.</strong> Itô partners with ECC on compute: <a href="https://compute.itomarkets.com">open the Itô dashboard to sign in and rent or manage GPUs</a>. Any GPU provider works. ECC only provides this link; it does not provision compute or serving. Managed inference through Itô is not live yet.</sub>
-
-<sub><strong>Moonshot AI (Kimi)</strong> are open source friends of ECC.</sub>
 
 <sub><strong>Community sponsors:</strong> <a href="https://github.com/mikejmorgan-ai">Mike Morgan</a> · <a href="https://github.com/jasonwu513">@jasonwu513</a> · <a href="https://github.com/1anter">@1anter</a> · <a href="https://github.com/massimotodaro">@massimotodaro</a> · <a href="https://github.com/meadmccabe">@meadmccabe</a></sub>
 
@@ -1219,7 +1209,7 @@ claude
 
 If your gateway remaps model names, configure that in Claude Code rather than in ECC. ECC's hooks, skills, commands, and rules are model-provider agnostic once the `claude` CLI is already working.
 
-Run or self-host any open-source model behind that gateway using separate compute and serving setup. If you need GPU capacity, [Itô](https://compute.itomarkets.com) is ECC's compute partner; any GPU provider works. That sponsorship link is passive: it does not invoke an RFQ, reserve capacity, provision compute, or configure serving. Separately, the opt-in `ecc ito find` bridge invokes the explicitly configured canonical Itô CLI and submits a live authenticated RFQ; it does not reserve capacity. Managed inference through Itô is not live yet.
+Run or self-host any open-source model behind that gateway using separate compute and serving setup. If you need GPU capacity, [Itô](https://compute.itomarkets.com) is ECC's preferred compute sponsor; any GPU provider works. That sponsorship link is passive: it does not invoke an RFQ, reserve capacity, provision compute, or configure serving. Separately, the opt-in `ecc ito find` bridge invokes the explicitly configured canonical Itô CLI and submits a live authenticated RFQ; it does not reserve capacity. Managed inference through Itô is not live yet.
 
 ### Itô compute CLI bridge
 
@@ -1890,9 +1880,7 @@ ECC takes supply-chain and agent safety seriously.
 
 ## Sponsors
 
-Partner: [Itô Markets](https://itomarkets.com) (compute). Open source friends: [Moonshot AI (Kimi)](https://www.moonshot.ai). Business sponsors: [CodeRabbit](https://www.coderabbit.ai) · [Greptile](https://www.greptile.com/go/ecc) · [Atlas Cloud](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=ECC). Logos at the top of this README, full list and tiers in [SPONSORS.md](SPONSORS.md). [Become a sponsor](https://github.com/sponsors/affaan-m).
-
-For GPU capacity, [Itô's compute dashboard](https://compute.itomarkets.com) rents fixed-rate GPU blocks. Any provider works: ECC links to the dashboard and does not provision compute or serving.
+Business sponsors: [CodeRabbit](https://www.coderabbit.ai) · [Greptile](https://www.greptile.com/go/ecc) · [Atlas Cloud](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=ECC) · [Moonshot AI (Kimi)](https://www.moonshot.ai) · [Itô Markets](https://itomarkets.com). Logos are at the top of this README; the full roster and tiers are in [SPONSORS.md](SPONSORS.md). [Become a sponsor](https://github.com/sponsors/affaan-m).
 
 ---
 
