@@ -24,12 +24,13 @@ ECC delegates to the canonical Itô package in
 `Ito-Markets/ito-cloud-runtime/cli/ito-compute-cli`. ECC does not maintain a
 second API client or response schema.
 
-The wrapper exposes only the canonical CLI's `auth`, `find`, and `status`
+The wrapper exposes only the canonical CLI's `auth`, `find`, `status`, and `evals`
 operations:
 
     ecc ito auth
     ecc ito find <all required RFQ constraints>
     ecc ito status
+    ecc ito evals --cluster <id> --live-sixtytwo --nodes <list> --config-dir <dir>
 
 The canonical MCP server exposes only `ito_auth`, `ito_find`, and `ito_status`.
 ECC includes an opt-in configuration template pointing to the local built MCP
@@ -69,6 +70,12 @@ environment. It does not inspect or log the key.
   or agent must gather every hard topology/economic constraint and obtain
   explicit buyer authority before invoking it.
 - `status` reads current RFQ and procurement status.
+- `evals` requires both `ITO_ENABLE_SIXTYTWO_LIVE=1` and
+  `--live-sixtytwo`, then runs only the canonical CLI's pinned
+  `sixtytwo-cli==0.3.33` qualification adapter against an explicit node list
+  and existing absolute configuration directory. It receives no `ITO_API_KEY`
+  or unrelated cloud/model credentials and cannot rent, launch, recover,
+  repair, reset, purchase, or order resources.
 - ECC returns the canonical process's stdout, stderr, and exit code unchanged.
 - An inventory row or RFQ is not a capacity reservation.
 - Only a non-null canonical firm quote is firm.
@@ -81,9 +88,9 @@ Itô platform. ECC adds no shadow store.
 
 ## Unsupported in this slice
 
-ECC exposes no quote lock, purchase, workload execution, node qualification,
-or inference command. The canonical package contains a separately gated node
-qualification adapter, but this ECC bridge intentionally does not expose it.
+ECC exposes no quote lock, purchase, workload execution, or inference command.
+Node qualification is live-only through the separately gated canonical
+adapter; the ECC bridge does not expose its paper fixture mode.
 
 Managed inference remains unavailable. ECC does not claim that Itô created a
 model endpoint, deployed a workload, reserved capacity, or moved funds.
@@ -114,9 +121,10 @@ after review.
 
 The local contract suite proves:
 
-- only the three supported operations spawn;
+- only the four supported operations spawn;
 - RFQ arguments are forwarded without economic reinterpretation;
-- only approved Itô runtime variables cross the process boundary;
+- only approved Itô runtime or isolated node-qualification variables cross the
+  process boundary;
 - unsupported and dry-run paths fail before spawn;
 - a missing or relative executable fails closed with local-install guidance;
 - canonical output and exit status pass through unchanged;

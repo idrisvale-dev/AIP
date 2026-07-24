@@ -574,7 +574,7 @@
     {
       "id": "ito-compute",
       "kind": "skills",
-      "description": "Authenticated Itô GPU inventory, RFQ, and status workflows through the separately installed canonical CLI.",
+      "description": "Authenticated Itô GPU inventory, RFQ, status, and explicitly gated node-qualification workflows through the separately installed canonical CLI.",
       "paths": [
         "skills/ito-compute"
       ],

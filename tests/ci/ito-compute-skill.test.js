@@ -34,10 +34,15 @@ function main() {
   const tests = [
     ["documents only the real CLI commands and MCP tools", () => {
       const skill = read("skills/ito-compute/SKILL.md");
-      for (const command of ["ecc ito auth", "ecc ito find", "ecc ito status"]) {
+      for (const command of [
+        "ecc ito auth",
+        "ecc ito find",
+        "ecc ito status",
+        "ecc ito evals",
+      ]) {
         assert.match(skill, new RegExp(command.replace(" ", "\\s+")));
       }
-      assert.doesNotMatch(skill, /^\s*ito (?:auth|find|status)\b/m);
+      assert.doesNotMatch(skill, /^\s*ito (?:auth|find|status|evals)\b/m);
       for (const tool of ["ito_auth", "ito_find", "ito_status"]) {
         assert.match(skill, new RegExp(`\\b${tool}\\b`));
       }
@@ -52,6 +57,10 @@ function main() {
       assert.match(skill, /ECC_ITO_CLI_EXECUTABLE/);
       assert.match(skill, /explicit absolute built entry/);
       assert.match(skill, /never discovers[^\n]*through `PATH`/);
+      assert.match(skill, /ITO_ENABLE_SIXTYTWO_LIVE/);
+      assert.match(skill, /sixtytwo-cli==0\.3\.33/);
+      assert.match(skill, /explicit node/i);
+      assert.match(skill, /cannot (?:rent|launch|recover|repair)/i);
       assert.doesNotMatch(skill, /npm link/);
     }],
     ["registers one opt-in install module and capability", () => {
@@ -72,7 +81,7 @@ function main() {
         {
           id: "capability:ito-compute",
           family: "capability",
-          description: "Authenticated Itô GPU inventory, RFQ, and status workflows through the separately installed canonical CLI.",
+          description: "Authenticated Itô GPU inventory, RFQ, status, and explicitly gated node-qualification workflows through the separately installed canonical CLI.",
           modules: ["ito-compute"],
         }
       );

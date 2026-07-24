@@ -1215,8 +1215,9 @@ Run or self-host any open-source model behind that gateway using separate comput
 
 `ecc ito` delegates to the separately installed canonical Itô client; ECC does
 not maintain a second API client or browser handoff. The available operations
-are `ecc ito auth`, `ecc ito find`, and `ecc ito status`. The matching MCP tools
-are `ito_auth`, `ito_find`, and `ito_status`.
+are `ecc ito auth`, `ecc ito find`, `ecc ito status`, and the separately gated
+`ecc ito evals`. The matching MCP tools remain `ito_auth`, `ito_find`, and
+`ito_status`; node qualification is CLI-only.
 
 The `ito-compute-cli` package is currently unpublished. Build it locally from the Itô runtime repo (private while the desk hardens;
 design partners get access) under `cli/ito-compute-cli`, run `npm ci` and `npm run check`, then set
@@ -1226,9 +1227,13 @@ discover this credential-bearing client through `PATH`. See the [`ito-compute`
 skill](skills/ito-compute/SKILL.md) for the full RFQ authority and MCP setup
 contract.
 
-`find` submits a live authenticated RFQ. It does not reserve capacity. ECC
-exposes no quote lock, purchase, workload, node-evaluation, or inference path,
-and it never replaces a missing client or failed live call with a local result.
+`find` submits a live authenticated RFQ. It does not reserve capacity.
+`evals` requires both `ITO_ENABLE_SIXTYTWO_LIVE=1` and `--live-sixtytwo`, a
+separately installed `sixtytwo-cli==0.3.33`, an explicit node list, and an
+existing absolute configuration directory. It cannot rent, launch, recover,
+repair, or purchase.
+ECC exposes no quote lock, purchase, workload, or inference path, and it never
+replaces a missing client or failed live call with a local result.
 
 Official references:
 - [Claude Code LLM gateway docs](https://docs.anthropic.com/en/docs/claude-code/llm-gateway)

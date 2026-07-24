@@ -142,8 +142,10 @@ function main() {
       assert.match(record, /-> any open-source model/);
       assert.doesNotMatch(record, /public Kimi|Moonshot|video and sponsorship/i);
       assert.match(record, /Status: \*\*Implemented local CLI bridge/i);
-      assert.match(record, /auth`, `find`, and `status/);
+      assert.match(record, /auth`, `find`, `status`, and `evals/);
       assert.match(record, /ito_auth`, `ito_find`, and `ito_status/);
+      assert.match(record, /sixtytwo-cli==0\.3\.33/);
+      assert.match(record, /explicit node/i);
       assert.match(record, /unpublished/i);
       assert.match(record, /managed inference remains unavailable/i);
       assert.match(record, /version bump[\s\S]*intentionally deferred/i);
