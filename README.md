@@ -54,7 +54,7 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
 <tr>
 <td width="33%" align="center">
   <a href="https://ecc.tools/pricing">
-    <img src="assets/ecc-icon.svg" height="42" alt="ECC Tools" /><br />
+    <img src="assets/images/community/ecc-tools-mark.svg" height="42" alt="ECC Tools" /><br />
     <strong>ECC Pro + GitHub App</strong>
   </a><br />
   <sub><a href="https://github.com/apps/ecc-tools">Install free</a> · <a href="https://ecc.tools/pricing">Private repos from $19/seat/mo</a></sub>
@@ -87,7 +87,7 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
   <a href="https://www.greptile.com/go/ecc" title="Greptile"><img src="assets/images/sponsors/greptile.png" height="54" alt="Greptile" /></a>&nbsp;&nbsp;&nbsp;
   <a href="https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=ECC" title="Atlas Cloud"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/atlascloud-dark.svg" /><img src="assets/images/sponsors/atlascloud.svg" width="154" alt="Atlas Cloud" /></picture></a>&nbsp;&nbsp;&nbsp;
   <a href="https://www.moonshot.ai" title="Moonshot AI — Kimi"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/moonshot-dark.png" /><img src="assets/images/sponsors/moonshot.png" width="132" alt="Moonshot AI — Kimi" /></picture></a>&nbsp;&nbsp;&nbsp;
-  <a href="https://compute.itomarkets.com" title="Itô Markets"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/ito-dark.svg" /><img src="assets/images/sponsors/ito.svg" width="190" alt="Itô Markets" /></picture></a>
+  <a href="https://compute.itomarkets.com" title="Itô Markets"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/ito-dark.svg" /><img src="assets/images/sponsors/ito.svg" width="172" alt="Itô Markets" /></picture></a>
 </p>
 
 <sub><strong>Community sponsors:</strong> <a href="https://github.com/mikejmorgan-ai">Mike Morgan</a> · <a href="https://github.com/jasonwu513">@jasonwu513</a> · <a href="https://github.com/1anter">@1anter</a> · <a href="https://github.com/massimotodaro">@massimotodaro</a> · <a href="https://github.com/meadmccabe">@meadmccabe</a></sub>
@@ -106,21 +106,21 @@ This repo is the raw code only. The guides explain everything.
 <tr>
 <td width="33%" align="center">
 <a href="./the-shortform-guide.md">
-<img src="./assets/images/shortform/00-header.png" height="120" alt="The Shorthand Guide to ECC" /><br />
+<img src="./assets/images/guides/shorthand-guide.png" width="213" height="120" alt="The Shorthand Guide to ECC" /><br />
 <b>The Shorthand Guide</b>
 </a>
 <br /><sub>Setup, foundations, philosophy. <b>Read this first.</b> (<a href="https://x.com/affaan/status/2012378465664745795">thread</a>)</sub>
 </td>
 <td width="33%" align="center">
 <a href="./the-longform-guide.md">
-<img src="./assets/images/longform/01-header.png" height="120" alt="The Longform Guide to ECC" /><br />
+<img src="./assets/images/guides/longform-guide.png" width="213" height="120" alt="The Longform Guide to ECC" /><br />
 <b>The Longform Guide</b>
 </a>
 <br /><sub>Token optimization, memory persistence, evals, parallelization. (<a href="https://x.com/affaan/status/2014040193557471352">thread</a>)</sub>
 </td>
 <td width="33%" align="center">
 <a href="./the-security-guide.md">
-<img src="./assets/images/security/security-guide-header.png" height="120" alt="The Shorthand Guide to Everything Agentic Security" /><br />
+<img src="./assets/images/guides/security-guide.png" width="213" height="120" alt="The Shorthand Guide to Everything Agentic Security" /><br />
 <b>The Security Guide</b>
 </a>
 <br /><sub>Attack vectors, sandboxing, sanitization, CVEs, AgentShield. (<a href="https://x.com/affaan/status/2033263813387223421">thread</a>)</sub>
@@ -147,7 +147,7 @@ The Kimi Code harness and the model-serving layer are separate. ECC configures t
 <tr>
 <td width="33%" align="center">
   <a href="https://compute.itomarkets.com">
-    <picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/ito-dark.svg" /><img src="assets/images/sponsors/ito.svg" width="180" alt="Itô Markets" /></picture><br />
+    <picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/ito-dark.svg" /><img src="assets/images/sponsors/ito.svg" width="164" alt="Itô Markets" /></picture><br />
     <strong>1. Get GPU capacity</strong>
   </a><br />
   <sub>Use Itô or any GPU provider.</sub>
@@ -161,7 +161,7 @@ The Kimi Code harness and the model-serving layer are separate. ECC configures t
 </td>
 <td width="33%" align="center">
   <a href=".kimi/README.md">
-    <img src="assets/ecc-icon.svg" height="52" alt="ECC Tools" /><br />
+    <img src="assets/images/community/ecc-tools-mark.svg" height="52" alt="ECC Tools" /><br />
     <strong>3. Run Kimi Code with ECC</strong>
   </a><br />
   <sub>Install project instructions and skills, then start <code>kimi</code>.</sub>

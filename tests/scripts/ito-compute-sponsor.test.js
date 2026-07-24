@@ -25,6 +25,15 @@ function read(relativePath) {
   return fs.readFileSync(path.join(REPO_ROOT, relativePath), 'utf8');
 }
 
+function readPngDimensions(relativePath) {
+  const image = fs.readFileSync(path.join(REPO_ROOT, relativePath));
+  assert.strictEqual(image.subarray(1, 4).toString('ascii'), 'PNG');
+  return {
+    width: image.readUInt32BE(16),
+    height: image.readUInt32BE(20),
+  };
+}
+
 function runTest(name, fn) {
   try {
     fn();
@@ -143,11 +152,11 @@ function main() {
       );
       const sponsorMark = read('assets/images/sponsors/ito.svg');
       const sponsorMarkDark = read('assets/images/sponsors/ito-dark.svg');
-      assert.match(sponsorMark, /viewBox="0 0 280 40"/);
+      assert.match(sponsorMark, /viewBox="0 0 172 40"/);
       assert.match(sponsorMark, />It</);
       assert.match(sponsorMark, />ô</);
       assert.match(sponsorMark, />MARKETS</);
-      assert.match(sponsorMarkDark, /viewBox="0 0 280 40"/);
+      assert.match(sponsorMarkDark, /viewBox="0 0 172 40"/);
       assert.match(sponsorMarkDark, />It</);
       assert.match(sponsorMarkDark, />ô</);
       assert.match(sponsorMarkDark, />MARKETS</);
@@ -169,7 +178,7 @@ function main() {
       const guides = extractNamedTable(readme, 'ECC guides');
 
       assert.strictEqual((primaryLinks.match(/<td\b/g) || []).length, 3);
-      assert.ok(primaryLinks.includes('assets/ecc-icon.svg'));
+      assert.ok(primaryLinks.includes('assets/images/community/ecc-tools-mark.svg'));
       assertExactHref(primaryLinks, 'https://github.com/apps/ecc-tools');
       assertExactHref(primaryLinks, 'https://ecc.tools/pricing');
       assertExactHref(primaryLinks, 'https://github.com/sponsors/affaan-m');
@@ -193,6 +202,30 @@ function main() {
       assert.ok(guides.includes('./the-shortform-guide.md'));
       assert.ok(guides.includes('./the-longform-guide.md'));
       assert.ok(guides.includes('./the-security-guide.md'));
+      assert.strictEqual((guides.match(/width="213" height="120"/g) || []).length, 3);
+
+      for (const guideAsset of [
+        'assets/images/guides/shorthand-guide.png',
+        'assets/images/guides/longform-guide.png',
+        'assets/images/guides/security-guide.png',
+      ]) {
+        assert.ok(guides.includes(guideAsset));
+        const { width, height } = readPngDimensions(guideAsset);
+        assert.ok(
+          Math.abs((width / height) - (16 / 9)) < 0.002,
+          `${guideAsset} should use the shared 16:9 guide-card geometry`
+        );
+      }
+
+      const eccToolsMark = read('assets/images/community/ecc-tools-mark.svg');
+      assert.match(eccToolsMark, /viewBox="0 0 96 96"/);
+      assert.match(eccToolsMark, /id="favicon-frame"/);
+      assert.match(eccToolsMark, /id="favicon-node"/);
+      assert.match(eccToolsMark, /circle cx="62" cy="44"/);
+      assert.doesNotMatch(
+        eccToolsMark,
+        /<script|<foreignObject|\son[a-z]+=|(?:href|xlink:href)=/i
+      );
     }],
     ['README shows the verified local Kimi via Ito path without claiming managed serving', () => {
       const readme = read('README.md');
@@ -201,7 +234,7 @@ function main() {
       assert.strictEqual((localModelPath.match(/<td\b/g) || []).length, 3);
       assert.ok(localModelPath.includes('assets/images/sponsors/ito.svg'));
       assert.ok(localModelPath.includes('assets/images/sponsors/moonshot.png'));
-      assert.ok(localModelPath.includes('assets/ecc-icon.svg'));
+      assert.ok(localModelPath.includes('assets/images/community/ecc-tools-mark.svg'));
       assert.match(readme, /install\.sh --target kimi --profile minimal/);
       assert.match(readme, /npx ecc doctor --target kimi/);
       assert.match(readme, /\.kimi\/AGENTS\.md/);
