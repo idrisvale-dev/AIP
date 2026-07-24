@@ -50,32 +50,28 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
 
 ---
 
-<table>
+<table aria-label="ECC primary links" width="100%">
 <tr>
-<td width="25%" align="center">
+<td width="33%" align="center">
   <a href="https://ecc.tools/pricing">
-    <strong> ECC Pro</strong><br />
-    <sub>Private repos · GitHub App · $19/seat/mo</sub>
-  </a>
+    <img src="assets/ecc-icon.svg" height="42" alt="ECC Tools" /><br />
+    <strong>ECC Pro + GitHub App</strong>
+  </a><br />
+  <sub><a href="https://github.com/apps/ecc-tools">Install free</a> · <a href="https://ecc.tools/pricing">Private repos from $19/seat/mo</a></sub>
 </td>
-<td width="25%" align="center">
+<td width="33%" align="center">
   <a href="https://github.com/sponsors/affaan-m">
-    <strong> Sponsor</strong><br />
-    <sub>Fund the OSS · From $5/mo</sub>
-  </a>
+    <img src="assets/images/community/heart.svg" height="42" alt="" /><br />
+    <strong>Sponsor ECC</strong>
+  </a><br />
+  <sub>Fund the OSS · From $5/mo</sub>
 </td>
-<td width="25%" align="center">
-  <a href="https://github.com/affaan-m/ECC/discussions">
+<td width="33%" align="center">
+  <a href="https://discord.gg/36yGMHGFbR">
+    <img src="assets/images/community/discord.svg" height="42" alt="Discord" /><br />
     <strong>Community</strong>
-    <br />
-    <sub>Discussions · Q&amp;A · Show & Tell</sub>
-  </a>
-</td>
-<td width="25%" align="center">
-  <a href="https://github.com/apps/ecc-tools">
-    <strong> GitHub App</strong><br />
-    <sub>Install · PR audits · Free tier</sub>
-  </a>
+  </a><br />
+  <sub>Discord · Q&amp;A · Show &amp; Tell</sub>
 </td>
 </tr>
 </table>
@@ -106,32 +102,31 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
 
 This repo is the raw code only. The guides explain everything.
 
-<table>
+<table aria-label="ECC guides" width="100%">
 <tr>
-<td width="50%" align="center">
+<td width="33%" align="center">
 <a href="./the-shortform-guide.md">
-<img src="./assets/images/shortform/00-header.png" width="420" alt="The Shorthand Guide to ECC" /><br />
+<img src="./assets/images/shortform/00-header.png" height="120" alt="The Shorthand Guide to ECC" /><br />
 <b>The Shorthand Guide</b>
 </a>
 <br /><sub>Setup, foundations, philosophy. <b>Read this first.</b> (<a href="https://x.com/affaan/status/2012378465664745795">thread</a>)</sub>
 </td>
-<td width="50%" align="center">
+<td width="33%" align="center">
 <a href="./the-longform-guide.md">
-<img src="./assets/images/longform/01-header.png" width="420" alt="The Longform Guide to ECC" /><br />
+<img src="./assets/images/longform/01-header.png" height="120" alt="The Longform Guide to ECC" /><br />
 <b>The Longform Guide</b>
 </a>
 <br /><sub>Token optimization, memory persistence, evals, parallelization. (<a href="https://x.com/affaan/status/2014040193557471352">thread</a>)</sub>
 </td>
-</tr>
-</table>
-
-<div align="center">
+<td width="33%" align="center">
 <a href="./the-security-guide.md">
-<img src="./assets/images/security/security-guide-header.png" width="420" alt="The Shorthand Guide to Everything Agentic Security" /><br />
+<img src="./assets/images/security/security-guide-header.png" height="120" alt="The Shorthand Guide to Everything Agentic Security" /><br />
 <b>The Security Guide</b>
 </a>
 <br /><sub>Attack vectors, sandboxing, sanitization, CVEs, AgentShield. (<a href="https://x.com/affaan/status/2033263813387223421">thread</a>)</sub>
-</div>
+</td>
+</tr>
+</table>
 
 | Topic | What You'll Learn |
 |-------|-------------------|
@@ -141,6 +136,52 @@ This repo is the raw code only. The guides explain everything.
 | Verification Loops | Checkpoint vs continuous evals, grader types, pass@k metrics |
 | Parallelization | Git worktrees, cascade method, when to scale instances |
 | Subagent Orchestration | The context problem, iterative retrieval pattern |
+
+---
+
+## Self-host Kimi with ECC + Itô compute
+
+The Kimi Code harness and the model-serving layer are separate. ECC configures the agent harness; you bring an API endpoint or self-host an open-weight Kimi model on your own GPU capacity.
+
+<table aria-label="Local Kimi model path" width="100%">
+<tr>
+<td width="33%" align="center">
+  <a href="https://compute.itomarkets.com">
+    <picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/ito-dark.svg" /><img src="assets/images/sponsors/ito.svg" width="180" alt="Itô Markets" /></picture><br />
+    <strong>1. Get GPU capacity</strong>
+  </a><br />
+  <sub>Use Itô or any GPU provider.</sub>
+</td>
+<td width="33%" align="center">
+  <a href="https://www.moonshot.ai">
+    <picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/moonshot-dark.png" /><img src="assets/images/sponsors/moonshot.png" width="126" alt="Moonshot AI — Kimi" /></picture><br />
+    <strong>2. Serve Kimi</strong>
+  </a><br />
+  <sub>Expose the chosen checkpoint through a Kimi- or OpenAI-compatible endpoint.</sub>
+</td>
+<td width="33%" align="center">
+  <a href=".kimi/README.md">
+    <img src="assets/ecc-icon.svg" height="52" alt="ECC Tools" /><br />
+    <strong>3. Run Kimi Code with ECC</strong>
+  </a><br />
+  <sub>Install project instructions and skills, then start <code>kimi</code>.</sub>
+</td>
+</tr>
+</table>
+
+Configure the endpoint using Kimi Code's <a href="https://moonshotai.github.io/kimi-cli/en/configuration/providers.html">official provider guide</a>, then install the ECC project surface:
+
+```bash
+bash ./install.sh --target kimi --profile minimal
+npx ecc doctor --target kimi
+kimi
+```
+
+Kimi Code discovers the installed `.kimi/AGENTS.md` instructions and `.kimi/skills/` workflows natively. The installer dry-run and regression suite verify that the Kimi target stays inside the project-local `.kimi/` root.
+
+Run or self-host any open-source model on owned or rented GPUs. Itô is ECC's preferred compute sponsor; any GPU provider works. The sponsorship link is passive: it does not invoke an RFQ, reserve capacity, provision compute, or configure serving. Separately, `ecc ito find` invokes the explicitly configured canonical Itô CLI and submits a live authenticated RFQ; it does not reserve capacity. Managed inference through Itô is not live yet.
+
+<sub>This three-beat strip is also the video outline: capacity → serving endpoint → Kimi Code with ECC.</sub>
 
 ---
 
