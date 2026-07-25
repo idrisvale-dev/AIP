@@ -14,7 +14,7 @@ Thank you to everyone funding ECC's open-source work. Your sponsorship is what l
 | [**Greptile**](https://www.greptile.com/go/ecc) | <img src="assets/images/sponsors/greptile.png" width="60" alt="Greptile logo" /> | 2026 |
 | [**Atlas Cloud**](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=ECC) | <picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/atlascloud-dark.svg" /><img src="assets/images/sponsors/atlascloud.svg" width="120" alt="Atlas Cloud logo" /></picture> | 2026 |
 | [**Moonshot AI (Kimi)**](https://www.moonshot.ai) | <picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/moonshot-dark.png" /><img src="assets/images/sponsors/moonshot.png" width="100" alt="Moonshot AI Kimi logo" /></picture> | 2026 |
-| [**Itô**](https://compute.itomarkets.com) | <picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/ito-dark.svg" /><img src="assets/images/sponsors/ito.svg" width="120" alt="Itô Markets logo" /></picture> | 2026 |
+| [**Itô**](https://compute.itomarkets.com) | <picture><source media="(prefers-color-scheme: light)" srcset="assets/images/sponsors/ito-transparent-light.png" /><img src="assets/images/sponsors/ito-transparent.png" width="88" alt="Itô Markets logo" /></picture> | 2026 |
 
 *[Become a Business sponsor](https://github.com/sponsors/affaan-m) to get README sponsor placement + SPONSORS.md listing. Current Business tier is $800/mo. No seats, SLA, custom development, or preferential technical placement is bundled unless separately agreed.*
 

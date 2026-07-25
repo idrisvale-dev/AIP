@@ -136,8 +136,9 @@ function main() {
     }],
     ['README exposes the sponsor logo and honest self-hosting route', () => {
       const readme = read('README.md');
-      assert.ok(readme.includes('assets/images/sponsors/ito.svg'));
-      assert.ok(readme.includes('assets/images/sponsors/ito-dark.svg'));
+      assert.ok(readme.includes('assets/images/sponsors/ito-transparent.png'));
+      assert.ok(readme.includes('assets/images/sponsors/ito-transparent-light.png'));
+      assert.doesNotMatch(readme, /assets\/images\/sponsors\/ito(?:-dark)?\.svg/);
       assert.match(readme, /<p align="center" aria-label="Partners and sponsors">/);
       assert.doesNotMatch(
         readme,
@@ -150,27 +151,12 @@ function main() {
         readme,
         /custom API endpoint or model gateway[\s\S]*Run or self-host any open-source model behind that gateway[\s\S]*sponsorship link is passive/
       );
-      const sponsorMark = read('assets/images/sponsors/ito.svg');
-      const sponsorMarkDark = read('assets/images/sponsors/ito-dark.svg');
-      assert.match(sponsorMark, /viewBox="0 0 172 40"/);
-      assert.match(sponsorMark, />It</);
-      assert.match(sponsorMark, />ô</);
-      assert.match(sponsorMark, />MARKETS</);
-      assert.match(sponsorMarkDark, /viewBox="0 0 172 40"/);
-      assert.match(sponsorMarkDark, />It</);
-      assert.match(sponsorMarkDark, />ô</);
-      assert.match(sponsorMarkDark, />MARKETS</);
-      assert.match(sponsorMarkDark, /fill="#F8FAFC"/i);
-      assert.doesNotMatch(
-        `${sponsorMark}\n${sponsorMarkDark}`,
-        /<script|<foreignObject|\son[a-z]+=|(?:href|xlink:href)=/i
+      const sponsorMark = readPngDimensions('assets/images/sponsors/ito-transparent.png');
+      const sponsorMarkLight = readPngDimensions(
+        'assets/images/sponsors/ito-transparent-light.png'
       );
-      const sponsorAssetUrls = `${sponsorMark}\n${sponsorMarkDark}`.match(URL_TOKEN_PATTERN) || [];
-      assert.ok(sponsorAssetUrls.length >= 4);
-      assert.ok(sponsorAssetUrls.every((url) => (
-        url.startsWith('http://www.w3.org/2000/svg')
-        || url.startsWith('https://fonts.googleapis.com/css2?')
-      )));
+      assert.deepStrictEqual(sponsorMark, { width: 1797, height: 1097 });
+      assert.deepStrictEqual(sponsorMarkLight, sponsorMark);
     }],
     ['README keeps the three primary choices and all three guides inline', () => {
       const readme = read('README.md');
@@ -247,7 +233,7 @@ function main() {
       const localModelPath = extractNamedTable(readme, 'Local Kimi model path');
 
       assert.strictEqual((localModelPath.match(/<td\b/g) || []).length, 3);
-      assert.ok(localModelPath.includes('assets/images/sponsors/ito.svg'));
+      assert.ok(localModelPath.includes('assets/images/sponsors/ito-transparent.png'));
       assert.ok(localModelPath.includes('assets/images/sponsors/moonshot.png'));
       assert.ok(localModelPath.includes('assets/images/community/ecc-tools-mark.svg'));
       assert.match(readme, /install\.sh --target kimi --profile minimal/);
@@ -359,7 +345,9 @@ function main() {
     ['sponsor roster keeps Itô and Moonshot distinct from node tooling', () => {
       const sponsors = read('SPONSORS.md');
       assert.ok(sponsors.includes('[**Itô**]'));
-      assert.ok(sponsors.includes('assets/images/sponsors/ito.svg'));
+      assert.ok(sponsors.includes('assets/images/sponsors/ito-transparent.png'));
+      assert.ok(sponsors.includes('assets/images/sponsors/ito-transparent-light.png'));
+      assert.doesNotMatch(sponsors, /assets\/images\/sponsors\/ito(?:-dark)?\.svg/);
       assert.ok(sponsors.includes('[**Moonshot AI (Kimi)**]'));
       assert.ok(sponsors.includes('assets/images/sponsors/moonshot.png'));
       assert.doesNotMatch(sponsors, /sixtytwo|sixty.?two/i);
@@ -430,7 +418,20 @@ function main() {
       assert.match(packageJson.scripts.welcome, /ecc ito find/i);
       assert.match(packageJson.scripts.welcome, /submits a live authenticated RFQ/i);
       assert.match(packageJson.scripts.welcome, /does not reserve capacity/i);
-      assert.ok(fs.existsSync(path.join(REPO_ROOT, 'assets', 'images', 'sponsors', 'ito.svg')));
+      assert.ok(
+        fs.existsSync(path.join(REPO_ROOT, 'assets', 'images', 'sponsors', 'ito-transparent.png'))
+      );
+      assert.ok(
+        fs.existsSync(
+          path.join(REPO_ROOT, 'assets', 'images', 'sponsors', 'ito-transparent-light.png')
+        )
+      );
+      assert.ok(
+        !fs.existsSync(path.join(REPO_ROOT, 'assets', 'images', 'sponsors', 'ito.svg'))
+      );
+      assert.ok(
+        !fs.existsSync(path.join(REPO_ROOT, 'assets', 'images', 'sponsors', 'ito-dark.svg'))
+      );
       assert.ok(fs.existsSync(path.join(REPO_ROOT, 'assets', 'images', 'sponsors', 'moonshot.png')));
     }],
   ];

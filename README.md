@@ -91,7 +91,7 @@ ECC v2.0.0 adds the public Hermes operator story on top of that reusable layer: 
   <a href="https://www.greptile.com/go/ecc" title="Greptile"><img src="assets/images/sponsors/greptile.png" height="54" alt="Greptile" /></a>&nbsp;&nbsp;&nbsp;
   <a href="https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=ECC" title="Atlas Cloud"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/atlascloud-dark.svg" /><img src="assets/images/sponsors/atlascloud.svg" width="154" alt="Atlas Cloud" /></picture></a>&nbsp;&nbsp;&nbsp;
   <a href="https://www.moonshot.ai" title="Moonshot AI — Kimi"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/moonshot-dark.png" /><img src="assets/images/sponsors/moonshot.png" width="132" alt="Moonshot AI — Kimi" /></picture></a>&nbsp;&nbsp;&nbsp;
-  <a href="https://compute.itomarkets.com" title="Itô Markets"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/ito-dark.svg" /><img src="assets/images/sponsors/ito.svg" width="172" alt="Itô Markets" /></picture></a>
+  <a href="https://compute.itomarkets.com" title="Itô Markets"><picture><source media="(prefers-color-scheme: light)" srcset="assets/images/sponsors/ito-transparent-light.png" /><img src="assets/images/sponsors/ito-transparent.png" width="96" alt="Itô Markets" /></picture></a>
 </p>
 
 <sub><strong>Community sponsors:</strong> <a href="https://github.com/mikejmorgan-ai">Mike Morgan</a> · <a href="https://github.com/jasonwu513">@jasonwu513</a> · <a href="https://github.com/1anter">@1anter</a> · <a href="https://github.com/massimotodaro">@massimotodaro</a> · <a href="https://github.com/meadmccabe">@meadmccabe</a></sub>
@@ -151,7 +151,7 @@ The Kimi Code harness and the model-serving layer are separate. ECC configures t
 <tr>
 <td width="33%" align="center">
   <a href="https://compute.itomarkets.com">
-    <picture><source media="(prefers-color-scheme: dark)" srcset="assets/images/sponsors/ito-dark.svg" /><img src="assets/images/sponsors/ito.svg" width="164" alt="Itô Markets" /></picture><br />
+    <picture><source media="(prefers-color-scheme: light)" srcset="assets/images/sponsors/ito-transparent-light.png" /><img src="assets/images/sponsors/ito-transparent.png" width="92" alt="Itô Markets" /></picture><br />
     <strong>1. Get GPU capacity</strong>
   </a><br />
   <sub>Use Itô or any GPU provider.</sub>
