@@ -375,6 +375,14 @@ npx ecc-install --profile minimal --target claude
 
 This profile intentionally excludes `hooks-runtime`.
 
+Claude manual installs place each skill directly under
+`~/.claude/skills/<skill-name>/` (or `.claude/skills/<skill-name>/` for
+`claude-project`) so Claude Code can discover it. When upgrading an older ECC
+manual install, the installer migrates only nested `skills/ecc/` files recorded
+in ECC install-state. If a flat skill directory is user-owned, ECC preserves it,
+prints a conflict warning, and keeps any older managed copy tracked for a safe
+uninstall instead of overwriting user files.
+
 If you want the normal core profile but need hooks off, use:
 
 ```bash
