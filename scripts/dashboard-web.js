@@ -12,6 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const { normalizeAgentTools } = require('./lib/agent-tools');
 
 function parsePort(v) {
   const n = parseInt(String(v), 10);
@@ -31,7 +32,11 @@ function readFrontmatter(p) {
       const s = l.indexOf(':'); if (s <= 0) continue;
       let k = l.slice(0, s).trim(), v = l.slice(s + 1).trim();
       if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
-      if (v.startsWith('[') && v.endsWith(']')) { try { v = JSON.parse(v); } catch { v = v.slice(1, -1).split(',').map(x => x.trim().replace(/["']/g, '')); } }
+      if (k === 'tools') {
+        v = normalizeAgentTools(v);
+      } else if (v.startsWith('[') && v.endsWith(']')) {
+        try { v = JSON.parse(v); } catch { v = v.slice(1, -1).split(',').map(x => x.trim().replace(/["']/g, '')); }
+      }
       fm[k] = v;
     }
     fm._body = c.replace(/^---[\s\S]*?---\n*/, '').trim();
