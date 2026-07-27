@@ -84,7 +84,7 @@ Access to 67 agents, 281 skills, and 94 legacy command shims, plus hooks, rules,
 | Rules            |   Selective | Always-loaded standards you choose by language or project                            |
 | AgentShield      |    Included | Scanning for prompts, hooks, MCP config, permissions, secrets, and agent files       |
 
-## Why It Feels Different
+## Why Choose ECC?
 
 | Without a system                                        | With ECC                                                              |
 | ------------------------------------------------------- | --------------------------------------------------------------------- |
