@@ -248,7 +248,7 @@ update_opencode_hook_banner_version() {
     const version = process.argv[2];
     const current = fs.readFileSync(file, "utf8");
     const updated = current.replace(
-      /(## Active Plugin: Everything Claude Code v)[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?/,
+      /(## Active Plugin: (?:Everything Claude Code|ECC) v)[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?/,
       `$1${version}`
     );
     if (updated === current) {
