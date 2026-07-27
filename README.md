@@ -33,9 +33,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/affaan-m/ECC"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Fclaude-plugin&style=flat" alt="Claude plugin installs" /></a>
-  <a href="https://github.com/affaan-m/ECC"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Fcodex-plugin&style=flat" alt="Codex plugin installs" /></a>
-  <a href="https://github.com/affaan-m/ECC"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Fclones&style=flat" alt="Repo clones" /></a>
   <a href="https://www.npmjs.com/package/ecc-universal"><img src="https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal&logo=npm" alt="ecc-universal npm downloads" /></a>
   <a href="https://www.npmjs.com/package/ecc-agentshield"><img src="https://img.shields.io/npm/dw/ecc-agentshield?label=ecc-agentshield&logo=npm" alt="ecc-agentshield npm downloads" /></a>
 </p>
