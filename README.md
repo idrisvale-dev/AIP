@@ -198,7 +198,7 @@ one local, inspectable Markdown format for durable context and handoffs. The
 optional `ecc-memory-mcp` stdio server exposes the same bounded
 save/search/read/doctor surface without enabling itself by default.
 
-### v2.0.0 — The Agent Harness Operating System (Jun 2026)
+### v2.1.0 — The Agent Harness Operating System (Jun 2026)
 
 Stable graduation of the 2.0 line: 261 skills, the control-pane substrate (session adapters + MCP inventory), the worktree-lifecycle service, the `orch-*` orchestrator family, and the launch of the [ECC Discord community](https://discord.gg/36yGMHGFbR). Full notes: [docs/releases/2.0.0/release-notes.md](docs/releases/2.0.0/release-notes.md).
 
@@ -1837,7 +1837,7 @@ ECC is the **first plugin to maximize every major AI coding tool**. Here's how e
 | **Context File** | CLAUDE.md + AGENTS.md | AGENTS.md | AGENTS.md | AGENTS.md | copilot-instructions.md |
 | **Secret Detection** | Hook-based            | beforeSubmitPrompt hook | Sandbox-based | Hook-based | Instruction-based |
 | **Auto-Format** | PostToolUse hook      | afterFileEdit hook | N/A | file.edited hook | N/A |
-| **Version** | Plugin | Plugin | Reference config | 2.0.0 | Instruction layer |
+| **Version** | Plugin | Plugin | Reference config | 2.1.0 | Instruction layer |
 
 **Key architectural decisions:**
 - **AGENTS.md** at root is the universal cross-tool file (read by Claude Code, Cursor, Codex, and OpenCode — GitHub Copilot uses `.github/copilot-instructions.md` instead)
