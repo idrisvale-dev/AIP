@@ -93,7 +93,7 @@ Access to 67 agents, 281 skills, and 94 legacy command shims, plus hooks, rules,
 | Quality checks depend on reminders                      | Hooks can enforce deterministic checks outside the prompt             |
 | Agent configuration is trusted by default               | AgentShield scans the harness itself as an attack surface             |
 
-### TDD is a principle, not a suggestion
+### TDD: Test-Driven Development
 
 ```text
 /ecc:plan "Add usage-based billing alerts"
