@@ -32,19 +32,19 @@ Run `node scripts/harness-audit.js repo --format json` for a baseline signal (Co
 
 ### Step 2: Execute
 
-Propose and apply minimal, reversible configuration changes per identified leverage area. Preserve cross-platform behavior across Claude Code, Cursor, OpenCode, and Codex, and avoid fragile shell quoting.
+Before touching any file, snapshot the current state of every path you intend to change (e.g. `git diff` / `git stash create` baseline, or a copy of the file) so it can be restored exactly. Propose and apply minimal, reversible configuration changes per identified leverage area, keeping the diff allowlisted to the leverage area under test — no incidental edits. Preserve cross-platform behavior across Claude Code, Cursor, OpenCode, and Codex, and avoid fragile shell quoting.
 
 ### Step 3: Verify
 
-Re-run the deterministic grader plus `node tests/run-all.js` (Regression Evals). Grade with all three eval-harness Grader Types: Code-Based (script/test exit codes), Model-Based (self-assessed diff quality), Human (flag any security- or safety-relevant change for manual review). Compute pass@k / pass^k as defined in `skills/eval-harness/SKILL.md` (pass@3 for capability changes, pass^3 for safety-critical hook changes).
+Re-run the deterministic grader plus `node tests/run-all.js` (Regression Evals). If either fails, automatically restore the Step 2 snapshot so the worktree/configuration is left clean — never hand back a partially-applied change. Grade with all three eval-harness Grader Types: Code-Based (script/test exit codes), Model-Based (self-assessed diff quality), Human (any security- or safety-relevant change is BLOCKED until a human explicitly approves it — this includes broader tool permissions, credential/secret access or exfiltration paths, and any weakening of existing safety controls; for changes under `{skills,commands,agents,rules}/**`, explicitly check prompt-injection resilience, permission scope, destructive-action guards, and secret-exfiltration risk). Compute pass@k / pass^k as defined in `skills/eval-harness/SKILL.md` (pass@3 for capability changes, pass^3 for safety-critical hook changes).
 
 ## Output Format
 
 `EVAL REPORT: harness-optimization`
 - Capability Evals: results per leverage area (pass/fail, pass@k)
 - Regression Evals: results (pass^k for safety-critical paths)
-- Applied changes and remaining risks
-- Status: READY FOR REVIEW / SHIP IT / BLOCKED
+- Applied changes (final diff) and remaining risks
+- Status: READY FOR REVIEW / SHIP IT / BLOCKED — a security-sensitive diff may never report SHIP IT; it stays BLOCKED until human approval is recorded
 
 ## Examples
 
