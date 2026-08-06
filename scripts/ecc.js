@@ -7,9 +7,17 @@ const { getComputeSponsorCopy } = require('./lib/compute-sponsor');
 const { createSafeItoInvocationEnvironment, getInvocationCommand } = require('./lib/ito-environment');
 
 const COMMANDS = {
+  setup: {
+    script: 'setup.js',
+    description: 'Install or update the Claude plugin with guided scope and hook choices',
+  },
+  welcome: {
+    script: 'welcome.js',
+    description: 'Show the ECC welcome artwork and community links',
+  },
   install: {
     script: 'install-apply.js',
-    description: 'Install ECC content into a supported target',
+    description: 'Install ECC content, including the guided multi-harness wizard',
   },
   plan: {
     script: 'install-plan.js',
@@ -94,6 +102,8 @@ const COMMANDS = {
 };
 
 const PRIMARY_COMMANDS = [
+  'setup',
+  'welcome',
   'install',
   'plan',
   'catalog',
@@ -140,6 +150,11 @@ Compute:
   ${getComputeSponsorCopy()}
 
 Examples:
+  ecc setup
+  ecc setup --mode claude-plugin --scope user --hooks standard --yes
+  ecc welcome
+  ecc install --guided
+  ecc install --guided --harness claude --harness codex --harness kimi
   ecc typescript
   ecc install --profile developer --target claude
   ecc plan --profile core --target cursor
@@ -255,11 +270,11 @@ function runCommand(commandName, args) {
           }),
         }
         : process.env,
-      stdio: isItoLogin
+      stdio: isItoLogin || commandName === 'setup' || commandName === 'install'
         ? 'inherit'
         : commandName === 'memory'
-        ? ['inherit', 'pipe', 'pipe']
-        : ['pipe', 'pipe', 'pipe'],
+          ? ['inherit', 'pipe', 'pipe']
+          : ['pipe', 'pipe', 'pipe'],
       encoding: 'utf8',
       maxBuffer: 10 * 1024 * 1024,
     }
