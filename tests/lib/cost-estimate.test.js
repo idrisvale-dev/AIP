@@ -31,16 +31,25 @@ function runTests() {
   console.log('RATE_TABLE:');
 
   if (
-    test('RATE_TABLE has haiku, sonnet, opus keys', () => {
-      assert.ok(RATE_TABLE.haiku, 'Missing haiku');
-      assert.ok(RATE_TABLE.sonnet, 'Missing sonnet');
-      assert.ok(RATE_TABLE.opus, 'Missing opus');
-      assert.strictEqual(typeof RATE_TABLE.haiku.in, 'number');
-      assert.strictEqual(typeof RATE_TABLE.haiku.out, 'number');
-      assert.strictEqual(typeof RATE_TABLE.sonnet.in, 'number');
-      assert.strictEqual(typeof RATE_TABLE.sonnet.out, 'number');
-      assert.strictEqual(typeof RATE_TABLE.opus.in, 'number');
-      assert.strictEqual(typeof RATE_TABLE.opus.out, 'number');
+    test('RATE_TABLE has a bucket per billing tier', () => {
+      for (const key of ['haiku', 'haikuLegacy', 'sonnet', 'opus', 'opusLegacy', 'fable']) {
+        assert.ok(RATE_TABLE[key], `Missing ${key}`);
+        assert.strictEqual(typeof RATE_TABLE[key].in, 'number', `${key}.in not a number`);
+        assert.strictEqual(typeof RATE_TABLE[key].out, 'number', `${key}.out not a number`);
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('RATE_TABLE carries current published rates, not Claude 3 era rates', () => {
+      assert.deepStrictEqual(RATE_TABLE.opus, { in: 5.0, out: 25.0 });
+      assert.deepStrictEqual(RATE_TABLE.opusLegacy, { in: 15.0, out: 75.0 });
+      assert.deepStrictEqual(RATE_TABLE.haiku, { in: 1.0, out: 5.0 });
+      assert.deepStrictEqual(RATE_TABLE.haikuLegacy, { in: 0.8, out: 4.0 });
+      assert.deepStrictEqual(RATE_TABLE.sonnet, { in: 3.0, out: 15.0 });
+      assert.deepStrictEqual(RATE_TABLE.fable, { in: 10.0, out: 50.0 });
     })
   )
     passed++;
@@ -50,9 +59,9 @@ function runTests() {
   console.log('\nestimateCost:');
 
   if (
-    test('opus 1M/1M tokens returns 90', () => {
+    test('opus 1M/1M tokens returns 30', () => {
       const cost = estimateCost('opus', 1_000_000, 1_000_000);
-      assert.strictEqual(cost, 90);
+      assert.strictEqual(cost, 30);
     })
   )
     passed++;
@@ -68,9 +77,9 @@ function runTests() {
   else failed++;
 
   if (
-    test('haiku 1M/1M tokens returns 4.8', () => {
+    test('haiku 1M/1M tokens returns 6', () => {
       const cost = estimateCost('haiku', 1_000_000, 1_000_000);
-      assert.strictEqual(cost, 4.8);
+      assert.strictEqual(cost, 6);
     })
   )
     passed++;
@@ -86,15 +95,73 @@ function runTests() {
   else failed++;
 
   if (
-    test('full model name claude-opus-4-6 uses opus rates', () => {
+    test('full model name claude-opus-4-6 uses current opus rates', () => {
       const cost = estimateCost('claude-opus-4-6', 500, 200);
-      // (500 / 1_000_000) * 15 + (200 / 1_000_000) * 75 = 0.0075 + 0.015 = 0.0225
-      const expected = Math.round(0.0225 * 1e6) / 1e6;
+      // (500 / 1_000_000) * 5 + (200 / 1_000_000) * 25 = 0.0025 + 0.005 = 0.0075
+      const expected = Math.round(0.0075 * 1e6) / 1e6;
       assert.strictEqual(cost, expected);
     })
   )
     passed++;
   else failed++;
+
+  // Every spelling of the three Opus models that really billed at $15/$75 has
+  // to keep doing so. Opus 4.0's snapshot is `claude-opus-4-20250514`, with no
+  // minor segment, so a bare `opus-4-0` substring misses it.
+  for (const legacy of [
+    'claude-3-opus-20240229',
+    'anthropic.claude-3-opus-20240229-v1:0',
+    'claude-opus-4-20250514',
+    'claude-opus-4@20250514',
+    'claude-opus-4-0',
+    'claude-opus-4-1'
+  ]) {
+    if (
+      test(`${legacy} keeps legacy opus rates`, () => {
+        assert.strictEqual(estimateCost(legacy, 1_000_000, 1_000_000), 90);
+      })
+    )
+      passed++;
+    else failed++;
+  }
+
+  for (const current of ['claude-opus-4-5', 'claude-opus-4-7', 'claude-opus-4-8', 'claude-opus-5']) {
+    if (
+      test(`${current} uses current opus rates`, () => {
+        assert.strictEqual(estimateCost(current, 1_000_000, 1_000_000), 30);
+      })
+    )
+      passed++;
+    else failed++;
+  }
+
+  if (
+    test('claude-3-5-haiku keeps legacy haiku rates', () => {
+      assert.strictEqual(estimateCost('claude-3-5-haiku-20241022', 1_000_000, 1_000_000), 4.8);
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('claude-haiku-4-5 uses current haiku rates', () => {
+      assert.strictEqual(estimateCost('claude-haiku-4-5-20251001', 1_000_000, 1_000_000), 6);
+    })
+  )
+    passed++;
+  else failed++;
+
+  // Fable and Mythos had no bucket at all and fell through to sonnet, which
+  // understated them 3.3x.
+  for (const model of ['claude-fable-5', 'claude-mythos-5']) {
+    if (
+      test(`${model} uses fable rates`, () => {
+        assert.strictEqual(estimateCost(model, 1_000_000, 1_000_000), 60);
+      })
+    )
+      passed++;
+    else failed++;
+  }
 
   if (
     test('unknown model falls back to sonnet rates', () => {
