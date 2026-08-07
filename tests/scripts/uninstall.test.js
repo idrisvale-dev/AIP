@@ -90,7 +90,7 @@ function runTests() {
     const projectRoot = createTempDir('uninstall-project-');
 
     try {
-      const installStdout = execFileSync('node', [INSTALL_SCRIPT, '--target', 'cursor', 'typescript'], {
+      const installStdout = execFileSync('node', [INSTALL_SCRIPT, '--target', 'cursor', 'typescript', '--enable-hooks'], {
         cwd: projectRoot,
         env: {
           ...process.env,
