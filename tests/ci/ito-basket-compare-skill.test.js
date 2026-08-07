@@ -46,7 +46,7 @@ function main() {
   const skill = fs.readFileSync(SKILL_PATH, "utf8");
   const tests = [
     ["has valid discoverable frontmatter and representative trigger phrases", () => {
-      assert.match(skill, /^---\nname: ito-basket-compare\ndescription: [^\n]+\nmetadata:\n  origin: ECC\n---\n/);
+      assert.match(skill, /^---\nname: ito-basket-compare\ndescription: [^\n]+\nmetadata:\n {2}origin: ECC\n---\n/);
       for (const phrase of ["compare this basket", "basket vs", "gap analysis", "stale assumptions", "watchlist"]) {
         assert.match(skill.toLowerCase(), new RegExp(phrase));
       }

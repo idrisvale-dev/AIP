@@ -110,7 +110,7 @@ const results = [
       {
         id: "capability:ito-compute",
         family: "capability",
-        description: "Authenticated Itô GPU inventory, RFQ, status, and explicitly gated node-qualification workflows through the separately installed canonical CLI.",
+        description: "Authenticated Itô GPU inventory, RFQ, status, device revocation, and explicitly gated node-qualification workflows through the separately installed canonical CLI.",
         modules: ["ito-compute"],
       }
     );

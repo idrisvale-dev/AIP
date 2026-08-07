@@ -34,7 +34,7 @@ function main() {
   const skill = read('skills/ito-trade-planner/SKILL.md');
   const tests = [
     ['has portable discovery metadata and representative triggers', () => {
-      assert.match(skill, /^---\nname: ito-trade-planner\ndescription: [^\n]+\nmetadata:\n  origin: ECC\n---/);
+      assert.match(skill, /^---\nname: ito-trade-planner\ndescription: [^\n]+\nmetadata:\n {2}origin: ECC\n---/);
       for (const trigger of ['trade plan', 'planning worksheet', 'venue comparison', 'basket adjustment']) {
         assert.match(skill, new RegExp(trigger, 'i'), `missing trigger phrase: ${trigger}`);
       }
