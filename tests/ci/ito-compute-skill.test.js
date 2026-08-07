@@ -36,6 +36,7 @@ function main() {
       const skill = read("skills/ito-compute/SKILL.md");
       for (const command of [
         "ecc ito login",
+        "ecc ito logout",
         "ecc ito auth",
         "ecc ito find",
         "ecc ito status",
@@ -59,6 +60,9 @@ function main() {
       assert.match(skill, /explicit absolute built entry/);
       assert.match(skill, /never discovers[^\n]*through `PATH`/);
       assert.match(skill, /ecc ito login --no-browser/);
+      assert.match(skill, /return to the originating (?:agent|task)/i);
+      assert.match(skill, /revok/i);
+      assert.match(skill, /rent or purchase/i);
       assert.match(skill, /auth.*validat/i);
       assert.match(skill, /--no-browser/);
       assert.match(skill, /macOS Keychain/i);
@@ -70,6 +74,11 @@ function main() {
       assert.match(skill, /explicit node/i);
       assert.match(skill, /cannot (?:rent|launch|recover|repair)/i);
       assert.doesNotMatch(skill, /npm link/);
+      const frontmatter = skill.match(/^---\n([\s\S]*?)\n---/)[1];
+      assert.doesNotMatch(frontmatter, /^metadata:/m);
+      const interfaceMetadata = read("skills/ito-compute/agents/openai.yaml");
+      assert.match(interfaceMetadata, /display_name: "Itô Compute"/);
+      assert.match(interfaceMetadata, /default_prompt: .*\$ito-compute/);
     }],
     ["keeps README and integration docs aligned with the separated auth contract", () => {
       for (const relativePath of [
@@ -108,7 +117,7 @@ function main() {
         {
           id: "capability:ito-compute",
           family: "capability",
-          description: "Authenticated Itô GPU inventory, RFQ, status, and explicitly gated node-qualification workflows through the separately installed canonical CLI.",
+          description: "Authenticated Itô GPU inventory, RFQ, status, device revocation, and explicitly gated node-qualification workflows through the separately installed canonical CLI.",
           modules: ["ito-compute"],
         }
       );

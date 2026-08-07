@@ -24,10 +24,11 @@ ECC delegates to the canonical Itô package in
 `Ito-Markets/ito-cloud-runtime/cli/ito-compute-cli`. ECC does not maintain a
 second API client or response schema.
 
-The wrapper exposes only the canonical CLI's `login`, `auth`, `find`, `status`, and `evals`
+The wrapper exposes only the canonical CLI's `login`, `logout`, `auth`, `find`, `status`, and `evals`
 operations:
 
     ecc ito login [--no-browser]
+    ecc ito logout
     ecc ito auth
     ecc ito find <all required RFQ constraints>
     ecc ito status
@@ -76,6 +77,9 @@ directory and 0600 token-file permissions. ECC does not inspect or log secrets.
 
 - `login` starts canonical device authorization, with `--no-browser` available
   when the operator does not want the CLI to open the verification page.
+- `logout` revokes the current device credential and removes the local copy only
+  after confirmed remote revocation; a failed revocation keeps the local copy
+  for retry.
 - `auth` validates existing credentials only.
 - `find` reads live inventory and submits a live authenticated RFQ. An operator
   or agent must gather every hard topology/economic constraint and obtain
@@ -132,7 +136,7 @@ after review.
 
 The local contract suite proves:
 
-- only the four supported operations spawn;
+- only the six supported operations spawn;
 - RFQ arguments are forwarded without economic reinterpretation;
 - only approved Itô runtime or isolated node-qualification variables cross the
   process boundary;
