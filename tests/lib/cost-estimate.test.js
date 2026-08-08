@@ -172,6 +172,36 @@ function runTests() {
     passed++;
   else failed++;
 
+  // A negative count yields a negative cost and a non-finite one yields NaN,
+  // and `NaN > budget` is false — so bad input defeats a budget check silently
+  // rather than loudly. Pin the throw so a regression fails here.
+  for (const bad of [-1, -0.5, NaN, Infinity, -Infinity, undefined, null, '100']) {
+    if (
+      test(`rejects ${String(bad)} as an input token count`, () => {
+        assert.throws(() => estimateCost('sonnet', bad, 100), RangeError);
+      })
+    )
+      passed++;
+    else failed++;
+
+    if (
+      test(`rejects ${String(bad)} as an output token count`, () => {
+        assert.throws(() => estimateCost('sonnet', 100, bad), RangeError);
+      })
+    )
+      passed++;
+    else failed++;
+  }
+
+  if (
+    test('accepts zero and fractional token counts', () => {
+      assert.strictEqual(estimateCost('sonnet', 0, 0), 0);
+      assert.strictEqual(estimateCost('sonnet', 500_000, 0), 1.5);
+    })
+  )
+    passed++;
+  else failed++;
+
   // Summary
   console.log(`\nResults: ${passed} passed, ${failed} failed\n`);
   return { passed, failed };

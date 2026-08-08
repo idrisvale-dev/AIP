@@ -48,11 +48,24 @@ const LEGACY_HAIKU_RE = /3-5-haiku|haiku-3-5/;
  * Estimate USD cost from token counts.
  * @param {string} model - Model name (may contain "haiku", "sonnet", "opus",
  *   "fable" or "mythos"); anything else is priced at sonnet rates.
- * @param {number} inputTokens
- * @param {number} outputTokens
+ * @param {number} inputTokens - Finite, non-negative.
+ * @param {number} outputTokens - Finite, non-negative.
  * @returns {number} Estimated cost in USD (rounded to 6 decimal places)
+ * @throws {RangeError} If either token count is negative or non-finite.
  */
 function estimateCost(model, inputTokens, outputTokens) {
+  // Callers use this to decide whether a call fits a budget, and both bad
+  // inputs defeat that check silently rather than loudly: a negative count
+  // yields a negative cost, and a non-finite one yields NaN, for which every
+  // `cost > budget` comparison is false. An unpriceable model still falls
+  // back to sonnet rates on purpose — that degrades an estimate; this
+  // corrupts one.
+  for (const [name, value] of [['inputTokens', inputTokens], ['outputTokens', outputTokens]]) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new RangeError(`${name} must be a finite non-negative number, got ${value}`);
+    }
+  }
+
   const normalized = String(model || '').toLowerCase();
   let rates = RATE_TABLE.sonnet;
   if (normalized.includes('haiku')) {
