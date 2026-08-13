@@ -529,13 +529,46 @@ function removeContainedPath(destinationPath, trustedRoot, action, options = {})
     return null;
   }
 
-  const finalDestination = getManagedDestination(
+  const managedDestination = getManagedDestination(
     existingDestination,
     trustedRoot,
     action,
     { allowFinalSymlink: true }
-  ).managedPath;
-  fs.rmSync(finalDestination, options);
+  );
+  const finalDestination = managedDestination.managedPath;
+  const expectedStat = fs.lstatSync(finalDestination, { bigint: true });
+  const quarantineDir = fs.mkdtempSync(path.join(
+    path.dirname(managedDestination.canonicalRoot),
+    '.ecc-remove-'
+  ));
+  const quarantinePath = path.join(quarantineDir, path.basename(finalDestination));
+
+  try {
+    fs.renameSync(finalDestination, quarantinePath);
+  } catch (error) {
+    fs.rmdirSync(quarantineDir);
+    throw error;
+  }
+
+  const quarantinedStat = fs.lstatSync(quarantinePath, { bigint: true });
+  if (!hasSameFileIdentity(expectedStat, quarantinedStat)) {
+    try {
+      fs.renameSync(quarantinePath, finalDestination);
+      fs.rmdirSync(quarantineDir);
+    } catch (_restoreError) {
+      throw new Error(
+        `Refusing to ${action}: managed destination changed before removal; replacement preserved at ${quarantinePath}.`
+      );
+    }
+    throw createChangedDestinationError(action);
+  }
+
+  if (quarantinedStat.isDirectory() && !options.recursive) {
+    fs.rmdirSync(quarantinePath);
+  } else {
+    fs.rmSync(quarantinePath, options);
+  }
+  fs.rmdirSync(quarantineDir);
   return finalDestination;
 }
 
@@ -724,12 +757,20 @@ function executeUninstallOperation(operation, trustedRoot, options = {}) {
       const existingDestination = getContainedExistingPath(
         operation.destinationPath,
         trustedRoot,
-        'uninstall'
+        'uninstall',
+        { allowFinalSymlink: true }
       );
       if (!existingDestination) {
         return {
           removedPaths: [],
           cleanupTargets: []
+        };
+      }
+      if (fs.lstatSync(existingDestination).isSymbolicLink()) {
+        return {
+          removedPaths: [],
+          cleanupTargets: [],
+          retainedPaths: [operation.destinationPath]
         };
       }
       const recordedDigest = operation.contentSha256;
@@ -741,7 +782,8 @@ function executeUninstallOperation(operation, trustedRoot, options = {}) {
       if (!currentDigest || currentDigest !== recordedDigest.toLowerCase()) {
         return {
           removedPaths: [],
-          cleanupTargets: []
+          cleanupTargets: [],
+          retainedPaths: [operation.destinationPath]
         };
       }
     }
@@ -1869,8 +1911,9 @@ function cleanupEmptyParentDirs(filePath, stopAt) {
     }
 
     const finalPath = assertWithinTrustedRoot(validatedPath, trustedStopAt, 'clean up');
-    fs.rmdirSync(finalPath);
-    currentPath = path.dirname(finalPath);
+    const removedPath = removeContainedPath(finalPath, trustedStopAt, 'clean up');
+    if (!removedPath) break;
+    currentPath = path.dirname(removedPath);
   }
 }
 
@@ -1926,25 +1969,29 @@ function uninstallInstalledStates(options = {}) {
     try {
       const removedPaths = [];
       const cleanupTargets = [];
+      const retainedPaths = [];
       const operations = getManagedOperations(state);
 
       for (const operation of operations) {
         const outcome = executeUninstallOperation(operation, record.targetRoot, {
-          preserveDriftedCopies: record.legacy,
+          preserveDriftedCopies: true,
         });
         removedPaths.push(...outcome.removedPaths);
         cleanupTargets.push(...outcome.cleanupTargets);
+        retainedPaths.push(...(outcome.retainedPaths || []));
       }
 
-      const removedStatePath = removeContainedPath(
-        record.installStatePath,
-        record.targetRoot,
-        'uninstall',
-        { force: true }
-      );
-      if (removedStatePath) {
-        removedPaths.push(record.installStatePath);
-        cleanupTargets.push(removedStatePath);
+      if (retainedPaths.length === 0) {
+        const removedStatePath = removeContainedPath(
+          record.installStatePath,
+          record.targetRoot,
+          'uninstall',
+          { force: true }
+        );
+        if (removedStatePath) {
+          removedPaths.push(record.installStatePath);
+          cleanupTargets.push(removedStatePath);
+        }
       }
 
       for (const cleanupTarget of cleanupTargets) {
@@ -1953,10 +2000,14 @@ function uninstallInstalledStates(options = {}) {
 
       return {
         adapter: record.adapter,
-        status: 'uninstalled',
+        status: retainedPaths.length > 0 ? 'partial' : 'uninstalled',
         installStatePath: record.installStatePath,
         removedPaths,
+        retainedPaths: [...new Set(retainedPaths)].sort(),
         plannedRemovals: [],
+        warning: retainedPaths.length > 0
+          ? 'Modified or unverifiable managed files were preserved together with install-state for review.'
+          : null,
         error: null
       };
     } catch (error) {

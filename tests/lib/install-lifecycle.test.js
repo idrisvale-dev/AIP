@@ -168,7 +168,7 @@ function withTemporarilyMovedPath(filePath, callback) {
 }
 
 function managedOperation(kind, destinationPath, overrides = {}) {
-  return {
+  const operation = {
     kind,
     moduleId: 'test-module',
     sourceRelativePath: 'rules/common/coding-style.md',
@@ -178,6 +178,18 @@ function managedOperation(kind, destinationPath, overrides = {}) {
     scaffoldOnly: false,
     ...overrides,
   };
+  if (
+    kind === 'copy-file'
+    && !Object.prototype.hasOwnProperty.call(overrides, 'contentSha256')
+    && fs.existsSync(destinationPath)
+    && fs.lstatSync(destinationPath).isFile()
+    && !fs.lstatSync(destinationPath).isSymbolicLink()
+  ) {
+    operation.contentSha256 = crypto.createHash('sha256')
+      .update(fs.readFileSync(destinationPath))
+      .digest('hex');
+  }
+  return operation;
 }
 
 function runTests() {
@@ -2478,11 +2490,45 @@ function runTests() {
         targets: ['cursor'],
       });
 
-      assert.strictEqual(result.results[0].status, 'uninstalled');
+      assert.strictEqual(result.results[0].status, 'uninstalled', result.results[0].error);
       assert.ok(result.results[0].removedPaths.includes(destinationPath));
       assert.ok(!fs.existsSync(destinationPath));
       assert.ok(!fs.existsSync(path.dirname(destinationPath)));
       assert.ok(fs.existsSync(targetRoot));
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
+  if (test('uninstall preserves drifted canonical copied files and install-state', () => {
+    const homeDir = createTempDir('install-lifecycle-home-');
+    const projectRoot = createTempDir('install-lifecycle-project-');
+
+    try {
+      const targetRoot = path.join(projectRoot, '.cursor');
+      const destinationPath = path.join(targetRoot, 'rules', 'managed.md');
+      fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+      fs.writeFileSync(destinationPath, 'managed\n');
+      const operation = managedOperation('copy-file', destinationPath, {
+        strategy: 'copy-file',
+      });
+      const { installStatePath } = writeCursorState(projectRoot, {
+        request: { legacyMode: false, legacyLanguages: [] },
+        operations: [operation],
+      });
+      fs.appendFileSync(destinationPath, 'user edit\n');
+
+      const result = uninstallInstalledStates({
+        homeDir,
+        projectRoot,
+        targets: ['cursor'],
+      });
+
+      assert.strictEqual(result.results[0].status, 'partial');
+      assert.ok(result.results[0].retainedPaths.includes(destinationPath));
+      assert.strictEqual(fs.readFileSync(destinationPath, 'utf8'), 'managed\nuser edit\n');
+      assert.ok(fs.existsSync(installStatePath));
     } finally {
       cleanup(homeDir);
       cleanup(projectRoot);
@@ -2730,7 +2776,7 @@ function runTests() {
     }
   })) passed++; else failed++;
 
-  if (test('uninstall removes an in-root final symlink without deleting its victim', () => {
+  if (test('uninstall preserves a managed path replaced by a symlink and its victim', () => {
     const homeDir = createTempDir('install-lifecycle-home-');
     const projectRoot = createTempDir('install-lifecycle-project-');
 
@@ -2758,8 +2804,9 @@ function runTests() {
         targets: ['cursor'],
       });
 
-      assert.strictEqual(result.results[0].status, 'uninstalled');
-      assert.ok(!fs.existsSync(destinationPath));
+      assert.strictEqual(result.results[0].status, 'partial');
+      assert.ok(fs.lstatSync(destinationPath).isSymbolicLink());
+      assert.ok(result.results[0].retainedPaths.includes(destinationPath));
       assert.strictEqual(fs.readFileSync(victimPath, 'utf8'), 'victim sentinel\n');
     } finally {
       cleanup(homeDir);
@@ -2824,6 +2871,66 @@ function runTests() {
         fs.readFileSync(outsideDestinationPath, 'utf8'),
         'outside sentinel\n'
       );
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+      cleanup(outsideRoot);
+    }
+  })) passed++; else failed++;
+
+  if (test('uninstall quarantine prevents an ancestor swap from deleting outside-root content', () => {
+    const homeDir = createTempDir('install-lifecycle-home-');
+    const projectRoot = createTempDir('install-lifecycle-project-');
+    const outsideRoot = createTempDir('install-lifecycle-outside-');
+    const targetRoot = path.join(projectRoot, '.cursor');
+    const destinationParent = path.join(targetRoot, 'swap-parent');
+    const backupParent = path.join(targetRoot, 'swap-parent-backup');
+    const destinationPath = path.join(destinationParent, 'managed.md');
+    const outsideDestinationPath = path.join(outsideRoot, 'managed.md');
+    const originalRenameSync = fs.renameSync;
+    let swapped = false;
+    let result;
+
+    try {
+      fs.mkdirSync(destinationParent, { recursive: true });
+      fs.writeFileSync(destinationPath, 'managed\n');
+      fs.writeFileSync(outsideDestinationPath, 'outside sentinel\n');
+      writeCursorState(projectRoot, {
+        operations: [managedOperation('copy-file', destinationPath)],
+      });
+
+      fs.renameSync = function renameSyncWithAncestorSwap(sourcePath, targetPath) {
+        if (
+          !swapped
+          && path.basename(sourcePath) === path.basename(destinationPath)
+          && path.basename(path.dirname(targetPath)).startsWith('.ecc-remove-')
+        ) {
+          originalRenameSync.call(fs, destinationParent, backupParent);
+          fs.symlinkSync(
+            outsideRoot,
+            destinationParent,
+            process.platform === 'win32' ? 'junction' : 'dir'
+          );
+          swapped = true;
+        }
+        return originalRenameSync.call(fs, sourcePath, targetPath);
+      };
+
+      result = uninstallInstalledStates({
+        homeDir,
+        projectRoot,
+        targets: ['cursor'],
+      });
+    } finally {
+      fs.renameSync = originalRenameSync;
+    }
+
+    try {
+      assert.strictEqual(swapped, true);
+      assert.strictEqual(result.results[0].status, 'error');
+      assert.match(result.results[0].error, /changed during|changed before removal/);
+      assert.strictEqual(fs.readFileSync(outsideDestinationPath, 'utf8'), 'outside sentinel\n');
+      assert.strictEqual(fs.readFileSync(path.join(backupParent, 'managed.md'), 'utf8'), 'managed\n');
     } finally {
       cleanup(homeDir);
       cleanup(projectRoot);

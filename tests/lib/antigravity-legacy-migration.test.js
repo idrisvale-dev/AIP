@@ -652,6 +652,45 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('applies a declared Antigravity transform without link-index metadata', () => {
+    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'antigravity-transform-only-'));
+    try {
+      const sourcePath = path.join(REPO_ROOT, 'agents', 'architect.md');
+      const targetRoot = path.join(projectRoot, '.agents');
+      const installStatePath = path.join(targetRoot, 'ecc-install-state.json');
+      const operation = {
+        kind: 'copy-file',
+        moduleId: 'agents-core',
+        sourcePath,
+        sourceRelativePath: null,
+        destinationPath: path.join(targetRoot, 'agents', 'architect.md'),
+        strategy: 'copy-file',
+        ownership: 'managed',
+        scaffoldOnly: false,
+        contentTransform: 'antigravity-agent-frontmatter',
+      };
+      const plan = {
+        mode: 'legacy',
+        target: 'antigravity',
+        adapter: { id: 'antigravity-project', target: 'antigravity', kind: 'project' },
+        targetRoot,
+        installRoot: targetRoot,
+        installStatePath,
+        operations: [operation],
+        warnings: [],
+        statePreview: createAntigravityState(targetRoot, installStatePath, []),
+      };
+
+      applyInstallPlan(plan, { writeInstallState() {} });
+
+      const installedContent = fs.readFileSync(operation.destinationPath, 'utf8');
+      assert.notStrictEqual(installedContent, fs.readFileSync(sourcePath, 'utf8'));
+      assert.ok(!installedContent.includes('color:'));
+    } finally {
+      fs.rmSync(projectRoot, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
 }

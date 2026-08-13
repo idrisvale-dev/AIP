@@ -350,20 +350,25 @@ function applyInstallPlan(plan, dependencies = {}) {
       continue;
     }
 
-    // Markdown may reference files whose installed paths move, such as rules
-    // copied under rules/ecc. Rewrite only links that point at installed targets;
-    // untouched links and non-markdown files stay on the byte-for-byte path.
-    if (
+    // Declared transforms are part of the install contract and always apply.
+    // Markdown link rewriting is additive when the plan has a usable index.
+    const needsLinkRewrite = Boolean(
       linkIndex
-      && operation.kind === 'copy-file'
       && operation.sourceRelativePath
       && isMarkdownPath(operation.destinationPath)
-    ) {
-      const rewritten = rewriteRelativeLinks(
-        transformInstallContent(operation, fs.readFileSync(operation.sourcePath, 'utf8')),
-        { sourceRel: operation.sourceRelativePath, index: linkIndex }
+    );
+    if (operation.kind === 'copy-file' && (operation.contentTransform || needsLinkRewrite)) {
+      const transformed = transformInstallContent(
+        operation,
+        fs.readFileSync(operation.sourcePath, 'utf8')
       );
-      fs.writeFileSync(operation.destinationPath, rewritten, 'utf8');
+      const installedContent = needsLinkRewrite
+        ? rewriteRelativeLinks(transformed, {
+          sourceRel: operation.sourceRelativePath,
+          index: linkIndex,
+        })
+        : transformed;
+      fs.writeFileSync(operation.destinationPath, installedContent, 'utf8');
       continue;
     }
 
