@@ -3,6 +3,7 @@
  */
 
 const assert = require('assert');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -165,6 +166,7 @@ function runTests() {
             strategy: 'preserve-relative-path',
             ownership: 'managed',
             scaffoldOnly: false,
+            contentSha256: crypto.createHash('sha256').update('managed\n').digest('hex'),
           },
           {
             kind: 'merge-json',
