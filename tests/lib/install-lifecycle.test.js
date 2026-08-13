@@ -3,6 +3,7 @@
  */
 
 const assert = require('assert');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -14,6 +15,7 @@ const {
   repairInstalledStates,
   uninstallInstalledStates,
 } = require('../../scripts/lib/install-lifecycle');
+const { applyInstallPlan } = require('../../scripts/lib/install/apply');
 const { getInstallTargetAdapter } = require('../../scripts/lib/install-targets/registry');
 const {
   createInstallState,
@@ -629,6 +631,59 @@ function runTests() {
       assert.strictEqual(result.results[0].status, 'planned');
       assert.deepStrictEqual(result.results[0].plannedRepairs, [destinationPath]);
       assert.ok(!fs.existsSync(destinationPath));
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
+  if (test('no-op repair preserves recorded source metadata until upgraded bytes are installed', () => {
+    const homeDir = createTempDir('install-lifecycle-home-');
+    const projectRoot = createTempDir('install-lifecycle-project-');
+
+    try {
+      const targetRoot = path.join(projectRoot, '.cursor');
+      const destinationPath = path.join(targetRoot, 'rules', 'coding-style.md');
+      const sourcePath = path.join(REPO_ROOT, 'rules', 'common', 'coding-style.md');
+      fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+      fs.copyFileSync(sourcePath, destinationPath);
+      const contentSha256 = crypto.createHash('sha256')
+        .update(fs.readFileSync(destinationPath))
+        .digest('hex');
+      const fixture = writeCursorState(projectRoot, {
+        source: {
+          repoVersion: '1.0.0',
+          repoCommit: 'old-commit',
+          manifestVersion: CURRENT_MANIFEST_VERSION,
+        },
+        operations: [
+          managedOperation('copy-file', destinationPath, {
+            sourceRelativePath: 'rules/common/coding-style.md',
+            strategy: 'copy-file',
+            contentSha256,
+          }),
+        ],
+      });
+
+      const repair = repairInstalledStates({
+        repoRoot: REPO_ROOT,
+        homeDir,
+        projectRoot,
+        targets: ['cursor'],
+      });
+      const stateAfterRepair = readInstallState(fixture.installStatePath);
+      const doctor = buildDoctorReport({
+        repoRoot: REPO_ROOT,
+        homeDir,
+        projectRoot,
+        targets: ['cursor'],
+      });
+
+      assert.strictEqual(repair.results[0].status, 'ok');
+      assert.strictEqual(repair.results[0].stateRefreshed, true);
+      assert.strictEqual(stateAfterRepair.source.repoVersion, '1.0.0');
+      assert.strictEqual(stateAfterRepair.source.manifestVersion, CURRENT_MANIFEST_VERSION);
+      assert.ok(doctor.results[0].issues.some(issue => issue.code === 'repo-version-mismatch'));
     } finally {
       cleanup(homeDir);
       cleanup(projectRoot);
@@ -1454,6 +1509,140 @@ function runTests() {
       assert.strictEqual(report.results.length, 1);
       assert.strictEqual(report.results[0].status, 'warning');
       assert.ok(report.results[0].issues.some(issue => issue.code === 'drifted-managed-files'));
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
+  if (test('doctor reproduces install-time link rewrites for managed copy files', () => {
+    const homeDir = createTempDir('install-lifecycle-home-');
+    const projectRoot = createTempDir('install-lifecycle-project-');
+
+    try {
+      const targetRoot = path.join(projectRoot, '.agents');
+      const statePath = path.join(targetRoot, 'ecc-install-state.json');
+      const operations = ['code-review.md', 'testing.md'].map(fileName => ({
+        kind: 'copy-file',
+        moduleId: 'rules-core',
+        sourcePath: path.join(REPO_ROOT, 'rules', 'common', fileName),
+        sourceRelativePath: path.join('rules', 'common', fileName),
+        destinationPath: path.join(targetRoot, 'rules', `common-${fileName}`),
+        strategy: 'flatten-copy',
+        ownership: 'managed',
+        scaffoldOnly: false,
+      }));
+      const state = createInstallState({
+        adapter: { id: 'antigravity-project', target: 'antigravity', kind: 'project' },
+        targetRoot,
+        installStatePath: statePath,
+        request: {
+          profile: null,
+          modules: [],
+          legacyLanguages: ['typescript'],
+          legacyMode: true,
+        },
+        resolution: {
+          selectedModules: ['rules-core'],
+          skippedModules: [],
+        },
+        operations,
+        source: {
+          repoVersion: CURRENT_PACKAGE_VERSION,
+          repoCommit: 'abc123',
+          manifestVersion: CURRENT_MANIFEST_VERSION,
+        },
+      });
+      applyInstallPlan({
+        mode: 'legacy',
+        target: 'antigravity',
+        adapter: { id: 'antigravity-project', target: 'antigravity', kind: 'project' },
+        targetRoot,
+        installRoot: targetRoot,
+        installStatePath: statePath,
+        operations,
+        warnings: [],
+        statePreview: state,
+      });
+
+      const report = buildDoctorReport({
+        repoRoot: REPO_ROOT,
+        homeDir,
+        projectRoot,
+        targets: ['antigravity'],
+      });
+      assert.ok(!report.results[0].issues.some(issue => issue.code === 'drifted-managed-files'));
+
+      fs.writeFileSync(operations[0].destinationPath, 'customer edit\n');
+      const driftedReport = buildDoctorReport({
+        repoRoot: REPO_ROOT,
+        homeDir,
+        projectRoot,
+        targets: ['antigravity'],
+      });
+      assert.ok(driftedReport.results[0].issues.some(issue => issue.code === 'drifted-managed-files'));
+
+      const repair = repairInstalledStates({
+        repoRoot: REPO_ROOT,
+        homeDir,
+        projectRoot,
+        targets: ['antigravity'],
+      });
+      assert.strictEqual(repair.results[0].status, 'repaired');
+      assert.ok(
+        fs.readFileSync(operations[0].destinationPath, 'utf8').includes('(common-testing.md)')
+      );
+      const repairedState = readInstallState(statePath);
+      assert.match(repairedState.operations[0].contentSha256, /^[a-f0-9]{64}$/);
+      const repairedReport = buildDoctorReport({
+        repoRoot: REPO_ROOT,
+        homeDir,
+        projectRoot,
+        targets: ['antigravity'],
+      });
+      assert.ok(!repairedReport.results[0].issues.some(issue => issue.code === 'drifted-managed-files'));
+    } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
+  if (test('doctor trusts a recorded installed digest before comparing a newer source tree', () => {
+    const homeDir = createTempDir('install-lifecycle-home-');
+    const projectRoot = createTempDir('install-lifecycle-project-');
+
+    try {
+      const targetRoot = path.join(projectRoot, '.cursor');
+      const destinationPath = path.join(targetRoot, 'rules', 'coding-style.md');
+      const installedContent = 'installed from an older verified release\n';
+      fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+      fs.writeFileSync(destinationPath, installedContent);
+      const contentSha256 = crypto.createHash('sha256').update(installedContent).digest('hex');
+      const installStatePath = path.join(targetRoot, 'ecc-install-state.json');
+
+      writeState(installStatePath, createCursorStateOptions(projectRoot, {
+        operations: [managedOperation('copy-file', destinationPath, {
+          sourceRelativePath: path.join('rules', 'common', 'coding-style.md'),
+          contentSha256,
+        })],
+      }));
+
+      const report = buildDoctorReport({
+        repoRoot: REPO_ROOT,
+        homeDir,
+        projectRoot,
+        targets: ['cursor'],
+      });
+      assert.ok(!report.results[0].issues.some(issue => issue.code === 'drifted-managed-files'));
+
+      fs.writeFileSync(destinationPath, 'customer edit\n');
+      const drifted = buildDoctorReport({
+        repoRoot: REPO_ROOT,
+        homeDir,
+        projectRoot,
+        targets: ['cursor'],
+      });
+      assert.ok(drifted.results[0].issues.some(issue => issue.code === 'drifted-managed-files'));
     } finally {
       cleanup(homeDir);
       cleanup(projectRoot);
