@@ -68,15 +68,27 @@ function readJsonObject(filePath, label) {
   return parsed;
 }
 
-function stateWithContentDigests(state) {
+function stateWithContentDigests(state, plan) {
   return {
     ...state,
     operations: (state.operations || []).map(operation => {
-      if (
-        !operation.destinationPath
-        || !fs.existsSync(operation.destinationPath)
-        || !fs.statSync(operation.destinationPath).isFile()
-      ) {
+      if (!operation.destinationPath) {
+        return { ...operation };
+      }
+      if (plan) {
+        assertSafeInstallOperation(plan, operation);
+        assertSafeClaudeSkillOperation(plan, operation);
+      }
+      let destinationStat;
+      try {
+        destinationStat = fs.lstatSync(operation.destinationPath);
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          return { ...operation };
+        }
+        throw error;
+      }
+      if (!destinationStat.isFile() || destinationStat.isSymbolicLink()) {
         return { ...operation };
       }
       return {
@@ -310,98 +322,116 @@ function applyInstallPlan(plan, dependencies = {}) {
     persistInstallState(plan.installStatePath, migration.bridgeState);
   }
 
-  for (const operation of appliedPlan.operations) {
-    assertSafeInstallOperation(appliedPlan, operation);
-    assertSafeClaudeSkillOperation(appliedPlan, operation);
-    fs.mkdirSync(path.dirname(operation.destinationPath), { recursive: true });
-    // Recheck directories that were absent during the first validation. This
-    // narrows the symlink-swap window around mkdirSync, but path checks cannot
-    // eliminate a later TOCTOU race before the file write.
-    assertSafeInstallOperation(appliedPlan, operation);
-    assertSafeClaudeSkillOperation(appliedPlan, operation);
-    if (typeof beforeOperationWrite === 'function') {
-      beforeOperationWrite({ plan: appliedPlan, operation });
-    }
-
-    if (operation.kind === 'merge-json') {
-      const payload = cloneJsonValue(operation.mergePayload);
-      if (payload === undefined) {
-        throw new Error(`Missing merge payload for ${operation.destinationPath}`);
+  let finalState;
+  try {
+    for (const operation of appliedPlan.operations) {
+      assertSafeInstallOperation(appliedPlan, operation);
+      assertSafeClaudeSkillOperation(appliedPlan, operation);
+      fs.mkdirSync(path.dirname(operation.destinationPath), { recursive: true });
+      // Recheck directories that were absent during the first validation. This
+      // narrows the symlink-swap window around mkdirSync, but path checks cannot
+      // eliminate a later TOCTOU race before the file write.
+      assertSafeInstallOperation(appliedPlan, operation);
+      assertSafeClaudeSkillOperation(appliedPlan, operation);
+      if (typeof beforeOperationWrite === 'function') {
+        beforeOperationWrite({ plan: appliedPlan, operation });
       }
 
-      const filteredPayload = (
-        isMcpConfigPath(operation.destinationPath) && disabledServers.length > 0
-      )
-        ? filterMcpConfig(payload, disabledServers).config
-        : payload;
+      if (operation.kind === 'merge-json') {
+        const payload = cloneJsonValue(operation.mergePayload);
+        if (payload === undefined) {
+          throw new Error(`Missing merge payload for ${operation.destinationPath}`);
+        }
 
-      const currentValue = fs.existsSync(operation.destinationPath)
-        ? readJsonObject(operation.destinationPath, 'existing JSON config')
-        : {};
-      const mergedValue = deepMergeJson(currentValue, filteredPayload);
-      fs.writeFileSync(operation.destinationPath, formatJson(mergedValue), 'utf8');
-      continue;
-    }
+        const filteredPayload = (
+          isMcpConfigPath(operation.destinationPath) && disabledServers.length > 0
+        )
+          ? filterMcpConfig(payload, disabledServers).config
+          : payload;
 
-    if (operation.kind === 'copy-file' && isMcpConfigPath(operation.destinationPath) && disabledServers.length > 0) {
-      const sourceConfig = readJsonObject(operation.sourcePath, 'MCP config');
-      const filteredConfig = filterMcpConfig(sourceConfig, disabledServers).config;
-      fs.writeFileSync(operation.destinationPath, formatJson(filteredConfig), 'utf8');
-      continue;
-    }
+        const currentValue = fs.existsSync(operation.destinationPath)
+          ? readJsonObject(operation.destinationPath, 'existing JSON config')
+          : {};
+        const mergedValue = deepMergeJson(currentValue, filteredPayload);
+        fs.writeFileSync(operation.destinationPath, formatJson(mergedValue), 'utf8');
+        continue;
+      }
 
-    // Declared transforms are part of the install contract and always apply.
-    // Markdown link rewriting is additive when the plan has a usable index.
-    const needsLinkRewrite = Boolean(
-      linkIndex
-      && operation.sourceRelativePath
-      && isMarkdownPath(operation.destinationPath)
-    );
-    if (operation.kind === 'copy-file' && (operation.contentTransform || needsLinkRewrite)) {
-      const transformed = transformInstallContent(
-        operation,
-        fs.readFileSync(operation.sourcePath, 'utf8')
+      if (operation.kind === 'copy-file' && isMcpConfigPath(operation.destinationPath) && disabledServers.length > 0) {
+        const sourceConfig = readJsonObject(operation.sourcePath, 'MCP config');
+        const filteredConfig = filterMcpConfig(sourceConfig, disabledServers).config;
+        fs.writeFileSync(operation.destinationPath, formatJson(filteredConfig), 'utf8');
+        continue;
+      }
+
+      // Declared transforms are part of the install contract and always apply.
+      // Markdown link rewriting is additive when the plan has a usable index.
+      const needsLinkRewrite = Boolean(
+        linkIndex
+        && operation.sourceRelativePath
+        && isMarkdownPath(operation.destinationPath)
       );
-      const installedContent = needsLinkRewrite
-        ? rewriteRelativeLinks(transformed, {
-          sourceRel: operation.sourceRelativePath,
-          index: linkIndex,
-        })
-        : transformed;
-      fs.writeFileSync(operation.destinationPath, installedContent, 'utf8');
-      continue;
+      if (operation.kind === 'copy-file' && (operation.contentTransform || needsLinkRewrite)) {
+        const transformed = transformInstallContent(
+          operation,
+          fs.readFileSync(operation.sourcePath, 'utf8')
+        );
+        const installedContent = needsLinkRewrite
+          ? rewriteRelativeLinks(transformed, {
+            sourceRel: operation.sourceRelativePath,
+            index: linkIndex,
+          })
+          : transformed;
+        fs.writeFileSync(operation.destinationPath, installedContent, 'utf8');
+        continue;
+      }
+
+      fs.copyFileSync(operation.sourcePath, operation.destinationPath);
     }
 
-    fs.copyFileSync(operation.sourcePath, operation.destinationPath);
-  }
-
-  if (resolvedClaudeHooksPlan) {
-    assertSafeInstallOperation(appliedPlan, resolvedClaudeHooksPlan.hooksOperation);
-    fs.mkdirSync(path.dirname(resolvedClaudeHooksPlan.hooksDestinationPath), { recursive: true });
-    assertSafeInstallOperation(appliedPlan, resolvedClaudeHooksPlan.hooksOperation);
-    if (typeof beforeOperationWrite === 'function') {
-      beforeOperationWrite({ plan: appliedPlan, operation: resolvedClaudeHooksPlan.hooksOperation });
+    if (resolvedClaudeHooksPlan) {
+      assertSafeInstallOperation(appliedPlan, resolvedClaudeHooksPlan.hooksOperation);
+      fs.mkdirSync(path.dirname(resolvedClaudeHooksPlan.hooksDestinationPath), { recursive: true });
+      assertSafeInstallOperation(appliedPlan, resolvedClaudeHooksPlan.hooksOperation);
+      if (typeof beforeOperationWrite === 'function') {
+        beforeOperationWrite({ plan: appliedPlan, operation: resolvedClaudeHooksPlan.hooksOperation });
+      }
+      fs.writeFileSync(
+        resolvedClaudeHooksPlan.hooksDestinationPath,
+        JSON.stringify(resolvedClaudeHooksPlan.resolvedHooksConfig, null, 2) + '\n',
+        'utf8'
+      );
     }
-    fs.writeFileSync(
-      resolvedClaudeHooksPlan.hooksDestinationPath,
-      JSON.stringify(resolvedClaudeHooksPlan.resolvedHooksConfig, null, 2) + '\n',
-      'utf8'
-    );
-  }
 
-  if (hasLegacyMigration) {
-    removeLegacyClaudeSkillFiles(migration, plan.targetRoot);
-  }
+    if (hasLegacyMigration) {
+      removeLegacyClaudeSkillFiles(migration, plan.targetRoot);
+    }
 
-  if (shouldSetClaudeCommitAttributionPreference(appliedPlan)) {
-    writeClaudeCommitAttributionPreference(path.join(plan.targetRoot, 'settings.json'));
-  }
+    if (shouldSetClaudeCommitAttributionPreference(appliedPlan)) {
+      writeClaudeCommitAttributionPreference(path.join(plan.targetRoot, 'settings.json'));
+    }
 
-  const finalState = stateWithContentDigests(migration.finalState);
-  if (typeof beforeInstallStateWrite === 'function') {
-    beforeInstallStateWrite({ plan: appliedPlan, state: finalState });
+    finalState = stateWithContentDigests(migration.finalState, appliedPlan);
+    if (typeof beforeInstallStateWrite === 'function') {
+      beforeInstallStateWrite({ plan: appliedPlan, state: finalState });
+    }
+    persistInstallState(plan.installStatePath, finalState);
+  } catch (error) {
+    if (migration.requiresBridgeState) {
+      try {
+        // The bridge was committed before any writes. Refresh it with hashes of
+        // files that now exist so uninstall can remove only bytes this attempt
+        // actually installed while preserving user changes.
+        persistInstallState(
+          plan.installStatePath,
+          stateWithContentDigests(migration.bridgeState, appliedPlan)
+        );
+      } catch (checkpointError) {
+        error.message += ` Install-state checkpoint also failed: ${checkpointError.message}`;
+      }
+    }
+    throw error;
   }
-  persistInstallState(plan.installStatePath, finalState);
   let antigravityMigrationWarnings = [];
   try {
     const antigravityMigration = cleanupLegacyAntigravityInstall(appliedPlan);

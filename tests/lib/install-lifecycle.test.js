@@ -2101,14 +2101,18 @@ function runTests() {
       canonicalDestinationPath = fs.realpathSync(destinationPath);
       writeCursorState(projectRoot, {
         operations: [
-          managedOperation('copy-file', destinationPath, { strategy: 'copy-file' }),
+          managedOperation('copy-file', destinationPath, {
+            strategy: 'copy-file',
+            contentSha256: '0'.repeat(64),
+          }),
         ],
       });
 
       fs.openSync = function openSyncWithLateParentSwap(filePath, flags, mode) {
-        const isDestinationWrite = path.resolve(filePath) === canonicalDestinationPath
+        const writeFlags = fs.constants.O_WRONLY | fs.constants.O_RDWR;
+        const isDestinationWrite = path.resolve(String(filePath)) === canonicalDestinationPath
           && typeof flags === 'number'
-          && (flags & fs.constants.O_WRONLY) === fs.constants.O_WRONLY;
+          && (flags & writeFlags) !== 0;
         if (!insertedSymlink && isDestinationWrite) {
           fs.renameSync(destinationParent, backupParent);
           fs.symlinkSync(

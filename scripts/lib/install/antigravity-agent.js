@@ -1,7 +1,5 @@
 'use strict';
 
-const yaml = require('js-yaml');
-
 const TOOL_NAMES = Object.freeze({
   Read: 'view_file',
   Write: 'write_to_file',
@@ -25,7 +23,10 @@ function splitFrontmatter(source, label) {
     throw new Error(`Cannot adapt Antigravity agent ${label}: missing YAML frontmatter`);
   }
 
-  const frontmatter = yaml.load(match[1]);
+  // Keep YAML loading behind the transform boundary. Public help commands load
+  // the installer graph without executing a transform, including in hermetic
+  // packed-artifact checks where runtime dependencies are intentionally absent.
+  const frontmatter = require('js-yaml').load(match[1]);
   if (!frontmatter || typeof frontmatter !== 'object' || Array.isArray(frontmatter)) {
     throw new Error(`Cannot adapt Antigravity agent ${label}: frontmatter must be an object`);
   }
@@ -56,7 +57,7 @@ function adaptAntigravityAgent(source, label = '<unknown>') {
       ? MODEL_NAMES[frontmatter.model]
       : frontmatter.model;
   }
-  const serialized = yaml
+  const serialized = require('js-yaml')
     .dump(adapted, { lineWidth: -1, noRefs: true })
     .trimEnd();
   return `---\n${serialized}\n---\n${body}`;
