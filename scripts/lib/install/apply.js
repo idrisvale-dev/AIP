@@ -58,7 +58,9 @@ function readJsonObject(filePath, label) {
   try {
     parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch (error) {
-    throw new Error(`Failed to parse ${label} at ${filePath}: ${error.message}`);
+    const wrappedError = new Error(`Failed to parse ${label} at ${filePath}: ${error.message}`);
+    wrappedError.code = error.code;
+    throw wrappedError;
   }
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -68,6 +70,45 @@ function readJsonObject(filePath, label) {
   return parsed;
 }
 
+function readOptionalJsonObject(filePath, label) {
+  try {
+    return readJsonObject(filePath, label);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return {};
+    }
+    throw error;
+  }
+}
+
+function readInstalledFileNoFollow(plan, operation) {
+  assertSafeInstallOperation(plan, operation);
+  assertSafeClaudeSkillOperation(plan, operation);
+  const flags = fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0);
+  let descriptor;
+  try {
+    descriptor = fs.openSync(operation.destinationPath, flags);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+
+  try {
+    // Revalidate the full path after opening. The descriptor pins the file so
+    // the digest and metadata refer to the same object.
+    assertSafeInstallOperation(plan, operation);
+    assertSafeClaudeSkillOperation(plan, operation);
+    if (!fs.fstatSync(descriptor).isFile()) {
+      return null;
+    }
+    return fs.readFileSync(descriptor);
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
 function stateWithContentDigests(state, plan) {
   return {
     ...state,
@@ -75,26 +116,14 @@ function stateWithContentDigests(state, plan) {
       if (!operation.destinationPath) {
         return { ...operation };
       }
-      if (plan) {
-        assertSafeInstallOperation(plan, operation);
-        assertSafeClaudeSkillOperation(plan, operation);
-      }
-      let destinationStat;
-      try {
-        destinationStat = fs.lstatSync(operation.destinationPath);
-      } catch (error) {
-        if (error.code === 'ENOENT') {
-          return { ...operation };
-        }
-        throw error;
-      }
-      if (!destinationStat.isFile() || destinationStat.isSymbolicLink()) {
+      const installedContent = readInstalledFileNoFollow(plan, operation);
+      if (installedContent === null) {
         return { ...operation };
       }
       return {
         ...operation,
         contentSha256: crypto.createHash('sha256')
-          .update(fs.readFileSync(operation.destinationPath))
+          .update(installedContent)
           .digest('hex'),
       };
     }),
@@ -349,9 +378,10 @@ function applyInstallPlan(plan, dependencies = {}) {
           ? filterMcpConfig(payload, disabledServers).config
           : payload;
 
-        const currentValue = fs.existsSync(operation.destinationPath)
-          ? readJsonObject(operation.destinationPath, 'existing JSON config')
-          : {};
+        const currentValue = readOptionalJsonObject(
+          operation.destinationPath,
+          'existing JSON config'
+        );
         const mergedValue = deepMergeJson(currentValue, filteredPayload);
         fs.writeFileSync(operation.destinationPath, formatJson(mergedValue), 'utf8');
         continue;

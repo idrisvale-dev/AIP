@@ -181,13 +181,27 @@ function managedOperation(kind, destinationPath, overrides = {}) {
   if (
     kind === 'copy-file'
     && !Object.prototype.hasOwnProperty.call(overrides, 'contentSha256')
-    && fs.existsSync(destinationPath)
-    && fs.lstatSync(destinationPath).isFile()
-    && !fs.lstatSync(destinationPath).isSymbolicLink()
   ) {
-    operation.contentSha256 = crypto.createHash('sha256')
-      .update(fs.readFileSync(destinationPath))
-      .digest('hex');
+    let descriptor;
+    try {
+      descriptor = fs.openSync(
+        destinationPath,
+        fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0)
+      );
+      if (fs.fstatSync(descriptor).isFile()) {
+        operation.contentSha256 = crypto.createHash('sha256')
+          .update(fs.readFileSync(descriptor))
+          .digest('hex');
+      }
+    } catch (error) {
+      if (!['ENOENT', 'ELOOP'].includes(error.code)) {
+        throw error;
+      }
+    } finally {
+      if (descriptor !== undefined) {
+        fs.closeSync(descriptor);
+      }
+    }
   }
   return operation;
 }
