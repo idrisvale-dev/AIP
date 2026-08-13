@@ -208,9 +208,6 @@ if [[ "$MODE" == "apply" ]]; then
       --previous-hooks-path "$previous_hooks_path" \
       --installed-hooks-path "${ECC_GLOBAL_HOOKS_DIR:-$CODEX_HOME/git-hooks}"
   )"
-  record_managed_path "$CONFIG_FILE"
-  record_managed_path "$AGENTS_FILE"
-
   rollback_legacy_sync() {
     local exit_status="${1:-1}"
     trap - ERR INT TERM
@@ -223,6 +220,9 @@ if [[ "$MODE" == "apply" ]]; then
   trap 'rollback_legacy_sync $?' ERR
   trap 'rollback_legacy_sync 130' INT
   trap 'rollback_legacy_sync 143' TERM
+
+  record_managed_path "$CONFIG_FILE"
+  record_managed_path "$AGENTS_FILE"
 fi
 
 ECC_BEGIN_MARKER="<!-- BEGIN ECC -->"

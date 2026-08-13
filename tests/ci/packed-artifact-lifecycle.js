@@ -419,7 +419,18 @@ function runLifecycle(options) {
       ],
     };
   } finally {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
+    try {
+      fs.rmSync(tempRoot, {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 100,
+      });
+    } catch (cleanupError) {
+      process.stderr.write(
+        `Could not remove lifecycle temp root ${tempRoot}: ${cleanupError.message}\n`
+      );
+    }
   }
 }
 

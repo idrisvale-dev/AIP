@@ -125,6 +125,16 @@ test('public CLI invocations use npm exec instead of internal package paths', ()
   assert.ok(!unixInvocation.args.some(argument => argument.includes('node_modules')));
 });
 
+test('lifecycle cleanup retries Windows file locks without masking results', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, 'packed-artifact-lifecycle.js'),
+    'utf8'
+  );
+  assert.match(source, /maxRetries:\s*10/);
+  assert.match(source, /retryDelay:\s*100/);
+  assert.match(source, /Could not remove lifecycle temp root/);
+});
+
 console.log(`\nPassed: ${passed}`);
 console.log(`Failed: ${failed}`);
 process.exit(failed > 0 ? 1 : 0);

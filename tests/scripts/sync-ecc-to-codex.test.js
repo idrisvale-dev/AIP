@@ -119,6 +119,11 @@ function runTests() {
     assert.match(source, /^set -Eeuo pipefail$/m);
     assert.ok(source.includes("trap 'rollback_legacy_sync $?' ERR"));
     assert.ok(source.includes('node "$LEGACY_STATE_HELPER" rollback --state "$LEGACY_STATE_PATH"'));
+    assert.ok(
+      source.indexOf("trap 'rollback_legacy_sync $?' ERR")
+        < source.indexOf('record_managed_path "$CONFIG_FILE"'),
+      'rollback trap must be active before the first ownership record'
+    );
   })) passed++; else failed++;
 
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
