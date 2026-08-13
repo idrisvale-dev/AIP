@@ -14,8 +14,87 @@ function getStatePath(codexHome) {
   return path.join(codexHome, 'ecc', 'legacy-sync-state.json');
 }
 
-function digestFile(filePath) {
-  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+function openRegularFileNoFollow(filePath, writable = false) {
+  const noFollow = fs.constants.O_NOFOLLOW || 0;
+  const flags = (writable ? fs.constants.O_RDWR : fs.constants.O_RDONLY) | noFollow;
+  let descriptor;
+  try {
+    descriptor = fs.openSync(filePath, flags);
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    if (error.code === 'ELOOP') {
+      throw new Error(`Refusing to manage non-regular legacy sync path: ${filePath}`);
+    }
+    throw error;
+  }
+  const stat = fs.fstatSync(descriptor);
+  if (!stat.isFile()) {
+    fs.closeSync(descriptor);
+    throw new Error(`Refusing to manage non-regular legacy sync path: ${filePath}`);
+  }
+  return { descriptor, stat };
+}
+
+function readRegularFileNoFollow(filePath, encoding = null) {
+  const opened = openRegularFileNoFollow(filePath);
+  if (!opened) return null;
+  try {
+    return {
+      content: fs.readFileSync(opened.descriptor, encoding || undefined),
+      mode: opened.stat.mode & 0o777,
+    };
+  } finally {
+    fs.closeSync(opened.descriptor);
+  }
+}
+
+function replaceOpenedRegularFile(opened, content, mode = null) {
+  const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
+  fs.ftruncateSync(opened.descriptor, 0);
+  fs.writeSync(opened.descriptor, buffer, 0, buffer.length, 0);
+  if (mode) fs.fchmodSync(opened.descriptor, mode);
+  fs.fsyncSync(opened.descriptor);
+}
+
+function createRegularFileNoFollow(filePath, content, mode = 0o600) {
+  const noFollow = fs.constants.O_NOFOLLOW || 0;
+  const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | noFollow;
+  const descriptor = fs.openSync(filePath, flags, mode);
+  try {
+    const stat = fs.fstatSync(descriptor);
+    if (!stat.isFile()) {
+      throw new Error(`Refusing to create non-regular legacy sync path: ${filePath}`);
+    }
+    fs.writeFileSync(descriptor, content);
+    fs.fchmodSync(descriptor, mode);
+    fs.fsyncSync(descriptor);
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
+function removeOpenedRegularFile(filePath, opened) {
+  const quarantineDir = fs.mkdtempSync(path.join(path.dirname(filePath), '.ecc-remove-'));
+  const quarantinePath = path.join(quarantineDir, path.basename(filePath));
+  fs.renameSync(filePath, quarantinePath);
+  const quarantined = openRegularFileNoFollow(quarantinePath);
+  const openedStat = fs.fstatSync(opened.descriptor, { bigint: true });
+  const quarantinedStat = fs.fstatSync(quarantined.descriptor, { bigint: true });
+  fs.closeSync(quarantined.descriptor);
+  if (quarantinedStat.dev !== openedStat.dev || quarantinedStat.ino !== openedStat.ino) {
+    try {
+      fs.linkSync(quarantinePath, filePath);
+      fs.unlinkSync(quarantinePath);
+      fs.rmdirSync(quarantineDir);
+    } catch (_restoreError) {
+      throw new Error(
+        `Legacy sync path changed before removal; preserved replacement at ${quarantinePath}`
+      );
+    }
+    throw new Error(`Legacy sync path changed before removal: ${filePath}`);
+  }
+  fs.unlinkSync(quarantinePath);
+  fs.rmdirSync(quarantineDir);
 }
 
 function atomicWriteJson(filePath, value) {
@@ -26,7 +105,18 @@ function atomicWriteJson(filePath, value) {
 }
 
 function readState(statePath) {
-  const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+  const snapshot = readRegularFileNoFollow(statePath, 'utf8');
+  if (!snapshot) throw new Error(`Legacy Codex sync state not found at ${statePath}`);
+  return parseState(snapshot.content, statePath);
+}
+
+function readStateIfPresent(statePath) {
+  const snapshot = readRegularFileNoFollow(statePath, 'utf8');
+  return snapshot ? parseState(snapshot.content, statePath) : null;
+}
+
+function parseState(content, statePath) {
+  const state = JSON.parse(content);
   if (state.schema !== SCHEMA || !Array.isArray(state.paths)) {
     throw new Error(`Invalid legacy Codex sync state at ${statePath}`);
   }
@@ -68,30 +158,14 @@ function getTrustedRoot(state, filePath) {
 }
 
 function snapshotLegacyPath(filePath) {
-  let previousContentBase64 = null;
-  let previousMode = null;
-  let previousType = 'missing';
-  try {
-    const stat = fs.lstatSync(filePath);
-    if (stat.isFile()) {
-      previousType = 'file';
-      previousContentBase64 = fs.readFileSync(filePath).toString('base64');
-      previousMode = stat.mode & 0o777;
-    } else {
-      previousType = stat.isSymbolicLink() ? 'symlink' : 'other';
-    }
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-  }
-  if (previousType === 'symlink' || previousType === 'other') {
-    throw new Error(`Refusing to manage non-regular legacy sync path: ${filePath}`);
-  }
+  const snapshot = readRegularFileNoFollow(filePath);
+  const previousType = snapshot ? 'file' : 'missing';
   return {
     path: filePath,
     installedSha256: null,
     previousType,
-    previousContentBase64,
-    previousMode,
+    previousContentBase64: snapshot ? snapshot.content.toString('base64') : null,
+    previousMode: snapshot ? snapshot.mode : null,
   };
 }
 
@@ -102,17 +176,15 @@ function assertInstalledStateUnmodified(state) {
     if (!trustedRoot || hasUnsafeManagedAncestor(filePath, trustedRoot)) {
       throw new Error(`Refusing to reuse unsafe legacy Codex ownership path: ${filePath}`);
     }
-    let stat = null;
-    try {
-      stat = fs.lstatSync(filePath);
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
-    }
+    const snapshot = readRegularFileNoFollow(filePath);
     if (!entry.installedSha256) {
-      if (stat) throw new Error(`Refusing to replace modified legacy Codex artifact: ${filePath}`);
+      if (snapshot) throw new Error(`Refusing to replace modified legacy Codex artifact: ${filePath}`);
       continue;
     }
-    if (!stat || !stat.isFile() || digestFile(filePath) !== entry.installedSha256) {
+    const digest = snapshot
+      ? crypto.createHash('sha256').update(snapshot.content).digest('hex')
+      : null;
+    if (digest !== entry.installedSha256) {
       throw new Error(`Refusing to replace modified legacy Codex artifact: ${filePath}`);
     }
   }
@@ -124,7 +196,7 @@ function beginLegacySyncState(options) {
   const configPath = path.join(codexHome, 'config.toml');
   const agentsPath = path.join(codexHome, 'AGENTS.md');
   const installedHooksPath = options.installedHooksPath ? path.resolve(options.installedHooksPath) : null;
-  const priorState = fs.existsSync(statePath) ? readState(statePath) : null;
+  const priorState = readStateIfPresent(statePath);
   if (priorState && priorState.status !== 'installed') {
     throw new Error(`Legacy Codex sync state requires recovery before reinstall: ${statePath}`);
   }
@@ -161,15 +233,8 @@ function beginLegacySyncState(options) {
 
   for (const [key, filePath] of [['config', configPath], ['agents', agentsPath]]) {
     if (priorState) break;
-    if (fs.existsSync(filePath)) {
-      const stat = fs.lstatSync(filePath);
-      if (!stat.isFile()) {
-        throw new Error(`Refusing to snapshot non-regular legacy sync path: ${filePath}`);
-      }
-      state.before[key] = fs.readFileSync(filePath, 'utf8');
-    } else {
-      state.before[key] = null;
-    }
+    const snapshot = readRegularFileNoFollow(filePath, 'utf8');
+    state.before[key] = snapshot ? snapshot.content : null;
   }
   atomicWriteJson(statePath, state);
   return statePath;
@@ -210,31 +275,38 @@ function rollbackLegacyCodexSync(options) {
       retainedPaths.push(filePath);
       continue;
     }
-    let currentStat = null;
+    let opened = null;
     try {
-      currentStat = fs.lstatSync(filePath);
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
-    }
-    if (currentStat && !currentStat.isFile() && !currentStat.isSymbolicLink()) {
+      opened = openRegularFileNoFollow(filePath, true);
+    } catch (_error) {
       retainedPaths.push(filePath);
       continue;
     }
     if (entry.previousType === 'file' && typeof entry.previousContentBase64 === 'string') {
-      if (currentStat && currentStat.isSymbolicLink()) {
-        retainedPaths.push(filePath);
-        continue;
-      }
+      const previousContent = Buffer.from(entry.previousContentBase64, 'base64');
+      const previousMode = entry.previousMode || 0o600;
       fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
-      fs.writeFileSync(filePath, Buffer.from(entry.previousContentBase64, 'base64'), {
-        mode: entry.previousMode || 0o600,
-      });
-      if (entry.previousMode) fs.chmodSync(filePath, entry.previousMode);
+      if (opened) {
+        try {
+          replaceOpenedRegularFile(opened, previousContent, previousMode);
+        } finally {
+          fs.closeSync(opened.descriptor);
+        }
+      } else {
+        createRegularFileNoFollow(filePath, previousContent, previousMode);
+      }
       restoredPaths.push(filePath);
     } else if (entry.previousType === 'missing' || entry.previousType === undefined) {
-      if (currentStat) fs.rmSync(filePath, { force: true });
+      if (opened) {
+        try {
+          removeOpenedRegularFile(filePath, opened);
+        } finally {
+          fs.closeSync(opened.descriptor);
+        }
+      }
       restoredPaths.push(filePath);
     } else {
+      if (opened) fs.closeSync(opened.descriptor);
       retainedPaths.push(filePath);
     }
   }
@@ -272,15 +344,21 @@ function finalizeLegacySyncState(options) {
   delete state.rollbackPaths;
   delete state.rollbackPreviousHooksPath;
   delete state.previousInstalledState;
-  state.paths = state.paths.map(entry => ({
-    ...entry,
-    installedSha256: getTrustedRoot(state, path.resolve(entry.path))
-      && !hasUnsafeManagedAncestor(entry.path, getTrustedRoot(state, path.resolve(entry.path)))
-      && fs.existsSync(entry.path)
-      && fs.lstatSync(entry.path).isFile()
-      ? digestFile(entry.path)
-      : null,
-  }));
+  state.paths = state.paths.map(entry => {
+    const trustedRoot = getTrustedRoot(state, path.resolve(entry.path));
+    let installedSha256 = null;
+    if (trustedRoot && !hasUnsafeManagedAncestor(entry.path, trustedRoot)) {
+      try {
+        const snapshot = readRegularFileNoFollow(entry.path);
+        installedSha256 = snapshot
+          ? crypto.createHash('sha256').update(snapshot.content).digest('hex')
+          : null;
+      } catch (_error) {
+        installedSha256 = null;
+      }
+    }
+    return { ...entry, installedSha256 };
+  });
   atomicWriteJson(options.statePath, state);
   return state;
 }
@@ -374,21 +452,24 @@ function uninstallLegacyCodexSync(options = {}) {
   const plannedRemovals = [];
   const removedPaths = [];
   const agentsPath = path.join(codexHome, 'AGENTS.md');
-  const state = fs.existsSync(statePath) ? readState(statePath) : null;
+  const state = readStateIfPresent(statePath);
 
   if (!state) {
-    if (fs.existsSync(agentsPath)) {
-      const agentsStat = fs.lstatSync(agentsPath);
-      if (!agentsStat.isFile()) {
-        retainedPaths.push(agentsPath);
-      } else {
-        const content = fs.readFileSync(agentsPath, 'utf8');
+    let openedAgents = null;
+    try {
+      openedAgents = openRegularFileNoFollow(agentsPath, !dryRun);
+      if (openedAgents) {
+        const content = fs.readFileSync(openedAgents.descriptor, 'utf8');
         const stripped = stripMarkerBlock(content);
         if (stripped !== content) {
           plannedRemovals.push(`${agentsPath}#ecc-marker-block`);
-          if (!dryRun) fs.writeFileSync(agentsPath, stripped, 'utf8');
+          if (!dryRun) replaceOpenedRegularFile(openedAgents, stripped, openedAgents.stat.mode & 0o777);
         }
       }
+    } catch (_error) {
+      retainedPaths.push(agentsPath);
+    } finally {
+      if (openedAgents) fs.closeSync(openedAgents.descriptor);
     }
     retainedPaths.push(...listLegacyCandidates(codexHome));
     return {
@@ -414,29 +495,41 @@ function uninstallLegacyCodexSync(options = {}) {
       retainedPaths.push(filePath);
       continue;
     }
-    if (!fs.existsSync(filePath)) continue;
-    const currentStat = fs.lstatSync(filePath);
-    const matches = entry.installedSha256 && currentStat.isFile()
-      ? digestFile(filePath) === entry.installedSha256
+    let opened = null;
+    try {
+      opened = openRegularFileNoFollow(filePath, !dryRun);
+    } catch (_error) {
+      retainedPaths.push(filePath);
+      continue;
+    }
+    if (!opened) continue;
+    const currentContent = fs.readFileSync(opened.descriptor);
+    const matches = entry.installedSha256
+      ? crypto.createHash('sha256').update(currentContent).digest('hex') === entry.installedSha256
       : false;
     if (!matches) {
+      fs.closeSync(opened.descriptor);
       retainedPaths.push(filePath);
       continue;
     }
     plannedRemovals.push(filePath);
     if (!dryRun) {
       if (entry.previousType === 'file' && typeof entry.previousContentBase64 === 'string') {
-        fs.writeFileSync(filePath, Buffer.from(entry.previousContentBase64, 'base64'), {
-          mode: entry.previousMode || 0o600,
-        });
+        replaceOpenedRegularFile(
+          opened,
+          Buffer.from(entry.previousContentBase64, 'base64'),
+          entry.previousMode || 0o600
+        );
       } else if (entry.previousType === 'missing' || entry.previousType === undefined) {
-        fs.rmSync(filePath, { force: true });
+        removeOpenedRegularFile(filePath, opened);
       } else {
+        fs.closeSync(opened.descriptor);
         retainedPaths.push(filePath);
         continue;
       }
       removedPaths.push(filePath);
     }
+    fs.closeSync(opened.descriptor);
   }
 
   if (state.installedHooksPath) {

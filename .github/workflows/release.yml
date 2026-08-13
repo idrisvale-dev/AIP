@@ -16,7 +16,6 @@ jobs:
       dist_tag: ${{ steps.npm_publish_state.outputs.dist_tag }}
       package_file: ${{ steps.pack.outputs.package_file }}
       package_sha256: ${{ steps.pack.outputs.package_sha256 }}
-      release_commit: ${{ steps.source.outputs.release_commit }}
 
     steps:
       - name: Checkout
@@ -24,12 +23,6 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Pin release source
-        id: source
-        run: |
-          RELEASE_COMMIT=$(git rev-parse HEAD)
-          echo "release_commit=${RELEASE_COMMIT}" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -121,6 +114,7 @@ jobs:
           path: |
             release_body.md
             ${{ steps.pack.outputs.package_file }}
+            tests/ci/packed-artifact-lifecycle.js
           if-no-files-found: error
 
       - name: Verify existing npm artifact matches candidate
@@ -145,12 +139,6 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout lifecycle test
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: ${{ needs.verify.outputs.release_commit }}
-          persist-credentials: false
-
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -166,7 +154,7 @@ jobs:
         env:
           ECC_RELEASE_PACKAGE: release-artifacts/${{ needs.verify.outputs.package_file }}
           ECC_RELEASE_SHA256: ${{ needs.verify.outputs.package_sha256 }}
-        run: node tests/ci/packed-artifact-lifecycle.js
+        run: node release-artifacts/tests/ci/packed-artifact-lifecycle.js
 
   publish:
     name: Publish Release

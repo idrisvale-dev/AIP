@@ -58,8 +58,6 @@ for (const workflowPath of workflowPaths) {
     assert.match(source, /package_sha256:\s*\$\{\{ steps\.pack\.outputs\.package_sha256 \}\}/);
     assert.match(source, /createHash\(['"]sha256['"]\)/);
     assert.match(source, /package_sha256=['"]? \+ digest/);
-    assert.match(source, /release_commit:\s*\$\{\{ steps\.source\.outputs\.release_commit \}\}/);
-    assert.match(source, /release_commit=\$\{RELEASE_COMMIT\}/);
   });
 
   test(`${workflowPath} invokes only test files present in the release source`, () => {
@@ -80,6 +78,7 @@ for (const workflowPath of workflowPaths) {
     assert.ok(uploadIndex > packIndex, 'artifact upload must happen after pack and hash');
     assert.match(verify, /name:\s*ecc-release-artifacts/);
     assert.match(verify, /\$\{\{ steps\.pack\.outputs\.package_file \}\}/);
+    assert.match(verify, /tests\/ci\/packed-artifact-lifecycle\.js/);
   });
 
   test(`${workflowPath} fails retries when npm already has different bytes`, () => {
@@ -102,8 +101,8 @@ for (const workflowPath of workflowPaths) {
     assert.match(lifecycle, /name:\s*ecc-release-artifacts/);
     assert.match(lifecycle, /ECC_RELEASE_PACKAGE:\s*release-artifacts\/\$\{\{ needs\.verify\.outputs\.package_file \}\}/);
     assert.match(lifecycle, /ECC_RELEASE_SHA256:\s*\$\{\{ needs\.verify\.outputs\.package_sha256 \}\}/);
-    assert.match(lifecycle, /node tests\/ci\/packed-artifact-lifecycle\.js/);
-    assert.match(lifecycle, /ref:\s*\$\{\{ needs\.verify\.outputs\.release_commit \}\}/);
+    assert.match(lifecycle, /node release-artifacts\/tests\/ci\/packed-artifact-lifecycle\.js/);
+    assert.doesNotMatch(lifecycle, /actions\/checkout@/);
     assert.doesNotMatch(lifecycle, /\bsecrets\s*:/, 'lifecycle job must not receive secrets');
     assert.doesNotMatch(lifecycle, /\$\{\{\s*secrets\./, 'lifecycle job must not reference secrets');
   });
