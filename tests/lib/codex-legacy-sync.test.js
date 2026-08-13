@@ -194,7 +194,8 @@ function runTests() {
     const createdPath = path.join(codexHome, 'prompts', 'ecc-review.md');
     fs.mkdirSync(path.dirname(existingPath), { recursive: true });
     fs.writeFileSync(existingPath, '# User prompt\n', { mode: 0o640 });
-    const originalMode = fs.statSync(existingPath).mode & 0o777;
+    const existingDescriptor = fs.openSync(existingPath, 'r+');
+    const originalMode = fs.fstatSync(existingDescriptor).mode & 0o777;
 
     const statePath = beginLegacySyncState({
       codexHome,
@@ -204,7 +205,9 @@ function runTests() {
     });
     recordLegacySyncPath({ statePath, filePath: existingPath });
     recordLegacySyncPath({ statePath, filePath: createdPath });
-    fs.writeFileSync(existingPath, '# Partial ECC write\n');
+    const partialContent = Buffer.from('# Partial ECC write\n');
+    fs.ftruncateSync(existingDescriptor, 0);
+    fs.writeSync(existingDescriptor, partialContent, 0, partialContent.length, 0);
     fs.writeFileSync(createdPath, '# Partial new file\n');
 
     let hooksValue = path.join(codexHome, 'git-hooks');
@@ -215,8 +218,11 @@ function runTests() {
     });
 
     assert.strictEqual(result.status, 'rolled-back');
-    assert.strictEqual(fs.readFileSync(existingPath, 'utf8'), '# User prompt\n');
-    assert.strictEqual(fs.statSync(existingPath).mode & 0o777, originalMode);
+    const restoredContent = Buffer.alloc(Buffer.byteLength('# User prompt\n'));
+    fs.readSync(existingDescriptor, restoredContent, 0, restoredContent.length, 0);
+    assert.strictEqual(restoredContent.toString('utf8'), '# User prompt\n');
+    assert.strictEqual(fs.fstatSync(existingDescriptor).mode & 0o777, originalMode);
+    fs.closeSync(existingDescriptor);
     assert.ok(!fs.existsSync(createdPath));
     assert.strictEqual(hooksValue, '/tmp/user-hooks');
     assert.ok(!fs.existsSync(statePath));
