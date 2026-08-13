@@ -10,7 +10,10 @@ const {
 
 function readFlag(args, name) {
   const index = args.indexOf(name);
-  return index === -1 ? null : args[index + 1] || null;
+  if (index === -1) return null;
+  const value = args[index + 1];
+  if (!value || value.startsWith('--')) return null;
+  return value;
 }
 
 function main(argv = process.argv.slice(2)) {
@@ -51,11 +54,13 @@ function main(argv = process.argv.slice(2)) {
   throw new Error('Usage: legacy-sync-state.js <begin|record|finalize|rollback> [options]');
 }
 
-try {
-  main();
-} catch (error) {
-  process.stderr.write(`[ecc-sync] ERROR: ${error.message}\n`);
-  process.exit(1);
-}
-
 module.exports = { main, readFlag };
+
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    process.stderr.write(`[ecc-sync] ERROR: ${error.message}\n`);
+    process.exit(1);
+  }
+}

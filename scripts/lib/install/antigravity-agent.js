@@ -1,5 +1,7 @@
 'use strict';
 
+const yaml = require('js-yaml');
+
 const TOOL_NAMES = Object.freeze({
   Read: 'view_file',
   Write: 'write_to_file',
@@ -23,7 +25,7 @@ function splitFrontmatter(source, label) {
     throw new Error(`Cannot adapt Antigravity agent ${label}: missing YAML frontmatter`);
   }
 
-  const frontmatter = require('js-yaml').load(match[1]);
+  const frontmatter = yaml.load(match[1]);
   if (!frontmatter || typeof frontmatter !== 'object' || Array.isArray(frontmatter)) {
     throw new Error(`Cannot adapt Antigravity agent ${label}: frontmatter must be an object`);
   }
@@ -45,12 +47,16 @@ function normalizeToolNames(value) {
 function adaptAntigravityAgent(source, label = '<unknown>') {
   const { frontmatter, body } = splitFrontmatter(source, label);
   const { color: _claudeColor, ...supportedFrontmatter } = frontmatter;
-  const adapted = {
-    ...supportedFrontmatter,
-    tools: normalizeToolNames(frontmatter.tools),
-    model: MODEL_NAMES[frontmatter.model] || frontmatter.model,
-  };
-  const serialized = require('js-yaml')
+  const adapted = { ...supportedFrontmatter };
+  if (Object.hasOwn(frontmatter, 'tools')) {
+    adapted.tools = normalizeToolNames(frontmatter.tools);
+  }
+  if (Object.hasOwn(frontmatter, 'model')) {
+    adapted.model = Object.hasOwn(MODEL_NAMES, frontmatter.model)
+      ? MODEL_NAMES[frontmatter.model]
+      : frontmatter.model;
+  }
+  const serialized = yaml
     .dump(adapted, { lineWidth: -1, noRefs: true })
     .trimEnd();
   return `---\n${serialized}\n---\n${body}`;

@@ -402,13 +402,20 @@ function applyInstallPlan(plan, dependencies = {}) {
     beforeInstallStateWrite({ plan: appliedPlan, state: finalState });
   }
   persistInstallState(plan.installStatePath, finalState);
-  const antigravityMigration = cleanupLegacyAntigravityInstall(appliedPlan);
-  const antigravityMigrationWarnings = antigravityMigration.detected && !antigravityMigration.complete
-    ? [
+  let antigravityMigrationWarnings = [];
+  try {
+    const antigravityMigration = cleanupLegacyAntigravityInstall(appliedPlan);
+    if (antigravityMigration.detected && !antigravityMigration.complete) {
+      antigravityMigrationWarnings = [
         'Legacy Antigravity migration is incomplete. ECC preserved modified, unverifiable, or unmanaged content under .agent; review and move anything you want to keep, then rerun the Antigravity install.',
         ...(Array.isArray(antigravityMigration.warnings) ? antigravityMigration.warnings : []),
-      ]
-    : [];
+      ];
+    }
+  } catch (error) {
+    antigravityMigrationWarnings = [
+      `Legacy Antigravity cleanup did not finish: ${error.message}. Content under .agent was preserved; remove it manually or rerun the Antigravity install.`,
+    ];
+  }
 
   return {
     ...plan,

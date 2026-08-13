@@ -7,17 +7,15 @@ const {
 } = require('./state-store');
 
 function openFailure(error) {
+  const warning = {
+    code: 'projection-open-failed',
+    message: error.message,
+  };
   return {
     status: 'warning',
     warningCount: 1,
-    warnings: [{
-      code: 'projection-open-failed',
-      message: error.message,
-    }],
-    warning: {
-      code: 'projection-open-failed',
-      message: error.message,
-    },
+    warnings: [warning],
+    warning,
   };
 }
 
@@ -29,7 +27,7 @@ async function withStateStore(options, operation) {
       dbPath: options.dbPath,
       homeDir: options.homeDir,
     });
-    return operation(store);
+    return await operation(store);
   } catch (error) {
     return openFailure(error);
   } finally {

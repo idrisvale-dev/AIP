@@ -50,7 +50,10 @@ module.exports = createInstallTargetAdapter({
         .flatMap(sourceRelativePath => {
           const normalizedSourcePath = normalizeRelativePath(sourceRelativePath);
 
-          if (normalizedSourcePath === 'rules') {
+          if (
+            normalizedSourcePath === 'rules'
+            || normalizedSourcePath.startsWith('rules/')
+          ) {
             return createFlatRuleOperations({
               moduleId: module.id,
               repoRoot,
