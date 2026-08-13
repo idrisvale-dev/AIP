@@ -17,6 +17,16 @@ function getStatePath(codexHome) {
 function openRegularFileNoFollow(filePath, writable = false) {
   const noFollow = fs.constants.O_NOFOLLOW || 0;
   const flags = (writable ? fs.constants.O_RDWR : fs.constants.O_RDONLY) | noFollow;
+  let pathStat;
+  try {
+    pathStat = fs.lstatSync(filePath, { bigint: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  }
+  if (!pathStat.isFile() || pathStat.isSymbolicLink()) {
+    throw new Error(`Refusing to manage non-regular legacy sync path: ${filePath}`);
+  }
   let descriptor;
   try {
     descriptor = fs.openSync(filePath, flags);
@@ -27,12 +37,30 @@ function openRegularFileNoFollow(filePath, writable = false) {
     }
     throw error;
   }
-  const stat = fs.fstatSync(descriptor);
-  if (!stat.isFile()) {
+  const descriptorStat = fs.fstatSync(descriptor, { bigint: true });
+  let finalPathStat;
+  try {
+    finalPathStat = fs.lstatSync(filePath, { bigint: true });
+  } catch (error) {
+    fs.closeSync(descriptor);
+    if (error.code === 'ENOENT') {
+      throw new Error(`Legacy sync path changed while opening: ${filePath}`);
+    }
+    throw error;
+  }
+  if (
+    !descriptorStat.isFile()
+    || !finalPathStat.isFile()
+    || finalPathStat.isSymbolicLink()
+    || descriptorStat.dev !== pathStat.dev
+    || descriptorStat.ino !== pathStat.ino
+    || descriptorStat.dev !== finalPathStat.dev
+    || descriptorStat.ino !== finalPathStat.ino
+  ) {
     fs.closeSync(descriptor);
     throw new Error(`Refusing to manage non-regular legacy sync path: ${filePath}`);
   }
-  return { descriptor, stat };
+  return { descriptor, stat: fs.fstatSync(descriptor) };
 }
 
 function readRegularFileNoFollow(filePath, encoding = null) {

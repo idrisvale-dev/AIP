@@ -194,6 +194,7 @@ function runTests() {
     const createdPath = path.join(codexHome, 'prompts', 'ecc-review.md');
     fs.mkdirSync(path.dirname(existingPath), { recursive: true });
     fs.writeFileSync(existingPath, '# User prompt\n', { mode: 0o640 });
+    const originalMode = fs.statSync(existingPath).mode & 0o777;
 
     const statePath = beginLegacySyncState({
       codexHome,
@@ -215,7 +216,7 @@ function runTests() {
 
     assert.strictEqual(result.status, 'rolled-back');
     assert.strictEqual(fs.readFileSync(existingPath, 'utf8'), '# User prompt\n');
-    assert.strictEqual(fs.statSync(existingPath).mode & 0o777, 0o640);
+    assert.strictEqual(fs.statSync(existingPath).mode & 0o777, originalMode);
     assert.ok(!fs.existsSync(createdPath));
     assert.strictEqual(hooksValue, '/tmp/user-hooks');
     assert.ok(!fs.existsSync(statePath));
