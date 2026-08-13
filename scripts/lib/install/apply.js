@@ -96,13 +96,22 @@ function readInstalledFileNoFollow(plan, operation) {
   }
 
   try {
+    const openedStat = fs.fstatSync(descriptor, { bigint: true });
+    const finalPathStat = fs.lstatSync(operation.destinationPath, { bigint: true });
+    if (finalPathStat.isSymbolicLink() || !finalPathStat.isFile()) {
+      return null;
+    }
+    const identityMatches = openedStat.ino === finalPathStat.ino
+      && (!openedStat.dev || !finalPathStat.dev || openedStat.dev === finalPathStat.dev);
+    if (!openedStat.isFile() || !identityMatches) {
+      throw new Error(
+        `Refusing to hash changed install destination: ${operation.destinationPath}`
+      );
+    }
     // Revalidate the full path after opening. The descriptor pins the file so
     // the digest and metadata refer to the same object.
     assertSafeInstallOperation(plan, operation);
     assertSafeClaudeSkillOperation(plan, operation);
-    if (!fs.fstatSync(descriptor).isFile()) {
-      return null;
-    }
     return fs.readFileSync(descriptor);
   } finally {
     fs.closeSync(descriptor);
@@ -457,7 +466,10 @@ function applyInstallPlan(plan, dependencies = {}) {
           stateWithContentDigests(migration.bridgeState, appliedPlan)
         );
       } catch (checkpointError) {
-        error.message += ` Install-state checkpoint also failed: ${checkpointError.message}`;
+        throw new Error(
+          `${error.message} Install-state checkpoint also failed: ${checkpointError.message}`,
+          { cause: error }
+        );
       }
     }
     throw error;

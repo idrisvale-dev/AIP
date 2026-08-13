@@ -188,7 +188,16 @@ function managedOperation(kind, destinationPath, overrides = {}) {
         destinationPath,
         fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0)
       );
-      if (fs.fstatSync(descriptor).isFile()) {
+      const openedStat = fs.fstatSync(descriptor, { bigint: true });
+      const finalPathStat = fs.lstatSync(destinationPath, { bigint: true });
+      const identityMatches = openedStat.ino === finalPathStat.ino
+        && (!openedStat.dev || !finalPathStat.dev || openedStat.dev === finalPathStat.dev);
+      if (
+        openedStat.isFile()
+        && finalPathStat.isFile()
+        && !finalPathStat.isSymbolicLink()
+        && identityMatches
+      ) {
         operation.contentSha256 = crypto.createHash('sha256')
           .update(fs.readFileSync(descriptor))
           .digest('hex');
@@ -211,6 +220,25 @@ function runTests() {
 
   let passed = 0;
   let failed = 0;
+
+  if (test('managed-operation digest never follows a final symlink', () => {
+    const tempDir = createTempDir('install-lifecycle-symlink-digest-');
+    const victimPath = path.join(tempDir, 'victim.md');
+    const symlinkPath = path.join(tempDir, 'managed.md');
+    try {
+      fs.writeFileSync(victimPath, 'user content\n');
+      try {
+        fs.symlinkSync(victimPath, symlinkPath, 'file');
+      } catch {
+        console.log('    (file symlink unsupported on this platform; skipping)');
+        return;
+      }
+      const operation = managedOperation('copy-file', symlinkPath);
+      assert.strictEqual(operation.contentSha256, undefined);
+    } finally {
+      cleanup(tempDir);
+    }
+  })) passed++; else failed++;
 
   if (test('normalizes default targets and dedupes adapter aliases', () => {
     const defaultTargets = normalizeTargets();
