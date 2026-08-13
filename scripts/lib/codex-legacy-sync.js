@@ -110,6 +110,8 @@ function removeOpenedRegularFile(filePath, opened) {
   const openedStat = fs.fstatSync(opened.descriptor, { bigint: true });
   const quarantinedStat = fs.fstatSync(quarantined.descriptor, { bigint: true });
   fs.closeSync(quarantined.descriptor);
+  fs.closeSync(opened.descriptor);
+  opened.descriptor = null;
   if (quarantinedStat.dev !== openedStat.dev || quarantinedStat.ino !== openedStat.ino) {
     try {
       fs.linkSync(quarantinePath, filePath);
@@ -319,7 +321,7 @@ function rollbackLegacyCodexSync(options) {
         try {
           replaceOpenedRegularFile(opened, previousContent, previousMode);
         } finally {
-          fs.closeSync(opened.descriptor);
+          if (opened.descriptor !== null) fs.closeSync(opened.descriptor);
         }
       } else {
         createRegularFileNoFollow(filePath, previousContent, previousMode);
@@ -330,12 +332,12 @@ function rollbackLegacyCodexSync(options) {
         try {
           removeOpenedRegularFile(filePath, opened);
         } finally {
-          fs.closeSync(opened.descriptor);
+          if (opened.descriptor !== null) fs.closeSync(opened.descriptor);
         }
       }
       restoredPaths.push(filePath);
     } else {
-      if (opened) fs.closeSync(opened.descriptor);
+      if (opened && opened.descriptor !== null) fs.closeSync(opened.descriptor);
       retainedPaths.push(filePath);
     }
   }
@@ -537,7 +539,7 @@ function uninstallLegacyCodexSync(options = {}) {
       ? crypto.createHash('sha256').update(currentContent).digest('hex') === entry.installedSha256
       : false;
     if (!matches) {
-      fs.closeSync(opened.descriptor);
+      if (opened.descriptor !== null) fs.closeSync(opened.descriptor);
       retainedPaths.push(filePath);
       continue;
     }
@@ -552,13 +554,13 @@ function uninstallLegacyCodexSync(options = {}) {
       } else if (entry.previousType === 'missing' || entry.previousType === undefined) {
         removeOpenedRegularFile(filePath, opened);
       } else {
-        fs.closeSync(opened.descriptor);
+        if (opened.descriptor !== null) fs.closeSync(opened.descriptor);
         retainedPaths.push(filePath);
         continue;
       }
       removedPaths.push(filePath);
     }
-    fs.closeSync(opened.descriptor);
+    if (opened.descriptor !== null) fs.closeSync(opened.descriptor);
   }
 
   if (state.installedHooksPath) {
