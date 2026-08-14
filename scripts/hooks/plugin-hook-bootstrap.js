@@ -7,6 +7,7 @@ const { spawnSync } = require('child_process');
 const { ensureAgentDataHomeEnv } = require('../lib/agent-data-home');
 
 const SHELL_PROBE_TIMEOUT_MS = 2000;
+const STDOUT_PIPE_CAP_BYTES = 64 * 1024;
 
 function readStdinRaw() {
   try {
@@ -20,6 +21,18 @@ function writeStderr(stderr) {
   if (typeof stderr === 'string' && stderr.length > 0) {
     process.stderr.write(stderr);
   }
+}
+
+function withComparisonInput(result, comparisonInput) {
+  return { ...result, comparisonInput };
+}
+
+function isRawPassthrough(raw, stdout) {
+  if (!raw || !stdout) return false;
+  return (
+    stdout === raw ||
+    (Buffer.byteLength(stdout, 'utf8') === STDOUT_PIPE_CAP_BYTES && raw.startsWith(stdout))
+  );
 }
 
 function passthrough(result) {
@@ -39,11 +52,8 @@ function passthrough(result) {
     // ~64 KB Node.js pipe buffer and get truncated -- stdout is then exactly
     // 65536 bytes and a strict prefix of raw. So we also detect that
     // truncation sentinel.
-    const raw = typeof result?.__rawInput === 'string' ? result.__rawInput : '';
-    const STDOUT_PIPE_CAP = 64 * 1024;
-    const looksLikePassthrough =
-      (stdout.length === STDOUT_PIPE_CAP && raw.startsWith(stdout)) ||
-      (raw.length > 0 && stdout === raw);
+    const raw = typeof result?.comparisonInput === 'string' ? result.comparisonInput : '';
+    const looksLikePassthrough = isRawPassthrough(raw, stdout);
     if (looksLikePassthrough) {
       writeStderr(
         '[Hook] bootstrap: hook returned raw input as stdout; emitting empty to avoid transcript bloat\n'
@@ -179,11 +189,7 @@ function spawnNode(rootDir, relPath, raw, args) {
     timeout: 30000,
     windowsHide: true,
   });
-  // Tag result with the raw input so passthrough() can detect the
-  // "hook returned raw input as stdout" pattern and suppress it
-  // (the dominant source of session-transcript bloat).
-  result.__rawInput = raw;
-  return result;
+  return withComparisonInput(result, raw);
 }
 
 // spawnShell is not used by any hook in the shipped hooks.json configuration
@@ -228,8 +234,7 @@ function spawnShell(rootDir, relPath, raw, args) {
       timeout: 30000,
       windowsHide: true,
     });
-    bashResult.__rawInput = raw;
-    return bashResult;
+    return withComparisonInput(bashResult, raw);
   }
 
   const shellArgs = isPs
@@ -246,8 +251,7 @@ function spawnShell(rootDir, relPath, raw, args) {
     timeout: 30000,
     windowsHide: true,
   });
-  result.__rawInput = raw;
-  return result;
+  return withComparisonInput(result, raw);
 }
 
 function main() {
@@ -307,6 +311,8 @@ if (require.main === module || require.main === undefined) {
 }
 
 module.exports = {
+  isRawPassthrough,
   main,
   normalizePluginRootForPlatform,
+  withComparisonInput,
 };

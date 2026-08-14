@@ -25,24 +25,29 @@
  *   - #2239 / #2240 — fixed the same bug in bash-hook-dispatcher.js
  *   - #1575 — "token limit so fast" (symptom caused in part by this)
  *
- * Fixtures live under `/tmp/ecc-pr2380-fixtures/` (per reviewer feedback
- * on #2380 — keep temp fixture files out of the live scripts/hooks/ tree).
+ * Fixtures live under a unique os.tmpdir() directory (per reviewer feedback
+ * on #2380 — keep temp fixture files out of the live scripts/hooks/ tree and
+ * avoid collisions across parallel/cross-platform test runs).
  */
 
 'use strict';
 
 const assert = require('assert');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const bootstrap = path.join(repoRoot, 'scripts', 'hooks', 'plugin-hook-bootstrap.js');
-const FIXTURE_DIR = '/tmp/ecc-pr2380-fixtures';
+const { isRawPassthrough } = require(bootstrap);
+const FIXTURE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-pr2380-fixtures-'));
 
-function ensureFixtureDir() {
-  fs.mkdirSync(FIXTURE_DIR, { recursive: true });
+function cleanupFixtureDir() {
+  fs.rmSync(FIXTURE_DIR, { recursive: true, force: true });
 }
+
+process.once('exit', cleanupFixtureDir);
 
 function test(name, fn) {
   try {
@@ -58,6 +63,19 @@ function test(name, fn) {
 
 function runBootstrap(args, input, env) {
   return spawnSync('node', [bootstrap, ...args], {
+    input,
+    encoding: 'utf8',
+    cwd: repoRoot,
+    env: { ...process.env, ...(env || {}) },
+    timeout: 30000,
+    maxBuffer: 16 * 1024 * 1024,
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+}
+
+function runHookEntry(args, input, env) {
+  const loader = `const s=${JSON.stringify(bootstrap)};process.argv.splice(1,0,s);require(s)`;
+  return spawnSync(process.execPath, ['-e', loader, ...args], {
     input,
     encoding: 'utf8',
     cwd: repoRoot,
@@ -87,8 +105,6 @@ function realisticPostToolUseEditPayload() {
 }
 
 console.log('\nplugin-hook-bootstrap raw-echo (no bloat) tests:');
-
-ensureFixtureDir();
 
 let passed = 0;
 let failed = 0;
@@ -129,13 +145,13 @@ else failed++;
 if (
   test('fallthrough 3: silent hook does NOT echo raw input (the core bug)', () => {
     const payload = realisticPostToolUseEditPayload();
-    // A no-op node hook that reads stdin and exits silently. Lives in
-    // /tmp/ecc-pr2380-fixtures/ — NOT in the live scripts/hooks/ tree.
+    // A no-op node hook that reads stdin and exits silently. It lives in the
+    // unique temporary fixture root, not in the live scripts/hooks/ tree.
     const noopHookPath = path.join(FIXTURE_DIR, 'noop-hook-fixture.js');
     fs.writeFileSync(noopHookPath, "process.stdin.resume(); process.stdin.on('end', () => process.exit(0));");
     try {
-      const result = runBootstrap(['node', noopHookPath], payload, {
-        CLAUDE_PLUGIN_ROOT: repoRoot
+      const result = runBootstrap(['node', path.basename(noopHookPath)], payload, {
+        CLAUDE_PLUGIN_ROOT: FIXTURE_DIR
       });
       assert.strictEqual(result.status, 0);
       assert.strictEqual(result.stdout, '', 'silent hook must NOT echo raw input (was ' + result.stdout.length + ' bytes)');
@@ -181,8 +197,8 @@ if (
     );
     try {
       const payload = realisticPostToolUseEditPayload();
-      const result = runBootstrap(['node', fixturePath], payload, {
-        CLAUDE_PLUGIN_ROOT: repoRoot
+      const result = runBootstrap(['node', path.basename(fixturePath)], payload, {
+        CLAUDE_PLUGIN_ROOT: FIXTURE_DIR
       });
       assert.strictEqual(result.status, 0);
       assert.ok(result.stdout.length > 0, 'hook that produced output should have non-empty stdout');
@@ -211,12 +227,104 @@ if (
     );
     try {
       const payload = realisticPostToolUseEditPayload();
-      const result = runBootstrap(['node', fixturePath], payload, {
-        CLAUDE_PLUGIN_ROOT: repoRoot
+      const result = runBootstrap(['node', path.basename(fixturePath)], payload, {
+        CLAUDE_PLUGIN_ROOT: FIXTURE_DIR
       });
       assert.strictEqual(result.status, 0);
       assert.strictEqual(result.stdout, '', 'hook that returned raw input as stdout must be suppressed (was ' + result.stdout.length + ' bytes)');
       assert.match(result.stderr, /returned raw input as stdout/, 'stderr should explain the suppression');
+    } finally {
+      fs.unlinkSync(fixturePath);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('64 KiB passthrough sentinel is measured in UTF-8 bytes', () => {
+    const fixturePath = path.join(FIXTURE_DIR, 'multibyte-prefix-fixture.js');
+    fs.writeFileSync(
+      fixturePath,
+      "let d=''; process.stdin.setEncoding('utf8'); process.stdin.on('data', c => d += c); process.stdin.on('end', () => process.stdout.write(d.slice(0, 32768)));"
+    );
+    try {
+      const payload = `${'é'.repeat(32768)}tail`;
+      const result = runBootstrap(['node', path.basename(fixturePath)], payload, {
+        CLAUDE_PLUGIN_ROOT: FIXTURE_DIR
+      });
+      assert.strictEqual(Buffer.byteLength(payload.slice(0, 32768), 'utf8'), 64 * 1024);
+      assert.strictEqual(result.status, 0, result.stderr);
+      assert.strictEqual(result.stdout, '', 'a 64 KiB UTF-8 prefix of raw input must be suppressed');
+      assert.match(result.stderr, /returned raw input as stdout/);
+    } finally {
+      fs.unlinkSync(fixturePath);
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('byte boundary does not misclassify 64K multibyte characters', () => {
+    const byteBoundaryPrefix = 'é'.repeat(32768);
+    const characterBoundaryPrefix = 'é'.repeat(65536);
+
+    assert.strictEqual(Buffer.byteLength(byteBoundaryPrefix, 'utf8'), 64 * 1024);
+    assert.strictEqual(Buffer.byteLength(characterBoundaryPrefix, 'utf8'), 128 * 1024);
+    assert.strictEqual(isRawPassthrough(`${byteBoundaryPrefix}tail`, byteBoundaryPrefix), true);
+    assert.strictEqual(
+      isRawPassthrough(`${characterBoundaryPrefix}tail`, characterBoundaryPrefix),
+      false,
+      '64K JavaScript characters must not be treated as a 64 KiB byte boundary'
+    );
+  })
+)
+  passed++;
+else failed++;
+
+if (process.platform !== 'win32') {
+  if (
+    test('shell branch suppresses raw stdin echoed by the child', () => {
+      const fixturePath = path.join(FIXTURE_DIR, 'passthrough-fixture.sh');
+      fs.writeFileSync(fixturePath, 'cat\n');
+      try {
+        const payload = realisticPostToolUseEditPayload();
+        const result = runBootstrap(['shell', path.basename(fixturePath)], payload, {
+          CLAUDE_PLUGIN_ROOT: FIXTURE_DIR,
+          BASH: fs.existsSync('/bin/sh') ? '/bin/sh' : 'sh'
+        });
+        assert.strictEqual(result.status, 0, result.stderr);
+        assert.strictEqual(result.stdout, '', 'shell raw-input passthrough must be suppressed');
+        assert.match(result.stderr, /returned raw input as stdout/);
+      } finally {
+        fs.unlinkSync(fixturePath);
+      }
+    })
+  )
+    passed++;
+  else failed++;
+}
+
+if (
+  test('eval hook-entry preserves the original tool result when bootstrap stdout is empty', () => {
+    const fixturePath = path.join(FIXTURE_DIR, 'entry-silent-fixture.js');
+    fs.writeFileSync(fixturePath, "process.stdin.resume(); process.stdin.on('end', () => process.exit(0));");
+    try {
+      const payload = JSON.parse(realisticPostToolUseEditPayload());
+      const originalToolResult = structuredClone(payload.tool_response);
+      const result = runHookEntry(['node', path.basename(fixturePath)], JSON.stringify(payload), {
+        CLAUDE_PLUGIN_ROOT: FIXTURE_DIR
+      });
+      assert.strictEqual(result.status, 0, result.stderr);
+      assert.strictEqual(result.stdout, '', 'no-op hook entry must express no replacement result');
+
+      // Claude's hook-entry contract treats empty stdout as no hook override;
+      // the tool result already present in the event remains authoritative.
+      const effectiveToolResult = result.stdout === ''
+        ? payload.tool_response
+        : JSON.parse(result.stdout).tool_response;
+      assert.deepStrictEqual(effectiveToolResult, originalToolResult);
     } finally {
       fs.unlinkSync(fixturePath);
     }
@@ -237,8 +345,8 @@ if (
     );
     try {
       const payload = realisticPostToolUseEditPayload();
-      const result = runBootstrap(['node', fixturePath], payload, {
-        CLAUDE_PLUGIN_ROOT: repoRoot
+      const result = runBootstrap(['node', path.basename(fixturePath)], payload, {
+        CLAUDE_PLUGIN_ROOT: FIXTURE_DIR
       });
       assert.strictEqual(result.status, 0);
       // Should contain the hook's own output, not the raw input

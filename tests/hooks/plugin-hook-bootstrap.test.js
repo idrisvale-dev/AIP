@@ -11,7 +11,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'plugin-hook-bootstrap.js');
-const { normalizePluginRootForPlatform } = require(SCRIPT);
+const { normalizePluginRootForPlatform, withComparisonInput } = require(SCRIPT);
 
 function createTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'plugin-hook-bootstrap-'));
@@ -69,6 +69,16 @@ function runTests() {
     // tool_use's original result -- prevents session-transcript bloat.
     assert.strictEqual(result.stdout, '');
     assert.ok(result.stderr.includes('missing required args'));
+  })) passed++; else failed++;
+
+  if (test('wraps spawn results without mutating the original object', () => {
+    const original = Object.freeze({ status: 0, stdout: 'ok', stderr: '' });
+    const wrapped = withComparisonInput(original, 'raw-input');
+
+    assert.notStrictEqual(wrapped, original);
+    assert.deepStrictEqual(original, { status: 0, stdout: 'ok', stderr: '' });
+    assert.strictEqual(wrapped.comparisonInput, 'raw-input');
+    assert.strictEqual(wrapped.stdout, 'ok');
   })) passed++; else failed++;
 
   if (test('normalizes Windows Git Bash POSIX drive roots', () => {
@@ -306,16 +316,12 @@ process.exit(7);
   // Windows-only: PowerShell preference and .sh fallback behaviour.
   if (process.platform === 'win32') {
     if (test('shell mode selects PowerShell when BASH is unset on Windows', () => {
-      // Skip if no PowerShell is available.
       const psProbe = spawnSync('pwsh.exe', ['-NoProfile', '-NonInteractive', '-Command', 'exit 0'], { stdio: 'ignore', timeout: 5000 });
       const ps = psProbe.error
         ? spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'exit 0'], { stdio: 'ignore', timeout: 5000 }).error
           ? null : 'powershell.exe'
         : 'pwsh.exe';
-      if (!ps) {
-        console.log('    SKIP: no PowerShell found');
-        return;
-      }
+      assert.ok(ps, 'Windows shell-path coverage requires PowerShell');
 
       const root = createTempDir();
       try {
@@ -340,13 +346,33 @@ process.exit(7);
       }
     })) passed++; else failed++;
 
-    if (test('shell mode falls back to bash for .sh scripts when PowerShell is the resolved shell', () => {
-      // Skip if no bash is available (headless CI without Git for Windows).
-      const bashProbe = spawnSync('bash.exe', ['-c', ':'], { stdio: 'ignore', timeout: 5000 });
-      if (bashProbe.error) {
-        console.log('    SKIP: bash.exe not found');
-        return;
+    if (test('PowerShell branch suppresses raw stdin echoed by the child', () => {
+      const root = createTempDir();
+      try {
+        writeFile(root, path.join('scripts', 'passthrough.ps1'), [
+          '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
+          '$OutputEncoding = [System.Text.Encoding]::UTF8',
+          '$input_data = [Console]::In.ReadToEnd()',
+          '[Console]::Out.Write($input_data)',
+        ].join('\n'));
+
+        const result = run(['shell', path.join('scripts', 'passthrough.ps1')], {
+          root,
+          input: 'raw-input',
+          env: { BASH: '' },
+        });
+
+        assert.strictEqual(result.status, 0, result.stderr);
+        assert.strictEqual(result.stdout, '');
+        assert.ok(result.stderr.includes('returned raw input as stdout'));
+      } finally {
+        cleanup(root);
       }
+    })) passed++; else failed++;
+
+    if (test('shell mode falls back to bash for .sh scripts when PowerShell is the resolved shell', () => {
+      const bashProbe = spawnSync('bash.exe', ['-c', ':'], { stdio: 'ignore', timeout: 5000 });
+      assert.ok(!bashProbe.error && bashProbe.status === 0, 'Windows .sh fallback coverage requires bash.exe');
 
       const root = createTempDir();
       try {
@@ -365,6 +391,25 @@ process.exit(7);
 
         assert.strictEqual(result.status, 0, result.stderr);
         assert.strictEqual(result.stdout, 'sh:arg:payload');
+      } finally {
+        cleanup(root);
+      }
+    })) passed++; else failed++;
+
+    if (test('PowerShell .sh fallback branch suppresses raw stdin echoed by bash', () => {
+      const root = createTempDir();
+      try {
+        writeFile(root, path.join('scripts', 'passthrough.sh'), 'cat\n');
+
+        const result = run(['shell', path.join('scripts', 'passthrough.sh')], {
+          root,
+          input: 'raw-input',
+          env: { BASH: '' },
+        });
+
+        assert.strictEqual(result.status, 0, result.stderr);
+        assert.strictEqual(result.stdout, '');
+        assert.ok(result.stderr.includes('returned raw input as stdout'));
       } finally {
         cleanup(root);
       }
