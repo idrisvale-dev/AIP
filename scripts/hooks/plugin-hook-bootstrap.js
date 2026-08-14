@@ -18,9 +18,14 @@ function readStdinRaw() {
 }
 
 function writeStderr(stderr) {
-  if (typeof stderr === 'string' && stderr.length > 0) {
+  if ((typeof stderr === 'string' || Buffer.isBuffer(stderr)) && stderr.length > 0) {
     process.stderr.write(stderr);
   }
+}
+
+function toBuffer(value) {
+  if (Buffer.isBuffer(value)) return value;
+  return typeof value === 'string' ? Buffer.from(value, 'utf8') : Buffer.alloc(0);
 }
 
 function withComparisonInput(result, comparisonInput) {
@@ -28,16 +33,22 @@ function withComparisonInput(result, comparisonInput) {
 }
 
 function isRawPassthrough(raw, stdout) {
-  if (!raw || !stdout) return false;
+  const rawBytes = toBuffer(raw);
+  const stdoutBytes = toBuffer(stdout);
+  if (rawBytes.length === 0 || stdoutBytes.length === 0) return false;
   return (
-    stdout === raw ||
-    (Buffer.byteLength(stdout, 'utf8') === STDOUT_PIPE_CAP_BYTES && raw.startsWith(stdout))
+    stdoutBytes.equals(rawBytes) ||
+    (stdoutBytes.length === STDOUT_PIPE_CAP_BYTES &&
+      rawBytes.subarray(0, stdoutBytes.length).equals(stdoutBytes))
   );
 }
 
 function passthrough(result) {
-  const stdout = typeof result?.stdout === 'string' ? result.stdout : '';
-  if (stdout) {
+  const stdout =
+    typeof result?.stdout === 'string' || Buffer.isBuffer(result?.stdout)
+      ? result.stdout
+      : Buffer.alloc(0);
+  if (stdout.length > 0) {
     // Most ECC hook scripts follow a `run(rawInput) -> rawInput` passthrough
     // pattern: they do their work, then return the original input so the hook
     // chain's tool result is preserved. The harness then writes the verbatim
@@ -52,7 +63,7 @@ function passthrough(result) {
     // ~64 KB Node.js pipe buffer and get truncated -- stdout is then exactly
     // 65536 bytes and a strict prefix of raw. So we also detect that
     // truncation sentinel.
-    const raw = typeof result?.comparisonInput === 'string' ? result.comparisonInput : '';
+    const raw = result?.comparisonInput;
     const looksLikePassthrough = isRawPassthrough(raw, stdout);
     if (looksLikePassthrough) {
       writeStderr(
@@ -183,13 +194,12 @@ function spawnNode(rootDir, relPath, raw, args) {
   };
   const result = spawnSync(process.execPath, [resolveTarget(rootDir, relPath), ...args], {
     input: raw,
-    encoding: 'utf8',
     env: hookEnv,
     cwd: process.cwd(),
     timeout: 30000,
     windowsHide: true,
   });
-  return withComparisonInput(result, raw);
+  return withComparisonInput(result, Buffer.from(raw, 'utf8'));
 }
 
 // spawnShell is not used by any hook in the shipped hooks.json configuration
@@ -228,13 +238,12 @@ function spawnShell(rootDir, relPath, raw, args) {
     }
     const bashResult = spawnSync(bash, [scriptPath, ...args], {
       input: raw,
-      encoding: 'utf8',
       env: hookEnv,
       cwd: process.cwd(),
       timeout: 30000,
       windowsHide: true,
     });
-    return withComparisonInput(bashResult, raw);
+    return withComparisonInput(bashResult, Buffer.from(raw, 'utf8'));
   }
 
   const shellArgs = isPs
@@ -245,13 +254,12 @@ function spawnShell(rootDir, relPath, raw, args) {
 
   const result = spawnSync(shell, shellArgs, {
     input: raw,
-    encoding: 'utf8',
     env: hookEnv,
     cwd: process.cwd(),
     timeout: 30000,
     windowsHide: true,
   });
-  return withComparisonInput(result, raw);
+  return withComparisonInput(result, Buffer.from(raw, 'utf8'));
 }
 
 function main() {
@@ -265,7 +273,8 @@ function main() {
     writeStderr(
       '[Hook] bootstrap: missing required args (mode/relPath/rootDir); emitting empty stdout\n'
     );
-    process.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   let result;
@@ -276,11 +285,13 @@ function main() {
       result = spawnShell(rootDir, relPath, raw, args);
     } else {
       writeStderr(`[Hook] unknown bootstrap mode: ${mode}; emitting empty stdout\n`);
-      process.exit(0);
+      process.exitCode = 0;
+      return;
     }
   } catch (error) {
     writeStderr(`[Hook] bootstrap resolution failed: ${error.message}; emitting empty stdout\n`);
-    process.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   passthrough(result);
@@ -293,10 +304,11 @@ function main() {
         ? `terminated by signal ${result.signal}`
         : 'missing exit status';
     writeStderr(`[Hook] bootstrap execution failed: ${reason}\n`);
-    process.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
-  process.exit(Number.isInteger(result.status) ? result.status : 0);
+  process.exitCode = Number.isInteger(result.status) ? result.status : 0;
 }
 
 // Run when invoked as a hook entry. Production hooks load this via

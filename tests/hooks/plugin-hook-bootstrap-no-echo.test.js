@@ -283,6 +283,46 @@ if (
   passed++;
 else failed++;
 
+if (
+  test('64 KiB byte prefix split inside UTF-8 remains a raw passthrough', () => {
+    const raw = Buffer.from(`${'a'.repeat(65535)}étail`, 'utf8');
+    const cappedStdout = raw.subarray(0, 64 * 1024);
+
+    assert.strictEqual(cappedStdout.length, 64 * 1024);
+    assert.strictEqual(cappedStdout.at(-1), Buffer.from('é', 'utf8')[0]);
+    assert.strictEqual(
+      isRawPassthrough(raw, cappedStdout),
+      true,
+      'classification must compare bytes before UTF-8 decoding can insert U+FFFD'
+    );
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('spawn classification suppresses a 64 KiB prefix split inside UTF-8', () => {
+    const fixturePath = path.join(FIXTURE_DIR, 'split-byte-prefix-fixture.js');
+    fs.writeFileSync(
+      fixturePath,
+      "const chunks=[]; process.stdin.on('data', chunk => chunks.push(chunk)); process.stdin.on('end', () => process.stdout.write(Buffer.concat(chunks).subarray(0, 64 * 1024)));"
+    );
+    try {
+      const payload = `${'a'.repeat(65535)}étail`;
+      const result = runBootstrap(['node', path.basename(fixturePath)], payload, {
+        CLAUDE_PLUGIN_ROOT: FIXTURE_DIR
+      });
+      assert.strictEqual(result.status, 0, result.stderr);
+      assert.strictEqual(result.stdout, '', 'classification must occur before UTF-8 decoding');
+      assert.match(result.stderr, /returned raw input as stdout/);
+    } finally {
+      fs.unlinkSync(fixturePath);
+    }
+  })
+)
+  passed++;
+else failed++;
+
 if (process.platform !== 'win32') {
   if (
     test('shell branch suppresses raw stdin echoed by the child', () => {
@@ -360,5 +400,5 @@ if (
   passed++;
 else failed++;
 
-console.log('\n  ' + passed + ' passed, ' + failed + ' failed\n');
+console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
 process.exit(failed > 0 ? 1 : 0);
