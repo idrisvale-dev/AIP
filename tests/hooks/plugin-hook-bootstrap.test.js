@@ -60,6 +60,7 @@ function runTests() {
 
   let passed = 0;
   let failed = 0;
+  let skipped = 0;
 
   if (test('emits empty stdout and stderr warning when required bootstrap inputs are missing', () => {
     const result = run([], { input: '{"ok":true}' });
@@ -315,13 +316,17 @@ process.exit(7);
 
   // Windows-only: PowerShell preference and .sh fallback behaviour.
   if (process.platform === 'win32') {
-    if (test('shell mode selects PowerShell when BASH is unset on Windows', () => {
-      const psProbe = spawnSync('pwsh.exe', ['-NoProfile', '-NonInteractive', '-Command', 'exit 0'], { stdio: 'ignore', timeout: 5000 });
-      const ps = psProbe.error
-        ? spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'exit 0'], { stdio: 'ignore', timeout: 5000 }).error
-          ? null : 'powershell.exe'
-        : 'pwsh.exe';
-      assert.ok(ps, 'Windows shell-path coverage requires PowerShell');
+    const psProbe = spawnSync('pwsh.exe', ['-NoProfile', '-NonInteractive', '-Command', 'exit 0'], { stdio: 'ignore', timeout: 5000 });
+    const ps = psProbe.error
+      ? spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'exit 0'], { stdio: 'ignore', timeout: 5000 }).error
+        ? null : 'powershell.exe'
+      : 'pwsh.exe';
+
+    if (!ps) {
+      skipped += 5;
+      console.log('  SKIP 5 Windows shell-branch tests: PowerShell is unavailable');
+    } else {
+      if (test('shell mode selects PowerShell when BASH is unset on Windows', () => {
 
       const root = createTempDir();
       try {
@@ -344,9 +349,9 @@ process.exit(7);
       } finally {
         cleanup(root);
       }
-    })) passed++; else failed++;
+      })) passed++; else failed++;
 
-    if (test('PowerShell branch suppresses raw stdin echoed by the child', () => {
+      if (test('PowerShell branch suppresses raw stdin echoed by the child', () => {
       const root = createTempDir();
       try {
         writeFile(root, path.join('scripts', 'passthrough.ps1'), [
@@ -368,11 +373,13 @@ process.exit(7);
       } finally {
         cleanup(root);
       }
-    })) passed++; else failed++;
+      })) passed++; else failed++;
 
-    if (test('shell mode falls back to bash for .sh scripts when PowerShell is the resolved shell', () => {
       const bashProbe = spawnSync('bash.exe', ['-c', ':'], { stdio: 'ignore', timeout: 5000 });
-      assert.ok(!bashProbe.error && bashProbe.status === 0, 'Windows .sh fallback coverage requires bash.exe');
+      const bashAvailable = !bashProbe.error && bashProbe.status === 0;
+
+      if (bashAvailable) {
+        if (test('shell mode falls back to bash for .sh scripts when PowerShell is the resolved shell', () => {
 
       const root = createTempDir();
       try {
@@ -394,9 +401,9 @@ process.exit(7);
       } finally {
         cleanup(root);
       }
-    })) passed++; else failed++;
+        })) passed++; else failed++;
 
-    if (test('PowerShell .sh fallback branch suppresses raw stdin echoed by bash', () => {
+        if (test('PowerShell .sh fallback branch suppresses raw stdin echoed by bash', () => {
       const root = createTempDir();
       try {
         writeFile(root, path.join('scripts', 'passthrough.sh'), 'cat\n');
@@ -413,9 +420,13 @@ process.exit(7);
       } finally {
         cleanup(root);
       }
-    })) passed++; else failed++;
+        })) passed++; else failed++;
+      } else {
+        skipped += 2;
+        console.log('  SKIP 2 Windows .sh fallback tests: bash.exe is unavailable');
+      }
 
-    if (test('shell mode emits skip warning for .sh script when no bash found on Windows', () => {
+      if (test('shell mode emits skip warning for .sh script when no bash found on Windows', () => {
       const root = createTempDir();
       try {
         writeFile(root, path.join('scripts', 'hook.sh'), 'printf unreachable\n');
@@ -440,10 +451,14 @@ process.exit(7);
       } finally {
         cleanup(root);
       }
-    })) passed++; else failed++;
+      })) passed++; else failed++;
+    }
   }
 
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
+  if (skipped > 0) {
+    console.log(`Skipped: ${skipped}`);
+  }
   process.exit(failed > 0 ? 1 : 0);
 }
 
