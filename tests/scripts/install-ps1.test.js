@@ -91,19 +91,20 @@ function runTests() {
 
   if (!powerShellCommand) {
     console.log('  - skipped delegation test; PowerShell is not available in PATH');
-  } else if (test('delegates to the Node installer and preserves dry-run output', () => {
+  } else if (test('delegates to the Antigravity installer while preserving the project cwd', () => {
     const homeDir = createTempDir('install-ps1-home-');
     const projectDir = createTempDir('install-ps1-project-');
 
     try {
-      const result = run(powerShellCommand, ['--target', 'cursor', '--dry-run', 'typescript'], {
+      const result = run(powerShellCommand, ['--target', 'antigravity', '--dry-run', 'typescript'], {
         cwd: projectDir,
         homeDir,
       });
 
       assert.strictEqual(result.code, 0, result.stderr);
       assert.ok(result.stdout.includes('Dry-run install plan'));
-      assert.ok(!fs.existsSync(path.join(projectDir, '.cursor', 'hooks.json')));
+      assert.ok(result.stdout.includes(path.join(projectDir, '.agents')));
+      assert.ok(!fs.existsSync(path.join(projectDir, '.agents')));
     } finally {
       cleanup(homeDir);
       cleanup(projectDir);
