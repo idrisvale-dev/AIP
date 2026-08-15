@@ -43,6 +43,10 @@ test('guide states the temporary npm release boundary', () => {
     'Guide should not imply that native Antigravity support is already published'
   );
   assert.ok(
+    guide.includes('current source checkout of `main` for native `.agents` support'),
+    'Guide should direct users to the main source checkout until ECC 2.2.0 is published'
+  );
+  assert.ok(
     guide.includes('remove this release-status paragraph only after `ecc-universal@2.2.0` is published and registry readback succeeds'),
     'Guide should retain a removal condition for the temporary release warning'
   );
