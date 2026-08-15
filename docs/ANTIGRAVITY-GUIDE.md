@@ -8,10 +8,12 @@ skills, and custom agents into that directory.
 
 ```bash
 # Install the minimal profile
-./install.sh --profile minimal --target antigravity
+# Run this from your project root directory
+/path/to/ECC/install.sh --profile minimal --target antigravity
 
 # Compatibility syntax: common rules plus only these language packs
-./install.sh --target antigravity typescript python go
+# Run this from your project root directory
+/path/to/ECC/install.sh --target antigravity typescript python go
 ```
 
 Start a new Antigravity conversation after installing so the agent receives the
