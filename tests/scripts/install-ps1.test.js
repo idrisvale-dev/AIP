@@ -19,6 +19,11 @@ function cleanup(dirPath) {
   fs.rmSync(dirPath, { recursive: true, force: true });
 }
 
+function normalizePathForOutput(value) {
+  const normalized = String(value).replace(/\\/g, '/');
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+}
+
 function resolvePowerShellCommand() {
   const candidates = process.platform === 'win32'
     ? ['powershell.exe', 'pwsh.exe', 'pwsh']
@@ -103,7 +108,15 @@ function runTests() {
 
       assert.strictEqual(result.code, 0, result.stderr);
       assert.ok(result.stdout.includes('Dry-run install plan'));
-      assert.ok(result.stdout.includes(path.join(projectDir, '.agents')));
+      // PowerShell can expand a Windows temp root from its 8.3 form, while
+      // preserving the unique project directory leaf created by mkdtempSync.
+      const expectedProjectRoot = `/${path.basename(projectDir)}/.agents`;
+      assert.ok(
+        normalizePathForOutput(result.stdout).includes(
+          normalizePathForOutput(expectedProjectRoot)
+        ),
+        `dry-run output should target the project .agents directory:\n${result.stdout}`
+      );
       assert.ok(!fs.existsSync(path.join(projectDir, '.agents')));
     } finally {
       cleanup(homeDir);
