@@ -24,6 +24,18 @@ function normalizePathForOutput(value) {
   return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
 }
 
+function canonicalizePlannedPath(value) {
+  const resolved = path.resolve(String(value).trim());
+  const canonicalParent = fs.realpathSync.native(path.dirname(resolved));
+  return normalizePathForOutput(path.join(canonicalParent, path.basename(resolved)));
+}
+
+function extractInstallRoot(stdout) {
+  const match = String(stdout).match(/^Install root:\s*(.+?)\r?$/m);
+  assert.ok(match, `dry-run output should include an Install root field:\n${stdout}`);
+  return match[1];
+}
+
 function resolvePowerShellCommand() {
   const candidates = process.platform === 'win32'
     ? ['powershell.exe', 'pwsh.exe', 'pwsh']
@@ -94,6 +106,23 @@ function runTests() {
     assert.strictEqual(packageJson.bin['ecc-install'], 'scripts/install-apply.js');
   })) passed++; else failed++;
 
+  if (test('compares planned install roots by canonical path instead of leaf name', () => {
+    const fixtureRoot = createTempDir('install-ps1-paths-');
+    const expectedProject = path.join(fixtureRoot, 'expected', 'same-project');
+    const unrelatedProject = path.join(fixtureRoot, 'unrelated', 'same-project');
+
+    try {
+      fs.mkdirSync(expectedProject, { recursive: true });
+      fs.mkdirSync(unrelatedProject, { recursive: true });
+      assert.notStrictEqual(
+        canonicalizePlannedPath(path.join(expectedProject, '.agents')),
+        canonicalizePlannedPath(path.join(unrelatedProject, '.agents'))
+      );
+    } finally {
+      cleanup(fixtureRoot);
+    }
+  })) passed++; else failed++;
+
   if (!powerShellCommand) {
     console.log('  - skipped delegation test; PowerShell is not available in PATH');
   } else if (test('delegates to the Antigravity installer while preserving the project cwd', () => {
@@ -108,13 +137,9 @@ function runTests() {
 
       assert.strictEqual(result.code, 0, result.stderr);
       assert.ok(result.stdout.includes('Dry-run install plan'));
-      // PowerShell can expand a Windows temp root from its 8.3 form, while
-      // preserving the unique project directory leaf created by mkdtempSync.
-      const expectedProjectRoot = `/${path.basename(projectDir)}/.agents`;
-      assert.ok(
-        normalizePathForOutput(result.stdout).includes(
-          normalizePathForOutput(expectedProjectRoot)
-        ),
+      assert.strictEqual(
+        canonicalizePlannedPath(extractInstallRoot(result.stdout)),
+        canonicalizePlannedPath(path.join(projectDir, '.agents')),
         `dry-run output should target the project .agents directory:\n${result.stdout}`
       );
       assert.ok(!fs.existsSync(path.join(projectDir, '.agents')));
