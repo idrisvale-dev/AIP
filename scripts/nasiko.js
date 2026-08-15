@@ -4,10 +4,11 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawnSync } = require('child_process');
 const {
+  inspectInstalledNasiko,
   installNasiko,
   normalizePlatform,
+  uninstallNasiko,
   validateInstallDirectory,
 } = require('./lib/nasiko-release');
 
@@ -16,9 +17,10 @@ function helpText() {
 ECC Nasiko control-plane bridge
 
 Usage:
-  ecc nasiko status [--json]
+  ecc nasiko status [--install-dir <absolute-path>] [--json]
   ecc nasiko install --version v0.1.0 --yes [--install-dir <absolute-path>] [--json]
   ecc nasiko install --version v0.1.0 --dry-run [--install-dir <absolute-path>] [--json]
+  ecc nasiko uninstall --version v0.1.0 --yes [--install-dir <absolute-path>] [--json]
 
 The installer is opt-in, accepts only ECC-qualified pinned releases, downloads
 content-addressed OCI artifacts from registry.nasiko.dev, verifies SHA-256
@@ -26,7 +28,7 @@ digests before extraction, and never executes fetched shell or PowerShell code.
 `;
 }
 
-function parseInstallArguments(argumentsList) {
+function parseMutationArguments(argumentsList, command = 'install') {
   let options = { dryRun: false, installDir: undefined, json: false, version: undefined, yes: false };
   for (let index = 0; index < argumentsList.length; index += 1) {
     const argument = argumentsList[index];
@@ -45,10 +47,10 @@ function parseInstallArguments(argumentsList) {
     } else if (argument === '--json') {
       options = { ...options, json: true };
     } else {
-      throw new Error(`Unknown Nasiko install argument: ${argument}`);
+      throw new Error(`Unknown Nasiko ${command} argument: ${argument}`);
     }
   }
-  if (!options.version) throw new Error('Nasiko install requires --version v0.1.0.');
+  if (!options.version) throw new Error(`Nasiko ${command} requires --version v0.1.0.`);
   if (options.installDir) validateInstallDirectory(options.installDir);
   return options;
 }
@@ -63,9 +65,12 @@ function defaultExecutablePath() {
   return path.join(os.homedir(), '.local', 'bin', normalized.binaryName);
 }
 
-function resolveExecutable() {
+function resolveExecutable(options = {}) {
   const configured = process.env.ECC_NASIKO_CLI_EXECUTABLE;
-  const candidate = configured || defaultExecutablePath();
+  const normalized = normalizePlatform();
+  const candidate = options.installDir
+    ? path.join(validateInstallDirectory(options.installDir), normalized.binaryName)
+    : configured || defaultExecutablePath();
   if (!candidate) return null;
   if (!path.isAbsolute(candidate)) {
     throw new Error('ECC_NASIKO_CLI_EXECUTABLE must be an absolute path.');
@@ -78,21 +83,25 @@ function resolveExecutable() {
   return candidate;
 }
 
-function readStatus() {
-  const executable = resolveExecutable();
+function readStatus(options = {}) {
+  const executable = resolveExecutable(options);
   if (!executable) return { installed: false, version: null, executable: null };
-  const result = spawnSync(executable, ['--version'], {
-    encoding: 'utf8',
-    shell: false,
-    timeout: 10000,
-  });
-  if (result.status !== 0) {
-    throw new Error('Nasiko executable failed its version check.');
+  return inspectInstalledNasiko(executable);
+}
+
+function parseStatusArguments(argumentsList) {
+  let options = { installDir: undefined, json: false };
+  for (let index = 0; index < argumentsList.length; index += 1) {
+    const argument = argumentsList[index];
+    if (argument === '--json') options = { ...options, json: true };
+    else if (argument === '--install-dir') {
+      const value = argumentsList[index + 1];
+      if (!value || value.startsWith('--')) throw new Error('Missing value for --install-dir.');
+      options = { ...options, installDir: validateInstallDirectory(value) };
+      index += 1;
+    } else throw new Error(`Unknown Nasiko status argument: ${argument}`);
   }
-  const output = `${result.stdout || ''}\n${result.stderr || ''}`;
-  const version = output.match(/\bv\d+\.\d+\.\d+\b/)?.[0] || null;
-  if (!version) throw new Error('Nasiko executable returned an unrecognized version.');
-  return { installed: true, version, executable };
+  return options;
 }
 
 async function main(argumentsList = process.argv.slice(2)) {
@@ -102,21 +111,30 @@ async function main(argumentsList = process.argv.slice(2)) {
     return 0;
   }
   if (command === 'status') {
-    const unknown = rest.filter(argument => argument !== '--json');
-    if (unknown.length > 0) throw new Error(`Unknown Nasiko status argument: ${unknown[0]}`);
-    const status = readStatus();
-    if (rest.includes('--json')) process.stdout.write(`${JSON.stringify(status, null, 2)}\n`);
-    else process.stdout.write(status.installed
-      ? `Nasiko ${status.version} is installed at ${status.executable}.\n`
+    const options = parseStatusArguments(rest);
+    const status = readStatus(options);
+    if (options.json) process.stdout.write(`${JSON.stringify(status, null, 2)}\n`);
+    else process.stdout.write(status.qualified
+      ? `Qualified Nasiko ${status.version} is installed at ${status.executable}.\n`
+      : status.installed
+        ? `An unqualified Nasiko file exists at ${status.executable}; it was not executed.\n`
       : 'Nasiko is not installed in the ECC-qualified location.\n');
     return 0;
   }
   if (command === 'install') {
-    const options = parseInstallArguments(rest);
+    const options = parseMutationArguments(rest, 'install');
     const result = await installNasiko(options);
     if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     else if (result.dryRun) process.stdout.write(`Would install Nasiko ${result.version} to ${result.destination}.\n`);
     else process.stdout.write(`${result.reused ? 'Using existing' : 'Installed'} Nasiko ${result.version} at ${result.destination}.\n`);
+    return 0;
+  }
+  if (command === 'uninstall') {
+    const options = parseMutationArguments(rest, 'uninstall');
+    const result = uninstallNasiko(options);
+    if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    else if (result.dryRun) process.stdout.write(`Would uninstall Nasiko ${result.version} from ${result.destination}.\n`);
+    else process.stdout.write(result.removed ? `Uninstalled Nasiko ${result.version}.\n` : 'Nasiko was not installed.\n');
     return 0;
   }
   throw new Error(`Unsupported Nasiko command: ${command}`);
@@ -131,4 +149,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main, parseInstallArguments, readStatus, resolveExecutable };
+module.exports = { main, parseInstallArguments: parseMutationArguments, parseMutationArguments, parseStatusArguments, readStatus, resolveExecutable };

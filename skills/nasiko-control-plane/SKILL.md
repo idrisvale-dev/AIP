@@ -16,6 +16,11 @@ Nasiko control plane with ECC.
 - Preview first with `ecc nasiko install --version v0.1.0 --dry-run --json`.
 - Install with `ecc nasiko install --version v0.1.0 --yes --json` only after the
   user reviews the version, registry origin, digest, and destination.
+- Remove only a still-qualified ECC-managed binary with
+  `ecc nasiko uninstall --version v0.1.0 --yes --json`. Preview removal with
+  `--dry-run` first.
+- The qualified source is `https://github.com/Nasiko-Labs/nasiko`, licensed
+  under Apache-2.0; artifact and extracted-binary SHA-256 values are pinned.
 - Never replace the qualified command with a downloaded shell or PowerShell
   bootstrap script.
 - Never put secrets or credentials in command arguments, logs, skill output,
@@ -25,8 +30,8 @@ Nasiko control plane with ECC.
 
 ## Lifecycle boundary
 
-The initial ECC bridge supports only qualified installation and read-only
-status. Use the canonical Nasiko CLI directly for connection, authentication,
+The initial ECC bridge supports qualified installation, read-only status, and
+ownership-checked uninstall. Use the canonical Nasiko CLI directly for connection, authentication,
 launch, deployment, or shutdown until those verbs have their own verified ECC
 contracts. Do not guess CLI verbs.
 

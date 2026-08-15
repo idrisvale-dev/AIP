@@ -56,6 +56,8 @@ async function main() {
         binaryName: 'nasiko.exe',
       });
       assert.match(getQualifiedRelease('v0.1.0', 'linux', 'x64').manifestDigest, /^sha256:[a-f0-9]{64}$/);
+      assert.match(getQualifiedRelease('v0.1.0', 'linux', 'x64').binaryDigest, /^sha256:[a-f0-9]{64}$/);
+      assert.strictEqual(getQualifiedRelease('v0.1.0', 'linux', 'x64').license, 'Apache-2.0');
       assert.throws(() => getQualifiedRelease('latest', 'darwin', 'arm64'), /pinned version/i);
       assert.throws(() => getQualifiedRelease('v1.0.0', 'darwin', 'arm64'), /not qualified/i);
       assert.throws(() => normalizePlatform('freebsd', 'x64'), /unsupported platform/i);
@@ -86,6 +88,7 @@ async function main() {
     ['verifies manifest and blob digests before an atomic install', async () => {
       const { installNasiko } = require('../../scripts/lib/nasiko-release');
       const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-green-'));
+      const binary = Buffer.from('#!/bin/sh\necho nasiko 0.1.0\n');
       const manifest = Buffer.from(JSON.stringify({
         schemaVersion: 2,
         mediaType: 'application/vnd.oci.image.manifest.v1+json',
@@ -105,24 +108,50 @@ async function main() {
         }, {
           platform: 'darwin',
           arch: 'arm64',
-          releaseOverride: { manifestDigest: sha256Digest(manifest) },
-          fetchBytes: async (url) => url.includes('/manifests/') ? manifest : archive,
-          inspectArchive: () => [{ path: 'nasiko', type: 'file' }],
-          extractArchive: (_archivePath, destination) => {
-            fs.writeFileSync(path.join(destination, 'nasiko'), '#!/bin/sh\necho nasiko v0.1.0\n', { mode: 0o755 });
+          releaseOverride: {
+            manifestDigest: sha256Digest(manifest),
+            binaryDigest: sha256Digest(binary),
           },
-          runVersion: executable => ({ status: 0, stdout: `${executable}: nasiko v0.1.0\n`, stderr: '' }),
+          fetchBytes: async (url) => url.includes('/manifests/') ? manifest : archive,
+          extractBinary: () => binary,
         });
         assert.strictEqual(result.installed, true);
         assert.strictEqual(result.version, 'v0.1.0');
         assert.strictEqual(fs.existsSync(path.join(installRoot, 'nasiko')), true);
         assert.strictEqual(fs.existsSync(path.join(installRoot, '.ecc-nasiko-install.json')), true);
+        const { getQualifiedRelease, inspectInstalledNasiko, uninstallNasiko } = require('../../scripts/lib/nasiko-release');
+        const fakeRelease = {
+          ...getQualifiedRelease('v0.1.0', 'darwin', 'arm64'),
+          manifestDigest: sha256Digest(manifest),
+          binaryDigest: sha256Digest(binary),
+        };
+        const preview = await uninstallNasiko({ installDir: installRoot, dryRun: true }, {
+          platform: 'darwin', arch: 'arm64', releaseOverride: result,
+        });
+        assert.strictEqual(preview.dryRun, true);
+        let renameCount = 0;
+        await assert.rejects(async () => uninstallNasiko({ installDir: installRoot, yes: true }, {
+          platform: 'darwin', arch: 'arm64',
+          inspectInstalled: destination => inspectInstalledNasiko(destination, () => fakeRelease),
+          rename: (source, destination) => {
+            renameCount += 1;
+            if (renameCount === 2) throw new Error('metadata staging unavailable');
+            fs.renameSync(source, destination);
+          },
+        }), /metadata staging unavailable/i);
+        assert.strictEqual(fs.existsSync(path.join(installRoot, 'nasiko')), true);
+        assert.strictEqual(fs.existsSync(path.join(installRoot, '.ecc-nasiko-install.json')), true);
+        await uninstallNasiko({ installDir: installRoot, yes: true }, {
+          platform: 'darwin', arch: 'arm64',
+          inspectInstalled: destination => inspectInstalledNasiko(destination, () => fakeRelease),
+        });
+        assert.strictEqual(fs.existsSync(path.join(installRoot, 'nasiko')), false);
       } finally {
         fs.rmSync(installRoot, { recursive: true, force: true });
       }
     }],
     ['rejects digest mismatch and unsafe archive entries without installing', async () => {
-      const { installNasiko, validateArchiveEntries } = require('../../scripts/lib/nasiko-release');
+      const { extractQualifiedTarGzip, installNasiko } = require('../../scripts/lib/nasiko-release');
       const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-reject-'));
       const manifest = Buffer.from('{"schemaVersion":2,"layers":[]}');
       try {
@@ -136,22 +165,16 @@ async function main() {
           /manifest digest mismatch/i
         );
         assert.strictEqual(fs.existsSync(path.join(installRoot, 'nasiko')), false);
-        assert.throws(
-          () => validateArchiveEntries([{ path: '../nasiko', type: 'file' }], 'nasiko'),
-          /unsafe archive/i
-        );
-        assert.throws(
-          () => validateArchiveEntries([{ path: 'nasiko', type: 'symlink' }], 'nasiko'),
-          /regular file/i
-        );
+        assert.throws(() => extractQualifiedTarGzip(Buffer.from('not gzip'), 'nasiko'), /invalid|size limit/i);
       } finally {
         fs.rmSync(installRoot, { recursive: true, force: true });
       }
     }],
-    ['routes read-only status through an explicit absolute executable', () => {
+    ['read-only status never executes an unqualified explicit executable', () => {
       const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-status-'));
       const executable = path.join(fixtureRoot, 'nasiko');
-      fs.writeFileSync(executable, '#!/bin/sh\nprintf "nasiko v0.1.0\\n"\n', { mode: 0o755 });
+      const marker = path.join(fixtureRoot, 'executed');
+      fs.writeFileSync(executable, `#!/bin/sh\ntouch ${JSON.stringify(marker)}\nprintf "nasiko 0.1.0\\n"\n`, { mode: 0o755 });
       try {
         const result = spawnSync(process.execPath, [
           path.join(REPO_ROOT, 'scripts', 'ecc.js'),
@@ -165,11 +188,79 @@ async function main() {
         assert.strictEqual(result.status, 0, result.stderr);
         const status = JSON.parse(result.stdout);
         assert.strictEqual(status.installed, true);
-        assert.strictEqual(status.version, 'v0.1.0');
+        assert.strictEqual(status.qualified, false);
+        assert.strictEqual(status.version, null);
         assert.strictEqual(status.executable, executable);
+        assert.strictEqual(fs.existsSync(marker), false);
       } finally {
         fs.rmSync(fixtureRoot, { recursive: true, force: true });
       }
+    }],
+    ['rejects and never executes an unqualified pre-existing binary', async () => {
+      const { installNasiko } = require('../../scripts/lib/nasiko-release');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-existing-'));
+      const executable = path.join(installRoot, 'nasiko');
+      const marker = path.join(installRoot, 'executed');
+      fs.writeFileSync(executable, `#!/bin/sh\ntouch ${JSON.stringify(marker)}\necho nasiko 0.1.0\n`, { mode: 0o755 });
+      try {
+        await assert.rejects(
+          installNasiko({ version: 'v0.1.0', yes: true, installDir: installRoot }, {
+            platform: 'darwin', arch: 'arm64',
+          }),
+          /unqualified|digest|metadata/i
+        );
+        assert.strictEqual(fs.existsSync(marker), false);
+      } finally {
+        fs.rmSync(installRoot, { recursive: true, force: true });
+      }
+    }],
+    ['rolls back a published binary when metadata persistence fails', async () => {
+      const { installNasiko } = require('../../scripts/lib/nasiko-release');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-rollback-'));
+      const binary = Buffer.from('qualified binary');
+      const archive = Buffer.from('verified archive');
+      const manifest = Buffer.from(JSON.stringify({
+        schemaVersion: 2,
+        mediaType: 'application/vnd.oci.image.manifest.v1+json',
+        layers: [{ mediaType: 'application/gzip', digest: sha256Digest(archive), size: archive.length }],
+      }));
+      try {
+        await assert.rejects(
+          installNasiko({ version: 'v0.1.0', yes: true, installDir: installRoot }, {
+            platform: 'darwin',
+            arch: 'arm64',
+            releaseOverride: {
+              manifestDigest: sha256Digest(manifest),
+              binaryDigest: sha256Digest(binary),
+            },
+            fetchBytes: async url => url.includes('/manifests/') ? manifest : archive,
+            extractBinary: () => binary,
+            writeMetadata: () => { throw new Error('metadata unavailable'); },
+          }),
+          /metadata unavailable/i
+        );
+        assert.strictEqual(fs.existsSync(path.join(installRoot, 'nasiko')), false);
+      } finally {
+        fs.rmSync(installRoot, { recursive: true, force: true });
+      }
+    }],
+    ['never overwrites or deletes a destination created during publication', async () => {
+      const { installNasiko } = require('../../scripts/lib/nasiko-release');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-race-'));
+      const binary = Buffer.from('qualified binary');
+      const intruder = Buffer.from('concurrent owner');
+      const archive = Buffer.from('verified archive');
+      const manifest = Buffer.from(JSON.stringify({ schemaVersion: 2, layers: [{ mediaType: 'application/gzip', digest: sha256Digest(archive), size: archive.length }] }));
+      try {
+        await assert.rejects(installNasiko({ version: 'v0.1.0', yes: true, installDir: installRoot }, {
+          platform: 'darwin', arch: 'arm64',
+          releaseOverride: { manifestDigest: sha256Digest(manifest), binaryDigest: sha256Digest(binary) },
+          fetchBytes: async url => url.includes('/manifests/') ? manifest : archive,
+          extractBinary: () => binary,
+          beforePublish: destination => fs.writeFileSync(destination, intruder, { flag: 'wx' }),
+        }), /exist/i);
+        assert.deepStrictEqual(fs.readFileSync(path.join(installRoot, 'nasiko')), intruder);
+      } finally { fs.rmSync(installRoot, { recursive: true, force: true }); }
     }],
     ['ships a canonical opt-in skill without silently bundling Nasiko', () => {
       const skill = read('skills/nasiko-control-plane/SKILL.md');
@@ -180,6 +271,7 @@ async function main() {
       assert.match(skill, /telemetry.*opt-in/i);
       assert.match(skill, /never.*secrets|never.*credentials/i);
       assert.match(skill, /install.*does not prove/i);
+      assert.match(skill, /ecc nasiko uninstall/i);
       assert.doesNotMatch(skill, /curl[^\n]*\|[^\n]*bash|irm[^\n]*\|[^\n]*iex/i);
 
       const modules = readJson('manifests/install-modules.json').modules;
@@ -202,14 +294,15 @@ async function main() {
       );
 
       const profiles = readJson('manifests/install-profiles.json').profiles;
-      for (const profile of Object.values(profiles)) {
-        assert.ok(!profile.modules.includes('nasiko-control-plane'));
+      assert.ok(profiles.full.modules.includes('nasiko-control-plane'));
+      for (const [profileId, profile] of Object.entries(profiles)) {
+        if (profileId !== 'full') assert.ok(!profile.modules.includes('nasiko-control-plane'));
       }
 
       const packageJson = readJson('package.json');
       assert.ok(packageJson.files.includes('skills/nasiko-control-plane/'));
       assert.ok(packageJson.files.includes('scripts/nasiko.js'));
-      assert.ok(packageJson.files.includes('scripts/lib/nasiko-release.js'));
+      assert.ok(packageJson.files.includes('scripts/lib/'));
       assert.ok(!packageJson.dependencies?.nasiko);
       assert.ok(!packageJson.optionalDependencies?.nasiko);
     }],

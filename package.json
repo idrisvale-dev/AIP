@@ -119,7 +119,6 @@
     "scripts/install-plan.js",
     "scripts/ito.js",
     "scripts/nasiko.js",
-    "scripts/lib/nasiko-release.js",
     "scripts/lib/",
     "scripts/list-installed.js",
     "scripts/loop-status.js",
