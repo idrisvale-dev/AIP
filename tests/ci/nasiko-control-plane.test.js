@@ -218,13 +218,14 @@ async function main() {
     }],
     ['read-only status has a stable absent result shape', () => {
       const { readStatus } = require('../../scripts/nasiko');
+      const { normalizePlatform } = require('../../scripts/lib/nasiko-release');
       const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-absent-'));
       try {
         assert.deepStrictEqual(readStatus({ installDir: fixtureRoot }), {
           installed: false,
           qualified: false,
           version: null,
-          executable: path.join(fs.realpathSync(fixtureRoot), 'nasiko'),
+          executable: path.join(fs.realpathSync(fixtureRoot), normalizePlatform().binaryName),
         });
       } finally { fs.rmSync(fixtureRoot, { recursive: true, force: true }); }
     }],
