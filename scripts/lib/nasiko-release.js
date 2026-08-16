@@ -144,7 +144,11 @@ function validateInstallDirectory(directory) {
   const resolved = path.resolve(directory);
   if (resolved === path.parse(resolved).root) throw new Error('Nasiko cannot install directly into a filesystem root.');
   let ancestor = resolved;
-  while (!fs.existsSync(ancestor)) ancestor = path.dirname(ancestor);
+  while (!fs.existsSync(ancestor)) {
+    const parent = path.dirname(ancestor);
+    if (parent === ancestor) throw new Error('Nasiko install directory has no resolvable filesystem ancestor.');
+    ancestor = parent;
+  }
   const canonical = fs.realpathSync(ancestor);
   return path.join(canonical, path.relative(ancestor, resolved));
 }
@@ -160,22 +164,54 @@ function assertPrivateInstallDirectory(directory) {
 
 function metadataPathFor(executable) { return path.join(path.dirname(executable), METADATA_FILENAME); }
 
+function readBoundedRegularFile(filePath, maximumBytes) {
+  const noFollow = fs.constants.O_NOFOLLOW;
+  const descriptor = fs.openSync(filePath, fs.constants.O_RDONLY | (noFollow || 0));
+  try {
+    const stats = fs.fstatSync(descriptor);
+    if (!stats.isFile() || stats.size <= 0 || stats.size > maximumBytes) return null;
+    if (!noFollow) {
+      const pathStats = fs.lstatSync(filePath);
+      if (pathStats.isSymbolicLink()
+        || pathStats.dev !== stats.dev
+        || pathStats.ino !== stats.ino
+        || pathStats.birthtimeMs !== stats.birthtimeMs) {
+        const error = new Error('Nasiko managed files must not be symbolic links or reparse points.');
+        error.code = 'ELOOP';
+        throw error;
+      }
+    }
+    const bytes = Buffer.allocUnsafe(stats.size);
+    let total = 0;
+    while (total < bytes.length) {
+      const count = fs.readSync(descriptor, bytes, total, bytes.length - total, total);
+      if (count === 0) return null;
+      total += count;
+    }
+    if (fs.fstatSync(descriptor).size !== stats.size) return null;
+    return bytes;
+  } finally { fs.closeSync(descriptor); }
+}
+
 function readMetadata(executable) {
   try {
-    const metadataPath = metadataPathFor(executable);
-    const stats = fs.lstatSync(metadataPath);
-    if (!stats.isFile() || stats.isSymbolicLink() || stats.size <= 0 || stats.size > MAX_METADATA_BYTES) return null;
-    return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    const bytes = readBoundedRegularFile(metadataPathFor(executable), MAX_METADATA_BYTES);
+    return bytes ? JSON.parse(bytes.toString('utf8')) : null;
   }
   catch (_error) { return null; }
 }
 
 function inspectInstalledNasiko(executable, resolveRelease = getQualifiedRelease) {
-  if (!executable || !fs.existsSync(executable)) return { installed: false, qualified: false, version: null, executable: executable || null };
-  const stats = fs.lstatSync(executable);
-  if (!stats.isFile() || stats.isSymbolicLink()) throw new Error('Nasiko executable must be a regular file, not a symlink.');
-  if (stats.size <= 0 || stats.size > MAX_BINARY_BYTES) return { installed: true, qualified: false, version: null, executable, binaryDigest: null, metadataPath: metadataPathFor(executable) };
-  const binaryDigest = digestBytes(fs.readFileSync(executable));
+  if (!executable) return { installed: false, qualified: false, version: null, executable: null };
+  let binary;
+  try { binary = readBoundedRegularFile(executable, MAX_BINARY_BYTES); }
+  catch (error) {
+    if (error.code === 'ENOENT') return { installed: false, qualified: false, version: null, executable };
+    if (error.code === 'ELOOP') throw new Error('Nasiko executable must be a regular file, not a symlink.');
+    throw error;
+  }
+  if (!binary) return { installed: true, qualified: false, version: null, executable, binaryDigest: null, metadataPath: metadataPathFor(executable) };
+  const binaryDigest = digestBytes(binary);
   const metadata = readMetadata(executable);
   let release = null;
   try { if (metadata) release = resolveRelease(metadata.version, metadata.platform, metadata.architecture); } catch (_error) { release = null; }
@@ -193,17 +229,23 @@ function writeMetadataExclusive(metadataPath, metadata) {
   fs.writeFileSync(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`, { mode: 0o600, flag: 'wx' });
 }
 
-function acquireLifecycleLock(installDirectory) {
+function acquireLifecycleLock(installDirectory, fileSystem = fs) {
   const lockPath = path.join(installDirectory, '.ecc-nasiko-lifecycle.lock');
   let descriptor;
-  try { descriptor = fs.openSync(lockPath, 'wx', 0o600); }
+  try {
+    descriptor = fileSystem.openSync(lockPath, 'wx', 0o600);
+    fileSystem.writeFileSync(descriptor, `${JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() })}\n`);
+    fileSystem.fsyncSync(descriptor);
+  }
   catch (error) {
-    if (error.code === 'EEXIST') throw new Error('Another Nasiko lifecycle operation is already in progress.');
+    if (error.code === 'EEXIST') throw new Error(`Another Nasiko lifecycle operation is already in progress; inspect ${lockPath} before recovering a stale lock.`);
+    if (descriptor !== undefined) {
+      try { fileSystem.closeSync(descriptor); } finally { fileSystem.rmSync(lockPath, { force: true }); }
+    }
     throw error;
   }
   return () => {
-    fs.closeSync(descriptor);
-    fs.rmSync(lockPath, { force: true });
+    try { fileSystem.closeSync(descriptor); } finally { fileSystem.rmSync(lockPath, { force: true }); }
   };
 }
 
@@ -223,8 +265,8 @@ async function installNasiko(options = {}, dependencies = {}) {
   let destinationOwned = false;
   let metadataOwned = false;
   try {
-    if (fs.existsSync(destination) || fs.existsSync(metadataPath)) {
-      const existing = inspectInstalledNasiko(destination);
+    const existing = inspectInstalledNasiko(destination);
+    if (existing.installed) {
       if (existing.qualified && existing.version === version) return { ...plan, dryRun: false, installed: true, reused: true };
       throw new Error('An unqualified or incompatible Nasiko executable or receipt already exists at the destination.');
     }
@@ -240,8 +282,11 @@ async function installNasiko(options = {}, dependencies = {}) {
     if (dependencies.beforePublish) dependencies.beforePublish(destination);
     const descriptor = fs.openSync(destination, 'wx', 0o700);
     destinationOwned = true;
-    try { fs.writeFileSync(descriptor, binary); fs.fsyncSync(descriptor); } finally { fs.closeSync(descriptor); }
-    assertDigest(fs.readFileSync(destination), release.binaryDigest, 'Published Nasiko binary');
+    try {
+      fs.writeFileSync(descriptor, binary);
+      fs.fsyncSync(descriptor);
+      if (fs.fstatSync(descriptor).size !== binary.length) throw new Error('Published Nasiko binary size mismatch.');
+    } finally { fs.closeSync(descriptor); }
     const metadata = { version, platform: release.os, architecture: release.arch, manifestDigest: release.manifestDigest, artifactDigest: layer.digest, binaryDigest: release.binaryDigest, installedPath: destination, license: release.license, sourceUrl: release.sourceUrl };
     (dependencies.writeMetadata || writeMetadataExclusive)(metadataPath, metadata);
     metadataOwned = true;
@@ -292,4 +337,4 @@ function uninstallNasiko(options = {}, dependencies = {}) {
   } finally { releaseLock(); }
 }
 
-module.exports = { QUALIFIED_RELEASES, REGISTRY_ORIGIN, digestBytes, extractQualifiedTarGzip, fetchBytes, getQualifiedRelease, inspectInstalledNasiko, installNasiko, normalizePlatform, uninstallNasiko, validateInstallDirectory };
+module.exports = { QUALIFIED_RELEASES, REGISTRY_ORIGIN, acquireLifecycleLock, digestBytes, extractQualifiedTarGzip, fetchBytes, getQualifiedRelease, inspectInstalledNasiko, installNasiko, normalizePlatform, uninstallNasiko, validateInstallDirectory };

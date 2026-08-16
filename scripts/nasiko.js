@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 'use strict';
 
-const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const {
@@ -75,17 +74,12 @@ function resolveExecutable(options = {}) {
   if (!path.isAbsolute(candidate)) {
     throw new Error('ECC_NASIKO_CLI_EXECUTABLE must be an absolute path.');
   }
-  if (!fs.existsSync(candidate)) return null;
-  const stats = fs.lstatSync(candidate);
-  if (!stats.isFile() || stats.isSymbolicLink()) {
-    throw new Error('Nasiko executable must be a regular file, not a symlink.');
-  }
   return candidate;
 }
 
 function readStatus(options = {}) {
   const executable = resolveExecutable(options);
-  if (!executable) return { installed: false, version: null, executable: null };
+  if (!executable) return { installed: false, qualified: false, version: null, executable: null };
   return inspectInstalledNasiko(executable);
 }
 
