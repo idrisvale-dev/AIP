@@ -81,6 +81,27 @@ test("describes the deterministic workflow surface faithfully", () => {
   assert.match(skill, /style pack/i);
 });
 
+test("defines the fail-closed file-driven multimodal contract", () => {
+  const skill = read("skills/tasteforge-video/SKILL.md");
+  assert.match(skill, /python3 -m tasteforge multimodal --config/);
+  for (const phrase of [
+    /Flash Ethereal/,
+    /3D Cyber Glitch/,
+    /Fluid Sketch/,
+    /image.*video.*3D-asset/is,
+    /seeded aperiodic/i,
+    /subject anchor/i,
+    /placement constraints/i,
+    /provider_execution:\s*false/i,
+    /path.*byte size.*SHA-256/is,
+    /genre.*modality/is,
+    /exact reference\/time provenance/i,
+    /provider_calls:\s*0/i,
+  ]) assert.match(skill, phrase);
+  assert.match(skill, /missing.*manifest.*fail closed/is);
+  assert.match(skill, /tamper.*fail closed/is);
+});
+
 test("ships through the opt-in media-generation install module and npm package", () => {
   const modules = readJson("manifests/install-modules.json").modules;
   const module = modules.find((candidate) => candidate.id === "media-generation");

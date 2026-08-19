@@ -106,6 +106,42 @@ and stop; do not reconstruct its logic inline.
    generation history, fixture provenance, provider references as
    pointer-only records.
 
+## File-Driven Multimodal Contract
+
+Use this path when local references must drive dry-run generation plans for
+image, video, and 3D-asset outputs while preserving genre separation:
+
+```bash
+python3 -m tasteforge multimodal --config workflow.json --out-dir out/multimodal
+```
+
+The config names numbered genres and local evidence files. Keep these candidate
+genres distinct rather than blending them into one generic aesthetic:
+
+1. Flash Ethereal
+2. 3D Cyber Glitch
+3. Fluid Sketch
+
+The command measures local references with ffprobe/ffmpeg and emits one style
+spec per genre, separate image, video, and 3D-asset manifests, provenance, and
+a Resolve effect recipe. The effect schedule must be seeded aperiodic. CV
+effects require a real subject anchor with fail-closed track-loss behavior.
+Every effect carries placement constraints that preserve faces and readable
+type and prevent decorative corner meshes from replacing full-frame 3D work.
+
+The returned receipt is the bundle boundary. It binds every emitted evidence
+artifact by relative path, byte size, SHA-256, genre, modality,
+`provider_execution: false`, and exact reference/time provenance. Manifests and
+requests also require `provider_calls: 0`, `provider_execution: false`,
+`submit: false`, and disabled provider-call mode. Whole-file evidence uses an
+explicit whole-file time basis and never invents timestamps.
+
+Always run bundle validation after creation. A missing image, video, or 3D-asset
+manifest must fail closed. Genericized or duplicate genres, periodic schedules,
+unanchored CV effects, missing placement constraints, provider-execution flags,
+unbound output files, byte-size drift, or SHA-256 tampering must fail closed.
+Do not repair a failed receipt by deleting evidence or weakening validation.
+
 ## Example Session
 
 ```bash
