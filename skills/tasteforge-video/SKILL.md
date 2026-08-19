@@ -138,20 +138,42 @@ replacing full-frame 3D work.
 The returned receipt is the bundle boundary. It binds every emitted evidence
 artifact by relative path, byte size, SHA-256, genre, modality,
 `provider_execution:false`, and exact reference/time provenance. The receipt
-itself requires `provider_calls:0`, `provider_execution:false`, and
-`dry_run:true`. Every modality manifest and every nested request must contain
-all four exact fail-closed fields: `provider_calls:0`,
-`provider_execution:false`, `dry_run:true`, and `submit:false`; each request
-also requires `provider_call_mode:"disabled"`. A missing field is a rejection,
-not a default, and `dry_run:false` must be rejected before output is written.
-Whole-file evidence uses an explicit whole-file time basis and never invents
-timestamps.
+requires `provider_calls:0` as an exact integer (the JSON boolean `false` is
+invalid), `provider_execution:false`, and `dry_run:true`. Every genre spec also
+requires explicit `dry_run:true`. The Resolve effect recipe requires that same
+exact integer `provider_calls:0`, `provider_execution:false`, and `dry_run:true`.
+Every modality manifest and every nested request must contain all four exact
+fail-closed fields: integer `provider_calls:0`, `provider_execution:false`,
+`dry_run:true`, and `submit:false`; each request also requires
+`provider_call_mode:"disabled"`. A missing field is a rejection, not a default,
+and `dry_run:false` must be rejected before output is written.
+
+Treat booleans as invalid numbers everywhere in timeline, evidence, probe, and
+source-duration data. Every such numeric value must be a finite real: reject
+`true`, `false`, NaN, infinities, negative event starts, non-positive durations,
+out-of-range evidence times, and events ending beyond the declared finite
+positive timeline. Whole-file evidence uses an explicit whole-file time basis
+and never invents timestamps.
+
+Receipt references are the duration authority. Key each validated reference
+duration by its cited SHA-256; duplicate occurrences of one digest must agree
+on duration or the bundle is invalid. Every effect evidence `source_duration`
+and every subject-anchor `source_duration` must equal that digest's validated
+receipt duration, not merely contain its cited time. Probe duration and all
+probe measurements must describe the same stable bytes used for byte count and
+SHA-256. If the source mutates while probing or rehashes differently while it
+is still available, fail closed rather than emitting or accepting a receipt.
 
 Always run bundle validation after creation. A missing image, video, or 3D-asset
 manifest must fail closed. Genericized or duplicate genres, periodic schedules,
 unanchored CV effects, missing placement constraints, provider-execution flags,
 unbound output files, byte-size drift, or SHA-256 tampering must fail closed.
-Do not repair a failed receipt by deleting evidence or weakening validation.
+Reject output roots, intermediates, or artifacts that are symlinks, and reject
+special files (including FIFOs and devices); outputs must remain regular files
+under a real directory tree. If local `ffmpeg` or `ffprobe` is unavailable, the
+CLI must return its bounded nonzero local-media-processing error without a
+Python traceback. Do not repair a failed receipt by deleting evidence or
+weakening validation.
 
 ## Example Session
 

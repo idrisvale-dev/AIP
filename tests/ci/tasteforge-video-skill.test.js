@@ -21,10 +21,124 @@ function readJson(relativePath) {
 }
 
 function assertExactDryRunBoundary(payload, label) {
-  assert.strictEqual(payload.provider_calls, 0, `${label} must require provider_calls:0`);
+  assert.ok(
+    Number.isInteger(payload.provider_calls) && payload.provider_calls === 0,
+    `${label} must require exact integer provider_calls:0`
+  );
   assert.strictEqual(payload.provider_execution, false, `${label} must require provider_execution:false`);
   assert.strictEqual(payload.dry_run, true, `${label} must require dry_run:true`);
   assert.strictEqual(payload.submit, false, `${label} must require submit:false`);
+}
+
+function assertFiniteReal(value, label, { positive = false, nonnegative = false } = {}) {
+  assert.strictEqual(typeof value, "number", `${label} must be a real number, not a boolean`);
+  assert.ok(Number.isFinite(value), `${label} must be finite`);
+  if (positive) assert.ok(value > 0, `${label} must be positive`);
+  if (nonnegative) assert.ok(value >= 0, `${label} must be nonnegative`);
+}
+
+function assertFiniteEvidenceTree(value, label) {
+  if (typeof value === "number" || typeof value === "boolean") {
+    assertFiniteReal(value, label);
+  } else if (Array.isArray(value)) {
+    value.forEach((nested) => assertFiniteEvidenceTree(nested, label));
+  } else if (value && typeof value === "object") {
+    Object.values(value).forEach((nested) => assertFiniteEvidenceTree(nested, label));
+  }
+}
+
+function validateFinalContractFixture(fixture) {
+  for (const spec of fixture.genre_specs) {
+    assert.strictEqual(spec.dry_run, true, `genre ${spec.number} must require dry_run:true`);
+  }
+
+  assertExactDryRunBoundary({ ...fixture.receipt, submit: false }, "receipt");
+  const durationByDigest = new Map();
+  for (const reference of fixture.receipt.references) {
+    assertFiniteReal(reference.source_duration, "receipt source_duration", { positive: true });
+    const prior = durationByDigest.get(reference.sha256);
+    assert.ok(
+      prior === undefined || prior === reference.source_duration,
+      "duplicate digest has conflicting source durations"
+    );
+    durationByDigest.set(reference.sha256, reference.source_duration);
+    assertFiniteEvidenceTree(reference.probe, "probe evidence");
+    assert.strictEqual(reference.probe.duration, reference.source_duration);
+    for (const time of [
+      ...(reference.probe.sample_times || []),
+      ...(reference.probe.scene_changes || []),
+      ...(reference.probe.style_samples || []).map((sample) => sample.time),
+    ]) {
+      assertFiniteReal(time, "probe evidence time", { nonnegative: true });
+      assert.ok(time <= reference.source_duration, "probe evidence time exceeds source duration");
+    }
+  }
+
+  const recipe = fixture.effect_recipe;
+  assertExactDryRunBoundary({ ...recipe, submit: false }, "effect recipe");
+  assertFiniteReal(recipe.timeline_duration, "timeline duration", { positive: true });
+  for (const event of recipe.events) {
+    assertFiniteReal(event.time, "effect event time", { nonnegative: true });
+    assertFiniteReal(event.duration, "effect event duration", { positive: true });
+    assert.ok(
+      event.time + event.duration <= recipe.timeline_duration,
+      "effect event exceeds timeline duration"
+    );
+    const evidence = event.evidence;
+    const evidenceDuration = durationByDigest.get(evidence.reference_sha256);
+    assert.ok(evidenceDuration !== undefined, "effect evidence cites unknown SHA-256");
+    assert.strictEqual(
+      evidence.source_duration,
+      evidenceDuration,
+      "effect evidence duration must equal receipt reference duration"
+    );
+    assertFiniteReal(evidence.time, "effect evidence time", { nonnegative: true });
+    assert.ok(evidence.time <= evidenceDuration, "effect evidence time exceeds source duration");
+    if (event.requires_subject_anchor) {
+      const anchor = event.subject_anchor;
+      const anchorDuration = durationByDigest.get(anchor.source_ref_sha256);
+      assert.ok(anchorDuration !== undefined, "subject anchor cites unknown SHA-256");
+      assert.strictEqual(
+        anchor.source_duration,
+        anchorDuration,
+        "subject-anchor duration must equal receipt reference duration"
+      );
+      assertFiniteReal(anchor.evidence_time, "subject-anchor evidence time", { nonnegative: true });
+      assert.ok(anchor.evidence_time <= anchorDuration, "anchor evidence time exceeds source duration");
+      assert.strictEqual(anchor.lost_policy, "disable_effect_until_track_recovers");
+    }
+  }
+
+  for (const modality of ["image", "video", "3d_asset"]) {
+    const manifest = fixture.manifests[modality];
+    assert.ok(manifest, `missing ${modality} manifest`);
+    assertExactDryRunBoundary(manifest, `${modality} manifest`);
+    assert.ok(manifest.requests.length > 0, `${modality} requests must not be empty`);
+    for (const request of manifest.requests) {
+      assertExactDryRunBoundary(request, `${modality} request`);
+      assert.strictEqual(request.provider_call_mode, "disabled");
+    }
+  }
+
+  const binding = fixture.source_binding;
+  assert.strictEqual(binding.probed_sha256, binding.before_probe_sha256);
+  assert.strictEqual(binding.receipt_sha256, binding.before_probe_sha256);
+  assert.strictEqual(
+    binding.after_probe_sha256,
+    binding.before_probe_sha256,
+    "source mutation during probe must fail closed"
+  );
+
+  assert.ok(fixture.missing_media_tool_error.exit_code > 0, "missing media tool must exit nonzero");
+  assert.ok(fixture.missing_media_tool_error.stderr.length < 256, "missing-tool error must stay bounded");
+  assert.doesNotMatch(fixture.missing_media_tool_error.stderr, /Traceback/i);
+
+  for (const entry of fixture.output_entries) {
+    assert.ok(
+      entry.type === "regular_file" || entry.type === "directory",
+      `output ${entry.path} must reject symlinks and special files`
+    );
+  }
 }
 
 function validateRejectedContractFixture(fixture) {
@@ -137,12 +251,83 @@ test("defines the fail-closed file-driven multimodal contract", () => {
     /genre.*modality/is,
     /exact reference\/time provenance/i,
     /provider_calls:\s*0/i,
+    /exact integer/i,
+    /genre spec.*dry_run:\s*true/is,
+    /effect recipe.*provider_calls:\s*0/is,
     /dry_run:\s*true/i,
     /submit:\s*false/i,
+    /finite real/i,
+    /booleans as invalid numbers/i,
+    /duplicate occurrences.*digest.*agree.*duration/is,
+    /effect evidence `source_duration`.*validated\s+receipt duration/is,
+    /subject-anchor `source_duration`.*validated\s+receipt duration/is,
+    /same stable bytes/i,
+    /mutates while probing/i,
+    /ffmpeg.*ffprobe.*bounded nonzero.*without a\s+Python traceback/is,
+    /symlinks.*special files/is,
     /disable_effect_until_track_recovers/i,
   ]) assert.match(skill, phrase);
   assert.match(skill, /missing.*manifest.*fail closed/is);
   assert.match(skill, /tamper.*fail closed/is);
+});
+
+test("executable fixture enforces the independently passed final contract", () => {
+  const baseline = readJson("tests/fixtures/tasteforge-video/final-contract.json");
+  const clone = () => JSON.parse(JSON.stringify(baseline));
+  assert.doesNotThrow(() => validateFinalContractFixture(clone()));
+
+  const mutations = [
+    ["genre dry_run false", (value) => { value.genre_specs[0].dry_run = false; }],
+    ["receipt boolean provider_calls", (value) => { value.receipt.provider_calls = false; }],
+    ["effect boolean provider_calls", (value) => { value.effect_recipe.provider_calls = false; }],
+    ["manifest boolean provider_calls", (value) => { value.manifests.video.provider_calls = false; }],
+    ["request boolean provider_calls", (value) => {
+      value.manifests.video.requests[0].provider_calls = false;
+    }],
+    ["boolean timeline number", (value) => { value.effect_recipe.events[0].time = false; }],
+    ["non-finite event duration", (value) => { value.effect_recipe.events[0].duration = NaN; }],
+    ["non-finite evidence duration", (value) => {
+      value.effect_recipe.events[0].evidence.source_duration = Infinity;
+    }],
+    ["boolean probe measurement", (value) => {
+      value.receipt.references[0].probe.style_samples[0].luma = false;
+    }],
+    ["effect duration not bound to digest", (value) => {
+      value.effect_recipe.events[0].evidence.source_duration = 5;
+    }],
+    ["anchor duration not bound to digest", (value) => {
+      value.effect_recipe.events[0].subject_anchor.source_duration = 5;
+    }],
+    ["duplicate digest conflicting duration", (value) => {
+      const duplicate = JSON.parse(JSON.stringify(value.receipt.references[0]));
+      duplicate.source_duration = 7;
+      duplicate.probe.duration = 7;
+      value.receipt.references.push(duplicate);
+    }],
+    ["source mutation during probe", (value) => {
+      value.source_binding.after_probe_sha256 = "b".repeat(64);
+    }],
+    ["missing-tool success exit", (value) => { value.missing_media_tool_error.exit_code = 0; }],
+    ["missing-tool traceback", (value) => {
+      value.missing_media_tool_error.stderr = "Traceback (most recent call last): secret\n";
+    }],
+    ["symlink output", (value) => {
+      value.output_entries.push({ path: "resolve", type: "symlink" });
+    }],
+    ["special-file output", (value) => {
+      value.output_entries.push({ path: "resolve/pipe", type: "fifo" });
+    }],
+  ];
+
+  for (const [label, mutate] of mutations) {
+    const fixture = clone();
+    mutate(fixture);
+    assert.throws(
+      () => validateFinalContractFixture(fixture),
+      undefined,
+      `${label} was not rejected`
+    );
+  }
 });
 
 test("executable fixtures reject dry_run:false and continue_without_anchor", () => {
