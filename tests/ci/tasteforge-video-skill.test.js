@@ -20,6 +20,37 @@ function readJson(relativePath) {
   return JSON.parse(read(relativePath));
 }
 
+function assertExactDryRunBoundary(payload, label) {
+  assert.strictEqual(payload.provider_calls, 0, `${label} must require provider_calls:0`);
+  assert.strictEqual(payload.provider_execution, false, `${label} must require provider_execution:false`);
+  assert.strictEqual(payload.dry_run, true, `${label} must require dry_run:true`);
+  assert.strictEqual(payload.submit, false, `${label} must require submit:false`);
+}
+
+function validateRejectedContractFixture(fixture) {
+  if (fixture.kind === "manifest") {
+    assertExactDryRunBoundary(fixture.payload, "manifest");
+    for (const request of fixture.payload.requests || []) {
+      assertExactDryRunBoundary(request, "request");
+      assert.strictEqual(request.provider_call_mode, "disabled");
+    }
+    return;
+  }
+  if (fixture.kind === "effect_recipe") {
+    for (const event of fixture.payload.events || []) {
+      if (event.requires_subject_anchor) {
+        assert.strictEqual(
+          event.subject_anchor?.lost_policy,
+          "disable_effect_until_track_recovers",
+          "anchored CV effects must disable_effect_until_track_recovers"
+        );
+      }
+    }
+    return;
+  }
+  assert.fail(`unknown fixture kind: ${fixture.kind}`);
+}
+
 const tests = [];
 function test(name, fn) { tests.push([name, fn]); }
 
@@ -37,6 +68,15 @@ test("has valid discoverable frontmatter and trigger phrases", () => {
     /export EDL\/FCPXML|export .*EDL.*FCPXML/i,
     /audit .*generated-media provenance|provenance audit/i,
   ]) assert.match(skill, trigger);
+
+  const description = skill.match(/^description: ([^\n]+)$/m)?.[1] || "";
+  for (const discoveryTerm of ["multimodal", "image", "video", "3D", "file-driven", "distill", "apply"]) {
+    assert.match(description, new RegExp(discoveryTerm, "i"), `frontmatter misses ${discoveryTerm}`);
+  }
+  const triggers = skill.match(/## When to Use\n([\s\S]*?)\n## /)?.[1] || "";
+  for (const discoveryTerm of ["multimodal", "image", "video", "3D", "file-driven", "distill", "apply"]) {
+    assert.match(triggers, new RegExp(discoveryTerm, "i"), `triggers miss ${discoveryTerm}`);
+  }
 });
 
 test("distinguishes local deterministic operations from provider generation", () => {
@@ -97,9 +137,27 @@ test("defines the fail-closed file-driven multimodal contract", () => {
     /genre.*modality/is,
     /exact reference\/time provenance/i,
     /provider_calls:\s*0/i,
+    /dry_run:\s*true/i,
+    /submit:\s*false/i,
+    /disable_effect_until_track_recovers/i,
   ]) assert.match(skill, phrase);
   assert.match(skill, /missing.*manifest.*fail closed/is);
   assert.match(skill, /tamper.*fail closed/is);
+});
+
+test("executable fixtures reject dry_run:false and continue_without_anchor", () => {
+  for (const fixtureName of [
+    "reject-dry-run-false.json",
+    "reject-continue-without-anchor.json",
+  ]) {
+    const fixture = readJson(`tests/fixtures/tasteforge-video/${fixtureName}`);
+    assert.strictEqual(fixture.expected, "reject");
+    assert.throws(
+      () => validateRejectedContractFixture(fixture),
+      undefined,
+      `${fixtureName} was not rejected`
+    );
+  }
 });
 
 test("ships through the opt-in media-generation install module and npm package", () => {
@@ -166,8 +224,10 @@ test("passes the curated skill validator", () => {
 // ECC_TEST_NPM_PACK=1 (release/CI verification); the default suite relies on
 // the files-array assertions above.
 test("ships inside the real npm tarball (opt-in)", () => {
-  if (process.env.ECC_TEST_NPM_PACK !== "1") return;
-  const result = spawnSync("npm", ["pack", "--dry-run"], {
+  if (process.env.ECC_TEST_NPM_PACK !== "1") {
+    return { skipped: "set ECC_TEST_NPM_PACK=1 to run real npm pack inclusion" };
+  }
+  const result = spawnSync("npm", ["pack", "--dry-run", "--ignore-scripts"], {
     cwd: REPO_ROOT,
     encoding: "utf8",
   });
@@ -180,10 +240,16 @@ test("ships inside the real npm tarball (opt-in)", () => {
 });
 
 let failed = 0;
+let skipped = 0;
 console.log("\n=== Testing TasteForge video skill ===\n");
 for (const [name, fn] of tests) {
   try {
-    fn();
+    const result = fn();
+    if (result?.skipped) {
+      skipped += 1;
+      console.log(`  - SKIP ${name}: ${result.skipped}`);
+      continue;
+    }
     console.log(`  ✓ ${name}`);
   } catch (error) {
     failed += 1;
@@ -192,4 +258,4 @@ for (const [name, fn] of tests) {
   }
 }
 if (failed) process.exit(1);
-console.log(`\n${tests.length - failed}/${tests.length} passed`);
+console.log(`\n${tests.length - failed - skipped}/${tests.length} passed, ${skipped} skipped`);
