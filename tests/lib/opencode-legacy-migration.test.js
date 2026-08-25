@@ -302,6 +302,7 @@ test('legacy cleanup never overwrites a file created during quarantine recovery'
   const destinationPath = path.join(targetRoot, 'managed.md');
   let quarantinePath = null;
   let effectiveSafePath = destinationPath;
+  let userDescriptor = null;
   const openDescriptors = [];
   try {
     fs.mkdirSync(targetRoot, { recursive: true });
@@ -323,10 +324,8 @@ test('legacy cleanup never overwrites a file created during quarantine recovery'
           return (filePath, options) => {
             if (!injected && quarantinePath && filePath === quarantinePath) {
               injected = true;
-              const quarantineDescriptor = fs.openSync(filePath, 'r');
-              openDescriptors.push(quarantineDescriptor);
-              const stat = fs.fstatSync(quarantineDescriptor, options);
-              const userDescriptor = fs.openSync(effectiveSafePath, 'wx', 0o600);
+              const stat = fs.fstatSync(originalDescriptor, options);
+              userDescriptor = fs.openSync(effectiveSafePath, 'wx+', 0o600);
               openDescriptors.push(userDescriptor);
               fs.writeFileSync(userDescriptor, 'user-new\n');
               return new Proxy(stat, {
@@ -357,12 +356,20 @@ test('legacy cleanup never overwrites a file created during quarantine recovery'
         return true;
       }
     );
-    const destinationDescriptor = fs.openSync(destinationPath, 'r');
-    openDescriptors.push(destinationDescriptor);
-    const retainedDescriptor = fs.openSync(quarantinePath, 'r');
-    openDescriptors.push(retainedDescriptor);
-    assert.strictEqual(fs.readFileSync(destinationDescriptor, 'utf8'), 'user-new\n');
-    assert.strictEqual(fs.readFileSync(retainedDescriptor, 'utf8'), 'managed-old\n');
+    const destinationStat = fs.lstatSync(destinationPath, { bigint: true });
+    const userStat = fs.fstatSync(userDescriptor, { bigint: true });
+    const retainedStat = fs.lstatSync(quarantinePath, { bigint: true });
+    const managedStat = fs.fstatSync(originalDescriptor, { bigint: true });
+    assert.strictEqual(destinationStat.dev, userStat.dev);
+    assert.strictEqual(destinationStat.ino, userStat.ino);
+    assert.strictEqual(retainedStat.dev, managedStat.dev);
+    assert.strictEqual(retainedStat.ino, managedStat.ino);
+    const userContent = Buffer.alloc(Buffer.byteLength('user-new\n'));
+    const managedContent = Buffer.alloc(Buffer.byteLength('managed-old\n'));
+    fs.readSync(userDescriptor, userContent, 0, userContent.length, 0);
+    fs.readSync(originalDescriptor, managedContent, 0, managedContent.length, 0);
+    assert.strictEqual(userContent.toString('utf8'), 'user-new\n');
+    assert.strictEqual(managedContent.toString('utf8'), 'managed-old\n');
   } finally {
     for (const descriptor of openDescriptors) {
       try {
