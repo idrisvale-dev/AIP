@@ -35,16 +35,18 @@ Commit `2331afbf` reproduced the hosted-runner failure where ambient OpenCode co
 
 Commit `85673326` added legacy OpenCode regressions for custom configuration roots, non-file managed operations, canonical repair routing, and provider-specific auto-update guidance. The migration and guidance cases failed before the final legacy-root repair.
 
+Commit `5aa66021` moved ambient-override checks into isolated child processes and added a regression requiring invocation environments to be immutable snapshots. The snapshot assertion failed before the environment-copy repair.
+
 ## GREEN
 
 - Focused installer, lifecycle, packaging, release-workflow, manifest, OpenCode, Antigravity, and uninstall tests passed.
-- Full repository suite: 3,979 passed, 0 failed.
+- Full repository suite: 3,980 passed, 0 failed.
 - `npm audit --audit-level=low`: 0 vulnerabilities.
 - Supply-chain IOC scan: 207 files inspected, no findings.
 - Both release workflow YAML files parsed successfully.
 - Both release workflows derive reviewed notes from the validated tag and fail clearly when that version's notes are absent.
 - Release-note selection follows the lowercase filename convention shared by prior release directories.
-- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `062bed7c2c0da6711c02940ba327a399d212f1d2d55b385b05760a5278669f15`.
+- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `072404f03255dfabd6d651a71432b7afae4aa5d03ae8c81b29ffa32caea061e0`.
 - The packed lifecycle covered npm installation, public CLI setup, cumulative Cursor install, drift detection, repair, uninstall, user-file preservation, Antigravity install/doctor/uninstall, and OpenCode install/doctor/uninstall.
 - Simulated hosted-runner `OPENCODE_CONFIG_DIR` and `XDG_CONFIG_HOME` overrides passed the adapter, MCP inventory, lifecycle, legacy migration, doctor, repair, list, and uninstall suites while explicit CLI environments continued to honor those overrides.
 
