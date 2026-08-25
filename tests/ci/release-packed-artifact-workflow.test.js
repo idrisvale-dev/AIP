@@ -185,6 +185,7 @@ test('packed lifecycle validates canonical Antigravity and OpenCode installs', (
   assert.match(lifecycleRunnerSource, /path\.join\(homeDir, '\.config', 'opencode'\)/);
   assert.match(lifecycleRunnerSource, /\['doctor', '--target', options\.target, '--json'\]/);
   assert.match(lifecycleRunnerSource, /skill-comply.*SKILL\.md/);
+  assert.match(lifecycleRunnerSource, /!fs\.existsSync\(installedSkillPath\)/);
 });
 
 test('packed lifecycle installs and verifies the opt-in Ito distribution surface', () => {
