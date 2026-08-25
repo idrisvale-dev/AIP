@@ -51,6 +51,18 @@ for (const workflow of [
   test(`${workflow} checks whether the tagged npm version already exists`, () => {
     assert.match(content, /Check npm publish state/);
     assert.match(content, /npm view "\$\{PACKAGE_NAME\}@\$\{PACKAGE_VERSION\}" version/);
+    assert.match(content, /E404/);
+    assert.match(content, /npm registry lookup failed/i);
+  });
+
+  test(`${workflow} requires the release commit to equal origin main`, () => {
+    assert.match(content, /git fetch origin main --no-tags/);
+    assert.match(content, /git rev-parse origin\/main/);
+    assert.match(content, /release commit.*origin\/main/i);
+  });
+
+  test(`${workflow} uses the reviewed 2.2 release notes`, () => {
+    assert.match(content, /docs\/releases\/2\.2\.0\/RELEASE_NOTES\.md/);
   });
 
   test(`${workflow} publishes new tag versions to npm`, () => {
@@ -59,15 +71,15 @@ for (const workflow of [
     assert.match(content, /NODE_AUTH_TOKEN:\s*\$\{\{\s*secrets\.NPM_TOKEN\s*\}\}/);
   });
 
-  test(`${workflow} creates the GitHub Release before publishing to npm`, () => {
+  test(`${workflow} publishes to npm before creating the GitHub Release`, () => {
     const releaseIndex = content.indexOf('name: Create GitHub Release');
     const publishIndex = content.indexOf('name: Publish npm package');
 
     assert.ok(releaseIndex >= 0, `${workflow} should create a GitHub Release`);
     assert.ok(publishIndex >= 0, `${workflow} should publish the npm package`);
     assert.ok(
-      releaseIndex < publishIndex,
-      `${workflow} should not publish to npm until GitHub Release creation has succeeded`
+      publishIndex < releaseIndex,
+      `${workflow} should publish the verified package before creating the GitHub Release`
     );
   });
 }

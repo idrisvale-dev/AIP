@@ -201,6 +201,7 @@ function main() {
         "schemas/install-state.schema.json",
         "schemas/memory.schema.json",
         "skills/backend-patterns/SKILL.md",
+        "skills/skill-comply/SKILL.md",
         "skills/unified-memory/SKILL.md",
       ]) {
         assert.ok(
@@ -214,7 +215,6 @@ function main() {
         "examples/CLAUDE.md",
         "plugins/README.md",
         "scripts/ci/catalog.js",
-        "skills/skill-comply/SKILL.md",
       ]) {
         assert.ok(
           !packagedPaths.has(excludedPath),
@@ -230,6 +230,10 @@ function main() {
         assert.ok(
           !/\.py[cod]$/.test(packagedPath),
           `npm pack should not include Python bytecode file ${packagedPath}`
+        )
+        assert.ok(
+          !packagedPath.includes(".pytest_cache/"),
+          `npm pack should not include pytest cache path ${packagedPath}`
         )
       }
     }],

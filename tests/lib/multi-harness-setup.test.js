@@ -175,6 +175,27 @@ function writeManagedState(plan, overrides = {}) {
     }
   });
 
+  await test('rejects managed preflight plans without an install-state path', () => {
+    const root = tempDir('ecc-guided-missing-state-');
+    try {
+      const source = path.join(root, 'source.md');
+      writeFile(source, 'ecc\n');
+      const plan = managedPlan(root, [{
+        kind: 'copy-file',
+        sourcePath: source,
+        destinationPath: path.join(root, 'AGENTS.md'),
+      }]);
+      delete plan.installStatePath;
+
+      assert.throws(
+        () => preflightManagedPlan(plan),
+        /install-state path is required/i
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   await test('rejects valid install-state from a different managed target identity', () => {
     const root = tempDir('ecc-guided-forged-target-');
     try {
