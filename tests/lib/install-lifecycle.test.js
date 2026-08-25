@@ -100,7 +100,7 @@ function writeCursorState(projectRoot, overrides = {}) {
 }
 
 function createOpencodeStateOptions(homeDir, overrides = {}) {
-  const targetRoot = overrides.targetRoot || path.join(homeDir, '.opencode');
+  const targetRoot = overrides.targetRoot || path.join(homeDir, '.config', 'opencode');
   const installStatePath = overrides.installStatePath || path.join(targetRoot, 'ecc-install-state.json');
 
   return {
