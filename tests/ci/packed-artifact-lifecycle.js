@@ -263,9 +263,15 @@ function runTargetSmoke(options) {
     `${options.target} packed install`
   );
   const statePath = path.join(options.targetRoot, 'ecc-install-state.json');
+  const installedSkillPath = path.join(
+    options.targetRoot,
+    'skills',
+    'skill-comply',
+    'SKILL.md'
+  );
   assert.ok(fs.existsSync(statePath), `${options.target} install-state must exist`);
   assert.ok(
-    fs.existsSync(path.join(options.targetRoot, 'skills', 'skill-comply', 'SKILL.md')),
+    fs.existsSync(installedSkillPath),
     `${options.target} must install skill-comply from the packed archive`
   );
 
@@ -281,6 +287,10 @@ function runTargetSmoke(options) {
   );
   assert.strictEqual(uninstall.summary.errorCount, 0);
   assert.ok(!fs.existsSync(statePath), `${options.target} uninstall must remove install-state`);
+  assert.ok(
+    !fs.existsSync(installedSkillPath),
+    `${options.target} uninstall must remove the installed skill`
+  );
 }
 
 function runLifecycle(options) {

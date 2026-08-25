@@ -4,7 +4,7 @@ Date: 2026-08-24
 
 ## Scope
 
-This pass covers the release blockers found in the delta from `v2.1.0`: cumulative selective-install ownership, native Antigravity packaging, canonical OpenCode installation, provider-neutral OpenCode agents, `skill-comply` distribution, conservative legacy Codex uninstall, release-workflow safety, and guided-install filesystem boundaries.
+This pass covers the release blockers found in the delta from `v2.1.0`: cumulative selective-install ownership, native Antigravity packaging, canonical OpenCode installation and conservative legacy migration, provider-neutral OpenCode agents, `skill-comply` distribution, conservative legacy Codex uninstall, release-workflow safety, and guided-install filesystem boundaries.
 
 ## RED
 
@@ -20,6 +20,8 @@ Commit `6e66dfba` added release regressions before the repairs. All six focused 
 Commit `528dbea0` added a security regression proving guided preflight accepted an identical copy source through a symbolic link. It failed before the no-follow snapshot repair.
 
 Commit `a504b194` added a release regression after review proved both workflows reused the literal 2.2.0 notes path for later valid versions. Both workflow cases failed before the version-derived notes repair.
+
+Commit `55a2d482` added five OpenCode upgrade regressions. Discovery, uninstall, canonical reinstall, repair migration, and no-follow symlink preservation all failed before the legacy managed-root repair.
 
 ## GREEN
 

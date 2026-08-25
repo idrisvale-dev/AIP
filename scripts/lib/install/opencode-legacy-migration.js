@@ -1,0 +1,338 @@
+'use strict';
+
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+
+const { readInstallState } = require('../install-state');
+const { assertWithinTrustedRoot } = require('../path-safety');
+
+const OPENCODE_TARGET = 'opencode';
+const INSTALL_STATE_NAME = 'ecc-install-state.json';
+
+function samePath(leftPath, rightPath) {
+  const left = path.resolve(leftPath);
+  const right = path.resolve(rightPath);
+  return process.platform === 'win32'
+    ? left.toLowerCase() === right.toLowerCase()
+    : left === right;
+}
+
+function pathExists(filePath) {
+  try {
+    fs.lstatSync(filePath);
+    return true;
+  } catch (error) {
+    if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+function getLegacyOpencodeLocation(homeDir) {
+  const targetRoot = path.join(path.resolve(homeDir), '.opencode');
+  return {
+    targetRoot,
+    installStatePath: path.join(targetRoot, INSTALL_STATE_NAME),
+    legacyLayout: 'opencode',
+  };
+}
+
+function getLegacyLocationForPlan(plan) {
+  if (
+    !plan
+    || plan.adapter?.target !== OPENCODE_TARGET
+    || typeof plan.targetRoot !== 'string'
+  ) {
+    return null;
+  }
+  const canonicalRoot = path.resolve(plan.targetRoot);
+  if (
+    path.basename(canonicalRoot) !== 'opencode'
+    || path.basename(path.dirname(canonicalRoot)) !== '.config'
+  ) {
+    return null;
+  }
+  return getLegacyOpencodeLocation(path.dirname(path.dirname(canonicalRoot)));
+}
+
+function inspectLegacyOpencodeState(location) {
+  if (!location) {
+    return { status: 'absent', state: null, error: null };
+  }
+  try {
+    if (!pathExists(location.installStatePath)) {
+      return { status: 'absent', state: null, error: null };
+    }
+    const rootStat = fs.lstatSync(location.targetRoot);
+    const stateStat = fs.lstatSync(location.installStatePath);
+    if (
+      !rootStat.isDirectory()
+      || rootStat.isSymbolicLink()
+      || !stateStat.isFile()
+      || stateStat.isSymbolicLink()
+    ) {
+      return { status: 'invalid', state: null, error: null };
+    }
+    const state = readInstallState(location.installStatePath);
+    const isOpencode = state.target.target === OPENCODE_TARGET
+      || state.target.id === 'opencode-home';
+    if (
+      !isOpencode
+      || !samePath(state.target.root, location.targetRoot)
+      || !samePath(state.target.installStatePath, location.installStatePath)
+    ) {
+      return { status: 'invalid', state: null, error: null };
+    }
+    return { status: 'valid', state, error: null };
+  } catch (error) {
+    return {
+      status: 'unreadable',
+      state: null,
+      error: `Unable to inspect legacy OpenCode install-state at ${location.installStatePath}: ${error.message}`,
+    };
+  }
+}
+
+function hashFileNoFollow(filePath) {
+  const flags = fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0);
+  const descriptor = fs.openSync(filePath, flags);
+  try {
+    const before = fs.fstatSync(descriptor);
+    if (!before.isFile()) {
+      throw new Error(`Refusing to read a non-file at ${filePath}`);
+    }
+    const content = fs.readFileSync(descriptor);
+    const after = fs.fstatSync(descriptor);
+    const finalPathStat = fs.lstatSync(filePath);
+    const unchanged = before.dev === after.dev
+      && before.ino === after.ino
+      && before.size === after.size
+      && before.mtimeMs === after.mtimeMs
+      && before.ctimeMs === after.ctimeMs
+      && after.dev === finalPathStat.dev
+      && after.ino === finalPathStat.ino
+      && after.size === finalPathStat.size
+      && after.mtimeMs === finalPathStat.mtimeMs
+      && after.ctimeMs === finalPathStat.ctimeMs;
+    if (finalPathStat.isSymbolicLink() || !finalPathStat.isFile() || !unchanged) {
+      throw new Error(`Refusing to read a file that changed during validation: ${filePath}`);
+    }
+    return {
+      digest: crypto.createHash('sha256').update(content).digest('hex'),
+      stat: after,
+    };
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
+function removeEmptyParents(startPath, legacyRoot) {
+  let currentPath = path.dirname(startPath);
+  while (!samePath(currentPath, legacyRoot)) {
+    const safePath = assertWithinTrustedRoot(
+      currentPath,
+      legacyRoot,
+      'clean legacy OpenCode install'
+    );
+    if (!pathExists(safePath)) {
+      currentPath = path.dirname(safePath);
+      continue;
+    }
+    const stat = fs.lstatSync(safePath);
+    if (!stat.isDirectory() || stat.isSymbolicLink() || fs.readdirSync(safePath).length > 0) {
+      return;
+    }
+    fs.rmdirSync(safePath);
+    currentPath = path.dirname(safePath);
+  }
+}
+
+function verifyManagedLegacyFile(operation, location, sourceRoot) {
+  if (
+    operation?.kind !== 'copy-file'
+    || operation.ownership !== 'managed'
+    || typeof operation.destinationPath !== 'string'
+    || typeof operation.sourceRelativePath !== 'string'
+    || !/^[a-f0-9]{64}$/i.test(operation.contentSha256 || '')
+  ) {
+    return { retainedPath: operation?.destinationPath || location.targetRoot };
+  }
+
+  let destinationPath;
+  let sourcePath;
+  try {
+    destinationPath = assertWithinTrustedRoot(
+      operation.destinationPath,
+      location.targetRoot,
+      'migrate legacy OpenCode install'
+    );
+    sourcePath = assertWithinTrustedRoot(
+      path.join(sourceRoot, operation.sourceRelativePath),
+      sourceRoot,
+      'verify legacy OpenCode source'
+    );
+  } catch (_error) {
+    return { retainedPath: operation.destinationPath };
+  }
+
+  let destination;
+  try {
+    destination = hashFileNoFollow(destinationPath);
+  } catch (error) {
+    if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+      return { missing: true };
+    }
+    return { retainedPath: destinationPath };
+  }
+  if (destination.digest !== operation.contentSha256.toLowerCase()) {
+    return { retainedPath: destinationPath };
+  }
+  let source;
+  try {
+    source = hashFileNoFollow(sourcePath);
+  } catch (_error) {
+    return { retainedPath: destinationPath };
+  }
+  if (source.digest !== destination.digest) {
+    return { retainedPath: destinationPath };
+  }
+  return { destinationPath, stat: destination.stat };
+}
+
+function removeVerifiedLegacyFile(entry, location) {
+  const safePath = assertWithinTrustedRoot(
+    entry.destinationPath,
+    location.targetRoot,
+    'remove verified legacy OpenCode file'
+  );
+  const quarantineDir = fs.mkdtempSync(path.join(
+    path.dirname(location.targetRoot),
+    '.ecc-opencode-remove-'
+  ));
+  const quarantinePath = path.join(quarantineDir, path.basename(safePath));
+  try {
+    fs.renameSync(safePath, quarantinePath);
+    const quarantinedStat = fs.lstatSync(quarantinePath);
+    const identityMatches = !quarantinedStat.isSymbolicLink()
+      && quarantinedStat.isFile()
+      && quarantinedStat.dev === entry.stat.dev
+      && quarantinedStat.ino === entry.stat.ino;
+    if (!identityMatches) {
+      fs.renameSync(quarantinePath, safePath);
+      fs.rmdirSync(quarantineDir);
+      return false;
+    }
+    fs.rmSync(quarantinePath);
+    fs.rmdirSync(quarantineDir);
+    return true;
+  } catch (error) {
+    try {
+      if (pathExists(quarantinePath) && !pathExists(safePath)) {
+        fs.renameSync(quarantinePath, safePath);
+      }
+      if (pathExists(quarantineDir) && fs.readdirSync(quarantineDir).length === 0) {
+        fs.rmdirSync(quarantineDir);
+      }
+    } catch (_restoreError) {
+      // Preserve the quarantined entry when restoration cannot be proven safe.
+    }
+    throw error;
+  }
+}
+
+function cleanupLegacyOpencodeInstall(plan) {
+  const location = getLegacyLocationForPlan(plan);
+  const emptyResult = {
+    detected: false,
+    complete: false,
+    removedPaths: [],
+    retainedPaths: [],
+    warnings: [],
+  };
+  if (!location || typeof plan.sourceRoot !== 'string' || !pathExists(plan.installStatePath)) {
+    return emptyResult;
+  }
+
+  try {
+    const canonicalState = readInstallState(plan.installStatePath);
+    if (
+      (canonicalState.target.target !== OPENCODE_TARGET
+        && canonicalState.target.id !== 'opencode-home')
+      || !samePath(canonicalState.target.root, plan.targetRoot)
+      || !samePath(canonicalState.target.installStatePath, plan.installStatePath)
+    ) {
+      return emptyResult;
+    }
+  } catch (_error) {
+    return emptyResult;
+  }
+
+  const inspection = inspectLegacyOpencodeState(location);
+  if (inspection.status === 'unreadable') {
+    return {
+      ...emptyResult,
+      detected: true,
+      retainedPaths: [location.targetRoot],
+      warnings: [inspection.error],
+    };
+  }
+  if (inspection.status !== 'valid') {
+    return emptyResult;
+  }
+
+  const removable = [];
+  const retainedPaths = [];
+  for (const operation of inspection.state.operations || []) {
+    const verified = verifyManagedLegacyFile(operation, location, plan.sourceRoot);
+    if (verified.destinationPath) {
+      removable.push(verified);
+    } else if (verified.retainedPath) {
+      retainedPaths.push(verified.retainedPath);
+    }
+  }
+
+  const removedPaths = [];
+  for (const entry of removable) {
+    try {
+      if (!removeVerifiedLegacyFile(entry, location)) {
+        retainedPaths.push(entry.destinationPath);
+        continue;
+      }
+      removedPaths.push(entry.destinationPath);
+      removeEmptyParents(entry.destinationPath, location.targetRoot);
+    } catch (_error) {
+      retainedPaths.push(entry.destinationPath);
+    }
+  }
+
+  const complete = retainedPaths.length === 0;
+  if (complete) {
+    fs.rmSync(location.installStatePath, { force: true });
+    removedPaths.push(location.installStatePath);
+    try {
+      if (pathExists(location.targetRoot) && fs.readdirSync(location.targetRoot).length === 0) {
+        fs.rmdirSync(location.targetRoot);
+      }
+    } catch (_error) {
+      // Removing an empty legacy root is best effort after ownership is cleared.
+    }
+  }
+
+  return {
+    detected: true,
+    complete,
+    removedPaths,
+    retainedPaths: [...new Set(retainedPaths)].sort(),
+    warnings: complete
+      ? []
+      : ['Modified, unsupported, or unverifiable managed files remain under ~/.opencode and were preserved.'],
+  };
+}
+
+module.exports = {
+  cleanupLegacyOpencodeInstall,
+  getLegacyOpencodeLocation,
+  inspectLegacyOpencodeState,
+};

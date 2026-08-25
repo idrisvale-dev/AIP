@@ -9,6 +9,9 @@ const { applyInstallPlan } = require('../../scripts/lib/install/apply');
 const { readInstallState } = require('../../scripts/lib/install-state');
 const { uninstallInstalledStates } = require('../../scripts/lib/install-lifecycle');
 
+let passed = 0;
+let failed = 0;
+
 function makePlan(root, moduleId, fileName) {
   const targetRoot = path.join(root, '.cursor');
   const installStatePath = path.join(targetRoot, 'ecc-install-state.json');
@@ -79,6 +82,13 @@ try {
   assert.ok(!fs.existsSync(first.operations[0].destinationPath));
   assert.ok(!fs.existsSync(second.operations[0].destinationPath));
   console.log('  ✓ selective reinstall preserves cumulative ownership and uninstall removes it');
+  passed += 1;
+} catch (error) {
+  console.log(`  ✗ ${error.message}`);
+  failed += 1;
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }
+
+console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
+process.exit(failed > 0 ? 1 : 0);

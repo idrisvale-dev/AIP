@@ -88,6 +88,7 @@ function canonicalPlan(homeDir) {
     moduleIds: ['workflow-quality'],
     projectRoot: homeDir,
     homeDir,
+    exemptValidationCodes: ['opencode-plugin-not-built'],
   });
 }
 
@@ -124,7 +125,7 @@ test('uninstall removes unchanged legacy-managed files and preserves user conten
     const sentinelPath = path.join(legacy.targetRoot, 'user.txt');
     fs.writeFileSync(sentinelPath, 'keep\n');
     const result = uninstallInstalledStates({ homeDir, projectRoot: homeDir, targets: ['opencode'] });
-    assert.strictEqual(result.summary.errorCount, 0);
+    assert.strictEqual(result.summary.errorCount, 0, JSON.stringify(result));
     assert.ok(!fs.existsSync(legacy.destinationPath));
     assert.ok(!fs.existsSync(legacy.installStatePath));
     assert.strictEqual(fs.readFileSync(sentinelPath, 'utf8'), 'keep\n');
@@ -157,9 +158,36 @@ test('repair migrates a legacy install while preserving modified legacy files', 
       projectRoot: homeDir,
       targets: ['opencode'],
     });
-    assert.strictEqual(result.summary.errorCount, 0);
+    assert.strictEqual(result.summary.errorCount, 0, JSON.stringify(result));
     assert.ok(fs.existsSync(path.join(homeDir, '.config', 'opencode', 'ecc-install-state.json')));
     assert.strictEqual(fs.readFileSync(legacy.destinationPath, 'utf8'), 'user-modified\n');
+    assert.ok(fs.existsSync(legacy.installStatePath));
+  } finally {
+    fs.rmSync(homeDir, { recursive: true, force: true });
+  }
+});
+
+test('migration never follows a legacy managed-file symlink', () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-legacy-symlink-'));
+  try {
+    const legacy = seedLegacyInstall(homeDir);
+    const victimPath = path.join(homeDir, 'victim.txt');
+    fs.writeFileSync(victimPath, 'do-not-delete\n');
+    fs.rmSync(legacy.destinationPath);
+    try {
+      fs.symlinkSync(victimPath, legacy.destinationPath);
+    } catch (error) {
+      if (process.platform === 'win32' && error.code === 'EPERM') {
+        console.log('    (symlink unsupported on this platform; skipping)');
+        return;
+      }
+      throw error;
+    }
+
+    const result = applyInstallPlan(canonicalPlan(homeDir));
+    assert.ok(result.warnings.some(warning => warning.includes('Legacy OpenCode migration')));
+    assert.strictEqual(fs.readFileSync(victimPath, 'utf8'), 'do-not-delete\n');
+    assert.ok(fs.lstatSync(legacy.destinationPath).isSymbolicLink());
     assert.ok(fs.existsSync(legacy.installStatePath));
   } finally {
     fs.rmSync(homeDir, { recursive: true, force: true });

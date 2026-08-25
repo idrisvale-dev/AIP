@@ -6,7 +6,7 @@ ECC 2.2.0 makes the universal installer a first-class, cross-harness distributio
 
 - Antigravity installs natively to `.agents/{rules,workflows,skills,agents}`. Do not manually rename a legacy `.agent` directory. Re-run ECC 2.2.0 so the installer can apply its ownership-aware migration rules.
 - Repeated selective installs retain the complete managed ownership ledger. A later module install no longer causes previously installed ECC files to survive uninstall.
-- OpenCode home installs use `~/.config/opencode`, and its bundled agent definitions inherit the user's selected model provider.
+- OpenCode home installs use `~/.config/opencode`. Reinstall or repair discovers legacy `~/.opencode` ownership, migrates unchanged ECC-managed files, and preserves modified files for review. Bundled agent definitions inherit the user's selected model provider.
 - Legacy Codex sync cleanup requires ownership evidence by default and preserves untracked or modified user files.
 - `skill-comply` is included in both the install graph and npm archive. Python bytecode and pytest caches remain excluded.
 

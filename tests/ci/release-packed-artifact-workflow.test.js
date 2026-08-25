@@ -184,7 +184,7 @@ test('packed lifecycle validates canonical Antigravity and OpenCode installs', (
   assert.match(lifecycleRunnerSource, /target:\s*'opencode'/);
   assert.match(lifecycleRunnerSource, /path\.join\(homeDir, '\.config', 'opencode'\)/);
   assert.match(lifecycleRunnerSource, /\['doctor', '--target', options\.target, '--json'\]/);
-  assert.match(lifecycleRunnerSource, /skill-comply.*SKILL\.md/);
+  assert.match(lifecycleRunnerSource, /skill-comply[\s\S]*SKILL\.md/);
   assert.match(lifecycleRunnerSource, /!fs\.existsSync\(installedSkillPath\)/);
 });
 

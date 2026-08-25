@@ -15,6 +15,10 @@ const {
   getLegacyAntigravityLocation,
   inspectLegacyAntigravityState,
 } = require('./install/antigravity-legacy-migration');
+const {
+  getLegacyOpencodeLocation,
+  inspectLegacyOpencodeState,
+} = require('./install/opencode-legacy-migration');
 const { adaptAntigravityAgent } = require('./install/antigravity-agent');
 const { buildInstallIndex, rewriteRelativeLinks } = require('./install/link-rewrite');
 const { getInstallTargetAdapter, listInstallTargetAdapters } = require('./install-targets/registry');
@@ -1209,7 +1213,8 @@ function buildDiscoveryRecord(adapter, context, location = null, knownState = nu
       exists: false,
       state: null,
       error: null,
-      legacy: Boolean(location)
+      legacy: Boolean(location),
+      legacyLayout: location?.legacyLayout || null
     };
   }
 
@@ -1225,7 +1230,8 @@ function buildDiscoveryRecord(adapter, context, location = null, knownState = nu
       exists: true,
       state: knownState,
       error: null,
-      legacy: Boolean(location)
+      legacy: Boolean(location),
+      legacyLayout: location?.legacyLayout || null
     };
   }
 
@@ -1242,7 +1248,8 @@ function buildDiscoveryRecord(adapter, context, location = null, knownState = nu
       exists: true,
       state,
       error: null,
-      legacy: Boolean(location)
+      legacy: Boolean(location),
+      legacyLayout: location?.legacyLayout || null
     };
   } catch (error) {
     return {
@@ -1256,7 +1263,8 @@ function buildDiscoveryRecord(adapter, context, location = null, knownState = nu
       exists: true,
       state: null,
       error: error.message,
-      legacy: Boolean(location)
+      legacy: Boolean(location),
+      legacyLayout: location?.legacyLayout || null
     };
   }
 }
@@ -1271,11 +1279,46 @@ function discoverInstalledStates(options = {}) {
   return targets.flatMap(target => {
     const adapter = getInstallTargetAdapter(target);
     const canonicalRecord = buildDiscoveryRecord(adapter, context);
+    if (adapter.target === 'opencode') {
+      const legacyLocation = getLegacyOpencodeLocation(context.homeDir);
+      const legacyInspection = inspectLegacyOpencodeState(legacyLocation);
+      if (
+        path.resolve(legacyLocation.installStatePath) === path.resolve(canonicalRecord.installStatePath)
+        || legacyInspection.status === 'absent'
+        || legacyInspection.status === 'invalid'
+      ) {
+        return [canonicalRecord];
+      }
+      if (legacyInspection.status === 'unreadable') {
+        return [canonicalRecord, {
+          adapter: {
+            id: adapter.id,
+            target: adapter.target,
+            kind: adapter.kind,
+          },
+          targetRoot: legacyLocation.targetRoot,
+          installStatePath: legacyLocation.installStatePath,
+          exists: true,
+          state: null,
+          error: legacyInspection.error,
+          legacy: true,
+          legacyLayout: 'opencode',
+        }];
+      }
+      return [
+        canonicalRecord,
+        buildDiscoveryRecord(adapter, context, legacyLocation, legacyInspection.state),
+      ];
+    }
+
     if (adapter.target !== 'antigravity') {
       return [canonicalRecord];
     }
 
-    const legacyLocation = getLegacyAntigravityLocation(context.projectRoot);
+    const legacyLocation = {
+      ...getLegacyAntigravityLocation(context.projectRoot),
+      legacyLayout: 'antigravity',
+    };
     const legacyInspection = inspectLegacyAntigravityState(legacyLocation);
     if (
       path.resolve(legacyLocation.installStatePath) === path.resolve(canonicalRecord.installStatePath)
@@ -1296,8 +1339,9 @@ function discoverInstalledStates(options = {}) {
         installStatePath: legacyLocation.installStatePath,
         exists: true,
         state: null,
-        error: legacyInspection.error,
-        legacy: true,
+          error: legacyInspection.error,
+          legacy: true,
+          legacyLayout: 'antigravity',
       }];
     }
 
@@ -1332,11 +1376,19 @@ function determineStatus(issues) {
 function analyzeRecord(record, context) {
   const issues = [];
 
-  if (record.legacy) {
+  if (record.legacyLayout === 'antigravity') {
     issues.push(buildIssue(
       'warning',
       'legacy-antigravity-layout',
       'Legacy Antigravity install-state remains under .agent. Review and move any preserved modified or unmanaged files out of .agent, then rerun the Antigravity install to finish migration.'
+    ));
+  }
+
+  if (record.legacyLayout === 'opencode') {
+    issues.push(buildIssue(
+      'warning',
+      'legacy-opencode-layout',
+      'Legacy OpenCode install-state remains under ~/.opencode. Rerun the OpenCode install or repair command to migrate unchanged ECC-managed files to ~/.config/opencode; modified files are preserved for review.'
     ));
   }
 
@@ -1669,7 +1721,10 @@ function repairInstalledStates(options = {}) {
     homeDir: context.homeDir,
     projectRoot: context.projectRoot,
     targets: options.targets
-  }).filter(record => record.exists && !record.legacy);
+  }).filter(record => (
+    record.exists
+    && (!record.legacy || record.legacyLayout === 'opencode')
+  ));
 
   const results = records.map(record => {
     if (record.error) {
@@ -1687,6 +1742,65 @@ function repairInstalledStates(options = {}) {
       const needsOpencodeBuild = record.adapter.target === 'opencode'
         && hasOpencodeBuildError(getOpencodeBuildValidationIssues(context));
       const opencodeBuildRepairPath = path.join(context.repoRoot, OPENCODE_BUILD_ARTIFACT);
+
+      if (record.legacyLayout === 'opencode') {
+        if (needsOpencodeBuild && !options.dryRun) {
+          try {
+            buildOpencodeRunner(context.repoRoot);
+          } catch (error) {
+            return {
+              adapter: record.adapter,
+              status: 'error',
+              installStatePath: record.installStatePath,
+              repairedPaths: [],
+              plannedRepairs: [],
+              error: formatBuildErrorMessage(error),
+            };
+          }
+        }
+
+        const canonicalPlan = createRepairPlanFromRecord(record, context, {
+          exemptValidationCodes: options.dryRun && needsOpencodeBuild
+            ? [OPENCODE_PLUGIN_NOT_BUILT_CODE]
+            : [],
+        });
+        const plannedRepairs = [...new Set([
+          ...(needsOpencodeBuild ? [opencodeBuildRepairPath] : []),
+          ...canonicalPlan.operations.map(operation => operation.destinationPath),
+          ...getManagedOperations(record.state).map(operation => operation.destinationPath),
+          record.installStatePath,
+        ])];
+
+        if (options.dryRun) {
+          return {
+            adapter: record.adapter,
+            status: 'planned',
+            installStatePath: canonicalPlan.installStatePath,
+            repairedPaths: [],
+            plannedRepairs,
+            stateRefreshed: false,
+            warnings: canonicalPlan.warnings,
+            error: null,
+          };
+        }
+
+        // Load lazily to avoid a module cycle during install-lifecycle startup.
+        const { applyInstallPlan } = require('./install/apply');
+        const appliedPlan = applyInstallPlan(canonicalPlan);
+        return {
+          adapter: record.adapter,
+          status: 'repaired',
+          installStatePath: canonicalPlan.installStatePath,
+          repairedPaths: [
+            ...(needsOpencodeBuild ? [opencodeBuildRepairPath] : []),
+            ...canonicalPlan.operations.map(operation => operation.destinationPath),
+          ],
+          plannedRepairs: [],
+          stateRefreshed: true,
+          warnings: appliedPlan.warnings,
+          error: null,
+        };
+      }
 
       if (needsOpencodeBuild && options.dryRun) {
         const rawPlan = createRepairPlanFromRecord(record, context, {
@@ -1938,7 +2052,7 @@ function uninstallInstalledStates(options = {}) {
 
     const state = record.state;
     const managedOperations = getManagedOperations(state);
-    if (record.legacy && managedOperations.length > 0) {
+    if (record.legacyLayout === 'antigravity' && managedOperations.length > 0) {
       return {
         adapter: record.adapter,
         status: 'partial',

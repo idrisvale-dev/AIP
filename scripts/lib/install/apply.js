@@ -17,6 +17,7 @@ const {
   removeLegacyClaudeSkillFiles,
 } = require('./claude-skill-migration');
 const { cleanupLegacyAntigravityInstall } = require('./antigravity-legacy-migration');
+const { cleanupLegacyOpencodeInstall } = require('./opencode-legacy-migration');
 const { buildInstallIndex, rewriteRelativeLinks } = require('./link-rewrite');
 const { adaptAntigravityAgent } = require('./antigravity-agent');
 
@@ -493,6 +494,21 @@ function applyInstallPlan(plan, dependencies = {}) {
     ];
   }
 
+  let opencodeMigrationWarnings = [];
+  try {
+    const opencodeMigration = cleanupLegacyOpencodeInstall(appliedPlan);
+    if (opencodeMigration.detected && !opencodeMigration.complete) {
+      opencodeMigrationWarnings = [
+        'Legacy OpenCode migration is incomplete. ECC preserved modified or unverifiable managed content under ~/.opencode; review it and rerun the OpenCode install.',
+        ...(Array.isArray(opencodeMigration.warnings) ? opencodeMigration.warnings : []),
+      ];
+    }
+  } catch (error) {
+    opencodeMigrationWarnings = [
+      `Legacy OpenCode cleanup did not finish: ${error.message}. Content under ~/.opencode was preserved; rerun the OpenCode install or review it manually.`,
+    ];
+  }
+
   return {
     ...plan,
     statePreview: finalState,
@@ -503,6 +519,7 @@ function applyInstallPlan(plan, dependencies = {}) {
       ...(Array.isArray(plan.warnings) ? plan.warnings : []),
       ...migration.warnings,
       ...antigravityMigrationWarnings,
+      ...opencodeMigrationWarnings,
     ],
     applied: true,
   };
