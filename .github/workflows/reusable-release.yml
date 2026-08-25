@@ -119,7 +119,16 @@ jobs:
           echo "dist_tag=${NPM_DIST_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Use reviewed release notes
-        run: cp docs/releases/2.2.0/RELEASE_NOTES.md release_body.md
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          RELEASE_VERSION="${RELEASE_TAG#v}"
+          RELEASE_NOTES="docs/releases/${RELEASE_VERSION}/RELEASE_NOTES.md"
+          if [ ! -f "$RELEASE_NOTES" ]; then
+            echo "::error::Missing reviewed release notes for ${RELEASE_VERSION}: ${RELEASE_NOTES}"
+            exit 1
+          fi
+          cp "$RELEASE_NOTES" release_body.md
 
       - name: Pack npm artifact
         id: pack
