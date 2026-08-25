@@ -15,6 +15,11 @@ const {
   uninstallInstalledStates,
 } = require('../../scripts/lib/install-lifecycle');
 const { createInstallState, writeInstallState } = require('../../scripts/lib/install-state');
+const {
+  cleanupLegacyOpencodeInstall,
+  getLegacyOpencodeLocation,
+  inspectLegacyOpencodeState,
+} = require('../../scripts/lib/install/opencode-legacy-migration');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const SOURCE_RELATIVE_PATH = path.join('skills', 'skill-comply', 'SKILL.md');
@@ -93,6 +98,35 @@ function canonicalPlan(homeDir) {
 }
 
 console.log('\n=== Testing OpenCode legacy migration ===\n');
+
+test('legacy inspection distinguishes absent, invalid, and unreadable state', () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-legacy-inspect-'));
+  try {
+    const location = getLegacyOpencodeLocation(homeDir);
+    assert.strictEqual(inspectLegacyOpencodeState(null).status, 'absent');
+    assert.strictEqual(inspectLegacyOpencodeState(location).status, 'absent');
+
+    fs.mkdirSync(location.targetRoot, { recursive: true });
+    fs.mkdirSync(location.installStatePath);
+    assert.strictEqual(inspectLegacyOpencodeState(location).status, 'invalid');
+    fs.rmSync(location.installStatePath, { recursive: true, force: true });
+
+    fs.writeFileSync(location.installStatePath, '{not-json', 'utf8');
+    const unreadable = inspectLegacyOpencodeState(location);
+    assert.strictEqual(unreadable.status, 'unreadable');
+    assert.ok(unreadable.error.includes(location.installStatePath));
+
+    assert.deepStrictEqual(cleanupLegacyOpencodeInstall(null), {
+      detected: false,
+      complete: false,
+      removedPaths: [],
+      retainedPaths: [],
+      warnings: [],
+    });
+  } finally {
+    fs.rmSync(homeDir, { recursive: true, force: true });
+  }
+});
 
 test('discovery and doctor surface the legacy managed root', () => {
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-legacy-discover-'));

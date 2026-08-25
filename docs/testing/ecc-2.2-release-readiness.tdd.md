@@ -43,6 +43,7 @@ All three changed core modules exceeded the 80 percent line target:
 | `scripts/lib/multi-harness-setup.js` | 88.75% | 82.75% | 74.01% |
 | `scripts/lib/install/claude-skill-migration.js` | 95.20% | 100% | 88.78% |
 | `scripts/lib/install-targets/opencode-home.js` | 86.66% | 100% | 78.94% |
+| `scripts/lib/install/opencode-legacy-migration.js` | 82.24% | 100% | 68.29% |
 
 Coverage commands used `c8 --check-coverage --lines 80` against the corresponding focused test files.
 
