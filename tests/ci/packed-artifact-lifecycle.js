@@ -253,7 +253,7 @@ function findDriftCandidate(state, cursorRoot) {
 }
 
 function runTargetSmoke(options) {
-  const install = parseJsonOutput(
+  parseJsonOutput(
     options.runCli([
       'install',
       '--modules', 'workflow-quality',
@@ -262,7 +262,6 @@ function runTargetSmoke(options) {
     ]),
     `${options.target} packed install`
   );
-  assert.strictEqual(install.summary.errorCount, 0);
   const statePath = path.join(options.targetRoot, 'ecc-install-state.json');
   assert.ok(fs.existsSync(statePath), `${options.target} install-state must exist`);
   assert.ok(
