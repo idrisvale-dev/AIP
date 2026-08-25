@@ -35,7 +35,7 @@ All three changed core modules exceeded the 80 percent line target:
 
 | Module | Lines | Functions | Branches |
 | --- | ---: | ---: | ---: |
-| `scripts/lib/multi-harness-setup.js` | 88.42% | 82.75% | 73.18% |
+| `scripts/lib/multi-harness-setup.js` | 88.75% | 82.75% | 74.01% |
 | `scripts/lib/install/claude-skill-migration.js` | 95.20% | 100% | 88.78% |
 | `scripts/lib/install-targets/opencode-home.js` | 86.66% | 100% | 78.94% |
 
