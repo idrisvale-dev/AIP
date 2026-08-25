@@ -66,6 +66,11 @@ for (const workflow of [
     assert.match(content, /docs\/releases\/\$\{RELEASE_VERSION\}\/release-notes\.md/);
   });
 
+  test(`${workflow} publishes only the reviewed release notes`, () => {
+    assert.match(content, /body_path:\s*release_body\.md[\s\S]{0,160}generate_release_notes:\s*false/);
+    assert.doesNotMatch(content, /generate_release_notes:\s*(?:true|\$\{\{)/);
+  });
+
   test(`${workflow} publishes new tag versions to npm`, () => {
     assert.match(content, /ECC_RELEASE_PACKAGE:\s*\$\{\{ needs\.verify\.outputs\.package_file \}\}/);
     assert.match(content, /npm publish "\.\/\$\{ECC_RELEASE_PACKAGE\}" --access public --provenance/);
@@ -84,6 +89,10 @@ for (const workflow of [
     );
   });
 }
+
+test('reusable release workflow has no generated-notes input', () => {
+  assert.doesNotMatch(load('.github/workflows/reusable-release.yml'), /generate-notes:/);
+});
 
 if (failed > 0) {
   console.log(`\nFailed: ${failed}`);

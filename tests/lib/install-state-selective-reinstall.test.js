@@ -68,6 +68,7 @@ try {
   const first = makePlan(root, 'first-module', 'FIRST.md');
   const second = makePlan(root, 'second-module', 'SECOND.md');
   applyInstallPlan(first);
+  fs.writeFileSync(first.operations[0].destinationPath, 'user-modified\n');
   applyInstallPlan(second);
 
   const state = readInstallState(first.installStatePath);
@@ -79,15 +80,52 @@ try {
 
   const result = uninstallInstalledStates({ projectRoot: root, targets: ['cursor'] });
   assert.strictEqual(result.summary.errorCount, 0);
-  assert.ok(!fs.existsSync(first.operations[0].destinationPath));
+  assert.strictEqual(
+    fs.readFileSync(first.operations[0].destinationPath, 'utf8'),
+    'user-modified\n',
+    'selective reinstall must not claim modified retained content'
+  );
   assert.ok(!fs.existsSync(second.operations[0].destinationPath));
-  console.log('  ✓ selective reinstall preserves cumulative ownership and uninstall removes it');
+  console.log('  ✓ selective reinstall preserves cumulative ownership without claiming user changes');
   passed += 1;
 } catch (error) {
   console.log(`  ✗ ${error.message}`);
   failed += 1;
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
+}
+
+const partialRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-partial-non-claude-'));
+try {
+  const copied = makePlan(partialRoot, 'copied-module', 'COPIED.md');
+  const missing = makePlan(partialRoot, 'missing-module', 'MISSING.md');
+  fs.rmSync(missing.operations[0].sourcePath);
+  const partialPlan = {
+    ...copied,
+    operations: [copied.operations[0], missing.operations[0]],
+    statePreview: {
+      ...copied.statePreview,
+      operations: [copied.operations[0], missing.operations[0]],
+    },
+  };
+
+  assert.throws(() => applyInstallPlan(partialPlan), /ENOENT/);
+  assert.ok(fs.existsSync(copied.operations[0].destinationPath));
+  const checkpoint = readInstallState(copied.installStatePath);
+  assert.ok(checkpoint.operations.some(operation => (
+    operation.destinationPath === copied.operations[0].destinationPath
+  )));
+
+  const result = uninstallInstalledStates({ projectRoot: partialRoot, targets: ['cursor'] });
+  assert.strictEqual(result.summary.errorCount, 0);
+  assert.ok(!fs.existsSync(copied.operations[0].destinationPath));
+  console.log('  ✓ failed non-Claude install checkpoints managed files for uninstall');
+  passed += 1;
+} catch (error) {
+  console.log(`  ✗ ${error.message}`);
+  failed += 1;
+} finally {
+  fs.rmSync(partialRoot, { recursive: true, force: true });
 }
 
 console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);

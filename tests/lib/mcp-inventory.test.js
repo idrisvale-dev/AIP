@@ -184,6 +184,38 @@ test('opencode reader splits command array and reads environment', () => {
   assert.strictEqual(records.find(r => r.name === 'disabledtool').enabled, false);
 });
 
+test('opencode reader honors OPENCODE_CONFIG_DIR before XDG_CONFIG_HOME', () => {
+  const home = tmpHome();
+  const explicitRoot = path.join(home, 'explicit-opencode');
+  const xdgRoot = path.join(home, 'xdg');
+  for (const root of [explicitRoot, path.join(xdgRoot, 'opencode')]) {
+    fs.mkdirSync(root, { recursive: true });
+    fs.writeFileSync(path.join(root, 'opencode.json'), JSON.stringify({
+      mcp: {
+        [root === explicitRoot ? 'explicit' : 'xdg']: {
+          type: 'local',
+          command: ['node'],
+        },
+      },
+    }), 'utf8');
+  }
+
+  const explicit = readOpencodeMcp({
+    homeDir: home,
+    env: {
+      OPENCODE_CONFIG_DIR: explicitRoot,
+      XDG_CONFIG_HOME: xdgRoot,
+    },
+  });
+  assert.deepStrictEqual(explicit.map(record => record.name), ['explicit']);
+
+  const xdg = readOpencodeMcp({
+    homeDir: home,
+    env: { XDG_CONFIG_HOME: xdgRoot },
+  });
+  assert.deepStrictEqual(xdg.map(record => record.name), ['xdg']);
+});
+
 test('collectMcpInventory merges harnesses, detects fragmentation + drift, redacts secrets', () => {
   const home = tmpHome();
   // claude + opencode agree on github (consistent); codex github uses a

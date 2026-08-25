@@ -629,14 +629,43 @@ function runTests() {
   if (test('resolves qwen adapter root and install-state path from home dir', () => {
     const adapter = getInstallTargetAdapter('qwen');
     const homeDir = '/Users/example';
-    const root = adapter.resolveRoot({ homeDir });
-    const statePath = adapter.getInstallStatePath({ homeDir });
+    const root = adapter.resolveRoot({ homeDir, env: {} });
+    const statePath = adapter.getInstallStatePath({ homeDir, env: {} });
 
     assert.strictEqual(adapter.id, 'qwen-home');
     assert.strictEqual(adapter.target, 'qwen');
     assert.strictEqual(adapter.kind, 'home');
     assert.strictEqual(root, path.join(homeDir, '.qwen'));
     assert.strictEqual(statePath, path.join(homeDir, '.qwen', 'ecc-install-state.json'));
+  })) passed++; else failed++;
+
+  if (test('opencode adapter honors config overrides in priority order', () => {
+    const adapter = getInstallTargetAdapter('opencode');
+    const homeDir = '/Users/example';
+    const xdgRoot = path.join(homeDir, 'xdg');
+    const explicitRoot = path.join(homeDir, 'custom-opencode');
+
+    assert.strictEqual(
+      adapter.resolveRoot({
+        homeDir,
+        env: {
+          XDG_CONFIG_HOME: xdgRoot,
+          OPENCODE_CONFIG_DIR: explicitRoot,
+        },
+      }),
+      explicitRoot
+    );
+    assert.strictEqual(
+      adapter.resolveRoot({ homeDir, env: { XDG_CONFIG_HOME: xdgRoot } }),
+      path.join(xdgRoot, 'opencode')
+    );
+    assert.strictEqual(
+      adapter.getInstallStatePath({
+        homeDir,
+        env: { OPENCODE_CONFIG_DIR: explicitRoot },
+      }),
+      path.join(explicitRoot, 'ecc-install-state.json')
+    );
   })) passed++; else failed++;
 
   if (test('qwen adapter supports lookup by target and adapter id', () => {

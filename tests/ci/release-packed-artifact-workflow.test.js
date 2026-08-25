@@ -86,6 +86,15 @@ for (const workflowPath of workflowPaths) {
     );
   });
 
+  test(`${workflowPath} disables generated additions to reviewed release notes`, () => {
+    const publish = jobBlock(source, 'publish');
+    assert.match(
+      publish,
+      /body_path:\s*release_body\.md[\s\S]{0,160}generate_release_notes:\s*false/
+    );
+    assert.doesNotMatch(publish, /generate_release_notes:\s*(?:true|\$\{\{)/);
+  });
+
   test(`${workflowPath} uploads the one packed tgz as the release artifact`, () => {
     const verify = jobBlock(source, 'verify', 'lifecycle');
     const packIndex = verify.indexOf('name: Pack npm artifact');
