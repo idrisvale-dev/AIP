@@ -73,29 +73,26 @@ function sameFileIdentity(left, right) {
 }
 
 function readRegularFileSnapshot(filePath) {
-  let pathStat;
+  const flags = fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0);
+  let descriptor;
   try {
-    pathStat = fs.lstatSync(filePath);
+    descriptor = fs.openSync(filePath, flags);
   } catch (error) {
     if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) return null;
     throw error;
   }
-  if (!pathStat.isFile() || pathStat.isSymbolicLink()) {
-    throw new Error(`Refusing to read a symbolic link or non-file at ${filePath}.`);
-  }
 
-  const flags = fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0);
-  const descriptor = fs.openSync(filePath, flags);
   try {
     const before = fs.fstatSync(descriptor);
-    if (!before.isFile() || !sameFileIdentity(pathStat, before)) {
-      throw new Error(`Refusing to read a file that changed during open: ${filePath}.`);
+    if (!before.isFile()) {
+      throw new Error(`Refusing to read a non-file at ${filePath}.`);
     }
     const content = fs.readFileSync(descriptor);
     const after = fs.fstatSync(descriptor);
     const finalPathStat = fs.lstatSync(filePath);
     if (
       finalPathStat.isSymbolicLink()
+      || !finalPathStat.isFile()
       || !sameFileIdentity(before, after)
       || !sameFileIdentity(after, finalPathStat)
     ) {
