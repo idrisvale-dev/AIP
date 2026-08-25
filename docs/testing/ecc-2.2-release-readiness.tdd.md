@@ -25,16 +25,22 @@ Commit `55a2d482` added five OpenCode upgrade regressions. Discovery, uninstall,
 
 Commit `7d9f70c5` changed both workflow contracts to require the repository's established lowercase `release-notes.md` convention. Both cases failed against the uppercase 2.2-only path before the filename repair.
 
+Commit `01779a4a` added final-review regressions for OpenCode configuration overrides, retained content digests, failed non-Claude install checkpoints, and reviewed-only GitHub Release notes. All four areas failed before the corresponding repairs.
+
+Commit `dac154ef` added an end-to-end OpenCode override regression covering discovery, doctor, and uninstall through the same explicit configuration root. It failed before environment-aware lifecycle routing.
+
+The full suite then exposed three guided Kimi collision checks that rejected ECC's own new bridge checkpoint before reaching the protected destination. Commit `15815eca` advanced the expected fingerprint only for ECC-authored state writes while preserving every external state and destination collision check.
+
 ## GREEN
 
 - Focused installer, lifecycle, packaging, release-workflow, manifest, OpenCode, Antigravity, and uninstall tests passed.
-- Full repository suite: 3,967 passed, 0 failed.
+- Full repository suite: 3,975 passed, 0 failed.
 - `npm audit --audit-level=low`: 0 vulnerabilities.
 - Supply-chain IOC scan: 207 files inspected, no findings.
 - Both release workflow YAML files parsed successfully.
 - Both release workflows derive reviewed notes from the validated tag and fail clearly when that version's notes are absent.
 - Release-note selection follows the lowercase filename convention shared by prior release directories.
-- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `77e8867a50147f3ca23dabaf4a75f936c139aef27788d2b167c1702a4c81fdd4`.
+- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `b657daa563f7cc4faa7ff8bd0c00ff8b329f2a7a3a095848dac4854a33f05ea3`.
 - The packed lifecycle covered npm installation, public CLI setup, cumulative Cursor install, drift detection, repair, uninstall, user-file preservation, Antigravity install/doctor/uninstall, and OpenCode install/doctor/uninstall.
 
 ## Focused coverage
@@ -43,9 +49,10 @@ All three changed core modules exceeded the 80 percent line target:
 
 | Module | Lines | Functions | Branches |
 | --- | ---: | ---: | ---: |
-| `scripts/lib/multi-harness-setup.js` | 88.75% | 82.75% | 74.01% |
+| `scripts/lib/multi-harness-setup.js` | 89.01% | 83.87% | 74.30% |
 | `scripts/lib/install/claude-skill-migration.js` | 95.20% | 100% | 88.78% |
 | `scripts/lib/install-targets/opencode-home.js` | 86.66% | 100% | 78.94% |
+| `scripts/lib/opencode-paths.js` | 100% | 100% | 91.66% |
 | `scripts/lib/install/opencode-legacy-migration.js` | 82.24% | 100% | 68.29% |
 
 Coverage commands used `c8 --check-coverage --lines 80` against the corresponding focused test files.
