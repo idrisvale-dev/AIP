@@ -1,6 +1,6 @@
 # ECC 2.2 release-readiness TDD evidence
 
-Date: 2026-08-24
+Date: 2026-08-25
 
 ## Scope
 
@@ -31,17 +31,20 @@ Commit `dac154ef` added an end-to-end OpenCode override regression covering disc
 
 The full suite then exposed three guided Kimi collision checks that rejected ECC's own new bridge checkpoint before reaching the protected destination. Commit `15815eca` advanced the expected fingerprint only for ECC-authored state writes while preserving every external state and destination collision check.
 
+Commit `2331afbf` reproduced the hosted-runner failure where ambient OpenCode configuration overrides escaped into callers that supplied an explicit temporary home. Both adapter-root and MCP-inventory regressions failed before invocation contexts were isolated.
+
 ## GREEN
 
 - Focused installer, lifecycle, packaging, release-workflow, manifest, OpenCode, Antigravity, and uninstall tests passed.
-- Full repository suite: 3,975 passed, 0 failed.
+- Full repository suite: 3,976 passed, 0 failed.
 - `npm audit --audit-level=low`: 0 vulnerabilities.
 - Supply-chain IOC scan: 207 files inspected, no findings.
 - Both release workflow YAML files parsed successfully.
 - Both release workflows derive reviewed notes from the validated tag and fail clearly when that version's notes are absent.
 - Release-note selection follows the lowercase filename convention shared by prior release directories.
-- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `b657daa563f7cc4faa7ff8bd0c00ff8b329f2a7a3a095848dac4854a33f05ea3`.
+- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `4ce0c86b6ca5db2c413c253a7f6e2f936f13f2c607532862bb360a290dba8ef0`.
 - The packed lifecycle covered npm installation, public CLI setup, cumulative Cursor install, drift detection, repair, uninstall, user-file preservation, Antigravity install/doctor/uninstall, and OpenCode install/doctor/uninstall.
+- Simulated hosted-runner `OPENCODE_CONFIG_DIR` and `XDG_CONFIG_HOME` overrides passed the adapter, MCP inventory, lifecycle, legacy migration, doctor, repair, list, and uninstall suites while explicit CLI environments continued to honor those overrides.
 
 ## Focused coverage
 
@@ -52,7 +55,8 @@ All three changed core modules exceeded the 80 percent line target:
 | `scripts/lib/multi-harness-setup.js` | 89.01% | 83.87% | 74.30% |
 | `scripts/lib/install/claude-skill-migration.js` | 95.20% | 100% | 88.78% |
 | `scripts/lib/install-targets/opencode-home.js` | 86.66% | 100% | 78.94% |
-| `scripts/lib/opencode-paths.js` | 100% | 100% | 91.66% |
+| `scripts/lib/opencode-paths.js` | 100% | 100% | 90.90% |
+| `scripts/lib/invocation-environment.js` | 100% | 100% | 87.50% |
 | `scripts/lib/install/opencode-legacy-migration.js` | 82.24% | 100% | 68.29% |
 
 Coverage commands used `c8 --check-coverage --lines 80` against the corresponding focused test files.
