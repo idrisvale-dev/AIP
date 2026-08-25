@@ -19,6 +19,8 @@ Commit `6e66dfba` added release regressions before the repairs. All six focused 
 
 Commit `528dbea0` added a security regression proving guided preflight accepted an identical copy source through a symbolic link. It failed before the no-follow snapshot repair.
 
+Commit `a504b194` added a release regression after review proved both workflows reused the literal 2.2.0 notes path for later valid versions. Both workflow cases failed before the version-derived notes repair.
+
 ## GREEN
 
 - Focused installer, lifecycle, packaging, release-workflow, manifest, OpenCode, Antigravity, and uninstall tests passed.
@@ -26,6 +28,7 @@ Commit `528dbea0` added a security regression proving guided preflight accepted 
 - `npm audit --audit-level=low`: 0 vulnerabilities.
 - Supply-chain IOC scan: 207 files inspected, no findings.
 - Both release workflow YAML files parsed successfully.
+- Both release workflows derive reviewed notes from the validated tag and fail clearly when that version's notes are absent.
 - Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `c79fbabbbb2567835081c17804f692c77b0673f22e0e0a2e63e870b99a7b8592`.
 - The packed lifecycle covered npm installation, public CLI setup, cumulative Cursor install, drift detection, repair, uninstall, user-file preservation, Antigravity install/doctor/uninstall, and OpenCode install/doctor/uninstall.
 

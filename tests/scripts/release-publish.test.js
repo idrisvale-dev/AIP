@@ -61,8 +61,9 @@ for (const workflow of [
     assert.match(content, /release commit.*origin\/main/i);
   });
 
-  test(`${workflow} uses the reviewed 2.2 release notes`, () => {
-    assert.match(content, /docs\/releases\/2\.2\.0\/RELEASE_NOTES\.md/);
+  test(`${workflow} selects reviewed release notes from the release version`, () => {
+    assert.match(content, /RELEASE_VERSION="\$\{RELEASE_TAG#v\}"/);
+    assert.match(content, /docs\/releases\/\$\{RELEASE_VERSION\}\/RELEASE_NOTES\.md/);
   });
 
   test(`${workflow} publishes new tag versions to npm`, () => {
