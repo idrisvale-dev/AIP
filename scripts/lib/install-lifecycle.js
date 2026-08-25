@@ -72,6 +72,7 @@ function getOpencodeBuildValidationIssues(context) {
   return getInstallTargetAdapter('opencode').validate({
     homeDir: context.homeDir,
     repoRoot: context.repoRoot,
+    env: context.env,
   });
 }
 
@@ -1191,7 +1192,8 @@ function buildDiscoveryRecord(adapter, context, location = null, knownState = nu
   const installTargetInput = {
     homeDir: context.homeDir,
     projectRoot: context.projectRoot,
-    repoRoot: context.projectRoot
+    repoRoot: context.projectRoot,
+    env: context.env,
   };
   const targetRoot = location
     ? location.targetRoot
@@ -1272,7 +1274,8 @@ function buildDiscoveryRecord(adapter, context, location = null, knownState = nu
 function discoverInstalledStates(options = {}) {
   const context = {
     homeDir: options.homeDir || process.env.HOME || os.homedir(),
-    projectRoot: options.projectRoot || process.cwd()
+    projectRoot: options.projectRoot || process.cwd(),
+    env: options.env || process.env,
   };
   const targets = normalizeTargets(options.targets);
 
@@ -1506,6 +1509,7 @@ function analyzeRecord(record, context) {
         repoRoot: context.repoRoot,
         projectRoot: context.projectRoot,
         homeDir: context.homeDir,
+        env: context.env,
         target: record.adapter.target,
         profileId: state.request.profile || null,
         moduleIds: state.request.modules || [],
@@ -1541,12 +1545,14 @@ function buildDoctorReport(options = {}) {
   const records = discoverInstalledStates({
     homeDir: options.homeDir,
     projectRoot: options.projectRoot,
-    targets: options.targets
+    targets: options.targets,
+    env: options.env,
   }).filter(record => record.exists);
   const context = {
     repoRoot,
     homeDir: options.homeDir || process.env.HOME || os.homedir(),
     projectRoot: options.projectRoot || process.cwd(),
+    env: options.env || process.env,
     manifestVersion: manifests.modulesVersion,
     packageVersion: readPackageVersion(repoRoot)
   };
@@ -1613,6 +1619,7 @@ function createRepairPlanFromRecord(record, context, options = {}) {
     excludeComponentIds: state.request.excludeComponents || [],
     projectRoot: context.projectRoot,
     homeDir: context.homeDir,
+    env: context.env,
     exemptValidationCodes: options.exemptValidationCodes || [],
   });
 
@@ -1711,6 +1718,7 @@ function repairInstalledStates(options = {}) {
     repoRoot,
     homeDir: options.homeDir || process.env.HOME || os.homedir(),
     projectRoot: options.projectRoot || process.cwd(),
+    env: options.env || process.env,
     manifestVersion: manifests.modulesVersion,
     packageVersion: readPackageVersion(repoRoot)
   };
@@ -1720,7 +1728,8 @@ function repairInstalledStates(options = {}) {
   const records = discoverInstalledStates({
     homeDir: context.homeDir,
     projectRoot: context.projectRoot,
-    targets: options.targets
+    targets: options.targets,
+    env: context.env,
   }).filter(record => (
     record.exists
     && (!record.legacy || record.legacyLayout === 'opencode')
@@ -2035,7 +2044,8 @@ function uninstallInstalledStates(options = {}) {
   const records = discoverInstalledStates({
     homeDir: options.homeDir,
     projectRoot: options.projectRoot,
-    targets: options.targets
+    targets: options.targets,
+    env: options.env,
   }).filter(record => record.exists);
 
   const results = records.map(record => {

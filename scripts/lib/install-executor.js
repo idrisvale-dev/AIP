@@ -645,6 +645,7 @@ function createLegacyCompatInstallPlan(options = {}) {
     sourceRoot,
     projectRoot,
     homeDir: options.homeDir,
+    env: options.env || process.env,
     target,
     profileId: null,
     moduleIds: selection.moduleIds,

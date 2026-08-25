@@ -595,6 +595,7 @@ function resolveInstallPlan(options = {}) {
       repoRoot: manifests.repoRoot,
       projectRoot: validatedProjectRoot || manifests.repoRoot,
       homeDir: validatedHomeDir || os.homedir(),
+      env: options.env || process.env,
     }
     : null;
   const targetAdapter = target ? getInstallTargetAdapter(target) : null;
@@ -693,6 +694,7 @@ function resolveInstallPlan(options = {}) {
       repoRoot: targetPlanningInput.repoRoot,
       projectRoot: targetPlanningInput.projectRoot,
       homeDir: targetPlanningInput.homeDir,
+      env: targetPlanningInput.env,
       modules: selectedModules,
       exemptValidationCodes: options.exemptValidationCodes || [],
     })
