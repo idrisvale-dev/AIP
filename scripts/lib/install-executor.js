@@ -80,7 +80,12 @@ function validateLegacyTarget(target) {
   throw new Error(`Unknown install target: ${target}. Expected one of ${SUPPORTED_INSTALL_TARGETS.join(', ')}`);
 }
 
-const IGNORED_DIRECTORY_NAMES = new Set(['node_modules', '.git', '__pycache__']);
+const IGNORED_DIRECTORY_NAMES = new Set([
+  'node_modules',
+  '.git',
+  '__pycache__',
+  '.pytest_cache',
+]);
 const IGNORED_FILE_EXTENSIONS = new Set(['.pyc', '.pyo', '.pyd']);
 
 function listFilesRecursive(dirPath) {

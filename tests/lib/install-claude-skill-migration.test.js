@@ -512,6 +512,15 @@ function runTests() {
         const retry = applyInstallPlan(fixture.plan);
         assert.deepStrictEqual(retry.skippedOperations, []);
         const stateAfterRetry = readInstallState(fixture.installStatePath);
+        for (const originalOperation of fixture.operations) {
+          assert.strictEqual(
+            stateAfterRetry.operations.filter(operation => (
+              operation.destinationPath === originalOperation.destinationPath
+            )).length,
+            1,
+            `retry must record ${originalOperation.destinationPath} exactly once`
+          );
+        }
         const retainedExtraRecords = stateAfterRetry.operations.filter(operation => (
           operation.destinationPath === extraDestinationPath
         ));

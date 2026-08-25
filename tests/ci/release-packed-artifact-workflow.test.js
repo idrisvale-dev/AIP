@@ -162,12 +162,12 @@ test('packed lifecycle invokes installed public bins, including setup help', () 
 });
 
 test('packed lifecycle validates canonical Antigravity and OpenCode installs', () => {
-  assert.match(lifecycleRunnerSource, /'--target', 'antigravity'/);
+  assert.match(lifecycleRunnerSource, /target:\s*'antigravity'/);
   assert.match(lifecycleRunnerSource, /path\.join\(projectDir, '\.agents'\)/);
-  assert.match(lifecycleRunnerSource, /'--target', 'opencode'/);
+  assert.match(lifecycleRunnerSource, /target:\s*'opencode'/);
   assert.match(lifecycleRunnerSource, /path\.join\(homeDir, '\.config', 'opencode'\)/);
-  assert.match(lifecycleRunnerSource, /doctor.*antigravity/s);
-  assert.match(lifecycleRunnerSource, /doctor.*opencode/s);
+  assert.match(lifecycleRunnerSource, /\['doctor', '--target', options\.target, '--json'\]/);
+  assert.match(lifecycleRunnerSource, /skill-comply.*SKILL\.md/);
 });
 
 test('packed lifecycle installs and verifies the opt-in Ito distribution surface', () => {

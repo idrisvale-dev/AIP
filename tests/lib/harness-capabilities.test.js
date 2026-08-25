@@ -90,7 +90,7 @@ function runTests() {
       cursor: ['project', './.cursor'],
       antigravity: ['project', './.agents'],
       gemini: ['project', './.gemini'],
-      opencode: ['home', '~/.opencode'],
+      opencode: ['home', '~/.config/opencode'],
       codebuddy: ['project', './.codebuddy'],
       joycode: ['project', './.joycode'],
       qwen: ['home', '~/.qwen'],

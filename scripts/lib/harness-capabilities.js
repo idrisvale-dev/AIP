@@ -135,8 +135,8 @@ const HARNESS_CAPABILITIES = deepFreeze([
     installMode: 'managed-home',
     guidedReady: false,
     availability: 'advanced',
-    destination: '~/.opencode',
-    scopes: [scope('home', 'opencode', '~/.opencode')],
+    destination: '~/.config/opencode',
+    scopes: [scope('home', 'opencode', '~/.config/opencode')],
     hooks: hooks(
       'adapter-opt-in',
       false,

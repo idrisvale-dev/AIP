@@ -64,11 +64,55 @@ function pathsMatch(left, right) {
   return canonicalPath(left) === canonicalPath(right);
 }
 
+function sameFileIdentity(left, right) {
+  return left.dev === right.dev
+    && left.ino === right.ino
+    && left.size === right.size
+    && left.mtimeMs === right.mtimeMs
+    && left.ctimeMs === right.ctimeMs;
+}
+
+function readRegularFileSnapshot(filePath) {
+  let pathStat;
+  try {
+    pathStat = fs.lstatSync(filePath);
+  } catch (error) {
+    if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) return null;
+    throw error;
+  }
+  if (!pathStat.isFile() || pathStat.isSymbolicLink()) {
+    throw new Error(`Refusing to read a symbolic link or non-file at ${filePath}.`);
+  }
+
+  const flags = fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0);
+  const descriptor = fs.openSync(filePath, flags);
+  try {
+    const before = fs.fstatSync(descriptor);
+    if (!before.isFile() || !sameFileIdentity(pathStat, before)) {
+      throw new Error(`Refusing to read a file that changed during open: ${filePath}.`);
+    }
+    const content = fs.readFileSync(descriptor);
+    const after = fs.fstatSync(descriptor);
+    const finalPathStat = fs.lstatSync(filePath);
+    if (
+      finalPathStat.isSymbolicLink()
+      || !sameFileIdentity(before, after)
+      || !sameFileIdentity(after, finalPathStat)
+    ) {
+      throw new Error(`Refusing to read a file that changed during validation: ${filePath}.`);
+    }
+    return { content, stat: after };
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
 function fingerprintFile(filePath) {
-  if (!fs.existsSync(filePath)) return { exists: false, sha256: null };
+  const snapshot = readRegularFileSnapshot(filePath);
+  if (!snapshot) return { exists: false, sha256: null };
   return {
     exists: true,
-    sha256: crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex'),
+    sha256: crypto.createHash('sha256').update(snapshot.content).digest('hex'),
   };
 }
 
@@ -131,11 +175,11 @@ function readOwnedDestinations(plan, dependencies) {
   } catch (error) {
     throw new Error(`Refusing to trust managed install-state path: ${error.message}`);
   }
-  if (!fs.existsSync(plan.installStatePath)) {
+  const initialFingerprint = fingerprintFile(plan.installStatePath);
+  if (!initialFingerprint.exists) {
     return { destinations: new Set(), stateFingerprint: { exists: false, sha256: null } };
   }
   const readState = dependencies.readInstallState || require('./install-state').readInstallState;
-  const initialFingerprint = fingerprintFile(plan.installStatePath);
   const state = readState(plan.installStatePath);
   const validatedFingerprint = fingerprintFile(plan.installStatePath);
   if (
@@ -185,11 +229,12 @@ function readOwnedDestinations(plan, dependencies) {
   return { destinations, stateFingerprint: validatedFingerprint };
 }
 
-function assertMergeDestination(destinationPath) {
-  if (!fs.existsSync(destinationPath)) return null;
+function assertMergeDestination(destinationPath, existingSnapshot = null) {
+  const snapshot = existingSnapshot || readRegularFileSnapshot(destinationPath);
+  if (!snapshot) return null;
   let current;
   try {
-    current = JSON.parse(fs.readFileSync(destinationPath, 'utf8'));
+    current = JSON.parse(snapshot.content.toString('utf8'));
   } catch (error) {
     throw new Error(`Cannot merge ECC configuration into invalid JSON at ${destinationPath}: ${error.message}`);
   }
@@ -218,10 +263,11 @@ function findJsonConflicts(current, patch, prefix = '') {
 
 function classifyManagedOperation(operation, ownedDestinations) {
   const destinationPath = operation.destinationPath;
-  if (!fs.existsSync(destinationPath)) return 'create';
+  const destination = readRegularFileSnapshot(destinationPath);
+  if (!destination) return 'create';
   const canonicalDestination = canonicalPath(destinationPath);
   if (operation.kind === 'merge-json') {
-    const current = assertMergeDestination(destinationPath);
+    const current = assertMergeDestination(destinationPath, destination);
     if (ownedDestinations.has(canonicalDestination)) return 'managed-json-update';
     const conflicts = findJsonConflicts(current, operation.mergePayload);
     if (conflicts.length > 0) {
@@ -235,9 +281,7 @@ function classifyManagedOperation(operation, ownedDestinations) {
   if (
     operation.kind === 'copy-file'
     && typeof operation.sourcePath === 'string'
-    && fs.existsSync(operation.sourcePath)
-    && fs.statSync(destinationPath).isFile()
-    && fs.readFileSync(operation.sourcePath).equals(fs.readFileSync(destinationPath))
+    && readRegularFileSnapshot(operation.sourcePath)?.content.equals(destination.content)
   ) {
     return 'identical';
   }
@@ -294,6 +338,9 @@ function assertManagedDestinationsWritable(plan, dependencies) {
 function preflightManagedPlan(plan, dependencies = {}) {
   if (!plan || !Array.isArray(plan.operations)) {
     throw new Error('A managed install plan with operations is required.');
+  }
+  if (typeof plan.installStatePath !== 'string' || plan.installStatePath.length === 0) {
+    throw new Error('A managed install-state path is required before preflight.');
   }
   const ownership = readOwnedDestinations(plan, dependencies);
   const operations = plan.operations.map(operation => {
