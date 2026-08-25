@@ -23,6 +23,8 @@ Commit `a504b194` added a release regression after review proved both workflows 
 
 Commit `55a2d482` added five OpenCode upgrade regressions. Discovery, uninstall, canonical reinstall, repair migration, and no-follow symlink preservation all failed before the legacy managed-root repair.
 
+Commit `7d9f70c5` changed both workflow contracts to require the repository's established lowercase `release-notes.md` convention. Both cases failed against the uppercase 2.2-only path before the filename repair.
+
 ## GREEN
 
 - Focused installer, lifecycle, packaging, release-workflow, manifest, OpenCode, Antigravity, and uninstall tests passed.
@@ -31,6 +33,7 @@ Commit `55a2d482` added five OpenCode upgrade regressions. Discovery, uninstall,
 - Supply-chain IOC scan: 207 files inspected, no findings.
 - Both release workflow YAML files parsed successfully.
 - Both release workflows derive reviewed notes from the validated tag and fail clearly when that version's notes are absent.
+- Release-note selection follows the lowercase filename convention shared by prior release directories.
 - Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `77e8867a50147f3ca23dabaf4a75f936c139aef27788d2b167c1702a4c81fdd4`.
 - The packed lifecycle covered npm installation, public CLI setup, cumulative Cursor install, drift detection, repair, uninstall, user-file preservation, Antigravity install/doctor/uninstall, and OpenCode install/doctor/uninstall.
 
