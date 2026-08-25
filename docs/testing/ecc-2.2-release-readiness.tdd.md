@@ -33,22 +33,24 @@ The full suite then exposed three guided Kimi collision checks that rejected ECC
 
 Commit `2331afbf` reproduced the hosted-runner failure where ambient OpenCode configuration overrides escaped into callers that supplied an explicit temporary home. Both adapter-root and MCP-inventory regressions failed before invocation contexts were isolated.
 
+Commit `85673326` added legacy OpenCode regressions for custom configuration roots, non-file managed operations, canonical repair routing, and provider-specific auto-update guidance. The migration and guidance cases failed before the final legacy-root repair.
+
 ## GREEN
 
 - Focused installer, lifecycle, packaging, release-workflow, manifest, OpenCode, Antigravity, and uninstall tests passed.
-- Full repository suite: 3,976 passed, 0 failed.
+- Full repository suite: 3,979 passed, 0 failed.
 - `npm audit --audit-level=low`: 0 vulnerabilities.
 - Supply-chain IOC scan: 207 files inspected, no findings.
 - Both release workflow YAML files parsed successfully.
 - Both release workflows derive reviewed notes from the validated tag and fail clearly when that version's notes are absent.
 - Release-note selection follows the lowercase filename convention shared by prior release directories.
-- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `4ce0c86b6ca5db2c413c253a7f6e2f936f13f2c607532862bb360a290dba8ef0`.
+- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `062bed7c2c0da6711c02940ba327a399d212f1d2d55b385b05760a5278669f15`.
 - The packed lifecycle covered npm installation, public CLI setup, cumulative Cursor install, drift detection, repair, uninstall, user-file preservation, Antigravity install/doctor/uninstall, and OpenCode install/doctor/uninstall.
 - Simulated hosted-runner `OPENCODE_CONFIG_DIR` and `XDG_CONFIG_HOME` overrides passed the adapter, MCP inventory, lifecycle, legacy migration, doctor, repair, list, and uninstall suites while explicit CLI environments continued to honor those overrides.
 
 ## Focused coverage
 
-All three changed core modules exceeded the 80 percent line target:
+All six changed core modules exceeded the 80 percent line target:
 
 | Module | Lines | Functions | Branches |
 | --- | ---: | ---: | ---: |
@@ -57,7 +59,7 @@ All three changed core modules exceeded the 80 percent line target:
 | `scripts/lib/install-targets/opencode-home.js` | 86.66% | 100% | 78.94% |
 | `scripts/lib/opencode-paths.js` | 100% | 100% | 90.90% |
 | `scripts/lib/invocation-environment.js` | 100% | 100% | 87.50% |
-| `scripts/lib/install/opencode-legacy-migration.js` | 82.24% | 100% | 68.29% |
+| `scripts/lib/install/opencode-legacy-migration.js` | 81.89% | 100% | 70.00% |
 
 Coverage commands used `c8 --check-coverage --lines 80` against the corresponding focused test files.
 
