@@ -830,6 +830,7 @@ function createManifestInstallPlan(options = {}) {
       target: adapter.target,
       kind: adapter.kind
     },
+    homeDir: plan.homeDir,
     targetRoot: plan.targetRoot,
     installRoot: plan.targetRoot,
     installStatePath: plan.installStatePath,

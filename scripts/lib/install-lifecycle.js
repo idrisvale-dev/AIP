@@ -1593,7 +1593,10 @@ function createRepairPlanFromRecord(record, context, options = {}) {
     throw new Error('No install-state available for repair');
   }
 
-  if (state.request.legacyMode || shouldRepairFromRecordedOperations(state)) {
+  if (
+    record.legacyLayout !== 'opencode'
+    && (state.request.legacyMode || shouldRepairFromRecordedOperations(state))
+  ) {
     const operations = hydrateRecordedOperations(context.repoRoot, getManagedOperations(state));
     const statePreview = buildRecordedStatePreview(state, context, operations);
 

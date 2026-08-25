@@ -47,6 +47,9 @@ function getLegacyLocationForPlan(plan) {
   ) {
     return null;
   }
+  if (typeof plan.homeDir === 'string' && plan.homeDir.trim() !== '') {
+    return getLegacyOpencodeLocation(plan.homeDir);
+  }
   const canonicalRoot = path.resolve(plan.targetRoot);
   if (
     path.basename(canonicalRoot) !== 'opencode'
@@ -99,13 +102,13 @@ function hashFileNoFollow(filePath) {
   const flags = fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0);
   const descriptor = fs.openSync(filePath, flags);
   try {
-    const before = fs.fstatSync(descriptor);
+    const before = fs.fstatSync(descriptor, { bigint: true });
     if (!before.isFile()) {
       throw new Error(`Refusing to read a non-file at ${filePath}`);
     }
     const content = fs.readFileSync(descriptor);
-    const after = fs.fstatSync(descriptor);
-    const finalPathStat = fs.lstatSync(filePath);
+    const after = fs.fstatSync(descriptor, { bigint: true });
+    const finalPathStat = fs.lstatSync(filePath, { bigint: true });
     const unchanged = before.dev === after.dev
       && before.ino === after.ino
       && before.size === after.size
@@ -150,10 +153,11 @@ function removeEmptyParents(startPath, legacyRoot) {
 }
 
 function verifyManagedLegacyFile(operation, location, sourceRoot) {
+  if (operation?.ownership !== 'managed' || operation?.kind !== 'copy-file') {
+    return { skipped: true };
+  }
   if (
-    operation?.kind !== 'copy-file'
-    || operation.ownership !== 'managed'
-    || typeof operation.destinationPath !== 'string'
+    typeof operation.destinationPath !== 'string'
     || typeof operation.sourceRelativePath !== 'string'
     || !/^[a-f0-9]{64}$/i.test(operation.contentSha256 || '')
   ) {
@@ -214,7 +218,7 @@ function removeVerifiedLegacyFile(entry, location) {
   const quarantinePath = path.join(quarantineDir, path.basename(safePath));
   try {
     fs.renameSync(safePath, quarantinePath);
-    const quarantinedStat = fs.lstatSync(quarantinePath);
+    const quarantinedStat = fs.lstatSync(quarantinePath, { bigint: true });
     const identityMatches = !quarantinedStat.isSymbolicLink()
       && quarantinedStat.isFile()
       && quarantinedStat.dev === entry.stat.dev
@@ -242,32 +246,79 @@ function removeVerifiedLegacyFile(entry, location) {
   }
 }
 
-function cleanupLegacyOpencodeInstall(plan) {
-  const location = getLegacyLocationForPlan(plan);
-  const emptyResult = {
+function emptyCleanupResult() {
+  return {
     detected: false,
     complete: false,
     removedPaths: [],
     retainedPaths: [],
     warnings: [],
   };
-  if (!location || typeof plan.sourceRoot !== 'string' || !pathExists(plan.installStatePath)) {
-    return emptyResult;
-  }
+}
 
+function hasTrustedCanonicalState(plan) {
+  if (typeof plan.sourceRoot !== 'string' || !pathExists(plan.installStatePath)) {
+    return false;
+  }
   try {
     const canonicalState = readInstallState(plan.installStatePath);
-    if (
+    return !(
       (canonicalState.target.target !== OPENCODE_TARGET
         && canonicalState.target.id !== 'opencode-home')
       || !samePath(canonicalState.target.root, plan.targetRoot)
       || !samePath(canonicalState.target.installStatePath, plan.installStatePath)
-    ) {
-      return emptyResult;
+    );
+  } catch (_error) {
+    return false;
+  }
+}
+
+function classifyLegacyOperations(inspection, location, sourceRoot) {
+  const removable = [];
+  const retainedPaths = [];
+  for (const operation of inspection.state.operations || []) {
+    const verified = verifyManagedLegacyFile(operation, location, sourceRoot);
+    if (verified.destinationPath) removable.push(verified);
+    else if (verified.retainedPath) retainedPaths.push(verified.retainedPath);
+  }
+  return { removable, retainedPaths };
+}
+
+function removeLegacyFiles(removable, location, retainedPaths) {
+  const removedPaths = [];
+  for (const entry of removable) {
+    try {
+      if (!removeVerifiedLegacyFile(entry, location)) {
+        retainedPaths.push(entry.destinationPath);
+        continue;
+      }
+      removedPaths.push(entry.destinationPath);
+      removeEmptyParents(entry.destinationPath, location.targetRoot);
+    } catch (_error) {
+      retainedPaths.push(entry.destinationPath);
+    }
+  }
+  return removedPaths;
+}
+
+function finalizeLegacyCleanup(location, retainedPaths, removedPaths) {
+  if (retainedPaths.length > 0) return false;
+  fs.rmSync(location.installStatePath, { force: true });
+  removedPaths.push(location.installStatePath);
+  try {
+    if (pathExists(location.targetRoot) && fs.readdirSync(location.targetRoot).length === 0) {
+      fs.rmdirSync(location.targetRoot);
     }
   } catch (_error) {
-    return emptyResult;
+    // Removing an empty legacy root is best effort after ownership is cleared.
   }
+  return true;
+}
+
+function cleanupLegacyOpencodeInstall(plan) {
+  const location = getLegacyLocationForPlan(plan);
+  const emptyResult = emptyCleanupResult();
+  if (!location || !hasTrustedCanonicalState(plan)) return emptyResult;
 
   const inspection = inspectLegacyOpencodeState(location);
   if (inspection.status === 'unreadable') {
@@ -282,43 +333,13 @@ function cleanupLegacyOpencodeInstall(plan) {
     return emptyResult;
   }
 
-  const removable = [];
-  const retainedPaths = [];
-  for (const operation of inspection.state.operations || []) {
-    const verified = verifyManagedLegacyFile(operation, location, plan.sourceRoot);
-    if (verified.destinationPath) {
-      removable.push(verified);
-    } else if (verified.retainedPath) {
-      retainedPaths.push(verified.retainedPath);
-    }
-  }
-
-  const removedPaths = [];
-  for (const entry of removable) {
-    try {
-      if (!removeVerifiedLegacyFile(entry, location)) {
-        retainedPaths.push(entry.destinationPath);
-        continue;
-      }
-      removedPaths.push(entry.destinationPath);
-      removeEmptyParents(entry.destinationPath, location.targetRoot);
-    } catch (_error) {
-      retainedPaths.push(entry.destinationPath);
-    }
-  }
-
-  const complete = retainedPaths.length === 0;
-  if (complete) {
-    fs.rmSync(location.installStatePath, { force: true });
-    removedPaths.push(location.installStatePath);
-    try {
-      if (pathExists(location.targetRoot) && fs.readdirSync(location.targetRoot).length === 0) {
-        fs.rmdirSync(location.targetRoot);
-      }
-    } catch (_error) {
-      // Removing an empty legacy root is best effort after ownership is cleared.
-    }
-  }
+  const { removable, retainedPaths } = classifyLegacyOperations(
+    inspection,
+    location,
+    plan.sourceRoot
+  );
+  const removedPaths = removeLegacyFiles(removable, location, retainedPaths);
+  const complete = finalizeLegacyCleanup(location, retainedPaths, removedPaths);
 
   return {
     detected: true,

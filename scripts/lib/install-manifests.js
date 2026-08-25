@@ -722,6 +722,7 @@ function resolveInstallPlan(options = {}) {
     skippedModules,
     excludedModules,
     targetAdapterId: scaffoldPlan ? scaffoldPlan.adapter.id : null,
+    homeDir: targetPlanningInput ? targetPlanningInput.homeDir : null,
     targetRoot: scaffoldPlan ? scaffoldPlan.targetRoot : null,
     installStatePath: scaffoldPlan ? scaffoldPlan.installStatePath : null,
     operations: scaffoldPlan ? scaffoldPlan.operations : [],
