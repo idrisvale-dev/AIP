@@ -62,6 +62,23 @@ function seedLegacyInstall(homeDir, options = {}) {
     scaffoldOnly: false,
     contentSha256: digest(sourceContent),
   };
+  const operations = [operation];
+  if (options.includeJsonOperation) {
+    const configPath = path.join(targetRoot, 'opencode.json');
+    fs.writeFileSync(configPath, JSON.stringify({ plugin: ['ecc'] }, null, 2) + '\n');
+    operations.push({
+      kind: 'merge-json',
+      moduleId: 'opencode-plugin',
+      sourceRelativePath: '.opencode/opencode.json',
+      destinationPath: configPath,
+      strategy: 'merge-json',
+      ownership: 'managed',
+      scaffoldOnly: false,
+      mergePayload: { plugin: ['ecc'] },
+      previousExists: false,
+      previousContent: null,
+    });
+  }
   const state = createInstallState({
     adapter: { id: 'opencode-home', target: 'opencode', kind: 'home' },
     targetRoot,
@@ -80,19 +97,20 @@ function seedLegacyInstall(homeDir, options = {}) {
       repoCommit: 'legacy-opencode-test',
       manifestVersion: require('../../manifests/install-modules.json').version,
     },
-    operations: [operation],
+    operations,
   });
   writeInstallState(installStatePath, state);
   return { targetRoot, installStatePath, destinationPath };
 }
 
-function canonicalPlan(homeDir) {
+function canonicalPlan(homeDir, env) {
   return createManifestInstallPlan({
     sourceRoot: REPO_ROOT,
     target: 'opencode',
     moduleIds: ['workflow-quality'],
     projectRoot: homeDir,
     homeDir,
+    ...(env ? { env } : {}),
     exemptValidationCodes: ['opencode-plugin-not-built'],
   });
 }
@@ -179,6 +197,55 @@ test('a canonical install migrates unchanged legacy ownership', () => {
     assert.ok(!fs.existsSync(legacy.destinationPath));
   } finally {
     fs.rmSync(homeDir, { recursive: true, force: true });
+  }
+});
+
+test('a canonical install migrates legacy ownership when its config root is overridden', () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-legacy-custom-root-'));
+  try {
+    const legacy = seedLegacyInstall(homeDir);
+    const configRoot = path.join(homeDir, 'custom', 'opencode');
+    const result = applyInstallPlan(canonicalPlan(homeDir, {
+      OPENCODE_CONFIG_DIR: configRoot,
+    }));
+    assert.ok(result.applied);
+    assert.ok(fs.existsSync(path.join(configRoot, 'ecc-install-state.json')));
+    assert.ok(!fs.existsSync(legacy.installStatePath));
+    assert.ok(!fs.existsSync(legacy.destinationPath));
+  } finally {
+    fs.rmSync(homeDir, { recursive: true, force: true });
+  }
+});
+
+test('legacy non-file operations do not block canonical cleanup or repair', () => {
+  const applyHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-legacy-json-apply-'));
+  const repairHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-legacy-json-repair-'));
+  try {
+    const legacyApply = seedLegacyInstall(applyHome, { includeJsonOperation: true });
+    applyInstallPlan(canonicalPlan(applyHome));
+    assert.ok(!fs.existsSync(legacyApply.installStatePath));
+    assert.ok(fs.existsSync(path.join(legacyApply.targetRoot, 'opencode.json')));
+
+    const legacyRepair = seedLegacyInstall(repairHome, { includeJsonOperation: true });
+    const result = repairInstalledStates({
+      repoRoot: REPO_ROOT,
+      homeDir: repairHome,
+      projectRoot: repairHome,
+      targets: ['opencode'],
+    });
+    const canonicalStatePath = path.join(
+      repairHome,
+      '.config',
+      'opencode',
+      'ecc-install-state.json'
+    );
+    assert.strictEqual(result.summary.errorCount, 0, JSON.stringify(result));
+    assert.ok(fs.existsSync(canonicalStatePath));
+    assert.ok(!fs.existsSync(legacyRepair.installStatePath));
+    assert.ok(fs.existsSync(path.join(legacyRepair.targetRoot, 'opencode.json')));
+  } finally {
+    fs.rmSync(applyHome, { recursive: true, force: true });
+    fs.rmSync(repairHome, { recursive: true, force: true });
   }
 });
 
