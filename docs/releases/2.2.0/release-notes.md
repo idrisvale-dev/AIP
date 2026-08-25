@@ -8,14 +8,14 @@ ECC 2.2.0 makes the universal installer a first-class, cross-harness distributio
 - Repeated selective installs retain the complete managed ownership ledger. A later module install no longer causes previously installed ECC files to survive uninstall.
 - OpenCode home installs use `~/.config/opencode`. Reinstall or repair discovers legacy `~/.opencode` ownership, migrates unchanged ECC-managed files, and preserves modified files for review. Bundled agent definitions inherit the user's selected model provider.
 - Legacy Codex sync cleanup requires ownership evidence by default and preserves untracked or modified user files.
-- Nasiko lifecycle locks recover only when their recorded owner is confirmed dead. Its pinned archive parser rejects malformed boundaries, and incomplete uninstall cleanup returns an error with retained-file guidance.
+- The experimental Nasiko CLI lifecycle bridge recovers locks only when their recorded owner is confirmed dead. Its pinned archive parser rejects malformed boundaries, and incomplete uninstall cleanup returns an error with retained-file guidance. ECC does not connect or operate a Nasiko control plane, enable telemetry, or provide a supported end-to-end Nasiko workflow.
 - `skill-comply` is included in both the install graph and npm archive. Python bytecode and pytest caches remain excluded.
 
 ## New capabilities
 
 - Guided multi-harness setup and stronger doctor, repair, status, and uninstall flows.
 - Native Antigravity 2.0 documentation for Bash and PowerShell.
-- Expanded Itô, Nasiko, agent-evaluation, multi-model council, dev-team, living-docs, secure terminal, Pi, and TasteForge workflows.
+- Expanded Itô, agent-evaluation, multi-model council, dev-team, living-docs, secure terminal, Pi, and TasteForge workflows, plus the experimental Nasiko CLI lifecycle bridge.
 - Improved Plan Canvas, memory vault, continuous learning, skill evolution, hook stability, session handling, and Discord delivery.
 
 ## Release assurance
@@ -23,7 +23,8 @@ ECC 2.2.0 makes the universal installer a first-class, cross-harness distributio
 - The release workflow requires the tagged commit to equal `origin/main` exactly.
 - npm registry failures stop the release instead of being treated as an unpublished version.
 - The exact packed archive is hashed once and exercised on Linux, macOS, and Windows before publication.
-- The verified npm archive is published before the matching GitHub Release is created. A retry verifies byte-for-byte registry integrity.
+- Stable npm releases publish first to a staging dist-tag, verify byte-for-byte registry integrity, and only then promote `latest`. The matching GitHub Release is created after promotion.
+- The prior 2.1.0 package remains immutable and installable as the immediate dist-tag rollback target.
 
 ## Upgrade
 

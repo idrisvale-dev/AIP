@@ -1,5 +1,5 @@
 /**
- * Contract and lifecycle tests for the opt-in Nasiko control-plane bridge.
+ * Contract and lifecycle tests for the opt-in Nasiko CLI lifecycle bridge.
  */
 
 const assert = require('assert');
@@ -59,7 +59,7 @@ function tarGzipFixture({
 }
 
 async function main() {
-  console.log('\n=== Testing Nasiko control-plane integration ===\n');
+  console.log('\n=== Testing Nasiko CLI lifecycle bridge ===\n');
 
   const tests = [
     ['qualifies only pinned platform releases and rejects latest', () => {
@@ -468,7 +468,7 @@ async function main() {
         {
           id: 'capability:nasiko-control-plane',
           family: 'capability',
-          description: 'Explicitly gated Nasiko control-plane installation, status, and agent-operations guidance with pinned artifact verification and opt-in telemetry boundaries.',
+          description: 'Experimental Nasiko CLI lifecycle bridge guidance for pinned installation, read-only status, qualified uninstall, and opt-in telemetry boundaries.',
           modules: ['nasiko-control-plane'],
         }
       );

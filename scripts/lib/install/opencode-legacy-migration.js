@@ -205,42 +205,79 @@ function verifyManagedLegacyFile(operation, location, sourceRoot) {
   return { destinationPath, stat: destination.stat };
 }
 
-function removeVerifiedLegacyFile(entry, location) {
+function pathExistsWith(fileSystem, filePath) {
+  try {
+    fileSystem.lstatSync(filePath);
+    return true;
+  } catch (error) {
+    if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+function restoreQuarantinedFileNoClobber(quarantinePath, safePath, fileSystem) {
+  try {
+    fileSystem.linkSync(quarantinePath, safePath);
+  } catch (error) {
+    error.retainedPath = quarantinePath;
+    throw error;
+  }
+  try {
+    fileSystem.rmSync(quarantinePath);
+  } catch (error) {
+    error.retainedPath = quarantinePath;
+    throw error;
+  }
+}
+
+function removeVerifiedLegacyFile(entry, location, fileSystem = fs) {
   const safePath = assertWithinTrustedRoot(
     entry.destinationPath,
     location.targetRoot,
     'remove verified legacy OpenCode file'
   );
-  const quarantineDir = fs.mkdtempSync(path.join(
+  const quarantineDir = fileSystem.mkdtempSync(path.join(
     path.dirname(location.targetRoot),
     '.ecc-opencode-remove-'
   ));
   const quarantinePath = path.join(quarantineDir, path.basename(safePath));
   try {
-    fs.renameSync(safePath, quarantinePath);
-    const quarantinedStat = fs.lstatSync(quarantinePath, { bigint: true });
+    fileSystem.renameSync(safePath, quarantinePath);
+    const quarantinedStat = fileSystem.lstatSync(quarantinePath, { bigint: true });
     const identityMatches = !quarantinedStat.isSymbolicLink()
       && quarantinedStat.isFile()
       && quarantinedStat.dev === entry.stat.dev
       && quarantinedStat.ino === entry.stat.ino;
     if (!identityMatches) {
-      fs.renameSync(quarantinePath, safePath);
-      fs.rmdirSync(quarantineDir);
-      return false;
+      const identityError = new Error(
+        `Legacy OpenCode file changed during quarantine: ${safePath}`
+      );
+      identityError.code = 'ESTALE';
+      throw identityError;
     }
-    fs.rmSync(quarantinePath);
-    fs.rmdirSync(quarantineDir);
+    fileSystem.rmSync(quarantinePath);
+    fileSystem.rmdirSync(quarantineDir);
     return true;
   } catch (error) {
+    let restoreError = null;
     try {
-      if (pathExists(quarantinePath) && !pathExists(safePath)) {
-        fs.renameSync(quarantinePath, safePath);
+      if (pathExistsWith(fileSystem, quarantinePath)) {
+        restoreQuarantinedFileNoClobber(quarantinePath, safePath, fileSystem);
       }
-      if (pathExists(quarantineDir) && fs.readdirSync(quarantineDir).length === 0) {
-        fs.rmdirSync(quarantineDir);
+      if (
+        pathExistsWith(fileSystem, quarantineDir)
+        && fileSystem.readdirSync(quarantineDir).length === 0
+      ) {
+        fileSystem.rmdirSync(quarantineDir);
       }
-    } catch (_restoreError) {
-      // Preserve the quarantined entry when restoration cannot be proven safe.
+    } catch (recoveryError) {
+      restoreError = recoveryError;
+    }
+    if (restoreError) {
+      restoreError.cause = error;
+      throw restoreError;
     }
     throw error;
   }
@@ -294,8 +331,9 @@ function removeLegacyFiles(removable, location, retainedPaths) {
       }
       removedPaths.push(entry.destinationPath);
       removeEmptyParents(entry.destinationPath, location.targetRoot);
-    } catch (_error) {
+    } catch (error) {
       retainedPaths.push(entry.destinationPath);
+      if (error.retainedPath) retainedPaths.push(error.retainedPath);
     }
   }
   return removedPaths;
@@ -356,4 +394,5 @@ module.exports = {
   cleanupLegacyOpencodeInstall,
   getLegacyOpencodeLocation,
   inspectLegacyOpencodeState,
+  removeVerifiedLegacyFile,
 };

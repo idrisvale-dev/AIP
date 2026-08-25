@@ -76,8 +76,8 @@ Run these commands inside Claude Code:
 
 That installs ECC's skills, agents, commands, and plugin-managed hooks. If you choose this path, stop there. Do not also run a full manual install into Claude Code.
 
-> Guided package setup is coming in `ecc-universal` 2.2.0. Use the native
-> Claude plugin commands above while npm remains on 2.1.0.
+> ECC 2.2 includes guided package setup through `ecc-universal`. The native
+> Claude plugin commands above remain the simplest Claude Code install path.
 
 <div align="center">
 
@@ -168,16 +168,18 @@ Access to 68 agents, 286 skills, and 94 legacy command shims, plus hooks, rules,
 ## Install ECC
 
 > [!IMPORTANT]
-> Guided package setup is coming in `ecc-universal` 2.2.0. The current npm
-> release, 2.1.0, does not include the guided setup commands. Use the native
-> Claude plugin commands at the top of this README until 2.2.0 is published.
+> ECC 2.2 includes guided package setup for Claude Code, Codex, and Kimi Code.
+> During registry propagation, run `npm view ecc-universal version` before
+> using the package commands. If it still reports 2.1.0, the native Claude
+> plugin commands at the top of this README remain available.
 
 ### Pick one path only (per harness)
 
 You can use ECC with Claude Code, Codex, and other harnesses at the same time. Choose one install method for each harness:
 
-- **Recommended today for Claude Code:** use the [native plugin commands above](#install-with-claude-code)
-- **Coming in release 2.2:** guided package setup for Claude Code, Codex, and Kimi Code; see the preview at the bottom of this install area
+- **Recommended default:** run the guided Claude plugin setup below once `npm view ecc-universal version` reports 2.2.0
+- **Available throughout npm propagation:** use the [native plugin commands above](#install-with-claude-code)
+- **Available in release 2.2:** guided package setup for Claude Code, Codex, and Kimi Code
 - **Works:** Claude Code plugin + Codex native plugin
 - **Works:** Claude Code plugin + the legacy Codex sync flow
 - **Avoid:** Claude Code plugin + full Claude manual install
@@ -191,7 +193,7 @@ If you already layered multiple installs and things look duplicated, skip straig
 
 ### Claude Code details
 
-Claude Code owns these built-in commands, including their errors when a marketplace, plugin, or conflicting scope already exists. ECC cannot intercept that parser. If either native command reports an existing install or scope conflict, wait for the 2.2.0 guided setup or resolve the conflicting Claude plugin scope before retrying; do not layer a manual install on top.
+Claude Code owns these built-in commands, including their errors when a marketplace, plugin, or conflicting scope already exists. ECC cannot intercept that parser. If either native command reports an existing install or scope conflict, use the 2.2 guided setup or resolve the conflicting Claude plugin scope before retrying; do not layer a manual install on top.
 
 After ECC is installed, `/ecc:configure-ecc` is the namespaced in-Claude reconfiguration skill. It delegates to the same safe setup flow, but it is available only after the plugin is installed and cannot replace Claude Code's built-in `/plugin` command during a first install.
 
@@ -587,13 +589,12 @@ If you stacked methods, clean up in this order:
 4. Reinstall once, using a single path.
 </details>
 
-## Coming soon: guided setup in release 2.2
+## Guided package setup in release 2.2
 
-> [!WARNING]
-> These ECC package-runner commands are not available in the current npm
-> release, 2.1.0. Do not run them until `ecc-universal` 2.2.0 is published.
-
-The earlier README description—**Recommended default:** run the guided Claude plugin setup—was published too soon. That recommendation is withdrawn until release 2.2.
+> [!IMPORTANT]
+> These package-runner commands require `ecc-universal` 2.2.0 or newer.
+> Confirm registry propagation with `npm view ecc-universal version`. The
+> native Claude plugin install remains available throughout npm rollout.
 
 For Claude Code plugin setup, updates, scope changes, and hook-profile changes:
 
@@ -601,7 +602,7 @@ For Claude Code plugin setup, updates, scope changes, and hook-profile changes:
 npx ecc-universal setup
 ```
 
-Release 2.2 will support the same guided setup through modern package runners:
+ECC 2.2 supports the same guided setup through modern package runners:
 
 | Package runner | Guided setup command |
 |---|---|
@@ -610,7 +611,7 @@ Release 2.2 will support the same guided setup through modern package runners:
 | Yarn 2+ | `yarn dlx ecc-universal setup` |
 | Bun | `bunx ecc-universal setup` |
 
-Yarn Classic 1 does not provide `yarn dlx`; use `npx`, install the package globally, or upgrade Yarn for a temporary one-shot run after 2.2 is published.
+Yarn Classic 1 does not provide `yarn dlx`; use `npx`, install the package globally, or upgrade Yarn for a temporary one-shot run.
 
 The wizard inventories the official marketplace and every native Claude install scope before making changes, then installs, updates, or safely moves `ecc@ecc` to the scope you choose. Rerun the same command whenever you want to update ECC, change scope, or change its hook profile. This setup wizard currently configures the Claude Code plugin; use the multi-harness wizard below for Codex or Kimi Code.
 
@@ -644,7 +645,7 @@ npx ecc-universal install --guided --harness codex --dry-run
 npx ecc-universal install --profile core --target kimi --dry-run
 ```
 
-Additional package-name commands will also become available through the 2.2 alias:
+Additional package-name commands are also available through the 2.2 alias:
 
 ```bash
 npx ecc-universal consult "security reviews" --target claude

@@ -19,6 +19,7 @@ const {
   cleanupLegacyOpencodeInstall,
   getLegacyOpencodeLocation,
   inspectLegacyOpencodeState,
+  removeVerifiedLegacyFile,
 } = require('../../scripts/lib/install/opencode-legacy-migration');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -292,6 +293,70 @@ test('migration never follows a legacy managed-file symlink', () => {
     assert.ok(fs.existsSync(legacy.installStatePath));
   } finally {
     fs.rmSync(homeDir, { recursive: true, force: true });
+  }
+});
+
+test('legacy cleanup never overwrites a file created during quarantine recovery', () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-legacy-no-clobber-'));
+  const targetRoot = path.join(homeDir, '.opencode');
+  const destinationPath = path.join(targetRoot, 'managed.md');
+  let quarantinePath = null;
+  let effectiveSafePath = destinationPath;
+  try {
+    fs.mkdirSync(targetRoot, { recursive: true });
+    fs.writeFileSync(destinationPath, 'managed-old\n');
+    const originalStat = fs.lstatSync(destinationPath, { bigint: true });
+    let injected = false;
+    const fileSystem = new Proxy(fs, {
+      get(target, property) {
+        if (property === 'renameSync') {
+          return (sourcePath, targetPath) => {
+            fs.renameSync(sourcePath, targetPath);
+            effectiveSafePath = sourcePath;
+            quarantinePath = targetPath;
+          };
+        }
+        if (property === 'lstatSync') {
+          return (filePath, options) => {
+            const stat = fs.lstatSync(filePath, options);
+            if (!injected && quarantinePath && filePath === quarantinePath) {
+              injected = true;
+              fs.writeFileSync(effectiveSafePath, 'user-new\n', { flag: 'wx' });
+              return new Proxy(stat, {
+                get(statTarget, statProperty) {
+                  if (statProperty === 'ino') return statTarget.ino + 1n;
+                  const value = Reflect.get(statTarget, statProperty, statTarget);
+                  return typeof value === 'function' ? value.bind(statTarget) : value;
+                },
+              });
+            }
+            return stat;
+          };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+
+    assert.throws(
+      () => removeVerifiedLegacyFile(
+        { destinationPath, stat: originalStat },
+        { targetRoot },
+        fileSystem
+      ),
+      error => {
+        assert.strictEqual(error.code, 'EEXIST');
+        assert.strictEqual(error.retainedPath, quarantinePath);
+        return true;
+      }
+    );
+    assert.strictEqual(fs.readFileSync(destinationPath, 'utf8'), 'user-new\n');
+    assert.strictEqual(fs.readFileSync(quarantinePath, 'utf8'), 'managed-old\n');
+  } finally {
+    fs.rmSync(homeDir, { recursive: true, force: true });
+    if (quarantinePath) {
+      fs.rmSync(path.dirname(quarantinePath), { recursive: true, force: true });
+    }
   }
 });
 

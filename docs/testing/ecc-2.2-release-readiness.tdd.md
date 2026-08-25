@@ -4,7 +4,7 @@ Date: 2026-08-25
 
 ## Scope
 
-This pass covers the release blockers found in the delta from `v2.1.0`: cumulative selective-install ownership, native Antigravity packaging, canonical OpenCode installation and conservative legacy migration, provider-neutral OpenCode agents, `skill-comply` distribution, conservative legacy Codex uninstall, release-workflow safety, and guided-install filesystem boundaries.
+This pass covers the release blockers found in the delta from `v2.1.0`: cumulative selective-install ownership, native Antigravity packaging, canonical OpenCode installation and conservative legacy migration, provider-neutral OpenCode agents, `skill-comply` distribution, conservative legacy Codex uninstall, release-workflow safety, guided-install filesystem boundaries, npm availability during promotion, and accurate Nasiko release boundaries.
 
 ## RED
 
@@ -37,18 +37,35 @@ Commit `85673326` added legacy OpenCode regressions for custom configuration roo
 
 Commit `5aa66021` moved ambient-override checks into isolated child processes and added a regression requiring invocation environments to be immutable snapshots. The snapshot assertion failed before the environment-copy repair.
 
+The final independent audit found a recovery race in legacy OpenCode cleanup: a
+clobbering rename could overwrite a user file created after quarantine. A
+deterministic injected-filesystem regression now proves recovery fails closed,
+keeps the new user file, and retains the old managed file in quarantine.
+
+The same audit found prerelease wording in the immutable npm README, temporary
+Antigravity guidance, and wording that overstated the Nasiko feature. Focused
+copy regressions now reject those stale statements and require the implemented
+surface to be described as an experimental Nasiko CLI lifecycle bridge.
+
 ## GREEN
 
 - Focused installer, lifecycle, packaging, release-workflow, manifest, OpenCode, Antigravity, and uninstall tests passed.
-- Full repository suite: 3,987 passed, 0 failed.
-- `npm audit --audit-level=low`: 0 vulnerabilities.
+- Full repository suite: 3,992 passed, 0 failed.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
 - Supply-chain IOC scan: 207 files inspected, no findings.
 - Both release workflow YAML files parsed successfully.
 - Both release workflows derive reviewed notes from the validated tag and fail clearly when that version's notes are absent.
 - Release-note selection follows the lowercase filename convention shared by prior release directories.
-- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `cf3a5ccefda2608389c7039b6c8b7f5707fd3fdd99579e843ed1aa593c7b1a15`.
+- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `019547d032e63ee169abb2f92695dee25d6e60ed64c4085142225d75fb7a76c8`.
 - The packed lifecycle covered npm installation, public CLI setup, cumulative Cursor install, drift detection, repair, uninstall, user-file preservation, Antigravity install/doctor/uninstall, and OpenCode install/doctor/uninstall.
 - Simulated hosted-runner `OPENCODE_CONFIG_DIR` and `XDG_CONFIG_HOME` overrides passed the adapter, MCP inventory, lifecycle, legacy migration, doctor, repair, list, and uninstall suites while explicit CLI environments continued to honor those overrides.
+- The stable workflow publishes 2.2.0 to `staged`, verifies the public registry
+  SHA-512 against the exact tested archive, and only then promotes `latest`.
+- The live npm `latest` tag remained on 2.1.0. A clean exact 2.1.0 package
+  install and disposable Cursor install/uninstall passed, and its tarball
+  remained publicly readable with immutable caching.
+- A launch and rollback runbook assigns the merge, signed tag, and release to
+  Affaan and uses the npm dist-tag as the reversible availability switch.
 
 ## Focused coverage
 

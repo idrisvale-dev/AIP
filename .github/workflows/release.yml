@@ -14,6 +14,9 @@ jobs:
     outputs:
       already_published: ${{ steps.npm_publish_state.outputs.already_published }}
       dist_tag: ${{ steps.npm_publish_state.outputs.dist_tag }}
+      publish_tag: ${{ steps.npm_publish_state.outputs.publish_tag }}
+      package_name: ${{ steps.npm_publish_state.outputs.package_name }}
+      package_version: ${{ steps.npm_publish_state.outputs.package_version }}
       package_file: ${{ steps.pack.outputs.package_file }}
       package_sha256: ${{ steps.pack.outputs.package_sha256 }}
 
@@ -79,6 +82,7 @@ jobs:
           PACKAGE_NAME=$(node -p "require('./package.json').name")
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           NPM_DIST_TAG=$(node -p "require('./package.json').version.includes('-') ? 'next' : 'latest'")
+          NPM_PUBLISH_TAG=$(node -p "require('./package.json').version.includes('-') ? 'next' : 'staged'")
           set +e
           NPM_LOOKUP=$(npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version 2>&1)
           NPM_STATUS=$?
@@ -92,7 +96,10 @@ jobs:
             printf '%s\n' "$NPM_LOOKUP"
             exit "$NPM_STATUS"
           fi
+          echo "package_name=${PACKAGE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "package_version=${PACKAGE_VERSION}" >> "$GITHUB_OUTPUT"
           echo "dist_tag=${NPM_DIST_TAG}" >> "$GITHUB_OUTPUT"
+          echo "publish_tag=${NPM_PUBLISH_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Use reviewed release notes
         env:
@@ -192,8 +199,40 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           ECC_RELEASE_PACKAGE: ${{ needs.verify.outputs.package_file }}
+          NPM_PUBLISH_TAG: ${{ needs.verify.outputs.publish_tag }}
+        run: npm publish "./${ECC_RELEASE_PACKAGE}" --access public --provenance --tag "${NPM_PUBLISH_TAG}"
+
+      - name: Verify published npm artifact
+        env:
+          ECC_RELEASE_PACKAGE: ${{ needs.verify.outputs.package_file }}
+          PACKAGE_NAME: ${{ needs.verify.outputs.package_name }}
+          PACKAGE_VERSION: ${{ needs.verify.outputs.package_version }}
+        run: |
+          REGISTRY_INTEGRITY=""
+          for ATTEMPT in 1 2 3 4 5 6; do
+            set +e
+            REGISTRY_INTEGRITY=$(npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" dist.integrity 2>&1)
+            NPM_STATUS=$?
+            set -e
+            if [ "$NPM_STATUS" -eq 0 ]; then
+              break
+            fi
+            if [ "$ATTEMPT" -eq 6 ]; then
+              echo "::error::Published npm artifact was not readable after six attempts"
+              printf '%s\n' "$REGISTRY_INTEGRITY"
+              exit "$NPM_STATUS"
+            fi
+            sleep 5
+          done
+          ECC_REGISTRY_INTEGRITY="$REGISTRY_INTEGRITY" node -e "const crypto = require('crypto'); const fs = require('fs'); const expected = process.env.ECC_REGISTRY_INTEGRITY; if (!/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(expected || '')) throw new Error('Invalid published registry integrity'); const actual = 'sha512-' + crypto.createHash('sha512').update(fs.readFileSync(process.env.ECC_RELEASE_PACKAGE)).digest('base64'); if (actual !== expected) throw new Error('Published npm artifact does not match tested candidate')"
+
+      - name: Promote verified npm version
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PACKAGE_NAME: ${{ needs.verify.outputs.package_name }}
+          PACKAGE_VERSION: ${{ needs.verify.outputs.package_version }}
           NPM_DIST_TAG: ${{ needs.verify.outputs.dist_tag }}
-        run: npm publish "./${ECC_RELEASE_PACKAGE}" --access public --provenance --tag "${NPM_DIST_TAG}"
+        run: npm dist-tag add "${PACKAGE_NAME}@${PACKAGE_VERSION}" "${NPM_DIST_TAG}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2

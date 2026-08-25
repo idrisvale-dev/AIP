@@ -77,6 +77,27 @@ for (const workflow of [
     assert.match(content, /NODE_AUTH_TOKEN:\s*\$\{\{\s*secrets\.NPM_TOKEN\s*\}\}/);
   });
 
+  test(`${workflow} stages stable npm versions before changing latest`, () => {
+    assert.match(content, /publish_tag:\s*\$\{\{ steps\.npm_publish_state\.outputs\.publish_tag \}\}/);
+    assert.match(content, /version\.includes\('-'\) \? 'next' : 'staged'/);
+    assert.match(content, /--tag "\$\{NPM_PUBLISH_TAG\}"/);
+    assert.match(content, /npm dist-tag add "\$\{PACKAGE_NAME\}@\$\{PACKAGE_VERSION\}" "\$\{NPM_DIST_TAG\}"/);
+  });
+
+  test(`${workflow} verifies registry bytes before promoting the final dist-tag`, () => {
+    const publishIndex = content.indexOf('name: Publish npm package');
+    const verifyIndex = content.indexOf('name: Verify published npm artifact');
+    const promoteIndex = content.indexOf('name: Promote verified npm version');
+    const releaseIndex = content.indexOf('name: Create GitHub Release');
+
+    assert.ok(publishIndex >= 0, 'missing npm publish step');
+    assert.ok(verifyIndex > publishIndex, 'registry verification must follow npm publish');
+    assert.ok(promoteIndex > verifyIndex, 'dist-tag promotion must follow registry verification');
+    assert.ok(releaseIndex > promoteIndex, 'GitHub Release must follow npm promotion');
+    assert.match(content, /npm view "\$\{PACKAGE_NAME\}@\$\{PACKAGE_VERSION\}" dist\.integrity/);
+    assert.match(content, /Published npm artifact does not match tested candidate/);
+  });
+
   test(`${workflow} publishes to npm before creating the GitHub Release`, () => {
     const releaseIndex = content.indexOf('name: Create GitHub Release');
     const publishIndex = content.indexOf('name: Publish npm package');
