@@ -40,13 +40,13 @@ Commit `5aa66021` moved ambient-override checks into isolated child processes an
 ## GREEN
 
 - Focused installer, lifecycle, packaging, release-workflow, manifest, OpenCode, Antigravity, and uninstall tests passed.
-- Full repository suite: 3,985 passed, 0 failed.
+- Full repository suite: 3,986 passed, 0 failed.
 - `npm audit --audit-level=low`: 0 vulnerabilities.
 - Supply-chain IOC scan: 207 files inspected, no findings.
 - Both release workflow YAML files parsed successfully.
 - Both release workflows derive reviewed notes from the validated tag and fail clearly when that version's notes are absent.
 - Release-note selection follows the lowercase filename convention shared by prior release directories.
-- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `de51641fee3fd7318937ec3bb45fe86f597b06b36501bf31960efe5ab7c8b42c`.
+- Exact packed archive lifecycle passed on macOS with Node 24.9.0 using SHA-256 `cf3a5ccefda2608389c7039b6c8b7f5707fd3fdd99579e843ed1aa593c7b1a15`.
 - The packed lifecycle covered npm installation, public CLI setup, cumulative Cursor install, drift detection, repair, uninstall, user-file preservation, Antigravity install/doctor/uninstall, and OpenCode install/doctor/uninstall.
 - Simulated hosted-runner `OPENCODE_CONFIG_DIR` and `XDG_CONFIG_HOME` overrides passed the adapter, MCP inventory, lifecycle, legacy migration, doctor, repair, list, and uninstall suites while explicit CLI environments continued to honor those overrides.
 

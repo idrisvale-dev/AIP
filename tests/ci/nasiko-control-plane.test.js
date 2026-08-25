@@ -180,6 +180,29 @@ async function main() {
         assert.strictEqual(fs.existsSync(lockPath), true);
       } finally { fs.rmSync(installRoot, { recursive: true, force: true }); }
     }],
+    ['uses descriptor identity when Windows path stats disagree', () => {
+      const { acquireLifecycleLock } = require('../../scripts/lib/nasiko-release');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-windows-identity-'));
+      const lockPath = path.join(installRoot, '.ecc-nasiko-lifecycle.lock');
+      const windowsLikeFileSystem = {
+        ...fs,
+        lstatSync: target => {
+          const stats = fs.lstatSync(target);
+          return {
+            ...stats,
+            dev: Number(stats.dev) + 1,
+            isDirectory: () => stats.isDirectory(),
+            isFile: () => stats.isFile(),
+            isSymbolicLink: () => stats.isSymbolicLink(),
+          };
+        },
+      };
+      try {
+        const releaseLock = acquireLifecycleLock(installRoot, windowsLikeFileSystem);
+        releaseLock();
+        assert.strictEqual(fs.existsSync(lockPath), false);
+      } finally { fs.rmSync(installRoot, { recursive: true, force: true }); }
+    }],
     ['verifies manifest and blob digests before an atomic install', async () => {
       const { installNasiko } = require('../../scripts/lib/nasiko-release');
       const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-green-'));

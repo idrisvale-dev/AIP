@@ -273,11 +273,11 @@ function processIsAlive(pid) {
 function inspectLifecycleLock(lockPath, fileSystem) {
   const descriptor = fileSystem.openSync(lockPath, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
   try {
-    const descriptorStats = fileSystem.fstatSync(descriptor);
-    if (!descriptorStats.isFile() || descriptorStats.size <= 0 || descriptorStats.size > 4096) return null;
+    const descriptorStats = fileSystem.fstatSync(descriptor, { bigint: true });
+    if (!descriptorStats.isFile() || descriptorStats.size <= 0n || descriptorStats.size > 4096n) return null;
     const bytes = fileSystem.readFileSync(descriptor);
     const pathStats = fileSystem.lstatSync(lockPath);
-    if (pathStats.isSymbolicLink() || !pathStats.isFile() || !sameFileIdentity(descriptorStats, pathStats)) return null;
+    if (pathStats.isSymbolicLink() || !pathStats.isFile()) return null;
     let metadata;
     try { metadata = JSON.parse(bytes.toString('utf8')); } catch (_error) { return null; }
     if (
@@ -291,14 +291,21 @@ function inspectLifecycleLock(lockPath, fileSystem) {
 }
 
 function removeLockIfOwned(lockPath, expectedStats, fileSystem) {
+  let descriptor;
   try {
-    const current = fileSystem.lstatSync(lockPath);
-    if (!current.isSymbolicLink() && current.isFile() && sameFileIdentity(current, expectedStats)) {
+    descriptor = fileSystem.openSync(lockPath, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+    const current = fileSystem.fstatSync(descriptor, { bigint: true });
+    const pathStats = fileSystem.lstatSync(lockPath);
+    if (!pathStats.isSymbolicLink() && pathStats.isFile() && current.isFile() && sameFileIdentity(current, expectedStats)) {
+      fileSystem.closeSync(descriptor);
+      descriptor = undefined;
       fileSystem.rmSync(lockPath, { force: true });
       return true;
     }
   } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
+    if (error.code !== 'ENOENT' && error.code !== 'ELOOP') throw error;
+  } finally {
+    if (descriptor !== undefined) fileSystem.closeSync(descriptor);
   }
   return false;
 }
@@ -316,12 +323,12 @@ function createLifecycleLock(lockPath, fileSystem) {
   }
   catch (error) {
     if (descriptor !== undefined) {
-      const ownedStats = fileSystem.fstatSync(descriptor);
+      const ownedStats = fileSystem.fstatSync(descriptor, { bigint: true });
       try { fileSystem.closeSync(descriptor); } finally { removeLockIfOwned(lockPath, ownedStats, fileSystem); }
     }
     throw error;
   }
-  const ownedStats = fileSystem.fstatSync(descriptor);
+  const ownedStats = fileSystem.fstatSync(descriptor, { bigint: true });
   let released = false;
   return () => {
     if (released) return;
