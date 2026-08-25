@@ -120,10 +120,23 @@ function readInstalledFileNoFollow(plan, operation) {
 }
 
 function stateWithContentDigests(state, plan) {
+  const currentDestinations = new Set((plan.operations || [])
+    .filter(operation => operation.destinationPath)
+    .map(operation => {
+      const resolved = path.resolve(operation.destinationPath);
+      return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+    }));
   return {
     ...state,
     operations: (state.operations || []).map(operation => {
       if (!operation.destinationPath) {
+        return { ...operation };
+      }
+      const resolved = path.resolve(operation.destinationPath);
+      const destinationKey = process.platform === 'win32'
+        ? resolved.toLowerCase()
+        : resolved;
+      if (!currentDestinations.has(destinationKey)) {
         return { ...operation };
       }
       const installedContent = readInstalledFileNoFollow(plan, operation);

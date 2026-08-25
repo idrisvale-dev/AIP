@@ -243,7 +243,7 @@ function createDisabledMigration(plan, previousState) {
     bridgeState: finalState,
     finalState,
     legacyOperationsToRemove: [],
-    requiresBridgeState: false,
+    requiresBridgeState: plan.operations.length > 0,
   };
 }
 

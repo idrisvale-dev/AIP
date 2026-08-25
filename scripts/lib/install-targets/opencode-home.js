@@ -6,6 +6,7 @@ const {
   buildValidationIssue,
   createInstallTargetAdapter,
 } = require('./helpers');
+const { resolveOpencodeConfigRoot } = require('../opencode-paths');
 
 const COMPILED_PLUGIN_DIST_DIR = path.join('.opencode', 'dist');
 const REQUIRED_COMPILED_ARTEFACTS = Object.freeze([
@@ -84,6 +85,7 @@ module.exports = createInstallTargetAdapter({
   target: 'opencode',
   kind: 'home',
   rootSegments: ['.config', 'opencode'],
+  resolveRoot: resolveOpencodeConfigRoot,
   installStatePathSegments: ['ecc-install-state.json'],
   nativeRootRelativePath: '.opencode',
   validate: defaultValidateOpencodeHome,

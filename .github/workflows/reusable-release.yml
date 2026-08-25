@@ -7,11 +7,6 @@ on:
         description: 'Version tag (e.g., v1.0.0)'
         required: true
         type: string
-      generate-notes:
-        description: 'Auto-generate release notes'
-        required: false
-        type: boolean
-        default: true
     secrets:
       NPM_TOKEN:
         required: false
@@ -21,11 +16,6 @@ on:
         description: 'Version tag to release or republish (e.g., v2.0.0-rc.1)'
         required: true
         type: string
-      generate-notes:
-        description: 'Auto-generate release notes'
-        required: false
-        type: boolean
-        default: true
 
 permissions:
   contents: read
@@ -224,6 +214,6 @@ jobs:
         with:
           tag_name: ${{ inputs.tag }}
           body_path: release_body.md
-          generate_release_notes: ${{ inputs.generate-notes }}
+          generate_release_notes: false
           prerelease: ${{ contains(inputs.tag, '-') }}
           make_latest: ${{ contains(inputs.tag, '-') && 'false' || 'true' }}
