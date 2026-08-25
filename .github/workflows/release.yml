@@ -99,7 +99,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           RELEASE_VERSION="${RELEASE_TAG#v}"
-          RELEASE_NOTES="docs/releases/${RELEASE_VERSION}/RELEASE_NOTES.md"
+          RELEASE_NOTES="docs/releases/${RELEASE_VERSION}/release-notes.md"
           if [ ! -f "$RELEASE_NOTES" ]; then
             echo "::error::Missing reviewed release notes for ${RELEASE_VERSION}: ${RELEASE_NOTES}"
             exit 1
