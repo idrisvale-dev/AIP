@@ -113,6 +113,14 @@ function fingerprintFile(filePath) {
   };
 }
 
+function fingerprintInstallStateValue(state) {
+  const content = Buffer.from(`${JSON.stringify(state, null, 2)}\n`);
+  return {
+    exists: true,
+    sha256: crypto.createHash('sha256').update(content).digest('hex'),
+  };
+}
+
 function operationIdentityMatches(stateOperation, plannedOperation) {
   return [
     'kind',
@@ -364,11 +372,15 @@ async function applyPreflightedManagedPlan(entry) {
     ? entry.preview
     : preflightManagedPlan(entry.preview.plan);
   const ownedDestinations = new Set(preview.ownershipSnapshot.destinations);
-  const expectedStateFingerprint = preview.ownershipSnapshot.stateFingerprint;
+  let expectedStateFingerprint = preview.ownershipSnapshot.stateFingerprint;
   let operationIndex = 0;
   const assertStateUnchanged = () => (
     assertInstallStateUnchanged(preview.plan, expectedStateFingerprint)
   );
+  const prepareInstallStateWrite = ({ state }) => {
+    assertStateUnchanged();
+    expectedStateFingerprint = fingerprintInstallStateValue(state);
+  };
 
   const result = require('./install-executor').applyInstallPlan(preview.plan, {
     beforeInstallStateRead: assertStateUnchanged,
@@ -390,7 +402,7 @@ async function applyPreflightedManagedPlan(entry) {
       ownedDestinations.add(destination);
       operationIndex += 1;
     },
-    beforeInstallStateWrite: assertStateUnchanged,
+    beforeInstallStateWrite: prepareInstallStateWrite,
   });
   const { projectCanonicalInstallState } = require('./install-state-store-sync');
   const installStateProjection = await projectCanonicalInstallState(result.statePreview);
