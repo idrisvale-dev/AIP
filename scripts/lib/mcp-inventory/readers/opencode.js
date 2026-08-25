@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { resolveOpencodeConfigRoot } = require('../../opencode-paths');
+const { resolveInvocationEnvironment } = require('../../invocation-environment');
 
 // OpenCode stores MCP servers under "mcp" in its resolved configuration root.
 // Shape differs from Claude/Codex:
@@ -39,7 +40,10 @@ function mapOpencodeServer(name, raw, configPath) {
 
 function readOpencodeMcp(options = {}) {
   const homeDir = options.homeDir || os.homedir();
-  const configRoot = resolveOpencodeConfigRoot({ homeDir, env: options.env });
+  const configRoot = resolveOpencodeConfigRoot({
+    homeDir,
+    env: resolveInvocationEnvironment(options),
+  });
   const candidatePaths = options.configPath
     ? [options.configPath]
     : [

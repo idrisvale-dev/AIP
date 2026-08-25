@@ -22,6 +22,7 @@ const {
 const { adaptAntigravityAgent } = require('./install/antigravity-agent');
 const { buildInstallIndex, rewriteRelativeLinks } = require('./install/link-rewrite');
 const { getInstallTargetAdapter, listInstallTargetAdapters } = require('./install-targets/registry');
+const { resolveInvocationEnvironment } = require('./invocation-environment');
 const OPENCODE_BUILD_ARTIFACT = path.join('.opencode', 'dist');
 const OPENCODE_BUILD_SCRIPT = path.join('scripts', 'build-opencode.js');
 const OPENCODE_PLUGIN_NOT_BUILT_CODE = 'opencode-plugin-not-built';
@@ -1275,7 +1276,7 @@ function discoverInstalledStates(options = {}) {
   const context = {
     homeDir: options.homeDir || process.env.HOME || os.homedir(),
     projectRoot: options.projectRoot || process.cwd(),
-    env: options.env || process.env,
+    env: resolveInvocationEnvironment(options),
   };
   const targets = normalizeTargets(options.targets);
 
@@ -1546,13 +1547,13 @@ function buildDoctorReport(options = {}) {
     homeDir: options.homeDir,
     projectRoot: options.projectRoot,
     targets: options.targets,
-    env: options.env,
+    env: resolveInvocationEnvironment(options),
   }).filter(record => record.exists);
   const context = {
     repoRoot,
     homeDir: options.homeDir || process.env.HOME || os.homedir(),
     projectRoot: options.projectRoot || process.cwd(),
-    env: options.env || process.env,
+    env: resolveInvocationEnvironment(options),
     manifestVersion: manifests.modulesVersion,
     packageVersion: readPackageVersion(repoRoot)
   };
@@ -1718,7 +1719,7 @@ function repairInstalledStates(options = {}) {
     repoRoot,
     homeDir: options.homeDir || process.env.HOME || os.homedir(),
     projectRoot: options.projectRoot || process.cwd(),
-    env: options.env || process.env,
+    env: resolveInvocationEnvironment(options),
     manifestVersion: manifests.modulesVersion,
     packageVersion: readPackageVersion(repoRoot)
   };
@@ -2045,7 +2046,7 @@ function uninstallInstalledStates(options = {}) {
     homeDir: options.homeDir,
     projectRoot: options.projectRoot,
     targets: options.targets,
-    env: options.env,
+    env: resolveInvocationEnvironment(options),
   }).filter(record => record.exists);
 
   const results = records.map(record => {

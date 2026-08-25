@@ -2,6 +2,7 @@
 
 const os = require('os');
 const path = require('path');
+const { resolveInvocationEnvironment } = require('./invocation-environment');
 
 function configuredDirectory(environment, name) {
   const value = environment && environment[name];
@@ -11,7 +12,7 @@ function configuredDirectory(environment, name) {
 }
 
 function resolveOpencodeConfigRoot(options = {}) {
-  const environment = options.env || process.env;
+  const environment = resolveInvocationEnvironment(options);
   const explicitRoot = configuredDirectory(environment, 'OPENCODE_CONFIG_DIR');
   if (explicitRoot) {
     return explicitRoot;

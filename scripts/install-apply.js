@@ -164,6 +164,7 @@ async function main() {
     const rawPlan = createInstallPlanFromRequest(request, {
       projectRoot: process.cwd(),
       homeDir: process.env.HOME || os.homedir(),
+      env: process.env,
       claudeRulesDir: process.env.CLAUDE_RULES_DIR || null,
     });
 

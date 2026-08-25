@@ -7,6 +7,7 @@ const { toCursorAgentRelativePath } = require('./cursor-agent-names');
 const { LEGACY_INSTALL_TARGETS, parseInstallArgs } = require('./install/request');
 const { SUPPORTED_INSTALL_TARGETS, listLegacyCompatibilityLanguages, resolveLegacyCompatibilitySelection, resolveInstallPlan } = require('./install-manifests');
 const { getInstallTargetAdapter } = require('./install-targets/registry');
+const { resolveInvocationEnvironment } = require('./invocation-environment');
 
 const LANGUAGE_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
 const CLAUDE_ECC_NAMESPACE = 'ecc';
@@ -645,7 +646,7 @@ function createLegacyCompatInstallPlan(options = {}) {
     sourceRoot,
     projectRoot,
     homeDir: options.homeDir,
-    env: options.env || process.env,
+    env: resolveInvocationEnvironment(options),
     target,
     profileId: null,
     moduleIds: selection.moduleIds,
@@ -775,6 +776,7 @@ function createManifestInstallPlan(options = {}) {
     repoRoot: sourceRoot,
     projectRoot,
     homeDir: options.homeDir,
+    env: resolveInvocationEnvironment(options),
     profileId: options.profileId || null,
     moduleIds: options.moduleIds || [],
     includeComponentIds: options.includeComponentIds || [],
