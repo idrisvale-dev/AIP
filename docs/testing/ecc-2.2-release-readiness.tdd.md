@@ -40,7 +40,7 @@ Commit `5aa66021` moved ambient-override checks into isolated child processes an
 ## GREEN
 
 - Focused installer, lifecycle, packaging, release-workflow, manifest, OpenCode, Antigravity, and uninstall tests passed.
-- Full repository suite: 3,986 passed, 0 failed.
+- Full repository suite: 3,987 passed, 0 failed.
 - `npm audit --audit-level=low`: 0 vulnerabilities.
 - Supply-chain IOC scan: 207 files inspected, no findings.
 - Both release workflow YAML files parsed successfully.

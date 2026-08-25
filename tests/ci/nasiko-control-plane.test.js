@@ -143,7 +143,13 @@ async function main() {
         assert.strictEqual(fs.existsSync(lockPath), true);
         releaseLock();
         assert.strictEqual(fs.existsSync(lockPath), false);
-
+      } finally { fs.rmSync(installRoot, { recursive: true, force: true }); }
+    }],
+    ['refuses to recover malformed lifecycle-lock ownership', () => {
+      const { acquireLifecycleLock } = require('../../scripts/lib/nasiko-release');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-malformed-lock-'));
+      const lockPath = path.join(installRoot, '.ecc-nasiko-lifecycle.lock');
+      try {
         fs.writeFileSync(lockPath, '{"pid":"unknown"}\n', { mode: 0o600 });
         assert.throws(
           () => acquireLifecycleLock(installRoot, fs, { isProcessAlive: () => false }),
