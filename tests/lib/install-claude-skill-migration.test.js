@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('assert');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -136,6 +137,9 @@ function seedLegacyInstall(fixture, options = {}) {
         ? operation.sourceRelativePath.split(path.sep).join('\\')
         : operation.sourceRelativePath,
       destinationPath,
+      contentSha256: crypto.createHash('sha256')
+        .update(fs.readFileSync(destinationPath))
+        .digest('hex'),
     };
   });
 
@@ -239,12 +243,17 @@ function runTests() {
       fs.mkdirSync(path.dirname(otherLegacyPath), { recursive: true });
       fs.writeFileSync(otherSourcePath, '# Other source\n');
       fs.writeFileSync(otherLegacyPath, '# Other legacy managed skill\n');
-      const otherLegacyOperation = createOperation(
-        'other-module',
-        fixture.sourceRoot,
-        otherSourceRelativePath,
-        otherLegacyPath
-      );
+      const otherLegacyOperation = {
+        ...createOperation(
+          'other-module',
+          fixture.sourceRoot,
+          otherSourceRelativePath,
+          otherLegacyPath
+        ),
+        contentSha256: crypto.createHash('sha256')
+          .update(fs.readFileSync(otherLegacyPath))
+          .digest('hex'),
+      };
       writeInstallState(fixture.installStatePath, {
         ...fixture.plan.statePreview,
         operations: [...legacyOperations, otherLegacyOperation],
