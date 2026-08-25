@@ -24,7 +24,7 @@ Commit `a504b194` added a release regression after review proved both workflows 
 ## GREEN
 
 - Focused installer, lifecycle, packaging, release-workflow, manifest, OpenCode, Antigravity, and uninstall tests passed.
-- Full repository suite: 3,958 passed, 0 failed.
+- Full repository suite: 3,960 passed, 0 failed.
 - `npm audit --audit-level=low`: 0 vulnerabilities.
 - Supply-chain IOC scan: 207 files inspected, no findings.
 - Both release workflow YAML files parsed successfully.
