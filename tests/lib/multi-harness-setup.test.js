@@ -196,6 +196,31 @@ function writeManagedState(plan, overrides = {}) {
     }
   });
 
+  await test('rejects an identical copy source that is a symbolic link', () => {
+    if (process.platform === 'win32') return;
+    const root = tempDir('ecc-guided-source-symlink-');
+    try {
+      const realSource = path.join(root, 'real-source.md');
+      const linkedSource = path.join(root, 'linked-source.md');
+      const destination = path.join(root, 'AGENTS.md');
+      writeFile(realSource, 'same\n');
+      writeFile(destination, 'same\n');
+      fs.symlinkSync(realSource, linkedSource);
+      const plan = managedPlan(root, [{
+        kind: 'copy-file',
+        sourcePath: linkedSource,
+        destinationPath: destination,
+      }]);
+
+      assert.throws(
+        () => preflightManagedPlan(plan),
+        /symbolic link|regular non-symlink/i
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   await test('rejects valid install-state from a different managed target identity', () => {
     const root = tempDir('ecc-guided-forged-target-');
     try {
