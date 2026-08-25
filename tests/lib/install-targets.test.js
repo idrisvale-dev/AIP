@@ -668,6 +668,27 @@ function runTests() {
     );
   })) passed++; else failed++;
 
+  if (test('opencode adapter isolates an explicit home from ambient config overrides', () => {
+    const adapter = getInstallTargetAdapter('opencode');
+    const homeDir = '/Users/isolated';
+    const originalRoot = process.env.OPENCODE_CONFIG_DIR;
+    const originalXdg = process.env.XDG_CONFIG_HOME;
+
+    try {
+      process.env.OPENCODE_CONFIG_DIR = '/runner/global/opencode';
+      process.env.XDG_CONFIG_HOME = '/runner/global/xdg';
+      assert.strictEqual(
+        adapter.resolveRoot({ homeDir }),
+        path.join(homeDir, '.config', 'opencode')
+      );
+    } finally {
+      if (originalRoot === undefined) delete process.env.OPENCODE_CONFIG_DIR;
+      else process.env.OPENCODE_CONFIG_DIR = originalRoot;
+      if (originalXdg === undefined) delete process.env.XDG_CONFIG_HOME;
+      else process.env.XDG_CONFIG_HOME = originalXdg;
+    }
+  })) passed++; else failed++;
+
   if (test('qwen adapter supports lookup by target and adapter id', () => {
     const byTarget = getInstallTargetAdapter('qwen');
     const byId = getInstallTargetAdapter('qwen-home');

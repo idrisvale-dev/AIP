@@ -216,6 +216,32 @@ test('opencode reader honors OPENCODE_CONFIG_DIR before XDG_CONFIG_HOME', () => 
   assert.deepStrictEqual(xdg.map(record => record.name), ['xdg']);
 });
 
+test('opencode reader isolates an explicit home from ambient config overrides', () => {
+  const home = tmpHome();
+  const configRoot = path.join(home, '.config', 'opencode');
+  const ambientRoot = path.join(home, 'runner-global-opencode');
+  fs.mkdirSync(configRoot, { recursive: true });
+  fs.mkdirSync(ambientRoot, { recursive: true });
+  fs.writeFileSync(path.join(configRoot, 'opencode.json'), JSON.stringify({
+    mcp: { isolated: { type: 'local', command: ['node'] } },
+  }), 'utf8');
+  fs.writeFileSync(path.join(ambientRoot, 'opencode.json'), JSON.stringify({
+    mcp: { leaked: { type: 'local', command: ['node'] } },
+  }), 'utf8');
+  const originalRoot = process.env.OPENCODE_CONFIG_DIR;
+
+  try {
+    process.env.OPENCODE_CONFIG_DIR = ambientRoot;
+    assert.deepStrictEqual(
+      readOpencodeMcp({ homeDir: home }).map(record => record.name),
+      ['isolated']
+    );
+  } finally {
+    if (originalRoot === undefined) delete process.env.OPENCODE_CONFIG_DIR;
+    else process.env.OPENCODE_CONFIG_DIR = originalRoot;
+  }
+});
+
 test('collectMcpInventory merges harnesses, detects fragmentation + drift, redacts secrets', () => {
   const home = tmpHome();
   // claude + opencode agree on github (consistent); codex github uses a
