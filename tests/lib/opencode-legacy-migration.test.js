@@ -302,10 +302,13 @@ test('legacy cleanup never overwrites a file created during quarantine recovery'
   const destinationPath = path.join(targetRoot, 'managed.md');
   let quarantinePath = null;
   let effectiveSafePath = destinationPath;
+  const openDescriptors = [];
   try {
     fs.mkdirSync(targetRoot, { recursive: true });
     fs.writeFileSync(destinationPath, 'managed-old\n');
-    const originalStat = fs.lstatSync(destinationPath, { bigint: true });
+    const originalDescriptor = fs.openSync(destinationPath, 'r');
+    openDescriptors.push(originalDescriptor);
+    const originalStat = fs.fstatSync(originalDescriptor, { bigint: true });
     let injected = false;
     const fileSystem = new Proxy(fs, {
       get(target, property) {
@@ -318,10 +321,14 @@ test('legacy cleanup never overwrites a file created during quarantine recovery'
         }
         if (property === 'lstatSync') {
           return (filePath, options) => {
-            const stat = fs.lstatSync(filePath, options);
             if (!injected && quarantinePath && filePath === quarantinePath) {
               injected = true;
-              fs.writeFileSync(effectiveSafePath, 'user-new\n', { flag: 'wx' });
+              const quarantineDescriptor = fs.openSync(filePath, 'r');
+              openDescriptors.push(quarantineDescriptor);
+              const stat = fs.fstatSync(quarantineDescriptor, options);
+              const userDescriptor = fs.openSync(effectiveSafePath, 'wx', 0o600);
+              openDescriptors.push(userDescriptor);
+              fs.writeFileSync(userDescriptor, 'user-new\n');
               return new Proxy(stat, {
                 get(statTarget, statProperty) {
                   if (statProperty === 'ino') return statTarget.ino + 1n;
@@ -330,7 +337,7 @@ test('legacy cleanup never overwrites a file created during quarantine recovery'
                 },
               });
             }
-            return stat;
+            return fs.lstatSync(filePath, options);
           };
         }
         const value = Reflect.get(target, property, target);
@@ -350,9 +357,20 @@ test('legacy cleanup never overwrites a file created during quarantine recovery'
         return true;
       }
     );
-    assert.strictEqual(fs.readFileSync(destinationPath, 'utf8'), 'user-new\n');
-    assert.strictEqual(fs.readFileSync(quarantinePath, 'utf8'), 'managed-old\n');
+    const destinationDescriptor = fs.openSync(destinationPath, 'r');
+    openDescriptors.push(destinationDescriptor);
+    const retainedDescriptor = fs.openSync(quarantinePath, 'r');
+    openDescriptors.push(retainedDescriptor);
+    assert.strictEqual(fs.readFileSync(destinationDescriptor, 'utf8'), 'user-new\n');
+    assert.strictEqual(fs.readFileSync(retainedDescriptor, 'utf8'), 'managed-old\n');
   } finally {
+    for (const descriptor of openDescriptors) {
+      try {
+        fs.closeSync(descriptor);
+      } catch (_error) {
+        // Best-effort fixture cleanup.
+      }
+    }
     fs.rmSync(homeDir, { recursive: true, force: true });
     if (quarantinePath) {
       fs.rmSync(path.dirname(quarantinePath), { recursive: true, force: true });
