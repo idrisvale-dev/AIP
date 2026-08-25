@@ -69,6 +69,23 @@ for (const workflowPath of workflowPaths) {
     }
   });
 
+  test(`${workflowPath} selects reviewed release notes from the validated release version`, () => {
+    const verify = jobBlock(source, 'verify', 'lifecycle');
+
+    assert.match(verify, /RELEASE_VERSION="\$\{RELEASE_TAG#v\}"/);
+    assert.match(
+      verify,
+      /RELEASE_NOTES="docs\/releases\/\$\{RELEASE_VERSION\}\/RELEASE_NOTES\.md"/
+    );
+    assert.match(verify, /if \[ ! -f "\$RELEASE_NOTES" \]/);
+    assert.match(verify, /cp "\$RELEASE_NOTES" release_body\.md/);
+    assert.doesNotMatch(
+      verify,
+      /cp docs\/releases\/2\.2\.0\/RELEASE_NOTES\.md/,
+      'release workflows must not reuse 2.2.0 notes for later versions'
+    );
+  });
+
   test(`${workflowPath} uploads the one packed tgz as the release artifact`, () => {
     const verify = jobBlock(source, 'verify', 'lifecycle');
     const packIndex = verify.indexOf('name: Pack npm artifact');
