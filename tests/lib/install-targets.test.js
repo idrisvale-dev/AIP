@@ -655,18 +655,18 @@ function runTests() {
           OPENCODE_CONFIG_DIR: explicitRoot,
         },
       }),
-      explicitRoot
+      path.resolve(explicitRoot)
     );
     assert.strictEqual(
       adapter.resolveRoot({ homeDir, env: { XDG_CONFIG_HOME: xdgRoot } }),
-      path.join(xdgRoot, 'opencode')
+      path.join(path.resolve(xdgRoot), 'opencode')
     );
     assert.strictEqual(
       adapter.getInstallStatePath({
         homeDir,
         env: { OPENCODE_CONFIG_DIR: explicitRoot },
       }),
-      path.join(explicitRoot, 'ecc-install-state.json')
+      path.join(path.resolve(explicitRoot), 'ecc-install-state.json')
     );
   })) passed++; else failed++;
 
@@ -691,7 +691,7 @@ function runTests() {
     assert.strictEqual(child.status, 0, child.stderr);
     assert.strictEqual(
       JSON.parse(child.stdout),
-      path.join(homeDir, '.config', 'opencode')
+      path.join(path.resolve(homeDir), '.config', 'opencode')
     );
   })) passed++; else failed++;
 
@@ -1139,10 +1139,10 @@ function runTests() {
     assert.strictEqual(adapter.id, 'opencode-home');
     assert.strictEqual(adapter.target, 'opencode');
     assert.strictEqual(adapter.kind, 'home');
-    assert.strictEqual(root, path.join(homeDir, '.config', 'opencode'));
+    assert.strictEqual(root, path.join(path.resolve(homeDir), '.config', 'opencode'));
     assert.strictEqual(
       statePath,
-      path.join(homeDir, '.config', 'opencode', 'ecc-install-state.json')
+      path.join(path.resolve(homeDir), '.config', 'opencode', 'ecc-install-state.json')
     );
   })) passed++; else failed++;
 
