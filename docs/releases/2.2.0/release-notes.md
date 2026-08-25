@@ -8,6 +8,7 @@ ECC 2.2.0 makes the universal installer a first-class, cross-harness distributio
 - Repeated selective installs retain the complete managed ownership ledger. A later module install no longer causes previously installed ECC files to survive uninstall.
 - OpenCode home installs use `~/.config/opencode`. Reinstall or repair discovers legacy `~/.opencode` ownership, migrates unchanged ECC-managed files, and preserves modified files for review. Bundled agent definitions inherit the user's selected model provider.
 - Legacy Codex sync cleanup requires ownership evidence by default and preserves untracked or modified user files.
+- Nasiko lifecycle locks recover only when their recorded owner is confirmed dead. Its pinned archive parser rejects malformed boundaries, and incomplete uninstall cleanup returns an error with retained-file guidance.
 - `skill-comply` is included in both the install graph and npm archive. Python bytecode and pytest caches remain excluded.
 
 ## New capabilities
