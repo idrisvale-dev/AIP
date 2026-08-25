@@ -63,7 +63,7 @@ for (const workflow of [
 
   test(`${workflow} selects reviewed release notes from the release version`, () => {
     assert.match(content, /RELEASE_VERSION="\$\{RELEASE_TAG#v\}"/);
-    assert.match(content, /docs\/releases\/\$\{RELEASE_VERSION\}\/RELEASE_NOTES\.md/);
+    assert.match(content, /docs\/releases\/\$\{RELEASE_VERSION\}\/release-notes\.md/);
   });
 
   test(`${workflow} publishes new tag versions to npm`, () => {

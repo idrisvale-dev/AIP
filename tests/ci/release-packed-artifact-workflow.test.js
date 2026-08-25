@@ -75,13 +75,13 @@ for (const workflowPath of workflowPaths) {
     assert.match(verify, /RELEASE_VERSION="\$\{RELEASE_TAG#v\}"/);
     assert.match(
       verify,
-      /RELEASE_NOTES="docs\/releases\/\$\{RELEASE_VERSION\}\/RELEASE_NOTES\.md"/
+      /RELEASE_NOTES="docs\/releases\/\$\{RELEASE_VERSION\}\/release-notes\.md"/
     );
     assert.match(verify, /if \[ ! -f "\$RELEASE_NOTES" \]/);
     assert.match(verify, /cp "\$RELEASE_NOTES" release_body\.md/);
     assert.doesNotMatch(
       verify,
-      /cp docs\/releases\/2\.2\.0\/RELEASE_NOTES\.md/,
+      /cp docs\/releases\/2\.2\.0\/release-notes\.md/,
       'release workflows must not reuse 2.2.0 notes for later versions'
     );
   });
