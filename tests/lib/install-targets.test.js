@@ -6,12 +6,14 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const {
   getInstallTargetAdapter,
   listInstallTargetAdapters,
   planInstallTargetScaffold,
 } = require('../../scripts/lib/install-targets/registry');
+const { resolveInvocationEnvironment } = require('../../scripts/lib/invocation-environment');
 
 function normalizedRelativePath(value) {
   return String(value || '').replace(/\\/g, '/');
@@ -669,24 +671,38 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('opencode adapter isolates an explicit home from ambient config overrides', () => {
-    const adapter = getInstallTargetAdapter('opencode');
     const homeDir = '/Users/isolated';
-    const originalRoot = process.env.OPENCODE_CONFIG_DIR;
-    const originalXdg = process.env.XDG_CONFIG_HOME;
+    const registryPath = path.join(__dirname, '..', '..', 'scripts', 'lib', 'install-targets', 'registry.js');
+    const child = spawnSync(process.execPath, ['-e', [
+      'const { getInstallTargetAdapter } = require(process.env.ECC_TEST_REGISTRY);',
+      'const root = getInstallTargetAdapter(\'opencode\').resolveRoot({ homeDir: process.env.ECC_TEST_HOME });',
+      'process.stdout.write(JSON.stringify(root));',
+    ].join('\n')], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        ECC_TEST_REGISTRY: registryPath,
+        ECC_TEST_HOME: homeDir,
+        OPENCODE_CONFIG_DIR: '/runner/global/opencode',
+        XDG_CONFIG_HOME: '/runner/global/xdg',
+      },
+    });
 
-    try {
-      process.env.OPENCODE_CONFIG_DIR = '/runner/global/opencode';
-      process.env.XDG_CONFIG_HOME = '/runner/global/xdg';
-      assert.strictEqual(
-        adapter.resolveRoot({ homeDir }),
-        path.join(homeDir, '.config', 'opencode')
-      );
-    } finally {
-      if (originalRoot === undefined) delete process.env.OPENCODE_CONFIG_DIR;
-      else process.env.OPENCODE_CONFIG_DIR = originalRoot;
-      if (originalXdg === undefined) delete process.env.XDG_CONFIG_HOME;
-      else process.env.XDG_CONFIG_HOME = originalXdg;
-    }
+    assert.strictEqual(child.status, 0, child.stderr);
+    assert.strictEqual(
+      JSON.parse(child.stdout),
+      path.join(homeDir, '.config', 'opencode')
+    );
+  })) passed++; else failed++;
+
+  if (test('invocation environments are immutable snapshots', () => {
+    const source = { OPENCODE_CONFIG_DIR: '/custom/opencode' };
+    const selected = resolveInvocationEnvironment({ env: source });
+    const ambient = resolveInvocationEnvironment();
+    assert.notStrictEqual(selected, source);
+    assert.notStrictEqual(ambient, process.env);
+    selected.OPENCODE_CONFIG_DIR = '/mutated';
+    assert.strictEqual(source.OPENCODE_CONFIG_DIR, '/custom/opencode');
   })) passed++; else failed++;
 
   if (test('qwen adapter supports lookup by target and adapter id', () => {

@@ -4,6 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const {
   MCP_SCHEMA_VERSION,
@@ -228,18 +229,32 @@ test('opencode reader isolates an explicit home from ambient config overrides', 
   fs.writeFileSync(path.join(ambientRoot, 'opencode.json'), JSON.stringify({
     mcp: { leaked: { type: 'local', command: ['node'] } },
   }), 'utf8');
-  const originalRoot = process.env.OPENCODE_CONFIG_DIR;
+  const readerPath = path.join(
+    __dirname,
+    '..',
+    '..',
+    'scripts',
+    'lib',
+    'mcp-inventory',
+    'readers',
+    'opencode.js'
+  );
+  const child = spawnSync(process.execPath, ['-e', [
+    'const { readOpencodeMcp } = require(process.env.ECC_TEST_READER);',
+    'const names = readOpencodeMcp({ homeDir: process.env.ECC_TEST_HOME }).map(record => record.name);',
+    'process.stdout.write(JSON.stringify(names));',
+  ].join('\n')], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      ECC_TEST_READER: readerPath,
+      ECC_TEST_HOME: home,
+      OPENCODE_CONFIG_DIR: ambientRoot,
+    },
+  });
 
-  try {
-    process.env.OPENCODE_CONFIG_DIR = ambientRoot;
-    assert.deepStrictEqual(
-      readOpencodeMcp({ homeDir: home }).map(record => record.name),
-      ['isolated']
-    );
-  } finally {
-    if (originalRoot === undefined) delete process.env.OPENCODE_CONFIG_DIR;
-    else process.env.OPENCODE_CONFIG_DIR = originalRoot;
-  }
+  assert.strictEqual(child.status, 0, child.stderr);
+  assert.deepStrictEqual(JSON.parse(child.stdout), ['isolated']);
 });
 
 test('collectMcpInventory merges harnesses, detects fragmentation + drift, redacts secrets', () => {
