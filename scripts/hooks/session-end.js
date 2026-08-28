@@ -49,7 +49,10 @@ function extractSessionSummary(transcriptPath) {
         const cleaned = stripAnsi(text).trim();
         // Skip harness noise: local command echoes, caveats, system reminders.
         const isNoise = /^<(local-command-caveat|local-command-stdout|command-name|command-message|command-args|system-reminder|task-notification)/i.test(cleaned);
-        if (cleaned && !isToolResult && !isNoise && !entry.isMeta) {
+        // `isMeta` is also used for genuine channel- and plugin-originated
+        // human prompts. Exclude known structured noise above instead of
+        // discarding every metadata-marked user turn.
+        if (cleaned && !isToolResult && !isNoise) {
           userMessages.push(cleaned.slice(0, 200));
         }
       }
