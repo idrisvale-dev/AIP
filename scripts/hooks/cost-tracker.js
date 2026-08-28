@@ -82,12 +82,16 @@ const RATE_TABLE = {
   fable:      { in: 10.00, out: 50.0, cacheWrite: 12.50, cacheRead: 1.00 }
 };
 
+// Opus 4.0's dated snapshot omits the minor segment, so an `opus-4-0`
+// substring check alone misses `claude-opus-4-20250514`.
+const LEGACY_OPUS_RE = /3-opus|opus-4-0(?!\d)|opus-4-1(?!\d)|opus-4[-@]\d{8}/;
+
 function getRates(model) {
   const m = String(model || '').toLowerCase();
   if (m.includes('fable') || m.includes('mythos')) return RATE_TABLE.fable;
   if (m.includes('haiku')) return RATE_TABLE.haiku;
   if (isSonnet5(m)) return RATE_TABLE.sonnet5;
-  if (m.includes('opus-4-1') || m.includes('opus-4-0') || m.includes('3-opus')) return RATE_TABLE.opusLegacy;
+  if (LEGACY_OPUS_RE.test(m)) return RATE_TABLE.opusLegacy;
   if (m.includes('opus'))  return RATE_TABLE.opus;
   return RATE_TABLE.sonnet;
 }

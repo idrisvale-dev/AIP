@@ -533,6 +533,51 @@ function runTests() {
     }
   }) ? passed++ : failed++);
 
+  // 10d. Opus 4.0's dated ID has no explicit minor segment. It must retain
+  // the legacy $15/$75 rate while Opus 4.5 uses the current $5/$25 rate.
+  (test('distinguishes the dated Opus 4.0 snapshot from current Opus 4.x', () => {
+    const priceModel = model => {
+      const tmpHome = makeTempDir();
+      const sessionId = `opus-rate-${process.pid}-${Date.now()}-${model}`;
+      const transcriptPath = path.join(tmpHome, 'session.jsonl');
+      writeTranscript(transcriptPath, [
+        {
+          type: 'assistant',
+          message: {
+            id: `msg_${model}`,
+            model,
+            usage: { input_tokens: 1_000_000, output_tokens: 1_000_000 },
+          },
+        },
+      ]);
+
+      try {
+        removeHarnessCostCache(sessionId);
+        const result = runScript(
+          { session_id: sessionId, transcript_path: transcriptPath },
+          withTempHome(tmpHome)
+        );
+        assert.strictEqual(result.code, 0, `Expected exit code 0, got ${result.code}`);
+        const metricsFile = path.join(tmpHome, '.claude', 'metrics', 'costs.jsonl');
+        return JSON.parse(fs.readFileSync(metricsFile, 'utf8').trim()).estimated_cost_usd;
+      } finally {
+        removeHarnessCostCache(sessionId);
+        fs.rmSync(tmpHome, { recursive: true, force: true });
+      }
+    };
+
+    assert.strictEqual(
+      priceModel('claude-opus-4-20250514'),
+      90,
+      'Expected dated Opus 4.0 to retain the legacy $15/$75 rate'
+    );
+    assert.strictEqual(
+      priceModel('claude-opus-4-5-20251101'),
+      30,
+      'Expected Opus 4.5 to use the current $5/$25 rate'
+    );
+  }) ? passed++ : failed++);
+
   // 11. Ignores stale harness-cost cache and falls back to transcript estimate
   (test('ignores stale harness-cost cache (>300s) and uses transcript estimate', () => {
     const tmpHome = makeTempDir();
