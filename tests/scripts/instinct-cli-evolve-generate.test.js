@@ -245,10 +245,10 @@ test('preview names match the files --generate writes', () => {
 
 function parseFrontmatter(filePath) {
   const raw = fs.readFileSync(filePath, 'utf8');
-  const match = /^---\n([\s\S]*?)\n---\n/.exec(raw);
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(raw);
   if (!match) return null;
   const fm = {};
-  for (const line of match[1].split('\n')) {
+  for (const line of match[1].split(/\r?\n/)) {
     const idx = line.indexOf(':');
     if (idx > 0 && !line.startsWith(' ')) {
       fm[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
@@ -321,7 +321,7 @@ test('generated descriptions quote YAML comment markers', () => {
     const commandsDir = path.join(root, 'evolved', 'commands');
     const descriptions = generatedCommands(root).map(file =>
       fs.readFileSync(path.join(commandsDir, file), 'utf8')
-        .split('\n')
+        .split(/\r?\n/)
         .find(line => line.startsWith('description: '))
     );
     const description = descriptions.find(line => line.includes('# preserve this text'));
