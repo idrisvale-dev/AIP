@@ -70,6 +70,7 @@ function readHarnessCost(sessionId, maxAgeSeconds) {
 
 // Approximate per-1M-token billing rates (USD).
 // Cache creation: 1.25x input rate. Cache read: 0.1x input rate.
+// Source: https://platform.claude.com/docs/en/about-claude/pricing
 // Current-generation list prices: Fable/Mythos 5 $10/$50, Opus 5 and
 // Opus 4.5-4.8 $5/$25, Sonnet 5 $2/$10, Sonnet 4.6 $3/$15, and Haiku 4.5
 // $1/$5. Opus 4.0/4.1 and Opus 3 stay on the legacy $15/$75 tier.
