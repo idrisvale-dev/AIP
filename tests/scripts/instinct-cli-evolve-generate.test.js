@@ -308,6 +308,30 @@ test('generated agents carry name + description alongside model/tools', () => {
   }
 });
 
+test('generated descriptions quote YAML comment markers', () => {
+  const root = createTempDir();
+  try {
+    writeInstinct(root, 'hash-marker', 'when reviewing output # preserve this text');
+    writeInstinct(root, 'run-tests', 'when running tests');
+    writeInstinct(root, 'build-images', 'when building images');
+
+    const result = runCli(root, ['evolve', '--generate']);
+    assert.strictEqual(result.status, 0, result.stderr);
+
+    const commandsDir = path.join(root, 'evolved', 'commands');
+    const descriptions = generatedCommands(root).map(file =>
+      fs.readFileSync(path.join(commandsDir, file), 'utf8')
+        .split('\n')
+        .find(line => line.startsWith('description: '))
+    );
+    const description = descriptions.find(line => line.includes('# preserve this text'));
+    assert.ok(description, `missing hash-bearing description in ${descriptions.join(', ')}`);
+    assert.match(description, /^description: ".* # preserve this text.*"$/);
+  } finally {
+    cleanupDir(root);
+  }
+});
+
 console.log(`\nPassed: ${passed}`);
 console.log(`Failed: ${failed}`);
 

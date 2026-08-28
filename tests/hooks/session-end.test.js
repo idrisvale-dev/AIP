@@ -160,7 +160,7 @@ function runTests() {
     }
   }) ? passed++ : failed++);
 
-  (test('skips a one-message prompt with no tool activity', () => {
+  (test('writes a session for a normal one-message prompt without tool activity', () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-end-'));
     try {
       const uuid = '12345678-1234-4234-8234-123456789abc';
@@ -169,8 +169,7 @@ function runTests() {
 
       const res = runHook(home, transcript);
       assert.strictEqual(res.status || 0, 0, `hook exited ${res.status}: ${res.stderr}`);
-      assert.ok(!fs.existsSync(sessionFileFor(home, uuid)), 'One-shot prompt should not create a session file');
-      assert.ok(!fs.existsSync(path.join(home, '.claude', 'session-data')), 'Rejected transcript should not create the sessions directory');
+      assert.ok(fs.existsSync(sessionFileFor(home, uuid)), 'A normal short user session should remain resumable');
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
     }
@@ -189,7 +188,7 @@ function runTests() {
         ].join('\n') + '\n'
       );
 
-      const res = runHook(home, transcript);
+      const res = runHook(home, transcript, { ECC_LLM_SUMMARY_SUBPROCESS: '1' });
       assert.strictEqual(res.status || 0, 0, `hook exited ${res.status}: ${res.stderr}`);
       assert.ok(!fs.existsSync(sessionFileFor(home, uuid)), 'Summarizer subprocess should not create a session file');
     } finally {
@@ -209,12 +208,12 @@ function runTests() {
       fs.mkdirSync(path.dirname(sessionFile), { recursive: true });
       fs.writeFileSync(sessionFile, original);
       fs.utimesSync(sessionFile, originalTime, originalTime);
-      fs.writeFileSync(transcript, JSON.stringify({ type: 'user', content: 'Answer this one question' }) + '\n');
+      fs.writeFileSync(transcript, JSON.stringify({ type: 'user', content: 'Internal summary request' }) + '\n');
 
-      const res = runHook(home, transcript);
+      const res = runHook(home, transcript, { ECC_LLM_SUMMARY_SUBPROCESS: '1' });
       assert.strictEqual(res.status || 0, 0, `hook exited ${res.status}: ${res.stderr}`);
-      assert.strictEqual(fs.readFileSync(sessionFile, 'utf8'), original, 'Rejected transcript should not change existing content');
-      assert.strictEqual(fs.statSync(sessionFile).mtimeMs, originalTime.getTime(), 'Rejected transcript should not advance mtime');
+      assert.strictEqual(fs.readFileSync(sessionFile, 'utf8'), original, 'Internal summarizer should not change existing content');
+      assert.strictEqual(fs.statSync(sessionFile).mtimeMs, originalTime.getTime(), 'Internal summarizer should not advance mtime');
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
     }

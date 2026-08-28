@@ -94,10 +94,6 @@ function extractSessionSummary(transcriptPath) {
   };
 }
 
-function isLowSubstanceTranscript(summary) {
-  return summary.totalMessages === 1 && summary.toolsUsed.length === 0 && summary.filesModified.length === 0;
-}
-
 // Read hook input from stdin (Claude Code provides transcript_path via stdin JSON)
 const MAX_STDIN = 1024 * 1024;
 let stdinData = '';
@@ -185,7 +181,16 @@ async function main() {
     }
   }
 
-  // Classify known transcripts before resolving session metadata or touching the
+  // ECC's LLM summary helper launches a one-shot Claude subprocess whose Stop
+  // hooks inherit this dedicated marker. Skip that known internal session
+  // before touching session state. Transcript cardinality is not a safe proxy:
+  // an ordinary user session may legitimately contain one prompt and no tools.
+  if (process.env.ECC_LLM_SUMMARY_SUBPROCESS === '1') {
+    log('[SessionEnd] Skipped ECC LLM summary subprocess');
+    return;
+  }
+
+  // Read known transcripts before resolving session metadata or touching the
   // session directory. Missing, unreadable, or unparseable transcript data keeps
   // the established fallback behavior because it cannot be classified reliably.
   let summary = null;
@@ -194,10 +199,6 @@ async function main() {
     transcriptExists = fs.existsSync(transcriptPath);
     if (transcriptExists) {
       summary = extractSessionSummary(transcriptPath);
-      if (summary && isLowSubstanceTranscript(summary)) {
-        log('[SessionEnd] Skipped one-message session without tool or file activity');
-        return;
-      }
     } else {
       log(`[SessionEnd] Transcript not found: ${transcriptPath}`);
     }

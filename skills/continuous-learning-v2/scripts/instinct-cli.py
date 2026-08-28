@@ -1986,7 +1986,7 @@ def _generate_evolved(skill_candidates: list, workflow_instincts: list, agent_ca
 
         content = "---\n"
         content += f"name: {name}\n"
-        content += f"description: {_evolved_description(trigger, cand['instincts'], 'skill')}\n"
+        content += f"description: {_yaml_quote(_evolved_description(trigger, cand['instincts'], 'skill'))}\n"
         content += "---\n\n"
         content += f"# {name}\n\n"
         content += f"Evolved from {len(cand['instincts'])} instincts "
@@ -2016,7 +2016,7 @@ def _generate_evolved(skill_candidates: list, workflow_instincts: list, agent_ca
 
         cmd_file = evolved_dir / "commands" / f"{cmd_name}.md"
         content = "---\n"
-        content += f"description: {_evolved_description(inst.get('trigger', ''), [inst], 'command')}\n"
+        content += f"description: {_yaml_quote(_evolved_description(inst.get('trigger', ''), [inst], 'command'))}\n"
         content += "---\n\n"
         content += f"# {cmd_name}\n\n"
         content += f"Evolved from instinct: {inst.get('id', 'unnamed')}\n"
@@ -2043,7 +2043,7 @@ def _generate_evolved(skill_candidates: list, workflow_instincts: list, agent_ca
 
         content = "---\n"
         content += f"name: {agent_name}\n"
-        content += f"description: {_evolved_description(str(cand.get('trigger', '')), cand['instincts'], 'agent')}\n"
+        content += f"description: {_yaml_quote(_evolved_description(str(cand.get('trigger', '')), cand['instincts'], 'agent'))}\n"
         content += "model: sonnet\ntools: Read, Grep, Glob\n---\n"
         content += f"# {agent_name}\n\n"
         content += f"Evolved from {len(cand['instincts'])} instincts "
