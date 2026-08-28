@@ -181,6 +181,29 @@ async function main() {
     }
   }
 
+  // ECC's LLM summary helper launches a one-shot Claude subprocess whose Stop
+  // hooks inherit this dedicated marker. Skip that known internal session
+  // before touching session state. Transcript cardinality is not a safe proxy:
+  // an ordinary user session may legitimately contain one prompt and no tools.
+  if (process.env.ECC_LLM_SUMMARY_SUBPROCESS === '1') {
+    log('[SessionEnd] Skipped ECC LLM summary subprocess');
+    return;
+  }
+
+  // Read known transcripts before resolving session metadata or touching the
+  // session directory. Missing, unreadable, or unparseable transcript data keeps
+  // the established fallback behavior because it cannot be classified reliably.
+  let summary = null;
+  let transcriptExists = false;
+  if (transcriptPath) {
+    transcriptExists = fs.existsSync(transcriptPath);
+    if (transcriptExists) {
+      summary = extractSessionSummary(transcriptPath);
+    } else {
+      log(`[SessionEnd] Transcript not found: ${transcriptPath}`);
+    }
+  }
+
   const sessionsDir = getSessionsDir();
   const today = getDateString();
   // Derive shortId from transcript_path UUID when available, using the SAME
@@ -211,21 +234,10 @@ async function main() {
 
   const currentTime = getTimeString();
 
-  // Try to extract summary from transcript
-  let summary = null;
-
-  if (transcriptPath) {
-    if (fs.existsSync(transcriptPath)) {
-      summary = extractSessionSummary(transcriptPath);
-    } else {
-      log(`[SessionEnd] Transcript not found: ${transcriptPath}`);
-    }
-  }
-
   // Decide whether to call LLM for a richer summary.
   // Triggers: context remaining < 20%, or every 50 user messages as a baseline.
   let llmSummary = null;
-  if (transcriptPath && summary && fs.existsSync(transcriptPath)) {
+  if (transcriptPath && summary && transcriptExists) {
     const contextPct = getContextRemainingPct(transcriptPath);
     const isContextLow = contextPct !== null && contextPct < getContextThreshold();
     const interval = parseInt(process.env.ECC_LLM_SUMMARY_INTERVAL || '50', 10);
