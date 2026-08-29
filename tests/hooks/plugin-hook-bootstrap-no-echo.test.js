@@ -277,8 +277,11 @@ if (
       );
     }
 
-    const mismatchedPrefix = Buffer.from(raw.subarray(0, 8 * 1024));
-    mismatchedPrefix[mismatchedPrefix.length - 1] ^= 1;
+    const mismatchLength = 8 * 1024;
+    const mismatchedPrefix = Buffer.concat([
+      raw.subarray(0, mismatchLength - 1),
+      Buffer.from([raw[mismatchLength - 1] ^ 1])
+    ]);
     assert.strictEqual(isRawPassthrough(raw, mismatchedPrefix), false);
   })
 )
