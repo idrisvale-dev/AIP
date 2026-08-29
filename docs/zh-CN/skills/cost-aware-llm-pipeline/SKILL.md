@@ -151,13 +151,13 @@ def process(text: str, config: Config, tracker: CostTracker) -> tuple[Result, Co
     return parse_result(response), tracker
 ```
 
-## 价格参考（2025-2026）
+## 价格参考（2026）
 
 | 模型 | 输入（美元/百万令牌） | 输出（美元/百万令牌） | 相对成本 |
 |-------|---------------------|----------------------|---------------|
 | Haiku 4.5 | $1.00 | $5.00 | 1x |
-| Sonnet 4.6 | $3.00 | $15.00 | 3x |
-| Opus 4.5 | $5.00 | $25.00 | 5x |
+| Sonnet 5 | $2.00 | $10.00 | 2x |
+| Opus 4.8 | $5.00 | $25.00 | 5x |
 | Fable 5 / Mythos 5 | $10.00 | $50.00 | 10x |
 
 ## 最佳实践
