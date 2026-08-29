@@ -134,12 +134,19 @@ scan_dir_to_json() {
     name=$(extract_field "$file" "name")
     desc=$(extract_field "$file" "description")
     mtime=$(date -u -r "$file" +%Y-%m-%dT%H:%M:%SZ)
-    # Use awk exact field match to avoid substring false-positives from grep -F.
-    # uniq -c output format: "   N /path/to/file" — path is always field 2.
-    u7=$(echo "$obs_7d_counts" | awk -v f="$file" '$2 == f {print $1}' | head -1)
-    u7="${u7:-0}"
-    u30=$(echo "$obs_30d_counts" | awk -v f="$file" '$2 == f {print $1}' | head -1)
-    u30="${u30:-0}"
+    if [[ "$file" == *$'\n'* ]]; then
+      # The aggregated fast path is line-delimited. Preserve unusual paths by
+      # falling back to the structured JSON matcher for this record.
+      u7=$(count_obs "$file" "$c7")
+      u30=$(count_obs "$file" "$c30")
+    else
+      # Use awk exact field match to avoid substring false-positives from grep -F.
+      # uniq -c output format: "   N /path/to/file" — path is always field 2.
+      u7=$(echo "$obs_7d_counts" | awk -v f="$file" '$2 == f {print $1}' | head -1)
+      u7="${u7:-0}"
+      u30=$(echo "$obs_30d_counts" | awk -v f="$file" '$2 == f {print $1}' | head -1)
+      u30="${u30:-0}"
+    fi
     dp="${file/#$HOME/~}"
 
     jq -n \

@@ -58,9 +58,6 @@ if [[ ! "$evaluated_at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2
   exit 1
 fi
 
-# Pre-extract known paths from results.json once (O(1) lookup per file instead of O(n*m))
-known_paths=$(jq -r '.skills[].path' "$RESULTS_JSON" 2>/dev/null)
-
 tmpdir=$(mktemp -d)
 # Use a function to avoid embedding $tmpdir in a quoted string (prevents injection
 # if TMPDIR were crafted to contain shell metacharacters).
@@ -90,9 +87,9 @@ process_dir() {
     mtime=$(date -u -r "$file" +%Y-%m-%dT%H:%M:%SZ)
     dp="${file/#$HOME/~}"
 
-    # Check if this file is known to results.json (exact whole-line match to
-    # avoid substring false-positives, e.g. "python-patterns" matching "python-patterns-v2").
-    if echo "$known_paths" | grep -qxF "$dp"; then
+    # Keep path comparison structured so literal newlines remain part of one
+    # JSON string instead of becoming ambiguous line-delimited records.
+    if jq -e --arg path "$dp" '.skills | any(.path == $path)' "$RESULTS_JSON" >/dev/null 2>&1; then
       is_new="false"
       # Known file: only emit if mtime changed (ISO 8601 string comparison is safe)
       [[ "$mtime" > "$evaluated_at" ]] || continue

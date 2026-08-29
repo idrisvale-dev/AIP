@@ -151,9 +151,14 @@ else failed++;
 
 if (
   test('shell test runner honors a per-invocation BASH_PATH override', () => {
-    const missingBash = path.join(os.tmpdir(), 'ecc-missing-bash-executable');
-    const result = runBash(prePushHook, { env: { BASH_PATH: missingBash } });
-    assert.strictEqual(result.error?.code, 'ENOENT');
+    const tempDir = createTempDir('ecc-missing-bash-');
+    try {
+      const missingBash = path.join(tempDir, 'bash');
+      const result = runBash(prePushHook, { env: { BASH_PATH: missingBash } });
+      assert.strictEqual(result.error?.code, 'ENOENT');
+    } finally {
+      cleanup(tempDir);
+    }
   })
 )
   passed++;

@@ -26,6 +26,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
 
 const SKILLS_DIR = path.join(__dirname, '../../skills');
 const DOCS_DIR = path.join(__dirname, '../../docs');
@@ -101,7 +102,7 @@ function stripUnquotedYamlComment(rawValue) {
 }
 
 function inspectFrontmatter(lines) {
-  const values = Object.create(null);
+  let values = Object.create(null);
   let syntaxErrors = [];
   let descriptionIndicator = null;
   let inBlockScalar = false;
@@ -126,7 +127,7 @@ function inspectFrontmatter(lines) {
     const rawValue = match[2];
     // Strip YAML comments only when # appears outside a quoted scalar.
     const valueNoComment = stripUnquotedYamlComment(rawValue);
-    values[key] = valueNoComment;
+    values = Object.assign(Object.create(null), values, { [key]: valueNoComment });
 
     const isQuoted = /^"(?:[^"\\]|\\.)*"$/.test(valueNoComment) || /^'(?:[^']|'')*'$/.test(valueNoComment);
 
@@ -162,6 +163,24 @@ function inspectFrontmatter(lines) {
       inBlockScalar = true;
       blockScalarIndent = rawLine.match(/^(\s*)/)[1].length;
     }
+  }
+
+  try {
+    const parsed = yaml.load(lines.join('\n'));
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      syntaxErrors = [...syntaxErrors, 'must be a top-level YAML mapping'];
+    } else {
+      for (const key of ['name', 'description']) {
+        if (!Object.prototype.hasOwnProperty.call(parsed, key)) continue;
+        if (typeof parsed[key] !== 'string') {
+          syntaxErrors = [...syntaxErrors, `${key}: value must be a string`];
+          continue;
+        }
+        values = Object.assign(Object.create(null), values, { [key]: parsed[key] });
+      }
+    }
+  } catch (error) {
+    syntaxErrors = [...syntaxErrors, `invalid YAML: ${error.reason || error.message}`];
   }
 
   return { values, descriptionIndicator, syntaxErrors };

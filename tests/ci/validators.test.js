@@ -2870,6 +2870,34 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  if (test('rejects malformed quoted skill frontmatter', () => {
+    const testDir = createTestDir();
+    const skillDir = path.join(testDir, 'malformed-quote');
+    fs.mkdirSync(skillDir);
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'),
+      '---\nname: malformed-quote\ndescription: "unterminated\n---\n# Example');
+
+    const result = runSkillsValidator(testDir, ['--strict']);
+    assert.strictEqual(result.code, 1, 'Strict validation must reject malformed YAML');
+    assert.ok(result.stderr.includes('invalid YAML'),
+      `Should report the YAML parse failure, got: ${result.stderr}`);
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('rejects an empty folded skill description', () => {
+    const testDir = createTestDir();
+    const skillDir = path.join(testDir, 'empty-folded-description');
+    fs.mkdirSync(skillDir);
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'),
+      '---\nname: empty-folded-description\ndescription: >\n---\n# Example');
+
+    const result = runSkillsValidator(testDir, ['--strict']);
+    assert.strictEqual(result.code, 1, 'Strict validation must reject an empty folded scalar');
+    assert.ok(result.stderr.includes("'description' is empty"),
+      `Should report the empty parsed description, got: ${result.stderr}`);
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   if (test('reports an unreadable docs root deterministically', () => {
     const testDir = createTestDir();
     const docsPath = path.join(testDir, 'docs-file');

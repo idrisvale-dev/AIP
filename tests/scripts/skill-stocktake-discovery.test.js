@@ -65,6 +65,7 @@ if (process.platform === 'win32') {
     const linkedTarget = path.join(tempRoot, 'shared', 'linked-skill');
     const newlineSkill = path.join(projectSkills, 'newline\nskill');
     const resultsPath = path.join(tempRoot, 'results.json');
+    const observationsPath = path.join(tempRoot, 'observations.jsonl');
 
     writeSkill(directSkill, 'direct-skill');
     writeSkill(linkedTarget, 'linked-skill');
@@ -76,11 +77,19 @@ if (process.platform === 'win32') {
       resultsPath,
       JSON.stringify({ evaluated_at: '2099-01-01T00:00:00Z', skills: [] }),
     );
+    fs.writeFileSync(
+      observationsPath,
+      `${JSON.stringify({
+        tool: 'Read',
+        path: path.join(newlineSkill, 'SKILL.md'),
+        timestamp: new Date().toISOString(),
+      })}\n`,
+    );
 
     const env = {
       SKILL_STOCKTAKE_GLOBAL_DIR: path.join(tempRoot, 'missing-global'),
       SKILL_STOCKTAKE_PROJECT_DIR: projectSkills,
-      SKILL_STOCKTAKE_OBSERVATIONS: path.join(tempRoot, 'missing-observations.jsonl'),
+      SKILL_STOCKTAKE_OBSERVATIONS: observationsPath,
     };
 
     test('scan follows symlinked skills and ignores nested Markdown assets', () => {
@@ -92,6 +101,9 @@ if (process.platform === 'win32') {
         output.skills.map(skill => skill.name).sort(),
         ['direct-skill', 'linked-skill', 'newline-skill'],
       );
+      const newlineEntry = output.skills.find(skill => skill.name === 'newline-skill');
+      assert.strictEqual(newlineEntry.use_7d, 1);
+      assert.strictEqual(newlineEntry.use_30d, 1);
     });
 
     test('quick diff keeps newline-containing skill paths as one record', () => {
@@ -104,6 +116,21 @@ if (process.platform === 'win32') {
         1,
       );
       assert.ok(output.every(entry => entry.is_new === true));
+    });
+
+    test('quick diff recognizes a cached newline-containing path', () => {
+      fs.writeFileSync(
+        resultsPath,
+        JSON.stringify({
+          evaluated_at: '2099-01-01T00:00:00Z',
+          skills: [{ path: path.join(newlineSkill, 'SKILL.md') }],
+        }),
+      );
+      const result = runBash(quickDiffScript, [resultsPath], env);
+      assert.strictEqual(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout);
+      assert.strictEqual(output.length, 2);
+      assert.ok(output.every(entry => !entry.path.includes('newline\nskill/SKILL.md')));
     });
   } catch (error) {
     console.log(`  ✗ fixture setup: ${error.message}`);
