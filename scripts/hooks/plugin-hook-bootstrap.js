@@ -7,7 +7,6 @@ const { spawnSync } = require('child_process');
 const { ensureAgentDataHomeEnv } = require('../lib/agent-data-home');
 
 const SHELL_PROBE_TIMEOUT_MS = 2000;
-const STDOUT_PIPE_CAP_BYTES = 64 * 1024;
 
 function readStdinRaw() {
   try {
@@ -37,9 +36,8 @@ function isRawPassthrough(raw, stdout) {
   const stdoutBytes = toBuffer(stdout);
   if (rawBytes.length === 0 || stdoutBytes.length === 0) return false;
   return (
-    stdoutBytes.equals(rawBytes) ||
-    (stdoutBytes.length === STDOUT_PIPE_CAP_BYTES &&
-      rawBytes.subarray(0, stdoutBytes.length).equals(stdoutBytes))
+    stdoutBytes.length <= rawBytes.length &&
+    rawBytes.subarray(0, stdoutBytes.length).equals(stdoutBytes)
   );
 }
 
@@ -58,11 +56,11 @@ function passthrough(result) {
     // instead; the harness falls back to the tool_use's original result, the
     // same path #2240 established for bash-hook-dispatcher.
     //
-    // IMPORTANT: a strict `stdout === raw` check misses the common case where
-    // child processes' synchronous `process.stdout.write()` writes hit the
-    // ~64 KB Node.js pipe buffer and get truncated -- stdout is then exactly
-    // 65536 bytes and a strict prefix of raw. So we also detect that
-    // truncation sentinel.
+    // IMPORTANT: a strict `stdout === raw` check misses child processes whose
+    // synchronous `process.stdout.write()` is truncated before exit. Pipe
+    // capacity varies by platform and Node version (observed at 8, 16, and
+    // 64 KiB), so classify any non-empty byte-exact prefix of the raw hook
+    // event as passthrough instead of assuming one buffer size.
     const raw = result?.comparisonInput;
     const looksLikePassthrough = isRawPassthrough(raw, stdout);
     if (looksLikePassthrough) {
