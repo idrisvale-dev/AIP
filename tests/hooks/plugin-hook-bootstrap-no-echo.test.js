@@ -242,7 +242,7 @@ if (
 else failed++;
 
 if (
-  test('64 KiB passthrough sentinel is measured in UTF-8 bytes', () => {
+  test('truncated UTF-8 prefix is classified by bytes', () => {
     const fixturePath = path.join(FIXTURE_DIR, 'multibyte-prefix-fixture.js');
     fs.writeFileSync(
       fixturePath,
@@ -255,7 +255,7 @@ if (
       });
       assert.strictEqual(Buffer.byteLength(payload.slice(0, 32768), 'utf8'), 64 * 1024);
       assert.strictEqual(result.status, 0, result.stderr);
-      assert.strictEqual(result.stdout, '', 'a 64 KiB UTF-8 prefix of raw input must be suppressed');
+      assert.strictEqual(result.stdout, '', 'a UTF-8 byte prefix of raw input must be suppressed');
       assert.match(result.stderr, /returned raw input as stdout/);
     } finally {
       fs.unlinkSync(fixturePath);
@@ -266,18 +266,23 @@ if (
 else failed++;
 
 if (
-  test('byte boundary does not misclassify 64K multibyte characters', () => {
-    const byteBoundaryPrefix = 'é'.repeat(32768);
-    const characterBoundaryPrefix = 'é'.repeat(65536);
+  test('classifies platform-dependent pipe prefixes without accepting mismatches', () => {
+    const raw = Buffer.from(`${'a'.repeat(64 * 1024)}tail`, 'utf8');
 
-    assert.strictEqual(Buffer.byteLength(byteBoundaryPrefix, 'utf8'), 64 * 1024);
-    assert.strictEqual(Buffer.byteLength(characterBoundaryPrefix, 'utf8'), 128 * 1024);
-    assert.strictEqual(isRawPassthrough(`${byteBoundaryPrefix}tail`, byteBoundaryPrefix), true);
-    assert.strictEqual(
-      isRawPassthrough(`${characterBoundaryPrefix}tail`, characterBoundaryPrefix),
-      false,
-      '64K JavaScript characters must not be treated as a 64 KiB byte boundary'
-    );
+    for (const prefixLength of [8 * 1024, 16 * 1024, 64 * 1024]) {
+      assert.strictEqual(
+        isRawPassthrough(raw, raw.subarray(0, prefixLength)),
+        true,
+        `${prefixLength}-byte raw prefix must be classified as passthrough`
+      );
+    }
+
+    const mismatchLength = 8 * 1024;
+    const mismatchedPrefix = Buffer.concat([
+      raw.subarray(0, mismatchLength - 1),
+      Buffer.from([raw[mismatchLength - 1] ^ 1])
+    ]);
+    assert.strictEqual(isRawPassthrough(raw, mismatchedPrefix), false);
   })
 )
   passed++;
