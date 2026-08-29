@@ -43,15 +43,20 @@ function cleanup(dirPath) {
   fs.rmSync(dirPath, { recursive: true, force: true });
 }
 
+function resolveBashExecutable(env = process.env) {
+  return env.BASH_PATH
+    || (process.platform === 'win32' && fs.existsSync('C:\\Program Files\\Git\\bin\\bash.exe')
+      ? 'C:\\Program Files\\Git\\bin\\bash.exe'
+      : fs.existsSync('/bin/bash')
+        ? '/bin/bash'
+        : 'bash');
+}
+
 function runBash(
   scriptPath,
   { args = [], env = {}, cwd = repoRoot, input = undefined, preservePath = true } = {},
 ) {
-  const bash = process.platform === 'win32' && fs.existsSync('C:\\Program Files\\Git\\bin\\bash.exe')
-    ? 'C:\\Program Files\\Git\\bin\\bash.exe'
-    : fs.existsSync('/bin/bash')
-      ? '/bin/bash'
-      : 'bash';
+  const bash = resolveBashExecutable();
   return spawnSync(bash, [scriptPath, ...args], {
     cwd,
     env: {
@@ -131,6 +136,17 @@ const cacheManifestWithLocalRefs = {
 
 let passed = 0;
 let failed = 0;
+
+if (
+  test('shell test runner honors an explicit BASH_PATH override', () => {
+    assert.strictEqual(
+      resolveBashExecutable({ BASH_PATH: '/custom/git/bin/bash' }),
+      '/custom/git/bin/bash',
+    );
+  })
+)
+  passed++;
+else failed++;
 
 function runHermeticPrePush({
   failScript = null,

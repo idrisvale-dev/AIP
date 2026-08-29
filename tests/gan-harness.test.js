@@ -82,6 +82,23 @@ const results = Object.freeze([
     assert.strictEqual(result, '9.1');
   }),
 
+  test('extract_score does not treat a Verdict threshold as a score', () => {
+    const feedback = '## Verdict: PASS / FAIL (threshold: 7.0)\n';
+    const result = extractScore(feedback);
+
+    assert.strictEqual(result, '0.0');
+  }),
+
+  test('extract_score prefers a TOTAL score after a Verdict threshold', () => {
+    const feedback = [
+      '## Verdict: PASS / FAIL (threshold: 7.0)',
+      '| **TOTAL** | **1.0** | **9.0** |',
+    ].join('\n');
+    const result = extractScore(feedback);
+
+    assert.strictEqual(result, '9.0');
+  }),
+
   test('extract_score returns the fallback when no supported score exists', () => {
     const feedback = 'Other score: 9.9\n';
     const result = extractScore(feedback);

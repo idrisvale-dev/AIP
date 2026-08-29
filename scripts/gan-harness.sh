@@ -62,15 +62,30 @@ extract_score() {
   # Extract the TOTAL weighted score from a feedback file
   local file="$1"
   awk '
-    /\*\*TOTAL\*\*/ || /Verdict:/ {
-      if (match($0, /[0-9]+[.][0-9]+/)) {
-        print substr($0, RSTART, RLENGTH)
+    /\*\*TOTAL\*\*/ {
+      total_line = $0
+      total = ""
+      while (match(total_line, /[0-9]+[.][0-9]+/)) {
+        total = substr(total_line, RSTART, RLENGTH)
+        total_line = substr(total_line, RSTART + RLENGTH)
+      }
+      if (total != "") {
+        print total
         found = 1
         exit
       }
     }
+    /Verdict:/ && /[Ss]core[[:space:]]*[:=]?[[:space:]]*[0-9]+[.][0-9]+/ {
+      verdict = $0
+      sub(/^.*[Ss]core[[:space:]]*[:=]?[[:space:]]*/, "", verdict)
+      if (match(verdict, /^[0-9]+[.][0-9]+/)) {
+        verdict = substr(verdict, RSTART, RLENGTH)
+      } else {
+        verdict = ""
+      }
+    }
     END {
-      if (!found) print "0.0"
+      if (!found) print (verdict != "" ? verdict : "0.0")
     }
   ' "$file" 2>/dev/null
 }
