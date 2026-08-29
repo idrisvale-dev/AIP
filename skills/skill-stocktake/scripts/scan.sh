@@ -134,7 +134,7 @@ scan_dir_to_json() {
     name=$(extract_field "$file" "name")
     desc=$(extract_field "$file" "description")
     mtime=$(date -u -r "$file" +%Y-%m-%dT%H:%M:%SZ)
-    if [[ "$file" == *$'\n'* ]]; then
+    if [[ "$file" == *[[:space:]]* ]]; then
       # The aggregated fast path is line-delimited. Preserve unusual paths by
       # falling back to the structured JSON matcher for this record.
       u7=$(count_obs "$file" "$c7")

@@ -61,7 +61,7 @@ if (process.platform === 'win32') {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-skill-stocktake-'));
   try {
     const projectSkills = path.join(tempRoot, 'project', '.claude', 'skills');
-    const directSkill = path.join(projectSkills, 'direct-skill');
+    const directSkill = path.join(projectSkills, 'direct skill');
     const linkedTarget = path.join(tempRoot, 'shared', 'linked-skill');
     const newlineSkill = path.join(projectSkills, 'newline\nskill');
     const resultsPath = path.join(tempRoot, 'results.json');
@@ -82,6 +82,10 @@ if (process.platform === 'win32') {
       `${JSON.stringify({
         tool: 'Read',
         path: path.join(newlineSkill, 'SKILL.md'),
+        timestamp: new Date().toISOString(),
+      })}\n${JSON.stringify({
+        tool: 'Read',
+        path: path.join(directSkill, 'SKILL.md'),
         timestamp: new Date().toISOString(),
       })}\n`,
     );
@@ -104,6 +108,9 @@ if (process.platform === 'win32') {
       const newlineEntry = output.skills.find(skill => skill.name === 'newline-skill');
       assert.strictEqual(newlineEntry.use_7d, 1);
       assert.strictEqual(newlineEntry.use_30d, 1);
+      const spaceEntry = output.skills.find(skill => skill.name === 'direct-skill');
+      assert.strictEqual(spaceEntry.use_7d, 1);
+      assert.strictEqual(spaceEntry.use_30d, 1);
     });
 
     test('quick diff keeps newline-containing skill paths as one record', () => {
