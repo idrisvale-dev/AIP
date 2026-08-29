@@ -56,13 +56,14 @@ function runBash(
   scriptPath,
   { args = [], env = {}, cwd = repoRoot, input = undefined, preservePath = true } = {},
 ) {
-  const bash = resolveBashExecutable();
+  const effectiveEnv = {
+    ...(preservePath ? process.env : {}),
+    ...env,
+  };
+  const bash = resolveBashExecutable(effectiveEnv);
   return spawnSync(bash, [scriptPath, ...args], {
     cwd,
-    env: {
-      ...(preservePath ? process.env : {}),
-      ...env,
-    },
+    env: effectiveEnv,
     encoding: 'utf8',
     input,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -143,6 +144,16 @@ if (
       resolveBashExecutable({ BASH_PATH: '/custom/git/bin/bash' }),
       '/custom/git/bin/bash',
     );
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('shell test runner honors a per-invocation BASH_PATH override', () => {
+    const missingBash = path.join(os.tmpdir(), 'ecc-missing-bash-executable');
+    const result = runBash(prePushHook, { env: { BASH_PATH: missingBash } });
+    assert.strictEqual(result.error?.code, 'ENOENT');
   })
 )
   passed++;
