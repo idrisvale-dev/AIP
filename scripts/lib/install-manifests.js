@@ -2,6 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { getInstallTargetAdapter, planInstallTargetScaffold } = require('./install-targets/registry');
+const { resolveInvocationEnvironment } = require('./invocation-environment');
 
 const DEFAULT_REPO_ROOT = path.join(__dirname, '../..');
 const SUPPORTED_INSTALL_TARGETS = ['claude', 'claude-project', 'cursor', 'antigravity', 'codex', 'gemini', 'opencode', 'codebuddy', 'joycode', 'qwen', 'zed', 'hermes', 'openclaw', 'kimi'];
@@ -65,6 +66,8 @@ const LEGACY_COMPAT_BASE_MODULE_IDS_BY_TARGET = Object.freeze({
     'rules-core',
     'agents-core',
     'commands-core',
+    'skill-unified-memory',
+    'workflow-quality',
   ],
   zed: [
     'rules-core',
@@ -131,6 +134,14 @@ const LEGACY_LANGUAGE_EXTRA_MODULE_IDS = Object.freeze({
   rust: ['framework-language'],
   swift: [],
   typescript: ['framework-language'],
+});
+const LEGACY_LANGUAGE_RULE_NAMESPACES = Object.freeze({
+  c: 'cpp',
+  harmonyos: 'arkts',
+  javascript: 'typescript',
+  go: 'golang',
+  golang: 'golang',
+  rails: 'ruby',
 });
 const TARGET_DEFAULT_PROFILE_IDS = Object.freeze({
   opencode: 'opencode',
@@ -500,6 +511,9 @@ function resolveLegacyCompatibilitySelection(options = {}) {
 
   const canonicalLegacyLanguages = normalizedLegacyLanguages
     .map(language => LEGACY_LANGUAGE_ALIAS_TO_CANONICAL[language]);
+  const ruleLanguages = normalizedLegacyLanguages.map(language => (
+    LEGACY_LANGUAGE_RULE_NAMESPACES[language] || language
+  ));
   const baseModuleIds = LEGACY_COMPAT_BASE_MODULE_IDS_BY_TARGET[target || 'claude']
     || LEGACY_COMPAT_BASE_MODULE_IDS_BY_TARGET.claude;
   const moduleIds = dedupeStrings([
@@ -514,6 +528,7 @@ function resolveLegacyCompatibilitySelection(options = {}) {
   return {
     legacyLanguages: normalizedLegacyLanguages,
     canonicalLegacyLanguages,
+    ruleLanguages,
     moduleIds,
   };
 }
@@ -581,6 +596,7 @@ function resolveInstallPlan(options = {}) {
       repoRoot: manifests.repoRoot,
       projectRoot: validatedProjectRoot || manifests.repoRoot,
       homeDir: validatedHomeDir || os.homedir(),
+      env: resolveInvocationEnvironment(options),
     }
     : null;
   const targetAdapter = target ? getInstallTargetAdapter(target) : null;
@@ -679,6 +695,7 @@ function resolveInstallPlan(options = {}) {
       repoRoot: targetPlanningInput.repoRoot,
       projectRoot: targetPlanningInput.projectRoot,
       homeDir: targetPlanningInput.homeDir,
+      env: targetPlanningInput.env,
       modules: selectedModules,
       exemptValidationCodes: options.exemptValidationCodes || [],
     })
@@ -705,6 +722,7 @@ function resolveInstallPlan(options = {}) {
     skippedModules,
     excludedModules,
     targetAdapterId: scaffoldPlan ? scaffoldPlan.adapter.id : null,
+    homeDir: targetPlanningInput ? targetPlanningInput.homeDir : null,
     targetRoot: scaffoldPlan ? scaffoldPlan.targetRoot : null,
     installStatePath: scaffoldPlan ? scaffoldPlan.installStatePath : null,
     operations: scaffoldPlan ? scaffoldPlan.operations : [],
