@@ -13,6 +13,27 @@
 
 set -euo pipefail
 
+sort_nul_file() {
+  local input_file="$1"
+  local sorted_file="${input_file}.sorted"
+  node -e '
+    const fs = require("fs");
+    const input = fs.readFileSync(0);
+    const records = [];
+    let start = 0;
+    for (let index = 0; index < input.length; index += 1) {
+      if (input[index] === 0) {
+        records.push(input.subarray(start, index + 1));
+        start = index + 1;
+      }
+    }
+    if (start < input.length) records.push(input.subarray(start));
+    records.sort(Buffer.compare);
+    process.stdout.write(Buffer.concat(records));
+  ' <"$input_file" >"$sorted_file"
+  mv "$sorted_file" "$input_file"
+}
+
 RESULTS_JSON="${1:-}"
 CWD_SKILLS_DIR="${SKILL_STOCKTAKE_PROJECT_DIR:-${2:-$PWD/.claude/skills}}"
 GLOBAL_DIR="${SKILL_STOCKTAKE_GLOBAL_DIR:-$HOME/.claude/skills}"
@@ -56,13 +77,13 @@ process_dir() {
   # Capture find's exit status and stderr instead of discarding them: with -L,
   # a broken symlink or unreadable directory makes find skip that entry AND
   # exit non-zero, which would otherwise silently under-count skills.
-  # NUL-delimited (-print0 / sort -z / read -d '') so a path containing a
+  # NUL-delimited (-print0 / sort_nul_file / read -d '') so a path containing a
   # literal newline can't desync record boundaries — paths here are untrusted.
   if ! find -L "$dir" -name "SKILL.md" -type f -print0 >"$find_out" 2>"$find_err"; then
     echo "Warning: find encountered errors while scanning $dir (broken symlinks or permission issues may cause skills to be missed):" >&2
     cat "$find_err" >&2
   fi
-  sort -z -o "$find_out" "$find_out"
+  sort_nul_file "$find_out"
 
   while IFS= read -r -d '' file; do
     local mtime dp is_new

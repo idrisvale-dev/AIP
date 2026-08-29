@@ -698,7 +698,10 @@ function runTests() {
     const ctx = createContextContext();
     const transcript = writeTranscriptFixture(170000);
     try {
-      const result = runCompactWithInput({ session_id: ctx.sessionId, transcript_path: transcript });
+      const result = runCompactWithInput(
+        { session_id: ctx.sessionId, transcript_path: transcript },
+        { ECC_CONTEXT_WINDOW_TOKENS: '', CLAUDE_CODE_AUTO_COMPACT_WINDOW: '' },
+      );
       assert.strictEqual(result.code, 0, 'Should exit 0');
       assert.ok(result.stdout.trim().length > 0, `Expected stdout payload. Got: "${result.stdout}"`);
       const parsed = JSON.parse(result.stdout);

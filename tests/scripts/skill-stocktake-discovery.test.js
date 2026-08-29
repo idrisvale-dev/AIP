@@ -47,7 +47,9 @@ test('both scanners use canonical, error-visible, NUL-delimited discovery', () =
   for (const scriptPath of [scanScript, quickDiffScript]) {
     const source = fs.readFileSync(scriptPath, 'utf8');
     assert.match(source, /find -L "\$dir" -name "SKILL\.md" -type f -print0/);
-    assert.match(source, /sort -z -o "\$find_out" "\$find_out"/);
+    assert.match(source, /sort_nul_file "\$find_out"/);
+    assert.match(source, /records\.sort\(Buffer\.compare\)/);
+    assert.doesNotMatch(source, /sort -z/, `${path.basename(scriptPath)} still requires GNU sort`);
     assert.match(source, /read -r -d '' file/);
     assert.doesNotMatch(source, /find [^\n]*2>\/dev\/null/, `${path.basename(scriptPath)} still hides find errors`);
   }
@@ -103,6 +105,9 @@ if (process.platform === 'win32') {
       );
       assert.ok(output.every(entry => entry.is_new === true));
     });
+  } catch (error) {
+    console.log(`  ✗ fixture setup: ${error.message}`);
+    failed++;
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

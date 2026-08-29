@@ -144,6 +144,7 @@ class TestRunScenarioMaxTurnsTermination:
                 run_scenario(scenario, model="haiku")
 
 
+@pytest.mark.unit
 class TestParseStreamJsonRedactsHomePath:
     """Observations feed grade() and then a written report (results/<skill>.md) —
     a raw absolute path bakes the operator's username into every tool call
@@ -208,6 +209,27 @@ class TestParseStreamJsonRedactsHomePath:
             r"~\Documents\résumé.txt",
             "~/資料.txt",
         ]
+
+    def test_mapping_keys_are_redacted_without_silent_collision(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        home = r"C:\Users\Zoë"
+        self._set_home(monkeypatch, home)
+        stdout = self._stream_json_for(
+            {
+                home + r"\private.txt": "first",
+                r"c:\users\zoë\private.txt": "second",
+            },
+            "irrelevant output",
+        )
+        events = _parse_stream_json(stdout)
+
+        parsed_input = json.loads(events[0].input)
+        assert home not in events[0].input
+        assert parsed_input == {
+            r"~\private.txt": "first",
+            r"~\private.txt#2": "second",
+        }
 
     def test_sibling_and_embedded_prefix_paths_untouched(
         self, monkeypatch: pytest.MonkeyPatch

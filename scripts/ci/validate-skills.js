@@ -68,9 +68,41 @@ function extractFrontmatter(content) {
  * @param {string[]} lines
  * @returns {{values: Record<string,string>, descriptionIndicator: string|null}}
  */
+function stripUnquotedYamlComment(rawValue) {
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+
+  for (let index = 0; index < rawValue.length; index++) {
+    const character = rawValue[index];
+
+    if (inDoubleQuote && character === '\\') {
+      index += 1;
+      continue;
+    }
+    if (!inDoubleQuote && character === "'") {
+      if (inSingleQuote && rawValue[index + 1] === "'") {
+        index += 1;
+      } else {
+        inSingleQuote = !inSingleQuote;
+      }
+      continue;
+    }
+    if (!inSingleQuote && character === '"') {
+      inDoubleQuote = !inDoubleQuote;
+      continue;
+    }
+    if (!inSingleQuote && !inDoubleQuote && character === '#'
+      && (index === 0 || /\s/.test(rawValue[index - 1]))) {
+      return rawValue.slice(0, index).trim();
+    }
+  }
+
+  return rawValue.trim();
+}
+
 function inspectFrontmatter(lines) {
   const values = Object.create(null);
-  const syntaxErrors = [];
+  let syntaxErrors = [];
   let descriptionIndicator = null;
   let inBlockScalar = false;
   let blockScalarIndent = -1;
@@ -92,13 +124,8 @@ function inspectFrontmatter(lines) {
 
     const key = match[1];
     const rawValue = match[2];
-    // Strip unquoted comments for value/indicator inspection. Handles both
-    // trailing comments (`foo: bar # note`) and comment-only values
-    // (`foo: # todo`) so the latter is treated as empty.
-    const valueNoComment = rawValue
-      .replace(/^\s*#.*$/, '')
-      .replace(/\s+#.*$/, '')
-      .trim();
+    // Strip YAML comments only when # appears outside a quoted scalar.
+    const valueNoComment = stripUnquotedYamlComment(rawValue);
     values[key] = valueNoComment;
 
     const isQuoted = /^"(?:[^"\\]|\\.)*"$/.test(valueNoComment) || /^'(?:[^']|'')*'$/.test(valueNoComment);
@@ -109,16 +136,19 @@ function inspectFrontmatter(lines) {
       // drops a value's quoting, or glues the next frontmatter key onto
       // the end of a value, this is exactly what shows up (see #2630).
       if (valueNoComment.includes(': ')) {
-        syntaxErrors.push(
+        syntaxErrors = [...syntaxErrors,
           `${key}: unquoted value contains ': ' — invalid YAML; ` + `quote the value or the next key was likely glued onto this line`
-        );
+        ];
       }
 
       // '@' and '`' are reserved YAML indicators and cannot start a
       // plain scalar (see #2630 — a reordering during translation moved
       // '@' into the first column of an unquoted description).
       if (/^[@`]/.test(valueNoComment)) {
-        syntaxErrors.push(`${key}: unquoted value starts with reserved character '${valueNoComment[0]}' — quote the value`);
+        syntaxErrors = [
+          ...syntaxErrors,
+          `${key}: unquoted value starts with reserved character '${valueNoComment[0]}' — quote the value`
+        ];
       }
     }
 
@@ -246,30 +276,31 @@ function validateSkillFile(skillMd, label, reportFrontmatterFinding, opts = {}) 
 function findDocsSkillFiles(docsDir) {
   if (!fs.existsSync(docsDir)) return [];
 
-  const files = [];
-  const locales = fs
-    .readdirSync(docsDir, { withFileTypes: true })
+  const readDirectories = (directory, label) => {
+    try {
+      return fs.readdirSync(directory, { withFileTypes: true });
+    } catch {
+      throw new Error(`unable to read ${label}`);
+    }
+  };
+
+  const locales = readDirectories(docsDir, 'docs directory')
     .filter(e => e.isDirectory() && !e.name.startsWith('.'))
     .map(e => e.name);
 
-  for (const locale of locales) {
+  return locales.flatMap(locale => {
     const localeSkillsDir = path.join(docsDir, locale, 'skills');
-    if (!fs.existsSync(localeSkillsDir)) continue;
+    if (!fs.existsSync(localeSkillsDir)) return [];
 
-    const skillDirs = fs
-      .readdirSync(localeSkillsDir, { withFileTypes: true })
+    const skillDirs = readDirectories(localeSkillsDir, `docs/${locale}/skills directory`)
       .filter(e => e.isDirectory() && !e.name.startsWith('.'))
       .map(e => e.name);
 
-    for (const skillDir of skillDirs) {
-      files.push({
-        skillMd: path.join(localeSkillsDir, skillDir, 'SKILL.md'),
-        label: `docs/${locale}/skills/${skillDir}/SKILL.md`
-      });
-    }
-  }
-
-  return files;
+    return skillDirs.map(skillDir => ({
+      skillMd: path.join(localeSkillsDir, skillDir, 'SKILL.md'),
+      label: `docs/${locale}/skills/${skillDir}/SKILL.md`
+    }));
+  });
 }
 
 function validateSkills() {
@@ -329,4 +360,9 @@ function validateSkills() {
   console.log(msg);
 }
 
-validateSkills();
+try {
+  validateSkills();
+} catch (error) {
+  console.error(`ERROR: ${error.message}`);
+  process.exit(1);
+}

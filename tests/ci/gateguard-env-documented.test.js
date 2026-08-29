@@ -52,6 +52,15 @@ function test(name, fn) {
 const REGEX_CAN_FOLLOW = new Set([
   '', '(', ',', '=', ':', '[', '!', '&', '|', '?', '{', '}', ';', '+', '-', '*', '%', '~', '^', '<', '>',
 ]);
+const REGEX_CAN_FOLLOW_KEYWORD = new Set([
+  'await', 'case', 'delete', 'do', 'else', 'in', 'instanceof', 'new', 'of',
+  'return', 'throw', 'typeof', 'void', 'yield',
+]);
+
+function regexFollowsKeyword(source, slashIndex) {
+  const match = source.slice(0, slashIndex).match(/([A-Za-z_$][\w$]*)\s*$/);
+  return Boolean(match && REGEX_CAN_FOLLOW_KEYWORD.has(match[1]));
+}
 
 /**
  * Blank out comments and literal text, preserving length and line breaks so
@@ -102,7 +111,7 @@ function blankCommentsAndLiterals(source) {
       continue;
     }
 
-    if (ch === '/' && REGEX_CAN_FOLLOW.has(prev)) {
+    if (ch === '/' && (REGEX_CAN_FOLLOW.has(prev) || regexFollowsKeyword(source, i))) {
       emit(ch); i += 1;
       let inClass = false;
       while (i < source.length) {
@@ -289,6 +298,11 @@ if (test('env reads are read from code, not from comments, strings or regexes', 
 if (test('a regex literal containing a slash does not swallow the code after it', () => {
   const fixture = 'const re = /a\\/\\/b/;\nconst x = process.env.GATEGUARD_AFTER_REGEX;';
   assert.deepStrictEqual([...readGateguardEnvNames(fixture)], ['GATEGUARD_AFTER_REGEX']);
+})) passed++; else failed++;
+
+if (test('a regex literal after a statement keyword is ignored', () => {
+  const fixture = 'function matches() { return /process\\.env\\.GATEGUARD_IN_RETURN_REGEX/; }';
+  assert.deepStrictEqual([...readGateguardEnvNames(fixture)], []);
 })) passed++; else failed++;
 
 if (test('the access guard rejects every form the parser cannot follow', () => {

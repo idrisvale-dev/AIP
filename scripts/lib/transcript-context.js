@@ -162,10 +162,11 @@ function readLatestContextTokens(transcriptPath, options = {}) {
  * positively detected or merely assumed.
  *
  * `inferred: false` means the size came from evidence — an explicit env
- * override, the `[1m]` marker, a known large-window family, or an observed
- * token count that already exceeds the standard window. `inferred: true` means
- * every check fell through and the standard 200k default was assumed; the
- * window may actually be larger and callers must not present it as fact.
+ * override, the `[1m]` marker, or a known large-window family. An observed
+ * token count above the standard window selects the safer large-window
+ * thresholds, but remains inferred because the true denominator could be an
+ * unmarked intermediate size such as 400k. Callers must not present inferred
+ * windows as fact.
  *
  * @returns {{ windowTokens: number, inferred: boolean }}
  */
@@ -193,7 +194,7 @@ function resolveContextWindow(tokens, model) {
   }
 
   if (Number.isFinite(tokens) && tokens > STANDARD_CONTEXT_WINDOW_TOKENS) {
-    return { windowTokens: LARGE_CONTEXT_WINDOW_TOKENS, inferred: false };
+    return { windowTokens: LARGE_CONTEXT_WINDOW_TOKENS, inferred: true };
   }
 
   return { windowTokens: STANDARD_CONTEXT_WINDOW_TOKENS, inferred: true };

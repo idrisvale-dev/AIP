@@ -139,6 +139,10 @@ console.log('\nresolveContextWindowTokens:');
 
 // Isolation: an env-set window override (either knob) otherwise leaks into the
 // default-window assertions below and fails them (#2290).
+const originalContextWindowEnv = {
+  ECC_CONTEXT_WINDOW_TOKENS: process.env.ECC_CONTEXT_WINDOW_TOKENS,
+  CLAUDE_CODE_AUTO_COMPACT_WINDOW: process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW,
+};
 delete process.env.ECC_CONTEXT_WINDOW_TOKENS;
 delete process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW;
 
@@ -222,9 +226,6 @@ test('treats an empty model id as standard window', () => {
 // ── isContextWindowInferred ──
 console.log('\nisContextWindowInferred:');
 
-delete process.env.ECC_CONTEXT_WINDOW_TOKENS;
-delete process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW;
-
 test('flags the assumed 200k default as inferred', () => {
   assert.strictEqual(isContextWindowInferred(187000, 'claude-opus-9'), true);
 });
@@ -246,9 +247,14 @@ test('a known large-window family is a detected window, not inferred', () => {
   assert.strictEqual(isContextWindowInferred(187000, 'claude-fable-5'), false);
 });
 
-test('tokens above the standard window make the size detected, not inferred', () => {
-  assert.strictEqual(isContextWindowInferred(220000, 'claude-opus-9'), false);
+test('tokens above the standard window still leave the exact size inferred', () => {
+  assert.strictEqual(isContextWindowInferred(220000, 'claude-opus-9'), true);
 });
+
+for (const [name, value] of Object.entries(originalContextWindowEnv)) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
 
 // ── resolveContextThreshold ──
 console.log('\nresolveContextThreshold:');

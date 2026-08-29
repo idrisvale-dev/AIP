@@ -149,11 +149,25 @@ def _redact_home_path(text: str) -> str:
 
 
 def _redact_home_paths(value: object) -> object:
-    """Return a copy with home paths redacted from every string leaf."""
+    """Return a copy with home paths redacted from string keys and leaves.
+
+    Redacted mapping keys receive a stable numeric suffix when two original
+    keys collapse to the same portable value. This preserves every observation
+    without leaking the original home path or silently dropping data.
+    """
     if isinstance(value, str):
         return _redact_home_path(value)
     if isinstance(value, dict):
-        return {key: _redact_home_paths(item) for key, item in value.items()}
+        redacted: dict[object, object] = {}
+        for key, item in value.items():
+            redacted_key = _redact_home_path(key) if isinstance(key, str) else key
+            candidate = redacted_key
+            suffix = 2
+            while candidate in redacted:
+                candidate = f"{redacted_key}#{suffix}"
+                suffix += 1
+            redacted[candidate] = _redact_home_paths(item)
+        return redacted
     if isinstance(value, list):
         return [_redact_home_paths(item) for item in value]
     return value

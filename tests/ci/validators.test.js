@@ -2856,6 +2856,31 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  if (test('preserves # inside a quoted frontmatter value', () => {
+    const testDir = createTestDir();
+    const docsDir = path.join(testDir, 'docs-root');
+    const skillDir = path.join(docsDir, 'ja-JP', 'skills', 'example');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'),
+      '---\nname: example\ndescription: "Fix: details #tag" # translation note\n---\n# Example');
+
+    const result = runSkillsValidator('/nonexistent/skills-dir', ['--strict'], {}, docsDir);
+    assert.strictEqual(result.code, 0,
+      `Quoted # content must remain valid, got stderr: ${result.stderr}`);
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('reports an unreadable docs root deterministically', () => {
+    const testDir = createTestDir();
+    const docsPath = path.join(testDir, 'docs-file');
+    fs.writeFileSync(docsPath, 'not a directory');
+
+    const result = runSkillsValidator('/nonexistent/skills-dir', ['--strict'], {}, docsPath);
+    assert.strictEqual(result.code, 1, 'Should fail when the docs root cannot be read');
+    assert.strictEqual(result.stderr.trim(), 'ERROR: unable to read docs directory');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   if (test('flags a docs mirror SKILL.md with no frontmatter block at all', () => {
     const testDir = createTestDir();
     const docsDir = path.join(testDir, 'docs-root');
