@@ -134,11 +134,12 @@ function hasLineContinuation(line) {
 function normalizeUnquotedHeredocLines(lines, stripTabs = false) {
   const logical = lines
     .map((line, index) => {
-      if (index === lines.length - 1) return line;
-      return hasLineContinuation(line) ? line.slice(0, -1) : `${line}\n`;
+      const normalized = stripTabs ? line.replace(/^\t+/, '') : line;
+      if (index === lines.length - 1) return normalized;
+      return hasLineContinuation(normalized) ? normalized.slice(0, -1) : `${normalized}\n`;
     })
     .join('');
-  return stripTabs ? logical.replace(/^\t+/, '') : logical;
+  return logical;
 }
 
 /** @returns {{ text: string, nextIndex: number }} */

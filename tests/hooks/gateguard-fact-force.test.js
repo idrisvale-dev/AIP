@@ -1783,10 +1783,10 @@ function runTests() {
   else failed++;
 
   if (
-    test('denies split options after tab-stripped heredoc line continuation', () => {
-      expectDestructiveDeny(
+    test('allows a joined command when tab stripping removes the option separator', () => {
+      expectAllow(
         ['cat <<-EOF', '\t$(rm\\', '\t-rf /tmp/expanded-target)', 'EOF'].join('\n'),
-        'split option in tab-stripped unquoted heredoc substitution'
+        'tab stripping joins rm and -rf into a harmless command name'
       );
     })
   )
@@ -1794,10 +1794,10 @@ function runTests() {
   else failed++;
 
   if (
-    test('preserves internal tabs after tab-stripped heredoc continuations', () => {
-      expectAllow(
+    test('denies split command names after tab-stripped heredoc continuations', () => {
+      expectDestructiveDeny(
         ['cat <<-EOF', '\t$(r\\', '\tm -rf /tmp/expanded-target)', 'EOF'].join('\n'),
-        'internal tab after tab-stripped heredoc continuation'
+        'split command name in tab-stripped unquoted heredoc substitution'
       );
     })
   )
