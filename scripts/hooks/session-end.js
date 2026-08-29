@@ -43,9 +43,16 @@ function extractSessionSummary(transcriptPath) {
       if (entry.type === 'user' || entry.role === 'user' || entry.message?.role === 'user') {
         // Support both direct content and nested message.content (Claude Code JSONL format)
         const rawContent = entry.message?.content ?? entry.content;
+        // Skip tool_result carrier turns — they are not user asks.
+        const isToolResult = Array.isArray(rawContent) && rawContent.some(c => c && c.type === 'tool_result');
         const text = typeof rawContent === 'string' ? rawContent : Array.isArray(rawContent) ? rawContent.map(c => (c && c.text) || '').join(' ') : '';
         const cleaned = stripAnsi(text).trim();
-        if (cleaned) {
+        // Skip harness noise: local command echoes, caveats, system reminders.
+        const isNoise = /^<(local-command-caveat|local-command-stdout|command-name|command-message|command-args|system-reminder|task-notification)/i.test(cleaned);
+        // `isMeta` is also used for genuine channel- and plugin-originated
+        // human prompts. Exclude known structured noise above instead of
+        // discarding every metadata-marked user turn.
+        if (cleaned && !isToolResult && !isNoise) {
           userMessages.push(cleaned.slice(0, 200));
         }
       }

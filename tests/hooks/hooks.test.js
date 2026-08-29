@@ -2119,6 +2119,41 @@ async function runTests() {
   else failed++;
 
   if (
+    await asyncTest('keeps isMeta human prompts while filtering structured transcript noise', async () => {
+      const testDir = createTestDir();
+      const transcriptPath = path.join(testDir, 'transcript.jsonl');
+      const lines = [
+        JSON.stringify({ type: 'user', isMeta: true, content: 'Prompt delivered by a channel plugin' }),
+        JSON.stringify({ type: 'user', isMeta: true, content: '<system-reminder>internal harness context</system-reminder>' }),
+        JSON.stringify({
+          type: 'user',
+          message: { role: 'user', content: [{ type: 'tool_result', content: 'tool output' }] },
+        }),
+      ];
+      fs.writeFileSync(transcriptPath, lines.join('\n'));
+
+      const result = await runScript(
+        path.join(scriptsDir, 'session-end.js'),
+        JSON.stringify({ transcript_path: transcriptPath }),
+        { HOME: testDir, USERPROFILE: testDir }
+      );
+      assert.strictEqual(result.code, 0);
+
+      const sessionsDir = getCanonicalSessionsDir(testDir);
+      const sessionFiles = fs.readdirSync(sessionsDir).filter(file => file.endsWith('.tmp'));
+      assert.strictEqual(sessionFiles.length, 1, 'Should create one session file');
+      const content = fs.readFileSync(path.join(sessionsDir, sessionFiles[0]), 'utf8');
+      assert.ok(content.includes('Prompt delivered by a channel plugin'));
+      assert.ok(!content.includes('internal harness context'));
+      assert.ok(!content.includes('tool output'));
+      assert.ok(content.includes('Total user messages: 1'));
+      cleanupTestDir(testDir);
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
     await asyncTest('extracts tool names and file paths from transcript', async () => {
       const testDir = createTestDir();
       const transcriptPath = path.join(testDir, 'transcript.jsonl');
