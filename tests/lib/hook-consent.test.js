@@ -72,6 +72,14 @@ function runTests() {
     assert.strictEqual(isHookRuntimeOperation({ sourceRelativePath: 'hooks/hooks.json' }), true);
     assert.strictEqual(isHookRuntimeOperation({ sourceRelativePath: '.cursor/hooks.json' }), true);
     assert.strictEqual(isHookRuntimeOperation({ destinationPath: '/root/.claude/hooks/hooks.json' }), true);
+    assert.strictEqual(
+      isHookRuntimeOperation({
+        moduleId: 'platform-configs',
+        sourceRelativePath: '.opencode/plugins/ecc-hooks.ts',
+        destinationPath: '/root/.config/opencode/plugins/ecc-hooks.ts',
+      }),
+      false
+    );
     assert.strictEqual(isHookRuntimeOperation({ sourceRelativePath: 'rules/common.md' }), false);
     assert.strictEqual(
       isHookRuntimeOperation({ sourceRelativePath: 'skills/webhooks-guide.md' }),
