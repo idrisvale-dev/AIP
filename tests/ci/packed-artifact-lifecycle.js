@@ -258,6 +258,7 @@ function runTargetSmoke(options) {
       'install',
       '--modules', 'workflow-quality',
       '--target', options.target,
+      '--enable-hooks',
       '--json',
     ]),
     `${options.target} packed install`

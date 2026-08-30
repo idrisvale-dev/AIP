@@ -144,6 +144,17 @@ test('Windows public CLI invocation accepts the exact Itô capability selection'
   );
 });
 
+test('workflow-quality target smoke explicitly opts into hooks', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, 'packed-artifact-lifecycle.js'),
+    'utf8'
+  );
+  assert.match(
+    source,
+    /'--modules', 'workflow-quality'[\s\S]*'--enable-hooks'/
+  );
+});
+
 test('lifecycle cleanup retries Windows file locks without masking results', () => {
   const source = fs.readFileSync(
     path.join(__dirname, 'packed-artifact-lifecycle.js'),
