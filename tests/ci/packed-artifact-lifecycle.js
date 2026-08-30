@@ -339,6 +339,7 @@ function runLifecycle(options) {
       '--with', 'capability:ito-compute',
       '--with', 'capability:prediction-markets',
       '--target', 'cursor',
+      '--enable-hooks',
       '--json',
     ];
     parseJsonOutput(

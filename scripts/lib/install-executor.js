@@ -547,6 +547,7 @@ function createLegacyCompatInstallPlan(options = {}) {
     legacyLanguages: selection.legacyLanguages,
     ruleLanguages: selection.ruleLanguages,
     legacyMode: true,
+    exemptValidationCodes: options.exemptValidationCodes || [],
     requestProfileId: null,
     requestModuleIds: [],
     requestIncludeComponentIds: includeComponentIds,
