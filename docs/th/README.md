@@ -4,9 +4,9 @@
 
 ![Everything Claude Code — ระบบเพิ่มประสิทธิภาพสำหรับ AI agent harness](../../assets/hero.png)
 
-[![Stars](https://img.shields.io/github/stars/affaan-m/everything-claude-code?style=flat)](https://github.com/affaan-m/everything-claude-code/stargazers)
-[![Forks](https://img.shields.io/github/forks/affaan-m/everything-claude-code?style=flat)](https://github.com/affaan-m/everything-claude-code/network/members)
-[![Contributors](https://img.shields.io/github/contributors/affaan-m/everything-claude-code?style=flat)](https://github.com/affaan-m/everything-claude-code/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
+[![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
 [![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-universal)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 
@@ -50,7 +50,7 @@ ECC ไม่ใช่แค่ชุดไฟล์คอนฟิก แต่
 
 ```bash
 # เพิ่ม marketplace
-/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin marketplace add https://github.com/reborncursed/AIP
 
 # ติดตั้ง plugin
 /plugin install ecc@ecc
@@ -58,7 +58,7 @@ ECC ไม่ใช่แค่ชุดไฟล์คอนฟิก แต่
 
 ECC มีชื่อเรียกในระบบสาธารณะ 3 ชื่อที่ต่างกัน:
 
-- GitHub repo: `affaan-m/everything-claude-code`
+- GitHub repo: `reborncursed/AIP`
 - Claude marketplace plugin: `ecc@ecc`
 - npm package: `ecc-universal`
 
@@ -69,7 +69,7 @@ ECC มีชื่อเรียกในระบบสาธารณะ 3 �
 Plugin ของ Claude Code จะไม่ติดตั้ง `rules/` ให้อัตโนมัติ หากคุณติดตั้งผ่าน plugin **อย่า** รัน full installer เพิ่ม ให้คัดลอกเฉพาะชุด rule ที่ต้องการแทน:
 
 ```bash
-git clone https://github.com/affaan-m/everything-claude-code.git
+git clone https://github.com/reborncursed/AIP.git
 cd everything-claude-code
 
 mkdir -p ~/.claude/rules/ecc
@@ -78,7 +78,7 @@ cp -R rules/typescript ~/.claude/rules/ecc/
 ```
 
 ```powershell
-git clone https://github.com/affaan-m/everything-claude-code.git
+git clone https://github.com/reborncursed/AIP.git
 cd everything-claude-code
 
 New-Item -ItemType Directory -Force -Path "$HOME/.claude/rules/ecc" | Out-Null
@@ -230,7 +230,7 @@ ECC จะลบเฉพาะไฟล์ที่อยู่ใน install-s
 
 ```bash
 # 1. Fork และ clone
-gh repo fork affaan-m/everything-claude-code --clone
+gh repo fork reborncursed/AIP --clone
 cd everything-claude-code
 
 # 2. สร้าง branch
@@ -249,9 +249,9 @@ git add . && git commit -m "feat: add my-skill" && git push -u origin feat/my-co
 
 ## ชุมชน & สนับสนุน
 
-- [GitHub Discussions](https://github.com/affaan-m/everything-claude-code/discussions) — ถาม-ตอบ, โชว์ผลงาน
-- [GitHub Sponsors](https://github.com/sponsors/affaan-m) — สนับสนุน OSS เริ่มที่ $5/เดือน
-- [ECC Pro](https://ecc.tools/pricing) — private repo + GitHub App ($19/seat/เดือน)
+- [GitHub Discussions](https://github.com/reborncursed/AIP/discussions) — ถาม-ตอบ, โชว์ผลงาน
+- [GitHub Sponsors](https://github.com/sponsors/reborncursed) — สนับสนุน OSS เริ่มที่ $5/เดือน
+- [ECC Pro](https://bytecore.org/pricing) — private repo + GitHub App ($19/seat/เดือน)
 - [ECC Tools GitHub App](https://github.com/marketplace/ecc-tools) — ติดตั้ง, PR audit, มี free tier
 
 **OSS ยังคงฟรีตลอดไป** Repo นี้ใช้สัญญาอนุญาต MIT ตลอดกาล ECC Pro คือ GitHub App ที่ host ไว้สำหรับ private repo ส่วน Sponsors และ Pro subscribers ช่วยสนับสนุนให้ maintainer คนเดียวสามารถส่งงานข้าม 7 harness ได้ทุกสัปดาห์

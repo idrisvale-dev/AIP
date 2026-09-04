@@ -64,5 +64,5 @@ description: 任意の自動コンパクションではなく、タスクフェ�
 
 ## 関連
 
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - トークン最適化セクション
+- [The Longform Guide](https://bytecore.org/status/2014040193557471352) - トークン最適化セクション
 - メモリ永続化フック - コンパクションを超えて存続する状態用

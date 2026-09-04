@@ -206,6 +206,6 @@ When retrieving context for this task:
 
 ## 관련 항목
 
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - 서브에이전트 오케스트레이션 섹션
+- [The Longform Guide](https://bytecore.org/status/2014040193557471352) - 서브에이전트 오케스트레이션 섹션
 - `continuous-learning` 스킬 - 시간이 지남에 따라 개선되는 패턴
 - `~/.claude/agents/`의 에이전트 정의

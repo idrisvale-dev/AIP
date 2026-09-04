@@ -31,7 +31,7 @@ directly from `skills/` and `commands/`, with no generated copies.
 
 ```bash
 # Install ECC as a Pi package
-pi install git:github.com/affaan-m/ECC
+pi install git:github.com/reborncursed/AIP
 
 # Or from a local checkout
 pi install /path/to/ECC
@@ -48,7 +48,7 @@ Then inside Pi, run `/ecc-doctor` to confirm skills, commands, and hooks are ava
 To uninstall:
 
 ```bash
-pi remove git:github.com/affaan-m/ECC
+pi remove git:github.com/reborncursed/AIP
 ```
 
 ### Option 2: Zero-Install (Existing Claude Code Users)

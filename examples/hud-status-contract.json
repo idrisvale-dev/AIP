@@ -4,7 +4,7 @@
   "context": {
     "harness": "codex",
     "model": "gpt-5",
-    "repo": "affaan-m/everything-claude-code",
+    "repo": "reborncursed/AIP",
     "branch": "main",
     "worktree": "/repo/everything-claude-code",
     "sessionId": "session-active",
@@ -52,7 +52,7 @@
       {
         "name": "CI",
         "status": "pass",
-        "url": "https://github.com/affaan-m/everything-claude-code/actions"
+        "url": "https://github.com/reborncursed/AIP/actions"
       }
     ]
   },
@@ -106,7 +106,7 @@
       "latestStatusUpdateId": "status-update-id"
     },
     "GitHub": {
-      "repo": "affaan-m/everything-claude-code",
+      "repo": "reborncursed/AIP",
       "latestPullRequest": 1820
     },
     "handoff": {

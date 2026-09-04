@@ -28,15 +28,15 @@ curl -s https://api.npmjs.org/downloads/point/last-month/ecc-agentshield
 ### GitHub repository adoption
 
 ```bash
-gh api repos/affaan-m/ECC \
+gh api repos/reborncursed/AIP \
   --jq '{stars:.stargazers_count,forks:.forks_count,contributors_url:.contributors_url,open_issues:.open_issues_count}'
 ```
 
 ### GitHub traffic (maintainer access required)
 
 ```bash
-gh api repos/affaan-m/ECC/traffic/views
-gh api repos/affaan-m/ECC/traffic/clones
+gh api repos/reborncursed/AIP/traffic/views
+gh api repos/reborncursed/AIP/traffic/clones
 ```
 
 ### GitHub App installs

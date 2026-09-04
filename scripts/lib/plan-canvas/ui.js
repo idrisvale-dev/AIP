@@ -219,7 +219,7 @@ function canvasClientJs() {
   // origin (loopback is a common trigger). Unguarded, that killed the whole
   // client IIFE here, before the send button and Enter handlers bound below:
   // every control rendered and stayed inert. sessionStorage is already guarded
-  // above and below; match it. See affaan-m/ECC#2702.
+  // above and below; match it. See reborncursed/AIP#2702.
   function readTheme() {
     try { return localStorage.getItem(themeKey); } catch { return null; }
   }

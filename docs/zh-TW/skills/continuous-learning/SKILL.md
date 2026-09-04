@@ -76,7 +76,7 @@ description: Automatically extract reusable patterns from Claude Code sessions a
 
 ## 相關
 
-- [Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - 持續學習章節
+- [Longform Guide](https://bytecore.org/status/2014040193557471352) - 持續學習章節
 - `/learn` 指令 - 工作階段中手動提取模式
 
 ---

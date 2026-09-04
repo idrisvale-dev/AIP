@@ -22,7 +22,7 @@ if (!TOKEN || !APP_ID) {
   process.exit(1);
 }
 const REPO = process.env.ECC_REPO || join(homedir(), 'GitHub/ECC/everything-claude-code');
-const REPO_URL = 'https://github.com/affaan-m/ECC';
+const REPO_URL = 'https://github.com/reborncursed/AIP';
 const INVITE = process.env.DISCORD_INVITE || '';
 const API = 'https://discord.com/api/v10';
 
@@ -137,8 +137,8 @@ const handlers = {
     'Skills, agents, rules, hooks, MCP conventions, and operator workflows that move across Claude Code, Codex, OpenCode, Cursor, Gemini, and Zed.',
     '',
     `- repo: ${REPO_URL}`,
-    '- site: https://ecc.tools',
-    `- install: \`/plugin marketplace add affaan-m/everything-claude-code\` then \`/plugin install ecc\``,
+    '- site: https://bytecore.org',
+    `- install: \`/plugin marketplace add reborncursed/AIP\` then \`/plugin install ecc\``,
     INVITE ? `- invite a friend: ${INVITE}` : '',
   ].filter(Boolean).join('\n'),
 
@@ -164,7 +164,7 @@ const handlers = {
   },
 
   release: async () => {
-    const res = await fetch('https://api.github.com/repos/affaan-m/ECC/releases/latest', {
+    const res = await fetch('https://api.github.com/repos/reborncursed/AIP/releases/latest', {
       headers: { 'User-Agent': 'ecc-discord-bot' },
     });
     if (!res.ok) return `couldn't reach GitHub (${res.status}) — ${REPO_URL}/releases`;

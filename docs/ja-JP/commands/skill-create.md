@@ -171,4 +171,4 @@ src/
 
 ---
 
-*[Everything Claude Code](https://github.com/affaan-m/everything-claude-code)の一部*
+*[Everything Claude Code](https://github.com/reborncursed/AIP)の一部*

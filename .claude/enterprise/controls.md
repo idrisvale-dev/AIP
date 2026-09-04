@@ -4,7 +4,7 @@ This is a starter governance file for enterprise ECC deployments.
 
 ## Baseline
 
-- Repository: https://github.com/affaan-m/everything-claude-code
+- Repository: https://github.com/reborncursed/AIP
 - Recommended profile: full
 - Keep install manifests, audit allowlists, and Codex baselines under review.
 

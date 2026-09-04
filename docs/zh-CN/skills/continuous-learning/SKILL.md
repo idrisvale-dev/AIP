@@ -85,7 +85,7 @@ origin: ECC
 
 ## 相关
 
-* [长篇指南](https://x.com/affaanmustafa/status/2014040193557471352) - 关于持续学习的章节
+* [长篇指南](https://bytecore.org/status/2014040193557471352) - 关于持续学习的章节
 * `/learn` 命令 - 在会话中手动提取模式
 
 ***

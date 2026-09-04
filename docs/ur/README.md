@@ -4,12 +4,12 @@
 
 ![ECC - ایجنٹک کام کے لیے ہارنس-نیٹو آپریٹر سسٹم](../../assets/hero.png)
 
-[![Stars](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Fstars&style=flat)](https://github.com/affaan-m/ECC/stargazers)
-[![Forks](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Fforks&style=flat)](https://github.com/affaan-m/ECC/network/members)
-[![Contributors](https://img.shields.io/github/contributors/affaan-m/ECC?style=flat)](https://github.com/affaan-m/ECC/graphs/contributors)
+[![Stars](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fstars&style=flat)](https://github.com/reborncursed/AIP/stargazers)
+[![Forks](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fforks&style=flat)](https://github.com/reborncursed/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
 [![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-universal)
 [![npm ecc-agentshield](https://img.shields.io/npm/dw/ecc-agentshield?label=ecc-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-agentshield)
-[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/ecc-tools)
+[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/ecc-tools)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 ![Shell](https://img.shields.io/badge/-Shell-4EAA25?logo=gnu-bash&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -46,19 +46,19 @@ ECC v2.0.0-rc.1 اس قابل استعمال پرت پر عوامی Hermes آپ�
 <table>
 <tr>
 <td width="25%" align="center">
-  <a href="https://ecc.tools/pricing">
+  <a href="https://bytecore.org/pricing">
     <strong> ECC Pro</strong><br />
     <sub>نجی ریپوز · GitHub App · $19/نشست/ماہ</sub>
   </a>
 </td>
 <td width="25%" align="center">
-  <a href="https://github.com/sponsors/affaan-m">
+  <a href="https://github.com/sponsors/reborncursed">
     <strong> اسپانسر</strong><br />
     <sub>OSS کو فنڈ کریں · $5/ماہ سے</sub>
   </a>
 </td>
 <td width="25%" align="center">
-  <a href="https://github.com/affaan-m/ECC/discussions">
+  <a href="https://github.com/reborncursed/AIP/discussions">
     <strong> کمیونٹی</strong>
     <br />
     <sub>Discussions · Q&amp;A · Show & Tell</sub>
@@ -73,7 +73,7 @@ ECC v2.0.0-rc.1 اس قابل استعمال پرت پر عوامی Hermes آپ�
 </tr>
 </table>
 
-<sub>**OSS مفت رہتا ہے۔** یہ ریپو ہمیشہ کے لیے MIT لائسنس یافتہ ہے۔ ECC Pro نجی ریپوز کے لیے ہوسٹڈ GitHub App ہے۔ <a href="https://github.com/sponsors/affaan-m">اسپانسرز</a> اور <a href="https://ecc.tools/pricing">Pro سبسکرائبرز</a> اس کام کو فنڈ کرتے ہیں۔</sub>
+<sub>**OSS مفت رہتا ہے۔** یہ ریپو ہمیشہ کے لیے MIT لائسنس یافتہ ہے۔ ECC Pro نجی ریپوز کے لیے ہوسٹڈ GitHub App ہے۔ <a href="https://github.com/sponsors/reborncursed">اسپانسرز</a> اور <a href="https://bytecore.org/pricing">Pro سبسکرائبرز</a> اس کام کو فنڈ کرتے ہیں۔</sub>
 
 ---
 
@@ -108,7 +108,7 @@ ECC v2.0.0-rc.1 اس قابل استعمال پرت پر عوامی Hermes آپ�
 
 ```bash
 # مارکیٹ پلیس شامل کریں
-/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin marketplace add https://github.com/reborncursed/AIP
 
 # پلگ ان انسٹال کریں
 /plugin install ecc@ecc
@@ -118,7 +118,7 @@ ECC v2.0.0-rc.1 اس قابل استعمال پرت پر عوامی Hermes آپ�
 
 ```bash
 # ریپو کلون کریں
-git clone https://github.com/affaan-m/ECC.git
+git clone https://github.com/reborncursed/AIP.git
 cd ECC
 
 # ECC-owned نیم اسپیس میں rules کاپی کریں

@@ -46,7 +46,7 @@ test('ecc welcome renders the install artwork for captured agent output', () => 
   assert.strictEqual(result.status, 0, result.stderr);
   assert.match(result.stdout, /Welcome to ECC!/);
   assert.ok(result.stdout.includes(`v${version}`));
-  assert.match(result.stdout, /GitHub:\s+https:\/\/github\.com\/affaan-m\/ECC/);
+  assert.match(result.stdout, /GitHub:\s+https:\/\/github\.com\/reborncursed\/ECC/);
   assert.match(result.stdout, /Discord:\s+https:\/\/discord\.gg\/36yGMHGFbR/);
   assert.strictEqual(result.stderr, '');
 });

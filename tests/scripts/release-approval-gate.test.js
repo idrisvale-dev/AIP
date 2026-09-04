@@ -263,7 +263,7 @@ function runTests() {
           '',
           '| Surface | Intended URL or command | Gate before use |',
           '| --- | --- | --- |',
-          `| GitHub prerelease | https://github.com/affaan-m/ECC/releases/tag/v${CURRENT_RELEASE} | must return the prerelease |`,
+          `| GitHub prerelease | https://github.com/reborncursed/AIP/releases/tag/v${CURRENT_RELEASE} | must return the prerelease |`,
         ].join('\n'),
       });
 
@@ -284,7 +284,7 @@ function runTests() {
     try {
       const releaseDir = releaseDirFor(CURRENT_RELEASE);
       seedRepo(rootDir, {
-        [`${releaseDir}/x-thread.md`]: 'Ship copy with <video-url> and /Users/affaan/raw-footage.',
+        [`${releaseDir}/x-thread.md`]: 'Ship copy with <video-url> and /Users/bytecore/raw-footage.',
       });
 
       const report = buildReport({ root: rootDir });

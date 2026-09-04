@@ -134,7 +134,7 @@ Codex はその明示的な信頼を求めます。Codex にその信頼判断�
 ECC marketplace がない場合は追加し、既存ならスナップショットを更新します。
 
 ```bash
-codex plugin marketplace add affaan-m/ECC
+codex plugin marketplace add reborncursed/AIP
 codex plugin marketplace upgrade ecc --json
 ```
 

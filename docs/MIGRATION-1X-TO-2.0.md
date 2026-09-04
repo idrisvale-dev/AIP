@@ -1,12 +1,12 @@
 # Migrating From ECC 1.x (everything-claude-code) To 2.0
 
-ECC 2.0 renamed the repo (`affaan-m/everything-claude-code` → `affaan-m/ECC`) and the plugin identifier (`everything-claude-code@everything-claude-code` → `ecc@ecc`). If you installed 1.x, follow this guide to upgrade cleanly. See also the [Naming + Migration Note](../README.md#naming--migration-note) in the README.
+ECC 2.0 renamed the repo (`reborncursed/AIP` → `reborncursed/AIP`) and the plugin identifier (`everything-claude-code@everything-claude-code` → `ecc@ecc`). If you installed 1.x, follow this guide to upgrade cleanly. See also the [Naming + Migration Note](../README.md#naming--migration-note) in the README.
 
 ## TL;DR
 
 ```bash
 # 1. Install 2.0
-/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin marketplace add https://github.com/reborncursed/AIP
 /plugin install ecc@ecc
 
 # 2. Remove the old plugin

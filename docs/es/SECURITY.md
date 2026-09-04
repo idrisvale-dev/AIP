@@ -14,7 +14,7 @@ Si descubres una vulnerabilidad de seguridad en ECC, por favor repórtala de for
 
 **No abras un issue público de GitHub para vulnerabilidades de seguridad.**
 
-En cambio, envía un correo a **<security@ecc.tools>** con:
+En cambio, envía un correo a **<security@bytecore.org>** con:
 
 - Una descripción de la vulnerabilidad
 - Pasos para reproducirla
@@ -43,7 +43,7 @@ Esta política cubre:
 - Scripts de hooks que se ejecutan en tu máquina
 - Scripts del ciclo de vida de instalación/desinstalación/reparación
 - Configuraciones de MCP incluidas con ECC
-- El escáner de seguridad AgentShield ([github.com/affaan-m/agentshield](https://github.com/affaan-m/agentshield))
+- El escáner de seguridad AgentShield ([github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield))
 
 ## Orientación Operacional
 

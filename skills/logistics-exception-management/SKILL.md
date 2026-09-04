@@ -8,7 +8,7 @@ description: >
   Use when handling shipping exceptions, freight claims, delivery issues,
   or carrier disputes.
 license: Apache-2.0
-homepage: https://github.com/affaan-m/everything-claude-code
+homepage: https://github.com/reborncursed/AIP
 metadata:
   version: 1.0.0
   origin: ECC

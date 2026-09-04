@@ -52,7 +52,7 @@ Comandos slash que invocan flujos de trabajo útiles:
 
 ```bash
 # 1. Hacer fork y clonar
-gh repo fork affaan-m/everything-claude-code --clone
+gh repo fork reborncursed/AIP --clone
 cd everything-claude-code
 
 # 2. Crear una rama
@@ -465,8 +465,8 @@ Cómo lo probaste.
 
 ## ¿Preguntas?
 
-- **Issues:** [github.com/affaan-m/everything-claude-code/issues](https://github.com/affaan-m/everything-claude-code/issues)
-- **X/Twitter:** [@affaanmustafa](https://x.com/affaanmustafa)
+- **Issues:** [github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
+- **X/Twitter:** [@bytecore](https://bytecore.org)
 
 ---
 

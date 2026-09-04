@@ -14,7 +14,7 @@
 
 **请勿为安全漏洞创建公开的 GitHub 议题。**
 
-请将信息发送至 **<security@ecc.tools>**，邮件中需包含：
+请将信息发送至 **<security@bytecore.org>**，邮件中需包含：
 
 * 漏洞描述
 * 复现步骤
@@ -43,7 +43,7 @@
 * 在您机器上执行的钩子脚本
 * 安装/卸载/修复生命周期脚本
 * 随 ECC 分发的 MCP 配置
-* AgentShield 安全扫描器 ([github.com/affaan-m/agentshield](https://github.com/affaan-m/agentshield))
+* AgentShield 安全扫描器 ([github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield))
 
 ## 安全资源
 

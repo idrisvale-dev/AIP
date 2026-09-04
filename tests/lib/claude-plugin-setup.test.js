@@ -139,7 +139,7 @@ function officialMarketplace(scope = 'user') {
   return {
     name: 'ecc',
     source: 'github',
-    repo: 'affaan-m/ECC',
+    repo: 'reborncursed/AIP',
     scope,
   };
 }
@@ -218,11 +218,11 @@ test('marketplace provenance is validated according to its source type', () => {
   assert.strictEqual(isOfficialMarketplace({
     name: 'ecc',
     source: 'git',
-    url: 'https://github.com/affaan-m/ECC.git',
+    url: 'https://github.com/reborncursed/AIP.git',
   }), true);
   for (const url of [
-    'affaan-m/ECC',
-    'http://github.com/affaan-m/ECC.git',
+    'reborncursed/AIP',
+    'http://github.com/reborncursed/AIP.git',
   ]) {
     assert.strictEqual(isOfficialMarketplace({
       name: 'ecc',
@@ -633,7 +633,7 @@ test('dry-run snapshots local-scope inventory into isolated Claude and project r
     }, null, 2)}\n`);
     fs.writeFileSync(marketplacesPath, `${JSON.stringify({
       ecc: {
-        source: { source: 'github', repo: 'affaan-m/ECC' },
+        source: { source: 'github', repo: 'reborncursed/AIP' },
       },
     }, null, 2)}\n`);
 

@@ -14,7 +14,7 @@ ECCでセキュリティ脆弱性を発見した場合は、責任ある方法�
 
 **セキュリティ脆弱性についてGitHubの公開Issueを作成しないでください。**
 
-代わりに、**<security@ecc.tools>** に以下を含むメールを送信してください：
+代わりに、**<security@bytecore.org>** に以下を含むメールを送信してください：
 
 - 脆弱性の説明
 - 再現手順
@@ -43,7 +43,7 @@ ECCでセキュリティ脆弱性を発見した場合は、責任ある方法�
 - あなたのマシンで実行されるフックスクリプト
 - インストール/アンインストール/修復ライフサイクルスクリプト
 - ECCに同梱されるMCP設定
-- AgentShieldセキュリティスキャナー（[github.com/affaan-m/agentshield](https://github.com/affaan-m/agentshield)）
+- AgentShieldセキュリティスキャナー（[github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield)）
 
 ## 運用ガイダンス
 

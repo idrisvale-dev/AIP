@@ -261,7 +261,7 @@ v2はv1と完全に互換性があります：
 
 - [Skill Creator](https://skill-creator.app) - リポジトリ履歴からインスティンクトを生成
 - Homunculus - v2アーキテクチャのインスピレーション（アトミック観察、信頼度スコアリング、インスティンクト進化パイプライン）
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - 継続的学習セクション
+- [The Longform Guide](https://bytecore.org/status/2014040193557471352) - 継続的学習セクション
 
 ---
 

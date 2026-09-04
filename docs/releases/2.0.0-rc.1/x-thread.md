@@ -100,16 +100,16 @@ The deeper local integrations stay local until they are sanitized. The GitHub pr
 14/ Start here:
 
 Repo:
-<https://github.com/affaan-m/ECC>
+<https://github.com/reborncursed/AIP>
 
 Hermes x ECC setup:
-<https://github.com/affaan-m/ECC/blob/main/docs/HERMES-SETUP.md>
+<https://github.com/reborncursed/AIP/blob/main/docs/HERMES-SETUP.md>
 
 15/ Release notes:
-<https://github.com/affaan-m/ECC/blob/main/docs/releases/2.0.0-rc.1/release-notes.md>
+<https://github.com/reborncursed/AIP/blob/main/docs/releases/2.0.0-rc.1/release-notes.md>
 
 Itô skill pack boundary:
-<https://github.com/affaan-m/ECC/blob/main/docs/releases/2.0.0-rc.1/ito-prediction-market-skill-pack.md>
+<https://github.com/reborncursed/AIP/blob/main/docs/releases/2.0.0-rc.1/ito-prediction-market-skill-pack.md>
 
 URL ledger:
-<https://github.com/affaan-m/ECC/blob/main/docs/releases/2.0.0-rc.1/release-url-ledger-2026-05-19.md>
+<https://github.com/reborncursed/AIP/blob/main/docs/releases/2.0.0-rc.1/release-url-ledger-2026-05-19.md>

@@ -1,6 +1,6 @@
 # ECC 2.2 launch and rollback runbook
 
-Affaan is the only release operator for ECC 2.2. Everyone else may prepare,
+ByteCore is the only release operator for ECC 2.2. Everyone else may prepare,
 review, and verify the release candidate, but must not merge the release PR,
 create or push `v2.2.0`, change npm dist-tags, or publish the GitHub Release.
 
@@ -16,7 +16,7 @@ The native Claude marketplace install remains an independent install path
 throughout the npm rollout:
 
 ```text
-/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin marketplace add https://github.com/reborncursed/AIP
 /plugin install ecc@ecc
 ```
 
@@ -30,7 +30,7 @@ Before merge, confirm all of these:
 npm view ecc-universal dist-tags --json
 npm view ecc-universal@2.1.0 dist.integrity
 curl -fsSIL https://registry.npmjs.org/ecc-universal/-/ecc-universal-2.1.0.tgz
-gh release view v2.1.0 --repo affaan-m/ECC
+gh release view v2.1.0 --repo reborncursed/AIP
 ```
 
 Expected:
@@ -44,7 +44,7 @@ The published 2.1 Cursor adapter can report one non-blocking doctor warning for
 an adapted Markdown link. This does not prevent installation or uninstall. ECC
 2.2 corrects the packed lifecycle and doctor behavior.
 
-## Preflight before Affaan merges
+## Preflight before ByteCore merges
 
 1. PR #2863 must be mergeable and all required hosted checks must pass.
 2. The full local suite, npm audit, IOC scan, and exact packed lifecycle must
@@ -58,7 +58,7 @@ an adapted Markdown link. This does not prevent installation or uninstall. ECC
 
 ## The release switch
 
-After Affaan merges PR #2863, wait for CI on the exact `origin/main` commit.
+After ByteCore merges PR #2863, wait for CI on the exact `origin/main` commit.
 From a clean, current `main` checkout:
 
 ```bash
@@ -71,7 +71,7 @@ git rev-parse origin/main
 ```
 
 The two commit IDs must match and `git status --short` must print nothing.
-Affaan then creates and pushes the signed release tag:
+ByteCore then creates and pushes the signed release tag:
 
 ```bash
 git tag -s v2.2.0 -m "ECC 2.2.0" HEAD
@@ -96,7 +96,7 @@ After the workflow succeeds:
 ```bash
 npm view ecc-universal dist-tags --json
 npm view ecc-universal@2.2.0 version dist.integrity
-gh release view v2.2.0 --repo affaan-m/ECC
+gh release view v2.2.0 --repo reborncursed/AIP
 npx --yes ecc-universal@2.2.0 setup --help
 npx --yes ecc-universal@latest setup --help
 ```
@@ -115,7 +115,7 @@ install as critical.
 
 ## Rollback
 
-If 2.2.0 has an install-critical regression, Affaan or another authorized npm
+If 2.2.0 has an install-critical regression, ByteCore or another authorized npm
 owner restores the known installable fallback immediately:
 
 ```bash
@@ -124,7 +124,7 @@ npm view ecc-universal dist-tags --json
 ECC_ROLLBACK_ROOT=$(mktemp -d)
 npm install --ignore-scripts --prefix "$ECC_ROLLBACK_ROOT" ecc-universal@2.1.0
 node "$ECC_ROLLBACK_ROOT/node_modules/ecc-universal/scripts/ecc.js" --help
-gh release edit v2.1.0 --repo affaan-m/ECC --latest
+gh release edit v2.1.0 --repo reborncursed/AIP --latest
 ```
 
 Then open a release incident, state that 2.2.0 remains available only by exact

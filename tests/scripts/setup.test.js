@@ -197,7 +197,7 @@ test('an existing install without --scope updates its detected scope', () => {
     marketplaces: [{
       name: 'ecc',
       source: 'github',
-      repo: 'affaan-m/ECC',
+      repo: 'reborncursed/AIP',
       scope: 'project',
     }],
   }, fixture => {
@@ -366,7 +366,7 @@ test('setup automatically migrates an existing install to the selected scope and
     marketplaces: [{
       name: 'ecc',
       source: 'github',
-      repo: 'affaan-m/ECC',
+      repo: 'reborncursed/AIP',
       scope: 'local',
     }],
   }, fixture => {
@@ -416,7 +416,7 @@ test('setup resumes a safe two-scope migration without requiring --move-scope', 
     marketplaces: [{
       name: 'ecc',
       source: 'github',
-      repo: 'affaan-m/ECC',
+      repo: 'reborncursed/AIP',
       scope: 'user',
     }],
   }, fixture => {
@@ -452,7 +452,7 @@ test('all interrupted migration and hook combinations resume without reinstallin
           marketplaces: [{
             name: 'ecc',
             source: 'github',
-            repo: 'affaan-m/ECC',
+            repo: 'reborncursed/AIP',
             scope: destinationScope,
           }],
         }, fixture => {
@@ -562,7 +562,7 @@ test('migration dry-run JSON exposes ordered actions without mutation', () => {
     marketplaces: [{
       name: 'ecc',
       source: 'github',
-      repo: 'affaan-m/ECC',
+      repo: 'reborncursed/AIP',
       scope: 'user',
     }],
   }, fixture => {
@@ -592,7 +592,7 @@ test('migration JSON failures retain phase, scopes, and exact recovery', () => {
     marketplaces: [{
       name: 'ecc',
       source: 'github',
-      repo: 'affaan-m/ECC',
+      repo: 'reborncursed/AIP',
       scope: 'user',
     }],
     failures: [{
@@ -683,7 +683,7 @@ test('confirmed interactive apply clears and stops the spinner when apply throws
     failures: [{
       argv: [
         'plugin', 'marketplace', 'add',
-        'https://github.com/affaan-m/ECC',
+        'https://github.com/reborncursed/AIP',
         '--scope', 'user',
       ],
       status: 8,
@@ -752,7 +752,7 @@ test('all interactive choices from an existing install update or migrate to the 
           marketplaces: [{
             name: 'ecc',
             source: 'github',
-            repo: 'affaan-m/ECC',
+            repo: 'reborncursed/AIP',
             scope: sourceScope,
           }],
         }, fixture => {
@@ -900,7 +900,7 @@ test('interactive defaults preserve an existing install scope and hook preferenc
     marketplaces: [{
       name: 'ecc',
       source: 'github',
-      repo: 'affaan-m/ECC',
+      repo: 'reborncursed/AIP',
       scope: 'local',
     }],
   }, fixture => {
@@ -936,7 +936,7 @@ test('partial migration requires an explicit destination and preserves stored ho
     marketplaces: [{
       name: 'ecc',
       source: 'github',
-      repo: 'affaan-m/ECC',
+      repo: 'reborncursed/AIP',
       scope: 'user',
     }],
   }, fixture => {

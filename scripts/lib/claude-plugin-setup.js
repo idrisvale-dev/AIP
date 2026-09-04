@@ -20,8 +20,8 @@ const {
 } = require('./install/inventory');
 
 const OFFICIAL_MARKETPLACE_NAME = 'ecc';
-const OFFICIAL_MARKETPLACE_REPO = 'affaan-m/ecc';
-const OFFICIAL_MARKETPLACE_URL = 'https://github.com/affaan-m/ECC';
+const OFFICIAL_MARKETPLACE_REPO = 'reborncursed/AIP';
+const OFFICIAL_MARKETPLACE_URL = 'https://github.com/reborncursed/AIP';
 const PROVIDER_COMMAND_TIMEOUT_MS = 120 * 1000;
 const VALID_SCOPES = new Set(['user', 'project', 'local']);
 const VALID_HOOK_MODES = new Set(['off', 'minimal', 'standard', 'strict']);
@@ -505,7 +505,7 @@ function ensureOfficialMarketplace(options) {
   if (existing && !isOfficialMarketplace(existing)) {
     fail(
       'MARKETPLACE_COLLISION',
-      'Refusing the `ecc` marketplace collision because it is not the official affaan-m/ECC source.'
+      'Refusing the `ecc` marketplace collision because it is not the official reborncursed/AIP source.'
     );
   }
 
@@ -633,7 +633,7 @@ function setupClaudePlugin(options = {}, dependencies = {}) {
   if (namedMarketplace && !isOfficialMarketplace(namedMarketplace)) {
     fail(
       'MARKETPLACE_COLLISION',
-      'Refusing the `ecc` marketplace collision because it is not the official affaan-m/ECC source.'
+      'Refusing the `ecc` marketplace collision because it is not the official reborncursed/AIP source.'
     );
   }
 

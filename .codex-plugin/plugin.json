@@ -3,12 +3,12 @@
   "version": "2.2.1",
   "description": "Harness-native ECC workflows for Codex: shared skills, production-ready MCP configs, and selective-install-aligned conventions for TDD, security scanning, code review, and autonomous development.",
   "author": {
-    "name": "Affaan Mustafa",
-    "email": "me@affaanmustafa.com",
-    "url": "https://x.com/affaanmustafa"
+    "name": "ByteCore.org",
+    "email": "hello@bytecore.org",
+    "url": "https://bytecore.org"
   },
-  "homepage": "https://ecc.tools",
-  "repository": "https://github.com/affaan-m/ECC",
+  "homepage": "https://bytecore.org",
+  "repository": "https://github.com/reborncursed/AIP",
   "license": "MIT",
   "keywords": [
     "codex",
@@ -27,14 +27,14 @@
     "displayName": "ECC",
     "shortDescription": "281 ECC skills plus MCP configs for TDD, security, code review, and autonomous development.",
     "longDescription": "ECC is a harness-native operator system for Codex and adjacent agent harnesses. It packages reusable skills, MCP configs, TDD workflows, security scanning, code review, architecture decisions, operator workflows, and release gates in one installable plugin.",
-    "developerName": "Affaan Mustafa",
+    "developerName": "ByteCore.org",
     "category": "Coding",
     "capabilities": [
       "Interactive",
       "Read",
       "Write"
     ],
-    "websiteURL": "https://ecc.tools",
+    "websiteURL": "https://bytecore.org",
     "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
     "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
     "brandColor": "#E07856",

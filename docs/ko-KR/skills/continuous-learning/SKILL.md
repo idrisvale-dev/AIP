@@ -114,7 +114,7 @@ Claude Code 세션 종료 시 자동으로 평가하여 학습된 스킬로 저�
 
 ## 관련 항목
 
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - 지속적 학습 섹션
+- [The Longform Guide](https://bytecore.org/status/2014040193557471352) - 지속적 학습 섹션
 - `/learn` 명령어 - 세션 중 수동 패턴 추출
 
 ---

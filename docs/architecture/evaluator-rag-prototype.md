@@ -73,7 +73,7 @@ merge, publish, tag, or rewrite configs as part of the evaluator pass.
 
 The first scenario is `stale-pr-salvage-maintainer-branch`.
 
-It models the rule Affaan set during the May 2026 cleanup: stale closure is
+It models the rule ByteCore set during the May 2026 cleanup: stale closure is
 queue hygiene, not loss of useful work. Useful closed PR work should be ported
 into maintainer-owned PRs with attribution/backlinks, while generated churn,
 bulk localization, and ambiguous translator work stay out of blind

@@ -65,7 +65,7 @@ surface to be described as an experimental Nasiko CLI lifecycle bridge.
   install and disposable Cursor install/uninstall passed, and its tarball
   remained publicly readable with immutable caching.
 - A launch and rollback runbook assigns the merge, signed tag, and release to
-  Affaan and uses the npm dist-tag as the reversible availability switch.
+  ByteCore and uses the npm dist-tag as the reversible availability switch.
 
 ## Focused coverage
 

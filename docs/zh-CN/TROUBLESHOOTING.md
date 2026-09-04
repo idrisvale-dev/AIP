@@ -282,7 +282,7 @@ claude --version
 # Requires Claude Code 2.0+
 
 # Manual install (if marketplace fails)
-git clone https://github.com/affaan-m/everything-claude-code.git
+git clone https://github.com/reborncursed/AIP.git
 cp -r everything-claude-code ~/.claude/plugins/ecc
 ```
 
@@ -420,7 +420,7 @@ find ~/.claude/plugins -name "*.sh" -exec dos2unix {} \;
 
 如果您仍然遇到问题：
 
-1. **检查 GitHub Issues**：[github.com/affaan-m/everything-claude-code/issues](https://github.com/affaan-m/everything-claude-code/issues)
+1. **检查 GitHub Issues**：[github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
 2. **启用调试日志记录**：
    ```bash
    export CLAUDE_DEBUG=1

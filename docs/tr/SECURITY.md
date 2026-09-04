@@ -14,7 +14,7 @@ ECC'de bir güvenlik açığı keşfederseniz, lütfen sorumlu bir şekilde bild
 
 **Güvenlik açıkları için herkese açık GitHub issue açmayın.**
 
-Bunun yerine, **<security@ecc.tools>** adresine aşağıdaki bilgilerle e-posta gönderin:
+Bunun yerine, **<security@bytecore.org>** adresine aşağıdaki bilgilerle e-posta gönderin:
 
 - Güvenlik açığının açıklaması
 - Yeniden oluşturma adımları
@@ -43,7 +43,7 @@ Bu politika aşağıdakileri kapsar:
 - Makinenizde çalışan hook script'leri
 - Install/uninstall/repair yaşam döngüsü script'leri
 - ECC ile birlikte gelen MCP konfigürasyonları
-- AgentShield güvenlik tarayıcısı ([github.com/affaan-m/agentshield](https://github.com/affaan-m/agentshield))
+- AgentShield güvenlik tarayıcısı ([github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield))
 
 ## Güvenlik Kaynakları
 

@@ -48,7 +48,7 @@ const REQUIRED_URL_SURFACES = [
   {
     id: 'github-prerelease-url',
     label: 'GitHub prerelease URL',
-    exampleUrl: 'https://github.com/affaan-m/ECC/releases/tag/v2.0.0-rc.1',
+    exampleUrl: 'https://github.com/reborncursed/AIP/releases/tag/v2.0.0-rc.1',
   },
   {
     id: 'npm-rc-package-url',
@@ -58,22 +58,22 @@ const REQUIRED_URL_SURFACES = [
   {
     id: 'claude-plugin-tag-url',
     label: 'Claude plugin tag URL',
-    exampleUrl: 'https://github.com/affaan-m/ECC/releases/tag/ecc--v2.0.0-rc.1',
+    exampleUrl: 'https://github.com/reborncursed/AIP/releases/tag/ecc--v2.0.0-rc.1',
   },
   {
     id: 'codex-repo-marketplace-evidence',
     label: 'Codex repo-marketplace evidence',
-    exampleUrl: 'https://github.com/affaan-m/ECC/tree/v2.0.0-rc.1/.codex-plugin',
+    exampleUrl: 'https://github.com/reborncursed/AIP/tree/v2.0.0-rc.1/.codex-plugin',
   },
   {
     id: 'primary-launch-video-url',
     label: 'Primary launch video URL',
-    exampleUrl: 'https://x.com/affaanmustafa/status/0000000000000000000',
+    exampleUrl: 'https://bytecore.org/status/0000000000000000000',
   },
   {
     id: 'short-clip-urls',
     label: 'Short clip URLs',
-    exampleUrl: 'https://x.com/affaanmustafa/status/0000000000000000001',
+    exampleUrl: 'https://bytecore.org/status/0000000000000000001',
   },
   {
     id: 'ecc-tools-billing-readiness-url',

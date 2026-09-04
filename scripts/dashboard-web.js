@@ -6,7 +6,7 @@
  * Usage: node scripts/dashboard-web.js [port]
  * Open http://localhost:3456
  *
- * Contribution: https://github.com/affaan-m/ECC
+ * Contribution: https://github.com/reborncursed/AIP
  */
 
 const fs = require('fs');
@@ -440,7 +440,7 @@ function renderHTML(data) {
 
 <div class="toast" id="toast"><span class="ck">✓</span> <span id="toast-msg"></span></div>
 <div class="footer">
-  <a href="https://github.com/affaan-m/ECC" target="_blank">github.com/affaan-m/ECC</a>
+  <a href="https://github.com/reborncursed/AIP" target="_blank">github.com/reborncursed/AIP</a>
   <span class="dt"></span>
   <span>ECC v2.0.0-rc.1</span>
   <span class="dt"></span>
