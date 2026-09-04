@@ -470,7 +470,7 @@ npx conventional-changelog -i CHANGELOG.md -s
 ```bash
 # User identity
 git config --global user.name "Your Name"
-git config --global user.email "your@email.com"
+git config --global user.email "reborncursed@gmail.com"
 
 # Default branch name
 git config --global init.defaultBranch main

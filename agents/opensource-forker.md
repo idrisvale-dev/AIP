@@ -114,7 +114,7 @@ key-[A-Za-z0-9]{32}
 | Secret file references `~/.secrets/` | `.env` |
 | Private IPs `192.168.x.x`, `10.x.x.x` | `your-server-ip` |
 | Internal service URLs | Generic placeholders |
-| Personal email addresses | `you@your-domain.com` |
+| Personal email addresses | `reborncursed@gmail.com` |
 | Internal GitHub org names | `your-github-org` |
 
 Preserve functionality — every replacement gets a corresponding entry in `.env.example`.

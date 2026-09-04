@@ -85,7 +85,7 @@ Add `jira` to your `mcpServers` config (see `mcp-configs/mcp-servers.json` for t
 **Option B — Environment variables:**
 ```bash
 export JIRA_URL="https://yourorg.atlassian.net"
-export JIRA_EMAIL="your.email@example.com"
+export JIRA_EMAIL="reborncursed@gmail.com"
 export JIRA_API_TOKEN="your-api-token"
 ```
 

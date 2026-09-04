@@ -108,7 +108,7 @@ key-[A-Za-z0-9]{32}
 | 机密文件引用 `~/.secrets/` | `.env` |
 | 私有 IP `192.168.x.x`、`10.x.x.x` | `your-server-ip` |
 | 内部服务 URL | 通用占位符 |
-| 个人邮箱地址 | `you@your-domain.com` |
+| 个人邮箱地址 | `reborncursed@gmail.com` |
 | 内部 GitHub 组织名 | `your-github-org` |
 
 保留功能完整性——每次替换都需在 `.env.example` 中有对应条目。

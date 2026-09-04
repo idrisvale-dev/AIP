@@ -114,7 +114,7 @@ key-[A-Za-z0-9]{32}
 | シークレットファイル参照 `~/.secrets/` | `.env` |
 | プライベートIP `192.168.x.x`、`10.x.x.x` | `your-server-ip` |
 | 内部サービスURL | 汎用プレースホルダー |
-| 個人メールアドレス | `you@your-domain.com` |
+| 個人メールアドレス | `reborncursed@gmail.com` |
 | 内部GitHub組織名 | `your-github-org` |
 
 機能を保持する — すべての置換に対応する`.env.example`のエントリを作成する。
