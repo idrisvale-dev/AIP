@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.report.v1",
+  "schema_version": "aip.evaluator-rag.report.v1",
   "scenario_id": "agentshield-policy-exception",
   "run_id": "2026-05-12-agentshield-policy-exception-prototype",
   "result": "prototype_passed",

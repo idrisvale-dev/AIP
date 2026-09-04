@@ -1,7 +1,7 @@
 ---
 name: dart-flutter-patterns
 description: 本番環境対応のDartおよびFlutterパターンは、null安全性、不変状態、非同期構成、ウィジェットアーキテクチャ、人気のある状態管理フレームワーク（BLoC、Riverpod、Provider）、GoRouterナビゲーション、Dioネットワーキング、Freezedコード生成、クリーンアーキテクチャをカバー。
-origin: ECC
+origin: AIP
 ---
 
 # Dart/Flutterパターン

@@ -1,5 +1,5 @@
 ---
-description: Run the ECC formatter quality gate for a single file and report remediation steps.
+description: Run the AIP formatter quality gate for a single file and report remediation steps.
 ---
 
 # Quality Gate Command
@@ -14,8 +14,8 @@ The gate is a single-file formatter check driven by hook input, not CLI flags:
 - The script reads the target from the hook's stdin JSON
   (`tool_input.file_path`); it does not take a path argument.
 - Behavior toggles are environment variables:
-  - `ECC_QUALITY_GATE_FIX=true` - apply formatting fixes instead of check-only
-  - `ECC_QUALITY_GATE_STRICT=true` - log formatter failures as gate failures
+  - `AIP_QUALITY_GATE_FIX=true` - apply formatting fixes instead of check-only
+  - `AIP_QUALITY_GATE_STRICT=true` - log formatter failures as gate failures
 - Coverage by file type:
   - `.ts/.tsx/.js/.jsx/.json/.md` - Biome `check` or Prettier `--check`,
     whichever the project ships (JS/TS under Biome is skipped here because
@@ -32,7 +32,7 @@ script (set the env toggles first if you want fix or strict behavior):
 
 ```bash
 echo '{"tool_input":{"file_path":"src/example.ts"}}' \
-  | ECC_QUALITY_GATE_FIX=true node scripts/hooks/quality-gate.js
+  | AIP_QUALITY_GATE_FIX=true node scripts/hooks/quality-gate.js
 ```
 
 Then report formatter findings and concrete remediation steps.

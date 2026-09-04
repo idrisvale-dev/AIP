@@ -1,16 +1,16 @@
-# X Thread Draft - ECC v2.0.0-rc.1
+# X Thread Draft - AIP v2.0.0-rc.1
 
-1/ ECC v2.0.0-rc.1 is the first release-candidate pass at the 2.0 direction.
+1/ AIP v2.0.0-rc.1 is the first release-candidate pass at the 2.0 direction.
 
 The repo is moving from a Claude Code config pack into a meta-harness for
 agentic work.
 
 2/ The important split:
 
-ECC is the reusable substrate.
+AIP is the reusable substrate.
 Hermes is the operator shell that can run on top.
 
-Skills, hooks, MCP configs, rules, and workflow packs live in ECC.
+Skills, hooks, MCP configs, rules, and workflow packs live in AIP.
 
 3/ A meta-harness matters because the agent layer is fragmenting.
 
@@ -25,7 +25,7 @@ workflows all need similar operating primitives:
 - release evidence
 - security checks
 
-4/ ECC gives those primitives a shared shape instead of leaving every workflow
+4/ AIP gives those primitives a shared shape instead of leaving every workflow
 stuck inside one client.
 
 Use the harness you like. Keep the workflow layer portable.
@@ -57,7 +57,7 @@ The Mini Shai-Hulud/TanStack campaign forced a real supply-chain loop:
 8/ It also adds the public teaser surface for the Itô prediction-market skill
 pack.
 
-That is separate from ECC Tools billing and Itô remains a separate business.
+That is separate from AIP Tools billing and Itô remains a separate business.
 
 The public skills are research, comparison, planning, and risk review.
 
@@ -85,7 +85,7 @@ Most agent systems fail in the daily operating loop.
 
 They can code, but they do not keep research, content, handoffs, reminders, and execution in one measurable surface.
 
-12/ ECC gives the reusable layer.
+12/ AIP gives the reusable layer.
 
 Hermes gives the operator shell.
 
@@ -102,7 +102,7 @@ The deeper local integrations stay local until they are sanitized. The GitHub pr
 Repo:
 <https://github.com/reborncursed/AIP>
 
-Hermes x ECC setup:
+Hermes x AIP setup:
 <https://github.com/reborncursed/AIP/blob/main/docs/HERMES-SETUP.md>
 
 15/ Release notes:

@@ -1,7 +1,7 @@
 ---
 name: frontend-patterns
 description: React, Next.js, 상태 관리, 성능 최적화 및 UI 모범 사례를 위한 프론트엔드 개발 패턴.
-origin: ECC
+origin: AIP
 ---
 
 # 프론트엔드 개발 패턴

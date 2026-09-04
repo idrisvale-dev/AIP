@@ -28,7 +28,7 @@ function runHook(stateDir) {
   return spawnSync('node', [HOOK], {
     encoding: 'utf8',
     input: '{}',
-    env: { ...process.env, ECC_PLAN_CANVAS_STATE_DIR: stateDir }
+    env: { ...process.env, AIP_PLAN_CANVAS_STATE_DIR: stateDir }
   });
 }
 

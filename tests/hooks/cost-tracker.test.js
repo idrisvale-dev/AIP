@@ -251,8 +251,8 @@ function runTests() {
     fs.rmSync(tmpHome, { recursive: true, force: true });
   }) ? passed++ : failed++);
 
-  // 6. Prefers ECC_SESSION_ID for ECC2 session correlation
-  (test('prefers ECC_SESSION_ID over CLAUDE_SESSION_ID when both are present', () => {
+  // 6. Prefers AIP_SESSION_ID for AIP2 session correlation
+  (test('prefers AIP_SESSION_ID over CLAUDE_SESSION_ID when both are present', () => {
     const tmpHome = makeTempDir();
     const input = {
       model: 'claude-sonnet-4-20250514',
@@ -260,14 +260,14 @@ function runTests() {
     };
     const result = runScript(input, {
       ...withTempHome(tmpHome),
-      ECC_SESSION_ID: 'ecc-session-1234',
+      AIP_SESSION_ID: 'aip-session-1234',
       CLAUDE_SESSION_ID: 'claude-session-9999',
     });
     assert.strictEqual(result.code, 0, `Expected exit code 0, got ${result.code}`);
 
     const metricsFile = path.join(tmpHome, '.claude', 'metrics', 'costs.jsonl');
     const row = JSON.parse(fs.readFileSync(metricsFile, 'utf8').trim());
-    assert.strictEqual(row.session_id, 'ecc-session-1234', 'Expected ECC_SESSION_ID to win');
+    assert.strictEqual(row.session_id, 'aip-session-1234', 'Expected AIP_SESSION_ID to win');
 
     fs.rmSync(tmpHome, { recursive: true, force: true });
   }) ? passed++ : failed++);
@@ -282,7 +282,7 @@ function runTests() {
     };
     const result = runScript(input, {
       ...withTempHome(tmpHome),
-      ECC_SESSION_ID: '',
+      AIP_SESSION_ID: '',
       CLAUDE_SESSION_ID: '',
     });
     assert.strictEqual(result.code, 0, `Expected exit code 0, got ${result.code}`);

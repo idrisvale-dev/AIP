@@ -1,7 +1,7 @@
 ---
 name: autonomous-loops
 description: "Patterns and architectures for autonomous Claude Code loops — from simple sequential pipelines to RFC-driven multi-agent DAG systems."
-origin: ECC
+origin: AIP
 ---
 
 # Autonomous Loops Skill
@@ -108,7 +108,7 @@ claude -p --allowedTools "Read,Write,Edit,Bash" "Implement the fixes from securi
 
 ## 2. NanoClaw REPL
 
-**ECC's built-in persistent loop.** A session-aware REPL that calls `claude -p` synchronously with full conversation history.
+**AIP's built-in persistent loop.** A session-aware REPL that calls `claude -p` synchronously with full conversation history.
 
 ```bash
 # Start the default session
@@ -568,7 +568,7 @@ These patterns compose well:
 
 2. **Continuous Claude + De-Sloppify** — Add `--review-prompt` with a de-sloppify directive to each iteration.
 
-3. **Any loop + Verification** — Use ECC's `/verify` command or `verification-loop` skill as a gate before commits.
+3. **Any loop + Verification** — Use AIP's `/verify` command or `verification-loop` skill as a gate before commits.
 
 4. **Ralphinho's tiered approach in simpler loops** — Even in a sequential pipeline, you can route simple tasks to Haiku and complex tasks to Opus:
    ```bash
@@ -606,5 +606,5 @@ These patterns compose well:
 | Ralphinho | enitrat | credit: @enitrat |
 | Infinite Agentic Loop | disler | credit: @disler |
 | Continuous Claude | AnandChowdhary | credit: @AnandChowdhary |
-| NanoClaw | ECC | `/claw` command in this repo |
-| Verification Loop | ECC | `skills/verification-loop/` in this repo |
+| NanoClaw | AIP | `/claw` command in this repo |
+| Verification Loop | AIP | `skills/verification-loop/` in this repo |

@@ -18,7 +18,7 @@ const {
   summarizeProjectedInstallHealth,
 } = require('./install-state-projection');
 
-const DEFAULT_STATE_STORE_RELATIVE_PATH = path.join('.claude', 'ecc', 'state.db');
+const DEFAULT_STATE_STORE_RELATIVE_PATH = path.join('.claude', 'aip', 'state.db');
 const PRIVATE_DIRECTORY_MODE = 0o700;
 const PRIVATE_FILE_MODE = 0o600;
 

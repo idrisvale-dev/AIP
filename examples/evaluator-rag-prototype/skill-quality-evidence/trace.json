@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.trace.v1",
+  "schema_version": "aip.evaluator-rag.trace.v1",
   "scenario_id": "skill-quality-evidence",
   "run_id": "2026-05-12-skill-quality-evidence-prototype",
   "read_only": true,

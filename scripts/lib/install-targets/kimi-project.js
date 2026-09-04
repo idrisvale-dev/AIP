@@ -49,7 +49,7 @@ module.exports = createInstallTargetAdapter({
   target: 'kimi',
   kind: 'project',
   rootSegments: ['.kimi-code'],
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   nativeRootRelativePath: '.kimi-code',
   planOperations(input, adapter) {
     const modules = Array.isArray(input.modules)

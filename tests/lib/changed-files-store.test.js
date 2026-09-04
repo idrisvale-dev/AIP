@@ -52,11 +52,11 @@ async function runTests() {
     test('recordChange with relative path stores as-is when under worktree', () => {
       clearChanges()
       initStore(worktree)
-      recordChange('plugins/ecc-hooks.ts', 'modified')
+      recordChange('plugins/aip-hooks.ts', 'modified')
       const m = getChanges()
       assert.strictEqual(m.size, 1)
       const key = [...m.keys()][0]
-      assert.ok(key.includes('ecc-hooks'))
+      assert.ok(key.includes('aip-hooks'))
     })
   )
     passed++

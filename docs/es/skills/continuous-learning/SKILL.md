@@ -1,7 +1,7 @@
 ---
 name: continuous-learning
 description: "[OBSOLETO - usar continuous-learning-v2] Extractor de skill por hook Stop v1 heredado. v2 es un superconjunto estricto con aprendizaje basado en instintos, con alcance de proyecto y hooks confiables. No invocar v1; dirigir solicitudes de aprendizaje continuo, aprendizaje de sesión y extracción de patrones a continuous-learning-v2."
-origin: ECC
+origin: AIP
 ---
 
 # Skill de Aprendizaje Continuo - OBSOLETO

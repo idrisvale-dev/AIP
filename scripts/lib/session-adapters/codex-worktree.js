@@ -307,7 +307,7 @@ function createCodexWorktreeAdapter(options = {}) {
 
   return {
     id: 'codex-worktree',
-    description: 'Codex rollout sessions running in git worktrees, normalized to ecc.session.v1',
+    description: 'Codex rollout sessions running in git worktrees, normalized to aip.session.v1',
     targetTypes: ['codex-worktree', 'codex'],
     canOpen(target, context = {}) {
       if (context.adapterId && context.adapterId !== 'codex-worktree') {

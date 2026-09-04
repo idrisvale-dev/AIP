@@ -12,12 +12,12 @@ function resolveProjectDir(candidate) {
     || !path.posix.isAbsolute(candidate)
     || /[\0\r\n]/.test(candidate)
   ) {
-    throw new Error('ECC_PROJECT_DIR must be an absolute path within /workspace.');
+    throw new Error('AIP_PROJECT_DIR must be an absolute path within /workspace.');
   }
 
   const resolved = path.posix.resolve(candidate);
   if (resolved === WORKSPACE_ROOT || !resolved.startsWith(`${WORKSPACE_ROOT}/`)) {
-    throw new Error('ECC_PROJECT_DIR must be a child path within /workspace.');
+    throw new Error('AIP_PROJECT_DIR must be a child path within /workspace.');
   }
   return resolved;
 }

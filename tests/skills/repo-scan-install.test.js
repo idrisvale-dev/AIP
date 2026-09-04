@@ -32,7 +32,7 @@ const skillFiles = [
   }
 ];
 const pinnedCommit = '2742664ebcad1450c208eda0ae45d3c17fad5dd8';
-const bashBinary = process.env.ECC_TEST_BASH || (process.platform === 'win32' ? null : 'bash');
+const bashBinary = process.env.AIP_TEST_BASH || (process.platform === 'win32' ? null : 'bash');
 
 function run(command, args, options = {}) {
   return spawnSync(command, args, {
@@ -225,7 +225,7 @@ function assertInstallationResult({ result, scenario, installDir, installParent 
 }
 
 function executeInstallation(block, scenario) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-repo-scan-install-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-repo-scan-install-'));
   try {
     const sourceRepo = createLocalSource(root);
     const binDir = createCommandShims(root);
@@ -346,7 +346,7 @@ if (bashBinary) {
     }
   }
 } else {
-  console.log('  Integration coverage skipped on Windows without ECC_TEST_BASH');
+  console.log('  Integration coverage skipped on Windows without AIP_TEST_BASH');
 }
 
 console.log(`  Passed: ${passed}`);

@@ -75,10 +75,10 @@
 
 ```bash
 # minimal | standard | strict (default: standard)
-export ECC_HOOK_PROFILE=standard
+export AIP_HOOK_PROFILE=standard
 
 # Disable specific hook IDs (comma-separated)
-export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
+export AIP_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 ```
 
 配置文件：

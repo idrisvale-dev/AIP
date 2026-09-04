@@ -1,7 +1,7 @@
 ---
 name: skill-comply
 description: 可视化技能、规则和代理定义是否被实际遵循——自动生成3种提示严格级别的场景，运行代理，分类行为序列，并报告完整工具调用时间线的合规率
-origin: ECC
+origin: AIP
 tools: Read, Bash
 ---
 

@@ -46,7 +46,7 @@ function digest(content) {
 
 function seedLegacyInstall(homeDir, options = {}) {
   const targetRoot = path.join(homeDir, '.opencode');
-  const installStatePath = path.join(targetRoot, 'ecc-install-state.json');
+  const installStatePath = path.join(targetRoot, 'aip-install-state.json');
   const destinationPath = path.join(targetRoot, SOURCE_RELATIVE_PATH);
   const sourceContent = fs.readFileSync(path.join(REPO_ROOT, SOURCE_RELATIVE_PATH));
   const installedContent = options.modified ? Buffer.from('user-modified\n') : sourceContent;
@@ -66,7 +66,7 @@ function seedLegacyInstall(homeDir, options = {}) {
   const operations = [operation];
   if (options.includeJsonOperation) {
     const configPath = path.join(targetRoot, 'opencode.json');
-    fs.writeFileSync(configPath, JSON.stringify({ plugin: ['ecc'] }, null, 2) + '\n');
+    fs.writeFileSync(configPath, JSON.stringify({ plugin: ['aip'] }, null, 2) + '\n');
     operations.push({
       kind: 'merge-json',
       moduleId: 'opencode-plugin',
@@ -75,7 +75,7 @@ function seedLegacyInstall(homeDir, options = {}) {
       strategy: 'merge-json',
       ownership: 'managed',
       scaffoldOnly: false,
-      mergePayload: { plugin: ['ecc'] },
+      mergePayload: { plugin: ['aip'] },
       previousExists: false,
       previousContent: null,
     });
@@ -193,7 +193,7 @@ test('a canonical install migrates unchanged legacy ownership', () => {
     const legacy = seedLegacyInstall(homeDir);
     const result = applyInstallPlan(canonicalPlan(homeDir));
     assert.ok(result.applied);
-    assert.ok(fs.existsSync(path.join(homeDir, '.config', 'opencode', 'ecc-install-state.json')));
+    assert.ok(fs.existsSync(path.join(homeDir, '.config', 'opencode', 'aip-install-state.json')));
     assert.ok(!fs.existsSync(legacy.installStatePath));
     assert.ok(!fs.existsSync(legacy.destinationPath));
   } finally {
@@ -210,7 +210,7 @@ test('a canonical install migrates legacy ownership when its config root is over
       OPENCODE_CONFIG_DIR: configRoot,
     }));
     assert.ok(result.applied);
-    assert.ok(fs.existsSync(path.join(configRoot, 'ecc-install-state.json')));
+    assert.ok(fs.existsSync(path.join(configRoot, 'aip-install-state.json')));
     assert.ok(!fs.existsSync(legacy.installStatePath));
     assert.ok(!fs.existsSync(legacy.destinationPath));
   } finally {
@@ -238,7 +238,7 @@ test('legacy non-file operations do not block canonical cleanup or repair', () =
       repairHome,
       '.config',
       'opencode',
-      'ecc-install-state.json'
+      'aip-install-state.json'
     );
     assert.strictEqual(result.summary.errorCount, 0, JSON.stringify(result));
     assert.ok(fs.existsSync(canonicalStatePath));
@@ -261,7 +261,7 @@ test('repair migrates a legacy install while preserving modified legacy files', 
       targets: ['opencode'],
     });
     assert.strictEqual(result.summary.errorCount, 0, JSON.stringify(result));
-    assert.ok(fs.existsSync(path.join(homeDir, '.config', 'opencode', 'ecc-install-state.json')));
+    assert.ok(fs.existsSync(path.join(homeDir, '.config', 'opencode', 'aip-install-state.json')));
     assert.strictEqual(fs.readFileSync(legacy.destinationPath, 'utf8'), 'user-modified\n');
     assert.ok(fs.existsSync(legacy.installStatePath));
   } finally {

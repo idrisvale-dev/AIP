@@ -103,7 +103,7 @@ Después de planificar:
 
 ## Agente Planificador Opcional
 
-ECC también proporciona un agente `planner` para instalaciones manuales que incluyen archivos de agente. Usarlo solo cuando el runtime local ya expone ese subagente y el usuario lo pide explícitamente.
+AIP también proporciona un agente `planner` para instalaciones manuales que incluyen archivos de agente. Usarlo solo cuando el runtime local ya expone ese subagente y el usuario lo pide explícitamente.
 
 El archivo fuente se encuentra en:
 `agents/planner.md`

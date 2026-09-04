@@ -3,7 +3,7 @@ name: growth-log
 description: "Use after a complex task, failure, or when reviewing what was learned. Teaches how to write growth logs that extract reusable patterns — not diary entries."
 metadata:
   version: 1.1.0
-  origin: ECC
+  origin: AIP
 ---
 
 # Growth Log Skill

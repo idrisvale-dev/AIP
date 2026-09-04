@@ -1,7 +1,7 @@
 ---
 name: cost-aware-llm-pipeline
 description: LLM APIの使用量のコスト最適化パターン — タスクの複雑さによるモデルルーティング、予算追跡、リトライロジック、プロンプトキャッシング。
-origin: ECC
+origin: AIP
 ---
 
 # コスト認識LLMパイプライン

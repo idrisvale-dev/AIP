@@ -14,9 +14,9 @@ function showHelp(exitCode = 0) {
   console.log(`
 Usage: node scripts/uninstall.js [--target <${SUPPORTED_INSTALL_TARGETS.join('|')}>] [--legacy-codex-sync] [--dry-run] [--json]
 
-Remove ECC-managed files recorded in install-state for the current context.
+Remove AIP-managed files recorded in install-state for the current context.
 When no install-state is found, the uninstaller also detects and removes
-legacy sync-ecc-to-codex.sh artifacts, but only when a legacy ownership
+legacy sync-aip-to-codex.sh artifacts, but only when a legacy ownership
 manifest is present. Use --legacy-codex-sync to force the legacy path
 explicitly, including marker-only AGENTS.md cleanup.
 `);
@@ -57,7 +57,7 @@ function parseArgs(argv) {
 
 function printHuman(result) {
   if (result.results.length === 0) {
-    console.log('No ECC install-state files found for the current home/project context.');
+    console.log('No AIP install-state files found for the current home/project context.');
     return;
   }
 

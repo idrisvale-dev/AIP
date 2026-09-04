@@ -241,10 +241,10 @@ function assertMergeDestination(destinationPath, existingSnapshot = null) {
   try {
     current = JSON.parse(snapshot.content.toString('utf8'));
   } catch (error) {
-    throw new Error(`Cannot merge ECC configuration into invalid JSON at ${destinationPath}: ${error.message}`);
+    throw new Error(`Cannot merge AIP configuration into invalid JSON at ${destinationPath}: ${error.message}`);
   }
   if (!current || typeof current !== 'object' || Array.isArray(current)) {
-    throw new Error(`Cannot merge ECC configuration at ${destinationPath}: expected a JSON object.`);
+    throw new Error(`Cannot merge AIP configuration at ${destinationPath}: expected a JSON object.`);
   }
   return current;
 }

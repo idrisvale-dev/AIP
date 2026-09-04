@@ -1,7 +1,7 @@
 ---
 name: security-bounty-hunter
 description: リポジトリ内の悪用可能なバウンティ対象のセキュリティ問題を発見します。ノイズの多いローカルのみの発見ではなく、実際のレポートに適格なリモートから到達可能な脆弱性に焦点を当てます。
-origin: ECC direct-port adaptation
+origin: AIP direct-port adaptation
 version: "1.0.0"
 ---
 

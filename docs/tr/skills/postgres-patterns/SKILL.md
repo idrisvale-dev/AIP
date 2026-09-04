@@ -1,7 +1,7 @@
 ---
 name: postgres-patterns
 description: Sorgu optimizasyonu, şema tasarımı, indeksleme ve güvenlik için PostgreSQL veritabanı kalıpları. Supabase en iyi uygulamalarına dayanır.
-origin: ECC
+origin: AIP
 ---
 
 # PostgreSQL Kalıpları

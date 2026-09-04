@@ -1,7 +1,7 @@
 ---
 name: laravel-patterns
 description: Patrones de arquitectura Laravel, routing/controladores, Eloquent ORM, capas de servicio, colas, eventos, caché y API resources para aplicaciones en producción.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Desarrollo Laravel

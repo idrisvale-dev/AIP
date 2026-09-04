@@ -1,7 +1,7 @@
 ---
 name: backend-patterns
 description: Node.js, Express, Next.js API 라우트를 위한 백엔드 아키텍처 패턴, API 설계, 데이터베이스 최적화 및 서버 사이드 모범 사례.
-origin: ECC
+origin: AIP
 ---
 
 # 백엔드 개발 패턴

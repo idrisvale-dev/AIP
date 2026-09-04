@@ -37,8 +37,8 @@ function test(name, fn) {
 }
 
 function writeRolloutFixture() {
-  const sessionsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-codex-sessions-'));
-  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-codex-worktree-'));
+  const sessionsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-codex-sessions-'));
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-codex-worktree-'));
   const dayDir = path.join(sessionsDir, '2026', '06', '02');
   fs.mkdirSync(dayDir, { recursive: true });
 
@@ -56,7 +56,7 @@ function writeRolloutFixture() {
     } },
     { type: 'response_item', timestamp: now, payload: {
       type: 'message', role: 'user',
-      content: [{ type: 'text', text: 'continue our ecc 2.0 session and build the codex-worktree adapter' }]
+      content: [{ type: 'text', text: 'continue our aip 2.0 session and build the codex-worktree adapter' }]
     } }
   ];
 
@@ -64,7 +64,7 @@ function writeRolloutFixture() {
   return { sessionsDir, repoRoot, rolloutPath };
 }
 
-test('normalizeCodexWorktreeSession produces a valid ecc.session.v1 snapshot', () => {
+test('normalizeCodexWorktreeSession produces a valid aip.session.v1 snapshot', () => {
   const snapshot = normalizeCodexWorktreeSession({
     sessionId: 'abc', sessionPath: '/tmp/r.jsonl', cwd: '/repo', branch: 'feat/x',
     objective: 'do the thing', model: 'gpt-5.5-codex', originator: 'Codex Desktop',
@@ -88,7 +88,7 @@ test('parseCodexTarget strips codex prefixes', () => {
 
 test('adapter reads latest rollout, skips preamble, derives objective + model', () => {
   const { sessionsDir, repoRoot, rolloutPath } = writeRolloutFixture();
-  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-codex-rec-'));
+  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-codex-rec-'));
 
   assert.strictEqual(findLatestRollout(sessionsDir), rolloutPath);
 
@@ -107,7 +107,7 @@ test('adapter reads latest rollout, skips preamble, derives objective + model', 
   assert.strictEqual(snapshot.workers[0].artifacts.model, 'gpt-5.5-codex');
   assert.strictEqual(
     snapshot.workers[0].intent.objective,
-    'continue our ecc 2.0 session and build the codex-worktree adapter'
+    'continue our aip 2.0 session and build the codex-worktree adapter'
   );
   assert.strictEqual(snapshot.aggregates.workerCount, 1);
   assert.strictEqual(snapshot.aggregates.states.active, 1);
@@ -115,7 +115,7 @@ test('adapter reads latest rollout, skips preamble, derives objective + model', 
 
 test('registry routes structured codex-worktree target and direct rollout path', () => {
   const { sessionsDir, repoRoot, rolloutPath } = writeRolloutFixture();
-  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-codex-reg-'));
+  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-codex-reg-'));
 
   const registry = createAdapterRegistry({
     recordingDir,
@@ -150,7 +150,7 @@ test('parseCodexTarget handles non-string and unprefixed input', () => {
 });
 
 test('adapter throws clear errors for missing sessions and unknown ids', () => {
-  const sessionsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-codex-empty-'));
+  const sessionsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-codex-empty-'));
   const adapter = createCodexWorktreeAdapter({ sessionsDir, loadStateStoreImpl: () => null });
   assert.throws(() => adapter.open('codex:latest', { cwd: os.tmpdir() }).getSnapshot(), /No Codex rollout sessions found/);
   assert.throws(() => adapter.open('codex:nope-not-real', { cwd: os.tmpdir() }).getSnapshot(), /not found/);
@@ -158,7 +158,7 @@ test('adapter throws clear errors for missing sessions and unknown ids', () => {
 });
 
 test('findRolloutById + direct file target + isCodexRolloutFileTarget', () => {
-  const sessionsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-codex-byid-'));
+  const sessionsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-codex-byid-'));
   const day = path.join(sessionsDir, '2026', '06', '02');
   fs.mkdirSync(day, { recursive: true });
   const now = new Date().toISOString();
@@ -178,7 +178,7 @@ test('findRolloutById + direct file target + isCodexRolloutFileTarget', () => {
 });
 
 test('parseCodexRollout: model fallbacks, objective truncation, corrupt-line skip, mtime fallback', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-codex-parse-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-codex-parse-'));
   const longObjective = 'x'.repeat(400);
   const fp = path.join(dir, 'rollout-2026-06-02T03-00-00-019eMODELFALL0002.jsonl');
   // include a corrupt line, no turn_context (force meta.model_provider fallback), no timestamps (force mtime)
@@ -196,7 +196,7 @@ test('parseCodexRollout: model fallbacks, objective truncation, corrupt-line ski
 });
 
 test('resolveGitBranch returns null when cwd is not a git repo (real path)', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-codex-nogit-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-codex-nogit-'));
   const fp = path.join(dir, 'rollout-2026-06-02T03-00-00-019eNOGIT00003.jsonl');
   fs.writeFileSync(fp, JSON.stringify({ type: 'session_meta', payload: { id: '019eNOGIT00003', cwd: dir } }) + '\n', 'utf8');
   // no resolveBranchImpl => exercises the real execFileSync + catch path

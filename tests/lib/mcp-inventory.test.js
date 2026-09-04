@@ -40,7 +40,7 @@ function test(name, fn) {
 }
 
 function tmpHome() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-mcp-home-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-mcp-home-'));
 }
 
 const GITHUB_STDIO = {
@@ -240,15 +240,15 @@ test('opencode reader isolates an explicit home from ambient config overrides', 
     'opencode.js'
   );
   const child = spawnSync(process.execPath, ['-e', [
-    'const { readOpencodeMcp } = require(process.env.ECC_TEST_READER);',
-    'const names = readOpencodeMcp({ homeDir: process.env.ECC_TEST_HOME }).map(record => record.name);',
+    'const { readOpencodeMcp } = require(process.env.AIP_TEST_READER);',
+    'const names = readOpencodeMcp({ homeDir: process.env.AIP_TEST_HOME }).map(record => record.name);',
     'process.stdout.write(JSON.stringify(names));',
   ].join('\n')], {
     encoding: 'utf8',
     env: {
       ...process.env,
-      ECC_TEST_READER: readerPath,
-      ECC_TEST_HOME: home,
+      AIP_TEST_READER: readerPath,
+      AIP_TEST_HOME: home,
       OPENCODE_CONFIG_DIR: ambientRoot,
     },
   });

@@ -1,28 +1,28 @@
 # Glossar / Glossary
 
-Einheitliches Terminologie-Glossar für die deutsche (de-DE) Übersetzung von ECC.
+Einheitliches Terminologie-Glossar für die deutsche (de-DE) Übersetzung von AIP.
 
-Leitlinie: Etablierte englische Fachbegriffe und ECC-Oberflächennamen (`agents/`, `skills/`,
+Leitlinie: Etablierte englische Fachbegriffe und AIP-Oberflächennamen (`agents/`, `skills/`,
 `commands/`, `hooks/`, `rules/`) bleiben **englisch** — sie sind im deutschsprachigen
 Entwickleralltag Standard und entsprechen Verzeichnis-/Befehlsnamen im Repo. Begriffe mit
 einer klaren, gebräuchlichen deutschen Entsprechung werden **übersetzt**.
 
 | English | Deutsch | Notiz |
 |---------|---------|-------|
-| Agent | Agent | bleibt englisch — ECC-Oberfläche (`agents/`) |
-| Skill | Skill | bleibt englisch — ECC-Oberfläche (`skills/`) |
-| Hook | Hook | bleibt englisch — ECC-Oberfläche (`hooks/`) |
-| Command | Command | bleibt englisch als ECC-Oberfläche (`commands/`); generisch sonst „Befehl“ |
-| Rule | Rule | bleibt englisch als ECC-Oberfläche (`rules/`); generisch sonst „Regel“ |
+| Agent | Agent | bleibt englisch — AIP-Oberfläche (`agents/`) |
+| Skill | Skill | bleibt englisch — AIP-Oberfläche (`skills/`) |
+| Hook | Hook | bleibt englisch — AIP-Oberfläche (`hooks/`) |
+| Command | Command | bleibt englisch als AIP-Oberfläche (`commands/`); generisch sonst „Befehl“ |
+| Rule | Rule | bleibt englisch als AIP-Oberfläche (`rules/`); generisch sonst „Regel“ |
 | Harness | Harness | bleibt englisch — keine etablierte deutsche Entsprechung |
-| Instinct | Instinct | bleibt englisch — ECC-Begriff aus Continuous Learning |
+| Instinct | Instinct | bleibt englisch — AIP-Begriff aus Continuous Learning |
 | Plugin | Plugin | bleibt englisch |
 | Marketplace | Marketplace | bleibt englisch — Anthropic-Produktbegriff |
 | Worktree | Worktree | bleibt englisch — Git-Fachbegriff |
 | Subagent | Subagent | bleibt englisch |
 | Frontmatter | Frontmatter | bleibt englisch; YAML-Feldnamen bleiben englisch |
-| Continuous Learning | Continuous Learning | ECC-Feature-Name bleibt englisch; beschreibend „kontinuierliches Lernen“ |
-| Memory | Memory | als ECC-Konzept englisch; generisch „Speicher“ |
+| Continuous Learning | Continuous Learning | AIP-Feature-Name bleibt englisch; beschreibend „kontinuierliches Lernen“ |
+| Memory | Memory | als AIP-Konzept englisch; generisch „Speicher“ |
 | Context window | Kontextfenster | |
 | Token | Token | |
 | Coverage | Coverage | „Testabdeckung“, wo beschreibend |

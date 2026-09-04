@@ -1,7 +1,7 @@
 ---
 name: database-migrations
 description: Buenas prácticas de migración de base de datos para cambios de esquema, migraciones de datos, rollbacks y despliegues de tiempo cero en PostgreSQL, MySQL y ORMs comunes (Prisma, Drizzle, Kysely, Django, TypeORM, golang-migrate).
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Migración de Base de Datos

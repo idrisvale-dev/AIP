@@ -1,7 +1,7 @@
 ---
 name: kotlin-coroutines-flows
 description: Android および KMP 向けの Kotlin コルーチンと Flow パターン — 構造化並行性、Flow オペレーター、StateFlow、エラーハンドリング、テスト。
-origin: ECC
+origin: AIP
 ---
 
 # Kotlin コルーチン & Flow

@@ -1,7 +1,7 @@
 ---
 name: benchmark
 description: 使用此技能测量性能基线，检测PR前后的回归，并比较堆栈替代方案。
-origin: ECC
+origin: AIP
 ---
 
 # 基准测试 — 性能基线及回归检测
@@ -85,7 +85,7 @@ origin: ECC
 
 ## 输出
 
-将基线数据以 JSON 格式存储在 `.ecc/benchmarks/` 中。通过 Git 追踪，便于团队共享基线。
+将基线数据以 JSON 格式存储在 `.aip/benchmarks/` 中。通过 Git 追踪，便于团队共享基线。
 
 ## 集成
 

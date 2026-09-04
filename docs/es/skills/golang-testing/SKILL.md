@@ -1,7 +1,7 @@
 ---
 name: golang-testing
 description: Patrones de pruebas Go incluyendo pruebas basadas en tablas, subpruebas, benchmarks, fuzzing y cobertura de código. Sigue la metodología TDD con prácticas idiomáticas de Go.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Pruebas Go

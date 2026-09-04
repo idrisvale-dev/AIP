@@ -1,6 +1,6 @@
 # Evaluator RAG Prototype
 
-ECC 2.0 needs an evidence-driven harness evaluation loop that can compare
+AIP 2.0 needs an evidence-driven harness evaluation loop that can compare
 operator-supplied candidates from real work without implying model learning or
 blindly mutating a user's Claude, Codex, OpenCode, dmux, Zed, or terminal
 setup. This prototype defines the smallest read-only artifact set for that
@@ -36,7 +36,7 @@ repository or commit-analysis behavior can change.
   gateway behavior explicit instead of hiding local commands.
 - dmux, Orca, Superset, and Ghast: preserve worktree/session state so parallel
   agent work can be compared, resumed, or closed cleanly.
-- ECC Tools: route evaluator findings into PR comments, check runs, and Linear
+- AIP Tools: route evaluator findings into PR comments, check runs, and Linear
   backlog items without flooding GitHub.
 
 ## Artifact Contract
@@ -123,9 +123,9 @@ Current corpus:
   expected-output comparisons, representative repository/commit histories, and
   regression commands before deep-analysis behavior can be promoted.
 
-## ECC Tools Mapping
+## AIP Tools Mapping
 
-ECC Tools already flags missing RAG/evaluator evidence for retrieval,
+AIP Tools already flags missing RAG/evaluator evidence for retrieval,
 embedding, ranking, and evaluator changes. This prototype gives those checks a
 target shape:
 
@@ -135,7 +135,7 @@ target shape:
 - `candidate-playbook.md` maps to the suggested follow-up PR body.
 - `verifier-result.json` maps to pass/fail check-run evidence.
 
-Future ECC Tools work should consume these artifacts as fixture shape before it
+Future AIP Tools work should consume these artifacts as fixture shape before it
 adds hosted retrieval or model-backed judging. The local prototype is enough to
 prove the contract before any paid API or vector store is introduced.
 
@@ -154,6 +154,6 @@ A candidate can be promoted only when:
 ## Next Expansion
 
 The local evaluator/RAG corpus now covers the current evidence buckets. Future
-work should consume these fixtures from ECC Tools before adding hosted
+work should consume these fixtures from AIP Tools before adding hosted
 retrieval, vector storage, model-backed judging, or automated check-run
 promotion.

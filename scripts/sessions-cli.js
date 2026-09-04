@@ -8,7 +8,7 @@ function showHelp(exitCode = 0) {
   console.log(`
 Usage: node scripts/sessions-cli.js [<session-id>] [--db <path>] [--json] [--limit <n>]
 
-List recent ECC sessions from the SQLite state store or inspect a single session
+List recent AIP sessions from the SQLite state store or inspect a single session
 with worker, skill-run, and decision detail.
 `);
   process.exit(exitCode);

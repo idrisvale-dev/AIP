@@ -123,7 +123,7 @@ Bu doküman Türkçe çevirilerin terminoloji karşılıklarını kayıt altına
 | CVE | CVE | - | İngilizce tutulur |
 | AgentShield | AgentShield | - | Ürün adı korunur |
 | NanoClaw | NanoClaw | - | Ürün adı korunur |
-| ECC Tools | ECC Tools | - | Ürün adı korunur |
+| AIP Tools | AIP Tools | - | Ürün adı korunur |
 
 ---
 
@@ -134,7 +134,7 @@ Bu doküman Türkçe çevirilerin terminoloji karşılıklarını kayıt altına
 3. **Framework Adları**: İngilizce tutulur (React, Next.js, Vue, Django)
 4. **Teknik Kısaltmalar**: İngilizce tutulur (API, CLI, IDE, MCP, TDD, E2E, CI/CD)
 5. **Git Terimleri**: Çoğunlukla İngilizce tutulur (commit, PR, fork, branch, merge)
-6. **ECC Terimleri**: İngilizce tutulur (agent, hook, skill, command, rule, harness)
+6. **AIP Terimleri**: İngilizce tutulur (agent, hook, skill, command, rule, harness)
 7. **Kod İçeriği**: Çevrilmez (değişken adları, fonksiyon adları orijinal haliyle, açıklama yorumları çevrilir)
 8. **İlk Kullanım**: Kısaltmalar ilk kullanımda açılır
 9. **Bağlamsal Terimler**: Bazı terimler bağlama göre Türkçe veya İngilizce kullanılır (workflow, codebase, context, vb.)

@@ -4,7 +4,7 @@ description: 用于退货授权、接收与检验、处置决策、退款处理�
 license: Apache-2.0
 version: 1.0.0
 homepage: https://github.com/reborncursed/AIP
-origin: ECC
+origin: AIP
 metadata:
   author: evos
   clawdbot:

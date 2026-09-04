@@ -1,8 +1,8 @@
-# LinkedIn Draft - ECC v2.0.0-rc.1
+# LinkedIn Draft - AIP v2.0.0-rc.1
 
-ECC v2.0.0-rc.1 is ready for final release review as the first release-candidate pass at the 2.0 direction.
+AIP v2.0.0-rc.1 is ready for final release review as the first release-candidate pass at the 2.0 direction.
 
-The practical shift is simple: ECC is no longer framed as only a Claude Code plugin or config bundle.
+The practical shift is simple: AIP is no longer framed as only a Claude Code plugin or config bundle.
 
 It is becoming a meta-harness for agentic work: the portable layer above the
 individual AI coding clients.
@@ -20,11 +20,11 @@ I did not publish private workspace state. I shipped the reusable layer:
 - sanitized Hermes setup documentation
 - release notes and launch collateral
 - cross-harness architecture notes
-- Hermes import guidance for turning local operator patterns into public ECC skills
+- Hermes import guidance for turning local operator patterns into public AIP skills
 - release-readiness gates for PRs, issues, discussions, Linear progress, legacy tails, observability, and supply-chain checks
 - a deterministic preview-pack smoke test so the public pack can be verified before a release action
 - a gated Itô prediction-market skill pack for research, comparison, planning,
-  and risk review, with Itô API access kept separate from ECC Tools and
+  and risk review, with Itô API access kept separate from AIP Tools and
   approval-based
 
 The leverage is not just better prompting.
@@ -41,7 +41,7 @@ Shai-Hulud/TanStack campaign, rc.1 now includes IOC scanning, no-lifecycle CI
 installs, advisory-source refresh, npm audit/signature checks, and AI-tool
 persistence coverage.
 
-There is still more to harden before GA, especially around packaging, installers, and the `ecc2/` control plane. But rc.1 is enough to show the shape clearly.
+There is still more to harden before GA, especially around packaging, installers, and the `aip2/` control plane. But rc.1 is enough to show the shape clearly.
 
 The GitHub prerelease and npm `next` package are live now. Public publication
 still stays approval-gated for the plugin path, video URLs, final outbound URLs,

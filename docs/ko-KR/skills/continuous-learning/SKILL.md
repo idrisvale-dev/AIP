@@ -1,7 +1,7 @@
 ---
 name: continuous-learning
 description: Claude Code 세션에서 재사용 가능한 패턴을 자동으로 추출하여 향후 사용을 위한 학습된 스킬로 저장합니다.
-origin: ECC
+origin: AIP
 ---
 
 # 지속적 학습 스킬

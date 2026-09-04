@@ -1,7 +1,7 @@
 ---
 name: deployment-patterns
 description: Flujos de trabajo de despliegue, patrones de pipeline CI/CD, contenedorización Docker, health checks, estrategias de rollback y listas de verificación de preparación para producción de aplicaciones web.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Despliegue

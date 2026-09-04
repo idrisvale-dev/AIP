@@ -5,7 +5,7 @@ paths:
 ---
 # React Native / Expo Production Readiness
 
-> Extends the ECC philosophy to ship-grade concerns that style/pattern rules cannot encode by themselves.
+> Extends the AIP philosophy to ship-grade concerns that style/pattern rules cannot encode by themselves.
 > A clean codebase is necessary but not sufficient for production — these items are mandatory before release.
 
 ## Architecture

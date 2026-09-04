@@ -1,7 +1,7 @@
 ---
 name: docker-patterns
 description: Docker イメージの構築、最適化、マルチステージビルド、ネットワーク、ボリューム管理。本番環境デプロイメント用のベストプラクティス。
-origin: ECC
+origin: AIP
 ---
 
 # Docker パターン

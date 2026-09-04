@@ -1,26 +1,26 @@
 # .pi — Pi Coding Agent Integration
 
-This directory contains the **Pi adapter** for ECC — a thin extension that connects the
+This directory contains the **Pi adapter** for AIP — a thin extension that connects the
 [@earendil-works/pi-coding-agent](https://github.com/earendil-works/pi-coding-agent)
-terminal coding agent to ECC's canonical skills, prompts, and lifecycle hooks.
+terminal coding agent to AIP's canonical skills, prompts, and lifecycle hooks.
 
 ## Design Principle
 
-ECC's canonical assets—skills, agents, commands, and hooks—**remain the single source of truth**.
+AIP's canonical assets—skills, agents, commands, and hooks—**remain the single source of truth**.
 This adapter contains **only the integration logic**. No copies, no duplication.
 
 ## What This Provides
 
-- **ECC's skills** from `./skills/` — available in Pi as `/skill:<name>`
-- **ECC's commands** from `./commands/` — available in Pi as `/<name>`
-- **ECC's engineering rules** from `./rules/common/` — injected into Pi's system
+- **AIP's skills** from `./skills/` — available in Pi as `/skill:<name>`
+- **AIP's commands** from `./commands/` — available in Pi as `/<name>`
+- **AIP's engineering rules** from `./rules/common/` — injected into Pi's system
   prompt on every turn, so coding style, testing, security, git workflow, and
   code-review standards apply in Pi as they do in other harnesses
-- **Session lifecycle hooks** — ECC's SessionStart and SessionEnd hooks, run through ECC's own
-  `run-with-flags.js`, so `ECC_HOOK_PROFILE` and `ECC_DISABLED_HOOKS` keep working under Pi
-- **Session context injection** — whatever ECC's SessionStart hook returns as
+- **Session lifecycle hooks** — AIP's SessionStart and SessionEnd hooks, run through AIP's own
+  `run-with-flags.js`, so `AIP_HOOK_PROFILE` and `AIP_DISABLED_HOOKS` keep working under Pi
+- **Session context injection** — whatever AIP's SessionStart hook returns as
   `additionalContext` is folded into Pi's system prompt for the next turn
-- **`/ecc-doctor`** — diagnostic command to verify the integration
+- **`/aip-doctor`** — diagnostic command to verify the integration
 
 Verified against Pi 0.84.1: a global install exposes 285 skills and 94 commands, resolved
 directly from `skills/` and `commands/`, with no generated copies.
@@ -30,20 +30,20 @@ directly from `skills/` and `commands/`, with no generated copies.
 ### Option 1: Global Installation (Recommended)
 
 ```bash
-# Install ECC as a Pi package
+# Install AIP as a Pi package
 pi install git:github.com/reborncursed/AIP
 
 # Or from a local checkout
-pi install /path/to/ECC
+pi install /path/to/AIP
 
 # Or project-local only
-pi install -l /path/to/ECC
+pi install -l /path/to/AIP
 
 # Verify
 pi list
 ```
 
-Then inside Pi, run `/ecc-doctor` to confirm skills, commands, and hooks are available.
+Then inside Pi, run `/aip-doctor` to confirm skills, commands, and hooks are available.
 
 To uninstall:
 
@@ -53,7 +53,7 @@ pi remove git:github.com/reborncursed/AIP
 
 ### Option 2: Zero-Install (Existing Claude Code Users)
 
-If you already have ECC installed for Claude Code, point Pi at the same canonical directories
+If you already have AIP installed for Claude Code, point Pi at the same canonical directories
 from `~/.pi/agent/settings.json`:
 
 ```json
@@ -64,32 +64,32 @@ from `~/.pi/agent/settings.json`:
 ```
 
 This gives you skills and commands directly. It does **not** include the lifecycle hook adapter
-or `/ecc-doctor` — use Option 1 for the full integration.
+or `/aip-doctor` — use Option 1 for the full integration.
 
 ## How It Works
 
 The `extensions/index.ts` file handles:
 
 1. **Skill and command mounting** — Pi reads `./skills` and `./commands` directly via the
-   `pi` key in `package.json`. No transformation is needed: ECC's `SKILL.md` files already
-   follow the Agent Skills standard Pi implements, and ECC's command frontmatter
+   `pi` key in `package.json`. No transformation is needed: AIP's `SKILL.md` files already
+   follow the Agent Skills standard Pi implements, and AIP's command frontmatter
    (`description`, `argument-hint`) is already Pi's prompt-template format
-2. **Lifecycle hooks** — Maps Pi's `session_start` to ECC's `session:start` hook
-   (`scripts/hooks/session-start.js`) and Pi's `session_shutdown` to ECC's `session:end:marker`
+2. **Lifecycle hooks** — Maps Pi's `session_start` to AIP's `session:start` hook
+   (`scripts/hooks/session-start.js`) and Pi's `session_shutdown` to AIP's `session:end:marker`
    hook (`scripts/hooks/session-end-marker.js`), both invoked through
-   `scripts/hooks/run-with-flags.js` so ECC's profile and disable flags are honored
-3. **Rule injection** — Reads ECC's portable engineering rules from the canonical
+   `scripts/hooks/run-with-flags.js` so AIP's profile and disable flags are honored
+3. **Rule injection** — Reads AIP's portable engineering rules from the canonical
    `rules/common/` directory at runtime and appends them to the system prompt inside an
-   `<ecc-engineering-rules>` block on every turn. Nothing is copied into `.pi/`.
+   `<aip-engineering-rules>` block on every turn. Nothing is copied into `.pi/`.
    `agents.md`, `hooks.md`, and `performance.md` are excluded on purpose: they describe
    Claude Code primitives Pi does not have (Task/TodoWrite delegation, Claude hook event
    types, thinking-budget toggles), so injecting them would point the model at tools that
    are not there. Language-specific rules under `rules/<language>/` are not injected in this
-   first adapter. Set `ECC_PI_RULES` to `0`, `false`, `off`, `none`, or `disabled` to turn
-   injection off; `/ecc-doctor` reports the current state and the injected size
+   first adapter. Set `AIP_PI_RULES` to `0`, `false`, `off`, `none`, or `disabled` to turn
+   injection off; `/aip-doctor` reports the current state and the injected size
 4. **Context injection** — Parses `hookSpecificOutput.additionalContext` from the SessionStart
    hook and appends it to the system prompt on the next `before_agent_start`, wrapped in an
-   `<ecc-session-context>` block. Non-JSON hook output is tolerated, not treated as an error
+   `<aip-session-context>` block. Non-JSON hook output is tolerated, not treated as an error
 5. **Hook isolation** — Failing, missing, or slow hooks degrade to a warning and never
    terminate the Pi session. Hook execution is bounded by a timeout and an output limit
 6. **Package resolution** — Resolves hook scripts from the installed package via `__dirname`,
@@ -109,33 +109,33 @@ Intentionally **out of scope** for this first adapter (to be added independently
 - Profile-based resource filtering
 - MCP translation — see below; no translation turned out to be necessary
 
-ECC works in Pi without any of these. Skills and commands are fully available today.
+AIP works in Pi without any of these. Skills and commands are fully available today.
 
 These capabilities are provided by existing community Pi packages rather than by
-anything ECC would need to write. This adapter deliberately does not bundle or
+anything AIP would need to write. This adapter deliberately does not bundle or
 auto-install them: bundling would ship third-party code that executes with full
-user permissions in every ECC install, and would make optional capabilities
-mandatory. Install whichever you want yourself — `/ecc-doctor` reports which are
+user permissions in every AIP install, and would make optional capabilities
+mandatory. Install whichever you want yourself — `/aip-doctor` reports which are
 present and prints the exact `pi install` command for the ones that are not.
 
 ### MCP
 
 Pi core has no MCP surface by design. The community `pi-mcp-adapter` package
 adds one, and it reads the standard `mcpServers` format from `.mcp.json` and
-`~/.config/mcp/mcp.json` — which is exactly the format ECC already uses in
+`~/.config/mcp/mcp.json` — which is exactly the format AIP already uses in
 `.mcp.json` and `mcp-configs/mcp-servers.json`.
 
-Verified against `pi-mcp-adapter` 2.21.2: copying ECC's `mcp-configs/mcp-servers.json`
+Verified against `pi-mcp-adapter` 2.21.2: copying AIP's `mcp-configs/mcp-servers.json`
 to a project's `.mcp.json` registers Pi's `mcp` tool and `/mcp` command with all
-35 ECC servers discovered, alongside this adapter's own `/ecc-doctor`. No
-translation layer is needed and no ECC change is required.
+35 AIP servers discovered, alongside this adapter's own `/aip-doctor`. No
+translation layer is needed and no AIP change is required.
 
 ```bash
 pi install npm:pi-mcp-adapter
 cp mcp-configs/mcp-servers.json /path/to/project/.mcp.json
 ```
 
-ECC neither installs nor depends on that package. Two caveats: the adapter's
+AIP neither installs nor depends on that package. Two caveats: the adapter's
 first run against a new config performs initialization that blocks in
 non-interactive (`-p`) mode, so run it once interactively before using it
 headless; and only server discovery was verified, not live tool invocation,
@@ -155,36 +155,36 @@ which needs real credentials for each server.
 **Cause:** the package's resources are disabled, or a project-local install has not been
 trusted. Pi asks before trusting a project folder that carries its own `.pi/` resources.
 
-**Fix:** run `pi config` and confirm the ECC package's skills and prompts are enabled
+**Fix:** run `pi config` and confirm the AIP package's skills and prompts are enabled
 (<kbd>Tab</kbd> switches between user and project scope). Then confirm the package itself is
 registered with `pi list`.
 
-### `/ecc-doctor` not found or reports missing package root
+### `/aip-doctor` not found or reports missing package root
 
 **Cause:** Extension not loaded or package installed incorrectly.
 
 **Fix:**
-1. Run `pi list` to confirm ECC is registered
+1. Run `pi list` to confirm AIP is registered
 2. Restart Pi: exit and reopen the session
-3. Run `/ecc-doctor` again
+3. Run `/aip-doctor` again
 
-`/ecc-doctor` prints the resolved package root, the skill and command counts it found, the
+`/aip-doctor` prints the resolved package root, the skill and command counts it found, the
 hook runner path, the active hook profile, and which optional companion packages are present.
 A `NOT FOUND` line points at the specific path that failed to resolve.
 
 ### Hooks not firing
 
-**Cause:** the extension is not loaded, or the hooks are gated off by an ECC hook profile.
+**Cause:** the extension is not loaded, or the hooks are gated off by an AIP hook profile.
 
 **Fix:**
-1. Confirm `pi list` shows ECC and that `/ecc-doctor` reports the hook runner as found
-2. Check `ECC_HOOK_PROFILE` and `ECC_DISABLED_HOOKS` — `/ecc-doctor` prints both. A hook
-   listed in `ECC_DISABLED_HOOKS` is skipped by design
+1. Confirm `pi list` shows AIP and that `/aip-doctor` reports the hook runner as found
+2. Check `AIP_HOOK_PROFILE` and `AIP_DISABLED_HOOKS` — `/aip-doctor` prints both. A hook
+   listed in `AIP_DISABLED_HOOKS` is skipped by design
 3. Restart Pi so the extension reloads
 
 ## Notes
 
 - The `.pi/extensions/` directory is the only place for adapter code
 - Skills and commands are defined in the repo root (`skills/`, `commands/`) and referenced by Pi
-- MCP is not bundled, but ECC's MCP configs load in Pi through the community `pi-mcp-adapter` — see [MCP](#mcp) above
+- MCP is not bundled, but AIP's MCP configs load in Pi through the community `pi-mcp-adapter` — see [MCP](#mcp) above
 - This adapter was tested against Pi v0.84.1

@@ -37,9 +37,9 @@ async function loadChangedFilesStore(): Promise<ChangedFilesStore> {
       throw new Error(
         "changed-files tool: could not load the changed-files store. " +
           "This usually means the ~/.opencode/plugins directory is missing or incomplete " +
-          "(an interrupted or partial ECC install can leave tools/ populated without plugins/). " +
-          "Run `node scripts/repair.js --target opencode` (or `ecc repair --target opencode`) " +
-          "from the ECC repo to restore the missing files."
+          "(an interrupted or partial AIP install can leave tools/ populated without plugins/). " +
+          "Run `node scripts/repair.js --target opencode` (or `aip repair --target opencode`) " +
+          "from the AIP repo to restore the missing files."
       )
     })
   }

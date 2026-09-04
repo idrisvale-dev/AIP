@@ -1,7 +1,7 @@
 ---
 name: python-testing
 description: Estrategias de pruebas Python usando pytest, metodología TDD, fixtures, mocking, parametrización y requisitos de cobertura.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Pruebas Python

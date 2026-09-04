@@ -17,15 +17,15 @@ const { createManifestInstallPlan } = require('../../scripts/lib/install-executo
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
 // A claude-style namespace placement: skills/<id> -> skills/<id> and
-// rules/<x> -> rules/ecc/<x>. Mirrors what the real adapter emits.
+// rules/<x> -> rules/aip/<x>. Mirrors what the real adapter emits.
 function claudeNamespaceMappings() {
   return [
     { sourceRel: 'skills/react-patterns/SKILL.md', destRel: 'skills/react-patterns/SKILL.md' },
     { sourceRel: 'skills/react-patterns/other.md', destRel: 'skills/react-patterns/other.md' },
     { sourceRel: 'skills/react-patterns/sub/NOTE.md', destRel: 'skills/react-patterns/sub/NOTE.md' },
-    { sourceRel: 'rules/react/hooks.md', destRel: 'rules/ecc/react/hooks.md' },
-    { sourceRel: 'rules/react/testing.md', destRel: 'rules/ecc/react/testing.md' },
-    { sourceRel: 'rules/react/coding-style.md', destRel: 'rules/ecc/react/coding-style.md' },
+    { sourceRel: 'rules/react/hooks.md', destRel: 'rules/aip/react/hooks.md' },
+    { sourceRel: 'rules/react/testing.md', destRel: 'rules/aip/react/testing.md' },
+    { sourceRel: 'rules/react/coding-style.md', destRel: 'rules/aip/react/coding-style.md' },
   ];
 }
 
@@ -64,13 +64,13 @@ function runTests() {
     if (test(`rewrites ../../rules file link for ${skill}`, () => {
       const idx = buildInstallIndex([
         { sourceRel: `skills/${skill}/SKILL.md`, destRel: `skills/${skill}/SKILL.md` },
-        { sourceRel: 'rules/react/hooks.md', destRel: 'rules/ecc/react/hooks.md' },
+        { sourceRel: 'rules/react/hooks.md', destRel: 'rules/aip/react/hooks.md' },
       ]);
       const before = 'See [rules](../../rules/react/hooks.md) for details.';
       const after = rewriteRelativeLinks(before, { sourceRel: `skills/${skill}/SKILL.md`, index: idx });
       assert.notStrictEqual(after, before, 'rewrite must change the broken link (not vacuous)');
       assert.ok(
-        after.includes('](../../rules/ecc/react/hooks.md)'),
+        after.includes('](../../rules/aip/react/hooks.md)'),
         `expected corrected link, got: ${after}`
       );
       assert.ok(!after.includes('](../../rules/react/'), 'un-namespaced rules link must be gone');
@@ -81,7 +81,7 @@ function runTests() {
     const before = '- Rules: [rules/react/](../../rules/react/)';
     const after = rewriteRelativeLinks(before, { sourceRel: 'skills/react-patterns/SKILL.md', index });
     assert.notStrictEqual(after, before);
-    assert.ok(after.includes('](../../rules/ecc/react/)'), `got: ${after}`);
+    assert.ok(after.includes('](../../rules/aip/react/)'), `got: ${after}`);
   })) passed++; else failed++;
 
   if (test('leaves an intra-skill sibling link unchanged', () => {
@@ -110,7 +110,7 @@ function runTests() {
   if (test('preserves a #fragment on a rewritten link', () => {
     const before = '[hooks](../../rules/react/hooks.md#use-effect)';
     const after = rewriteRelativeLinks(before, { sourceRel: 'skills/react-patterns/SKILL.md', index });
-    assert.ok(after.includes('](../../rules/ecc/react/hooks.md#use-effect)'), `got: ${after}`);
+    assert.ok(after.includes('](../../rules/aip/react/hooks.md#use-effect)'), `got: ${after}`);
   })) passed++; else failed++;
 
   if (test('does not rewrite links inside fenced code blocks', () => {
@@ -122,7 +122,7 @@ function runTests() {
     ].join('\n');
     const after = rewriteRelativeLinks(before, { sourceRel: 'skills/react-patterns/SKILL.md', index });
     assert.ok(after.includes('[code](../../rules/react/hooks.md)'), 'code-fence link must be untouched');
-    assert.ok(after.includes('[prose](../../rules/ecc/react/hooks.md)'), 'prose link must be rewritten');
+    assert.ok(after.includes('[prose](../../rules/aip/react/hooks.md)'), 'prose link must be rewritten');
   })) passed++; else failed++;
 
   if (test('computes depth from path math for a nested skill file', () => {
@@ -131,7 +131,7 @@ function runTests() {
     const before = '[r](../../../rules/react/hooks.md)';
     const after = rewriteRelativeLinks(before, { sourceRel: 'skills/react-patterns/sub/NOTE.md', index });
     assert.notStrictEqual(after, before, 'nested depth must be recomputed, not hardcoded');
-    assert.ok(after.includes('](../../../rules/ecc/react/hooks.md)'), `got: ${after}`);
+    assert.ok(after.includes('](../../../rules/aip/react/hooks.md)'), `got: ${after}`);
   })) passed++; else failed++;
 
   if (test('is a no-op for a non-namespacing (identity) placement', () => {
@@ -153,7 +153,7 @@ function runTests() {
     const fs = require('fs');
     const plan = createManifestInstallPlan({
       sourceRoot: REPO_ROOT,
-      homeDir: '/tmp/ecc-link-rewrite-it',
+      homeDir: '/tmp/aip-link-rewrite-it',
       target: 'claude',
       moduleIds: ['framework-language', 'rules-core'],
     });

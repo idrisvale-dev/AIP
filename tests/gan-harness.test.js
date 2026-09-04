@@ -47,7 +47,7 @@ function extractScore(feedback) {
   const functionMatch = harnessSource.match(/extract_score\(\) \{[\s\S]*?\n\}/);
   assert.ok(functionMatch, 'expected scripts/gan-harness.sh to define extract_score');
 
-  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-gan-harness-'));
+  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-gan-harness-'));
   const feedbackPath = path.join(temporaryDirectory, 'feedback.md');
   fs.writeFileSync(feedbackPath, feedback, 'utf8');
 

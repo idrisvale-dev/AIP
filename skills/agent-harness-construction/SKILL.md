@@ -2,7 +2,7 @@
 name: agent-harness-construction
 description: Design and optimize AI agent action spaces, tool definitions, and observation formatting for higher completion rates. Use when defining or revising an agent's tool set, action space, or observation format.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Agent Harness Construction

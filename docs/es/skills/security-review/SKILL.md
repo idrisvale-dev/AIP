@@ -1,7 +1,7 @@
 ---
 name: security-review
 description: Usar este skill al agregar autenticación, manejar entradas de usuario, trabajar con secretos, crear endpoints de API o implementar funcionalidades de pago/sensibles. Proporciona lista de verificación y patrones de seguridad completos.
-origin: ECC
+origin: AIP
 ---
 
 # Skill de Revisión de Seguridad

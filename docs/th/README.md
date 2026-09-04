@@ -1,13 +1,13 @@
 **ภาษา:** [English](../../README.md) | [Português (Brasil)](../pt-BR/README.md) | [简体中文](../../README.zh-CN.md) | [繁體中文](../zh-TW/README.md) | [日本語](../ja-JP/README.md) | [한국어](../ko-KR/README.md) | [Türkçe](../tr/README.md) | [Русский](../ru/README.md) | [Tiếng Việt](../vi-VN/README.md) | **ไทย** | [Deutsch](../de-DE/README.md) | [Українська](../uk-UA/README.md)
 
-# Everything Claude Code
+# AIP
 
-![Everything Claude Code — ระบบเพิ่มประสิทธิภาพสำหรับ AI agent harness](../../assets/hero.png)
+![AIP — ระบบเพิ่มประสิทธิภาพสำหรับ AI agent harness](../../assets/hero.png)
 
 [![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
 [![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
 [![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
-[![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-universal)
+[![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-universal)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 
 > **182K+ ดาว** | **28K+ fork** | **170+ คอนทริบิวเตอร์** | **12+ ระบบนิเวศภาษาโปรแกรม** | **ผู้ชนะ Anthropic Hackathon**
@@ -24,9 +24,9 @@
 
 ---
 
-**Everything Claude Code (ECC) คือระบบเพิ่มประสิทธิภาพสำหรับ AI agent harness จากผู้ชนะ Anthropic Hackathon**
+**AIP (AIP) คือระบบเพิ่มประสิทธิภาพสำหรับ AI agent harness จากผู้ชนะ Anthropic Hackathon**
 
-ECC ไม่ใช่แค่ชุดไฟล์คอนฟิก แต่เป็นระบบครบวงจร: skills, สัญชาตญาณ (instincts), การจัดการหน่วยความจำ (memory optimization), การเรียนรู้ต่อเนื่อง (continuous learning), การสแกนความปลอดภัย (security scanning) และการพัฒนาที่ตรวจสอบจากแหล่งข้อมูลจริง (research-first development) ทั้งหมดนี้ผ่านการใช้งานจริงมากกว่า 10 เดือนในการสร้างผลิตภัณฑ์จริง
+AIP ไม่ใช่แค่ชุดไฟล์คอนฟิก แต่เป็นระบบครบวงจร: skills, สัญชาตญาณ (instincts), การจัดการหน่วยความจำ (memory optimization), การเรียนรู้ต่อเนื่อง (continuous learning), การสแกนความปลอดภัย (security scanning) และการพัฒนาที่ตรวจสอบจากแหล่งข้อมูลจริง (research-first development) ทั้งหมดนี้ผ่านการใช้งานจริงมากกว่า 10 เดือนในการสร้างผลิตภัณฑ์จริง
 
 ใช้งานได้ข้าม **Claude Code**, **Codex**, **Cursor**, **OpenCode**, **Gemini**, **Zed**, **GitHub Copilot** และ AI agent harness อื่น ๆ
 
@@ -42,9 +42,9 @@ ECC ไม่ใช่แค่ชุดไฟล์คอนฟิก แต่
 
 - **แนะนำ:** ติดตั้งผ่าน Claude Code plugin จากนั้นค่อยคัดลอกเฉพาะโฟลเดอร์ `rules/` ที่ต้องการใช้จริงด้วยมือ
 - **ใช้ installer แบบ manual** หากต้องการควบคุมรายละเอียดมากขึ้น หรือต้องการเลี่ยง plugin หรือ Claude Code ของคุณไม่สามารถ resolve marketplace ที่ self-host ได้
-- **อย่าติดตั้งซ้อนกันหลายวิธี** ปัญหาที่พบบ่อยที่สุดคือการรัน `/plugin install` ก่อน แล้วตามด้วย `install.sh --profile full` หรือ `npx ecc-universal install --profile full`
+- **อย่าติดตั้งซ้อนกันหลายวิธี** ปัญหาที่พบบ่อยที่สุดคือการรัน `/plugin install` ก่อน แล้วตามด้วย `install.sh --profile full` หรือ `npx aip-universal install --profile full`
 
-หากคุณติดตั้งซ้อนกันไปแล้วและพบว่ามี skill/hook ซ้ำ ดู [Reset / ถอนการติดตั้ง ECC](#reset--ถอนการติดตั้ง-ecc)
+หากคุณติดตั้งซ้อนกันไปแล้วและพบว่ามี skill/hook ซ้ำ ดู [Reset / ถอนการติดตั้ง AIP](#reset--ถอนการติดตั้ง-aip)
 
 ### ติดตั้งผ่าน Claude Code plugin
 
@@ -53,16 +53,16 @@ ECC ไม่ใช่แค่ชุดไฟล์คอนฟิก แต่
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # ติดตั้ง plugin
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
-ECC มีชื่อเรียกในระบบสาธารณะ 3 ชื่อที่ต่างกัน:
+AIP มีชื่อเรียกในระบบสาธารณะ 3 ชื่อที่ต่างกัน:
 
 - GitHub repo: `reborncursed/AIP`
-- Claude marketplace plugin: `ecc@ecc`
-- npm package: `ecc-universal`
+- Claude marketplace plugin: `aip@aip`
+- npm package: `aip-universal`
 
-ชื่อเหล่านี้ตั้งใจให้ต่างกัน Plugin บน Claude Code ใช้ `ecc@ecc` ส่วน npm ยังคงใช้ `ecc-universal`
+ชื่อเหล่านี้ตั้งใจให้ต่างกัน Plugin บน Claude Code ใช้ `aip@aip` ส่วน npm ยังคงใช้ `aip-universal`
 
 ### คัดลอกไฟล์ rules เพิ่มเติม (ถ้าต้องการ)
 
@@ -70,20 +70,20 @@ Plugin ของ Claude Code จะไม่ติดตั้ง `rules/` ใ�
 
 ```bash
 git clone https://github.com/reborncursed/AIP.git
-cd everything-claude-code
+cd aip
 
-mkdir -p ~/.claude/rules/ecc
-cp -R rules/common ~/.claude/rules/ecc/
-cp -R rules/typescript ~/.claude/rules/ecc/
+mkdir -p ~/.claude/rules/aip
+cp -R rules/common ~/.claude/rules/aip/
+cp -R rules/typescript ~/.claude/rules/aip/
 ```
 
 ```powershell
 git clone https://github.com/reborncursed/AIP.git
-cd everything-claude-code
+cd aip
 
-New-Item -ItemType Directory -Force -Path "$HOME/.claude/rules/ecc" | Out-Null
-Copy-Item -Recurse rules/common "$HOME/.claude/rules/ecc/"
-Copy-Item -Recurse rules/typescript "$HOME/.claude/rules/ecc/"
+New-Item -ItemType Directory -Force -Path "$HOME/.claude/rules/aip" | Out-Null
+Copy-Item -Recurse rules/common "$HOME/.claude/rules/aip/"
+Copy-Item -Recurse rules/typescript "$HOME/.claude/rules/aip/"
 ```
 
 ให้คัดลอกทั้งโฟลเดอร์ภาษา เช่น `rules/common` หรือ `rules/golang` แทนการคัดลอกไฟล์เดี่ยว ๆ
@@ -101,7 +101,7 @@ npm install
 npm install
 .\install.ps1 --profile full
 # หรือ
-npx ecc-universal install --profile full
+npx aip-universal install --profile full
 ```
 
 หากเลือกวิธี manual แล้ว ให้หยุดที่นี่ อย่ารัน `/plugin install` เพิ่ม
@@ -117,25 +117,25 @@ npx ecc-universal install --profile full
 ```powershell
 .\install.ps1 --profile minimal --target claude
 # หรือ
-npx ecc-universal install --profile minimal --target claude
+npx aip-universal install --profile minimal --target claude
 ```
 
 Profile นี้จงใจไม่ติดตั้ง `hooks-runtime`
 
 ---
 
-## Reset / ถอนการติดตั้ง ECC
+## Reset / ถอนการติดตั้ง AIP
 
-หาก ECC ติดตั้งซ้อนกัน รบกวนระบบ หรือทำงานผิดปกติ อย่ารันติดตั้งทับซ้ำเข้าไปอีก
+หาก AIP ติดตั้งซ้อนกัน รบกวนระบบ หรือทำงานผิดปกติ อย่ารันติดตั้งทับซ้ำเข้าไปอีก
 
-- **วิธี plugin:** ถอน plugin ออกจาก Claude Code จากนั้นลบโฟลเดอร์ rule ที่คุณคัดลอกเองใน `~/.claude/rules/ecc/`
+- **วิธี plugin:** ถอน plugin ออกจาก Claude Code จากนั้นลบโฟลเดอร์ rule ที่คุณคัดลอกเองใน `~/.claude/rules/aip/`
 - **วิธี installer/CLI:** ที่ root ของ repo ตรวจดูก่อน:
 
 ```bash
 node scripts/uninstall.js --dry-run
 ```
 
-จากนั้นถอนไฟล์ที่ ECC ดูแล:
+จากนั้นถอนไฟล์ที่ AIP ดูแล:
 
 ```bash
 node scripts/uninstall.js
@@ -144,13 +144,13 @@ node scripts/uninstall.js
 หรือใช้ lifecycle wrapper:
 
 ```bash
-node scripts/ecc.js list-installed
-node scripts/ecc.js doctor
-node scripts/ecc.js repair
-node scripts/ecc.js uninstall --dry-run
+node scripts/aip.js list-installed
+node scripts/aip.js doctor
+node scripts/aip.js repair
+node scripts/aip.js uninstall --dry-run
 ```
 
-ECC จะลบเฉพาะไฟล์ที่อยู่ใน install-state ของตัวเอง ไม่แตะไฟล์อื่นนอกเหนือจากนั้น
+AIP จะลบเฉพาะไฟล์ที่อยู่ใน install-state ของตัวเอง ไม่แตะไฟล์อื่นนอกเหนือจากนั้น
 
 ---
 
@@ -191,13 +191,13 @@ ECC จะลบเฉพาะไฟล์ที่อยู่ใน install-s
 
 ```bash
 # ติดตั้งผ่าน plugin ใช้ namespace เต็ม
-/ecc:plan "เพิ่มระบบยืนยันตัวตนผู้ใช้"
+/aip:plan "เพิ่มระบบยืนยันตัวตนผู้ใช้"
 
 # ติดตั้งแบบ manual ใช้ slash command แบบสั้นได้
 # /plan "เพิ่มระบบยืนยันตัวตนผู้ใช้"
 
 # ดู plugin ที่ติดตั้งอยู่
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
 คำสั่งหลักที่ใช้บ่อย:
@@ -210,7 +210,7 @@ ECC จะลบเฉพาะไฟล์ที่อยู่ใน install-s
 - `/learn` — ดึง pattern จาก session
 - `/skill-create` — สร้าง skill จาก git history
 
-ปัจจุบัน ECC มี agent หลายสิบตัว, skill มากกว่า 200 ชุด และ legacy command shim สำหรับ workflow ต่าง ๆ ดูรายการเต็มและคำแนะนำล่าสุดได้ใน [README ภาษาอังกฤษ](../../README.md)
+ปัจจุบัน AIP มี agent หลายสิบตัว, skill มากกว่า 200 ชุด และ legacy command shim สำหรับ workflow ต่าง ๆ ดูรายการเต็มและคำแนะนำล่าสุดได้ใน [README ภาษาอังกฤษ](../../README.md)
 
 ---
 
@@ -231,7 +231,7 @@ ECC จะลบเฉพาะไฟล์ที่อยู่ใน install-s
 ```bash
 # 1. Fork และ clone
 gh repo fork reborncursed/AIP --clone
-cd everything-claude-code
+cd aip
 
 # 2. สร้าง branch
 git checkout -b feat/my-contribution
@@ -251,10 +251,10 @@ git add . && git commit -m "feat: add my-skill" && git push -u origin feat/my-co
 
 - [GitHub Discussions](https://github.com/reborncursed/AIP/discussions) — ถาม-ตอบ, โชว์ผลงาน
 - [GitHub Sponsors](https://github.com/sponsors/reborncursed) — สนับสนุน OSS เริ่มที่ $5/เดือน
-- [ECC Pro](https://bytecore.org/pricing) — private repo + GitHub App ($19/seat/เดือน)
-- [ECC Tools GitHub App](https://github.com/marketplace/ecc-tools) — ติดตั้ง, PR audit, มี free tier
+- [AIP Pro](https://bytecore.org/pricing) — private repo + GitHub App ($19/seat/เดือน)
+- [AIP Tools GitHub App](https://github.com/marketplace/aip-tools) — ติดตั้ง, PR audit, มี free tier
 
-**OSS ยังคงฟรีตลอดไป** Repo นี้ใช้สัญญาอนุญาต MIT ตลอดกาล ECC Pro คือ GitHub App ที่ host ไว้สำหรับ private repo ส่วน Sponsors และ Pro subscribers ช่วยสนับสนุนให้ maintainer คนเดียวสามารถส่งงานข้าม 7 harness ได้ทุกสัปดาห์
+**OSS ยังคงฟรีตลอดไป** Repo นี้ใช้สัญญาอนุญาต MIT ตลอดกาล AIP Pro คือ GitHub App ที่ host ไว้สำหรับ private repo ส่วน Sponsors และ Pro subscribers ช่วยสนับสนุนให้ maintainer คนเดียวสามารถส่งงานข้าม 7 harness ได้ทุกสัปดาห์
 
 ---
 

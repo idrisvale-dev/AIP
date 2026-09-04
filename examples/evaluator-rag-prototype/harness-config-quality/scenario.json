@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.scenario.v1",
+  "schema_version": "aip.evaluator-rag.scenario.v1",
   "scenario_id": "harness-config-quality",
   "title": "Detect harness config drift before changing adapters or installs",
   "mode": "read_only_prototype",

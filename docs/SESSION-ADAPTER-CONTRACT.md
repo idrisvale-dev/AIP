@@ -1,7 +1,7 @@
 # Session Adapter Contract
 
-This document defines the canonical ECC session snapshot contract for
-`ecc.session.v1`.
+This document defines the canonical AIP session snapshot contract for
+`aip.session.v1`.
 
 The contract is implemented in
 `scripts/lib/session-adapters/canonical-session.js`. This document is the
@@ -9,7 +9,7 @@ normative specification for adapters and consumers.
 
 ## Purpose
 
-ECC has multiple session sources:
+AIP has multiple session sources:
 
 - tmux-orchestrated worktree sessions
 - Claude local session history
@@ -25,7 +25,7 @@ Every adapter MUST return a JSON-serializable object with this top-level shape:
 
 ```json
 {
-  "schemaVersion": "ecc.session.v1",
+  "schemaVersion": "aip.session.v1",
   "adapterId": "dmux-tmux",
   "session": {
     "id": "workflow-visual-proof",
@@ -86,7 +86,7 @@ Every adapter MUST return a JSON-serializable object with this top-level shape:
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `schemaVersion` | string | MUST be exactly `ecc.session.v1` for this contract |
+| `schemaVersion` | string | MUST be exactly `aip.session.v1` for this contract |
 | `adapterId` | string | Stable adapter identifier such as `dmux-tmux` or `claude-history` |
 | `session` | object | Canonical session metadata |
 | `workers` | array | Canonical worker records; may be empty |
@@ -190,7 +190,7 @@ degrade gracefully.
 
 `schemaVersion` is the only compatibility gate. Consumers MUST branch on it.
 
-### Allowed in `ecc.session.v1`
+### Allowed in `aip.session.v1`
 
 - adding new optional nested fields
 - adding new adapter ids
@@ -207,13 +207,13 @@ degrade gracefully.
 - moving data from one field to another while keeping the same version string
 
 If any of those happen, the producer MUST emit a new version string such as
-`ecc.session.v2`.
+`aip.session.v2`.
 
 ## Adapter Compliance Requirements
 
-Every ECC session adapter MUST:
+Every AIP session adapter MUST:
 
-1. Emit `schemaVersion: "ecc.session.v1"` exactly.
+1. Emit `schemaVersion: "aip.session.v1"` exactly.
 2. Return a snapshot that satisfies all required fields and types.
 3. Use `null` for unknown optional scalar values and empty arrays for unknown
    list values.
@@ -233,7 +233,7 @@ Every ECC session adapter MUST:
 
 Consumers SHOULD:
 
-- rely only on documented fields for `ecc.session.v1`
+- rely only on documented fields for `aip.session.v1`
 - ignore unknown optional fields
 - treat `adapterId`, `session.kind`, and `runtime.kind` as routing hints rather
   than exhaustive enums

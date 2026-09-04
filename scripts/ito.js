@@ -19,31 +19,31 @@ const CANONICAL_ENTRY_SEGMENTS = Object.freeze([
   "bin",
   "ito.js",
 ]);
-const EXECUTABLE_OVERRIDE = "ECC_ITO_CLI_EXECUTABLE";
+const EXECUTABLE_OVERRIDE = "AIP_ITO_CLI_EXECUTABLE";
 const MAX_OUTPUT_BYTES = 10 * 1024 * 1024;
 const NODE_QUALIFICATION_TIMEOUT_MS = 31 * 60 * 1000;
 
 function showHelp() {
   process.stdout.write(`
-ECC × Itô local CLI bridge
+AIP × Itô local CLI bridge
 
 Usage:
-  ecc ito login [--no-browser]
-  ecc ito logout
-  ecc ito auth
-  ecc ito find <all required RFQ options>
-  ecc ito status
-  ecc ito evals --cluster <id> --live-sixtytwo --nodes <list> --config-dir <dir>
-  ecc ito <login|logout|auth|find|status|evals> --json
+  aip ito login [--no-browser]
+  aip ito logout
+  aip ito auth
+  aip ito find <all required RFQ options>
+  aip ito status
+  aip ito evals --cluster <id> --live-sixtytwo --nodes <list> --config-dir <dir>
+  aip ito <login|logout|auth|find|status|evals> --json
 
 The bridge invokes the separately installed canonical Itô CLI and returns its
-real stdout, stderr, and exit code unchanged. "ecc ito login" delegates to the
+real stdout, stderr, and exit code unchanged. "aip ito login" delegates to the
 canonical CLI's device authorization. It opens the Itô verification page by default
 and persists its device token in macOS Keychain. Pass --no-browser to
-suppress that handoff. ECC itself performs no browser automation and adds no
+suppress that handoff. AIP itself performs no browser automation and adds no
 lock, workload, inference, or purchase path.
-"ecc ito auth" is validation-only and never starts device login.
-"ecc ito logout" asks the canonical CLI to revoke the current device credential
+"aip ito auth" is validation-only and never starts device login.
+"aip ito logout" asks the canonical CLI to revoke the current device credential
 and remove its local copy only after remote revocation is confirmed.
 
 Important:
@@ -65,7 +65,7 @@ The canonical package is currently unpublished. Install it locally:
 Then set ${EXECUTABLE_OVERRIDE} to the explicit absolute built entry:
   /absolute/path/to/ito-cloud-runtime/${CANONICAL_PACKAGE_PATH}/dist/bin/ito.js
 
-For safety, ECC never discovers this credential-bearing client through PATH.
+For safety, AIP never discovers this credential-bearing client through PATH.
 
 The same package's MCP server exposes only:
   ito_auth
@@ -148,7 +148,7 @@ function parseArgs(argv, environment = process.env) {
     return Object.freeze({ help: true, invocationArgs: [] });
   }
 
-  if (environment.ECC_DRY_RUN === "1" || args.includes("--dry-run")) {
+  if (environment.AIP_DRY_RUN === "1" || args.includes("--dry-run")) {
     throw new Error(
       "Itô compute has no paper or dry-run success mode. No CLI operation was invoked."
     );
@@ -164,11 +164,11 @@ function parseArgs(argv, environment = process.env) {
   const command = withoutJson.shift();
   if (!SUPPORTED_COMMANDS.includes(command)) {
     throw new Error(
-      `Unsupported Itô command "${command || "(missing)"}"; ECC permits only login, logout, auth, find, status, and evals.`
+      `Unsupported Itô command "${command || "(missing)"}"; AIP permits only login, logout, auth, find, status, and evals.`
     );
   }
   if (command === "auth" && withoutJson.includes("--no-browser")) {
-    throw new Error("--no-browser is valid only for ecc ito login; auth is validation-only.");
+    throw new Error("--no-browser is valid only for aip ito login; auth is validation-only.");
   }
   if (command === "evals") {
     validateNodeQualificationArgs(withoutJson, environment);
@@ -188,7 +188,7 @@ function resolveItoExecutable(environment = process.env) {
   const configured = environment[EXECUTABLE_OVERRIDE]?.trim();
   if (!configured) {
     throw new Error([
-      "The canonical ito-compute-cli is unpublished and ECC will not resolve",
+      "The canonical ito-compute-cli is unpublished and AIP will not resolve",
       `a credential-bearing "ito" executable from PATH. Build it from`,
       `${CANONICAL_REPOSITORY.replace(/\.git$/, "")}/${CANONICAL_PACKAGE_PATH},`,
       "run npm ci and npm run check, then set",

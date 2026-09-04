@@ -1,10 +1,10 @@
 ---
-description: プロジェクトのスタックを検出し、リポジトリのインストールマニフェストとスタックマッピングを使用してドライランECCオンボーディング計画を生成します。
+description: プロジェクトのスタックを検出し、リポジトリのインストールマニフェストとスタックマッピングを使用してドライランAIPオンボーディング計画を生成します。
 ---
 
 # /project-init
 
-現在のプロジェクト用の安全でレビュー可能なECCオンボーディング計画を作成します。このコマンドはドライランモードで開始し、明示的なユーザー承認後にのみファイルを書き込みます。
+現在のプロジェクト用の安全でレビュー可能なAIPオンボーディング計画を作成します。このコマンドはドライランモードで開始し、明示的なユーザー承認後にのみファイルを書き込みます。
 
 ## 使い方
 
@@ -14,14 +14,14 @@ description: プロジェクトのスタックを検出し、リポジトリの�
 /project-init --target claude
 /project-init --target cursor
 /project-init --skills continuous-learning-v2,security-review
-/project-init --config ecc-install.json
+/project-init --config aip-install.json
 ```
 
 ## 安全ルール
 
 1. デフォルトはドライラン。ユーザーが具体的な計画を承認するまで、`CLAUDE.md`、設定ファイル、ルール、スキル、またはインストール状態を変更しない。
 2. 既存のプロジェクトガイダンスを保持。`CLAUDE.md`、`.claude/settings.local.json`、`.cursor/`、`.codex/`、`.gemini/`、`.opencode/`、`.codebuddy/`、`.joycode/`、または`.qwen/`が既に存在する場合、内容を検査し上書きではなくマージ/追記計画を提案。
-3. ECCのインストーラーとマニフェストツールを使用。インストールのショートカットとしてファイルを手動コピーしたり任意のリモートをクローンしない。
+3. AIPのインストーラーとマニフェストツールを使用。インストールのショートカットとしてファイルを手動コピーしたり任意のリモートをクローンしない。
 4. パーミッションを狭く保つ。生成された設定は検出されたビルド/テスト/リントツールに一致させ、広範なシェルアクセスを避ける。
 5. 何かを適用する前に、正確に何が変わるかを報告。
 
@@ -32,17 +32,17 @@ description: プロジェクトのスタックを検出し、リポジトリの�
 - パッケージマネージャーファイル: `package.json`、`package-lock.json`、`pnpm-lock.yaml`、`yarn.lock`、`bun.lockb`
 - 言語マニフェスト: `pyproject.toml`、`requirements.txt`、`go.mod`、`Cargo.toml`、`pom.xml`、`build.gradle`、`build.gradle.kts`
 - フレームワークファイル: `next.config.*`、`vite.config.*`、`tailwind.config.*`、`Dockerfile`、`docker-compose.yml`
-- ECC設定: `ecc-install.json`
-- オプションのスタックマップ: ECCリポジトリ内の`config/project-stack-mappings.json`
+- AIP設定: `aip-install.json`
+- オプションのスタックマップ: AIPリポジトリ内の`config/project-stack-mappings.json`
 
-ECCチェックアウトが利用可能な場合、`config/project-stack-mappings.json`をスタックからルール/スキルへの参照として使用。ファイルが利用できない場合、インストール済みのECCマニフェストと明示的なユーザーの選択にフォールバック。
+AIPチェックアウトが利用可能な場合、`config/project-stack-mappings.json`をスタックからルール/スキルへの参照として使用。ファイルが利用できない場合、インストール済みのAIPマニフェストと明示的なユーザーの選択にフォールバック。
 
 ## 計画フロー
 
 1. ターゲットハーネスを特定。ユーザーが`cursor`、`codex`、`gemini`、`opencode`、`codebuddy`、`joycode`、または`qwen`を要求しない限りデフォルトは`claude`。
 2. プロジェクトファイルからスタックを検出し、各一致のエビデンスを表示。
-3. 最小限の有用なECC計画を解決:
-   - プロジェクトに`ecc-install.json`がある: `node scripts/install-plan.js --config ecc-install.json --json`
+3. 最小限の有用なAIP計画を解決:
+   - プロジェクトに`aip-install.json`がある: `node scripts/install-plan.js --config aip-install.json --json`
    - ユーザーがプロファイルを指定: `node scripts/install-plan.js --profile <profile> --target <target> --json`
    - ユーザーがスキルを指定: `node scripts/install-plan.js --skills <skill-ids> --target <target> --json`
    - 言語スタックのみ検出: それらの言語名でレガシー言語インストールのドライランを使用
@@ -83,4 +83,4 @@ diffを表示して承認を得ずに既存の`CLAUDE.md`を置換しないこ�
 - `config/project-stack-mappings.json` — スタックからサーフェスへのヒント
 - `scripts/install-plan.js` — 決定論的な計画解決
 - `scripts/install-apply.js` — ドライランと適用操作
-- `/ecc-guide` — インストール前のインタラクティブな機能ディスカバリー
+- `/aip-guide` — インストール前のインタラクティブな機能ディスカバリー

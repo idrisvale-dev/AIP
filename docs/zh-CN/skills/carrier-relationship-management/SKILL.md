@@ -4,7 +4,7 @@ description: 用于管理承运商组合、协商运费、跟踪承运商绩效�
 license: Apache-2.0
 version: 1.0.0
 homepage: https://github.com/reborncursed/AIP
-origin: ECC
+origin: AIP
 metadata:
   author: evos
   clawdbot:

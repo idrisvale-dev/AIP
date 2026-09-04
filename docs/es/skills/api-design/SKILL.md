@@ -1,7 +1,7 @@
 ---
 name: api-design
 description: Patrones de diseño REST API incluyendo nomenclatura de recursos, códigos de estado, paginación, filtrado, respuestas de error, versionado y rate limiting para APIs de producción.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Diseño de API

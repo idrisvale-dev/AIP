@@ -192,19 +192,19 @@ function runTests() {
     );
   })) passed++; else failed++;
 
-  if (test('marks unified-memory install surfaces as requiring the separate ECC runtime', () => {
+  if (test('marks unified-memory install surfaces as requiring the separate AIP runtime', () => {
     const component = getInstallComponent('skill:unified-memory');
     assert.deepStrictEqual(component.moduleIds, ['skill-unified-memory']);
-    assert.match(component.description, /ecc-universal/i);
+    assert.match(component.description, /aip-universal/i);
     assert.match(component.description, /separate|external/i);
 
     const modules = listInstallModules();
     const singleSkillModule = modules.find(module => module.id === 'skill-unified-memory');
     const workflowModule = modules.find(module => module.id === 'workflow-quality');
     assert.ok(singleSkillModule, 'Should define an explicit unified-memory module');
-    assert.match(singleSkillModule.description, /ecc-universal/i);
+    assert.match(singleSkillModule.description, /aip-universal/i);
     assert.match(singleSkillModule.description, /separate|external/i);
-    assert.match(workflowModule.description, /ecc-universal/i);
+    assert.match(workflowModule.description, /aip-universal/i);
 
     const plan = resolveInstallPlan({
       includeComponentIds: ['skill:unified-memory'],
@@ -241,7 +241,7 @@ function runTests() {
       'Should report unsupported orchestration module as skipped');
     assert.strictEqual(plan.targetAdapterId, 'cursor-project');
     assert.strictEqual(plan.targetRoot, path.join(projectRoot, '.cursor'));
-    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.cursor', 'ecc-install-state.json'));
+    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.cursor', 'aip-install-state.json'));
     assert.ok(plan.operations.length > 0, 'Should include scaffold operations');
     assert.ok(
       plan.operations.some(operation => (

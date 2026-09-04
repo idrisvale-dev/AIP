@@ -1,8 +1,8 @@
-# ECC v1.8.0 Release Notes
+# AIP v1.8.0 Release Notes
 
 ## Positioning
 
-ECC v1.8.0 positions the project as an agent harness performance system, not just a config bundle.
+AIP v1.8.0 positions the project as an agent harness performance system, not just a config bundle.
 
 ## Key Improvements
 

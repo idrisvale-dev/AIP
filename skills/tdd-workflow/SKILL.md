@@ -3,7 +3,7 @@ name: tdd-workflow
 description: Use this skill when writing new features, fixing bugs, or refactoring code. Enforces test-driven development with 80%+ coverage including unit, integration, and E2E tests.
 argument-hint: <path/to/*.plan.md>
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Test-Driven Development Workflow
@@ -89,7 +89,7 @@ ALWAYS write tests first, then implement code to make tests pass.
 
 Do not assume `npm test`. The commands in the steps and examples below use `<test>`, `<test-watch>`, and `<coverage>` as placeholders for the project's actual runner. Resolve them once before starting:
 
-1. **Run the package-manager detector** (ships with ECC):
+1. **Run the package-manager detector** (ships with AIP):
 
    ```bash
    node scripts/setup-package-manager.js --detect

@@ -8,10 +8,10 @@ const {
   OFFICIAL_MARKETPLACE_URL,
   VALID_HOOK_MODES,
   VALID_SCOPES,
-  assertNoConflictingEccPlugins,
+  assertNoConflictingAipPlugins,
   assertSafeLocalInventory,
   assertGitAvailable,
-  currentEccPlugins,
+  currentAipPlugins,
   createDryRunClaudeRunner,
   deriveHookMode,
   ensureOfficialMarketplace,
@@ -40,7 +40,7 @@ function recoveryCommands(sourceScope, destinationScope) {
     );
   }
   commands.push(
-    `ecc setup --mode claude-plugin --scope ${destinationScope} --move-scope --yes`
+    `aip setup --mode claude-plugin --scope ${destinationScope} --move-scope --yes`
   );
   return commands;
 }
@@ -55,8 +55,8 @@ function readPluginInventory(run, projectRoot, phase) {
 }
 
 function assertMigrationInventory(plugins, destinationScope) {
-  assertNoConflictingEccPlugins(plugins);
-  const installed = currentEccPlugins(plugins);
+  assertNoConflictingAipPlugins(plugins);
+  const installed = currentAipPlugins(plugins);
   const observedScopes = installed.map(plugin => plugin.scope);
   const uniqueScopes = new Set(observedScopes);
 
@@ -67,7 +67,7 @@ function assertMigrationInventory(plugins, destinationScope) {
       {
         observedScopes,
         recovery: [
-          `ecc setup --mode claude-plugin --scope ${destinationScope} --yes`,
+          `aip setup --mode claude-plugin --scope ${destinationScope} --yes`,
         ],
       }
     );
@@ -124,8 +124,8 @@ function assertMigrationInventory(plugins, destinationScope) {
 }
 
 function validateExpectedScopes(plugins, expectedScopes, options = {}) {
-  assertNoConflictingEccPlugins(plugins);
-  const installed = currentEccPlugins(plugins);
+  assertNoConflictingAipPlugins(plugins);
+  const installed = currentAipPlugins(plugins);
   const observedScopes = installed.map(plugin => plugin.scope);
   const actual = [...observedScopes].sort();
   const expected = [...expectedScopes].sort();
@@ -207,8 +207,8 @@ function uninstallSource(run, paths, migration, destinationScope) {
         paths.projectRoot,
         'source-uninstall-verification'
       );
-      assertNoConflictingEccPlugins(plugins);
-      const installed = currentEccPlugins(plugins);
+      assertNoConflictingAipPlugins(plugins);
+      const installed = currentAipPlugins(plugins);
       observedScopes = installed.map(plugin => plugin.scope);
       if (
         installed.length === 1
@@ -282,11 +282,11 @@ function migrateClaudePluginScope(options = {}, dependencies = {}) {
       { cwd: paths.projectRoot, phase: 'marketplace-inventory' }
     ).stdout
   );
-  const namedMarketplace = marketplaces.find(entry => entry?.name === 'ecc');
+  const namedMarketplace = marketplaces.find(entry => entry?.name === 'aip');
   if (namedMarketplace && !isOfficialMarketplace(namedMarketplace)) {
     throw migrationError(
       'MARKETPLACE_COLLISION',
-      'Refusing the `ecc` marketplace collision because it is not the official reborncursed/AIP source.',
+      'Refusing the `aip` marketplace collision because it is not the official reborncursed/AIP source.',
       {
         phase: 'marketplace-inventory',
         observedScopes: migration.observedScopes,
@@ -332,7 +332,7 @@ function migrateClaudePluginScope(options = {}, dependencies = {}) {
   let marketplaceAction = null;
   if (migration.mode === 'migrate') {
     marketplaceAction = namedMarketplace
-      ? ['plugin', 'marketplace', 'update', 'ecc']
+      ? ['plugin', 'marketplace', 'update', 'aip']
       : [
         'plugin', 'marketplace', 'add',
         OFFICIAL_MARKETPLACE_URL,

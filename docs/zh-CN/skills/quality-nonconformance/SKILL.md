@@ -4,7 +4,7 @@ description: 为受监管制造业中的质量控制、不合格调查、根本�
 license: Apache-2.0
 version: 1.0.0
 homepage: https://github.com/reborncursed/AIP
-origin: ECC
+origin: AIP
 metadata:
   author: evos
   clawdbot:

@@ -1,7 +1,7 @@
 ---
 name: video-editing
 description: 実写素材のカット、構築、強化のためのAI支援ビデオ編集ワークフロー。生の撮影素材からFFmpeg、Remotion、ElevenLabs、fal.aiを経て、DescriptまたはCapCutで最終仕上げを行う完全なパイプラインをカバーする。ユーザーがビデオの編集、素材のカット、vlogの作成、またはビデオコンテンツの構築を望む場合に使用する。
-origin: ECC
+origin: AIP
 ---
 
 # ビデオ編集

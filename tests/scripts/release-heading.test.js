@@ -38,7 +38,7 @@ function extractHeadingProgram() {
 const headingProgram = extractHeadingProgram();
 
 function runHeadingUpdate(contents, version) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-release-heading-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-release-heading-'));
   const file = path.join(dir, 'README.md');
   try {
     fs.writeFileSync(file, contents);

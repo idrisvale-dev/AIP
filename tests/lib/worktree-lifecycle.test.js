@@ -231,7 +231,7 @@ test('empty-queue branches: no conflicts / no stale render friendly messages', (
 
 
 test('real git: createGitRunner drives an actual repo (covers default spawn path)', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-wl-realgit-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-wl-realgit-'));
   const cleanEnv = { ...process.env };
   for (const k of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_PREFIX']) delete cleanEnv[k];
   const git = (args) => execFileSync('git', ['-C', dir, ...args], { stdio: ['ignore', 'pipe', 'ignore'], env: cleanEnv });

@@ -1,7 +1,7 @@
 ---
 name: dotnet-patterns
 description: 惯用的C#和.NET模式、约定、依赖注入、async/await以及构建健壮、可维护的.NET应用程序的最佳实践。
-origin: ECC
+origin: AIP
 ---
 
 # .NET 开发模式

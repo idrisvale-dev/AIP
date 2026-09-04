@@ -131,12 +131,12 @@ jobs:
         id: pack
         run: |
           npm pack --json > npm-pack.json
-          node -e "const crypto = require('crypto'); const fs = require('fs'); const data = JSON.parse(fs.readFileSync('npm-pack.json', 'utf8')); const entries = Array.isArray(data) ? data : [data]; const file = entries.find(entry => /^ecc-universal-[0-9A-Za-z.+-]+\.tgz$/.test(entry?.filename || ''))?.filename; if (!file) throw new Error('Unexpected packed filename'); const archives = fs.readdirSync('.').filter(name => name.endsWith('.tgz')); if (archives.length !== 1 || archives[0] !== file) throw new Error('Expected exactly one packed archive'); const digest = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'package_file=' + file + '\npackage_sha256=' + digest + '\n')"
+          node -e "const crypto = require('crypto'); const fs = require('fs'); const data = JSON.parse(fs.readFileSync('npm-pack.json', 'utf8')); const entries = Array.isArray(data) ? data : [data]; const file = entries.find(entry => /^aip-universal-[0-9A-Za-z.+-]+\.tgz$/.test(entry?.filename || ''))?.filename; if (!file) throw new Error('Unexpected packed filename'); const archives = fs.readdirSync('.').filter(name => name.endsWith('.tgz')); if (archives.length !== 1 || archives[0] !== file) throw new Error('Expected exactly one packed archive'); const digest = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'package_file=' + file + '\npackage_sha256=' + digest + '\n')"
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ecc-release-artifacts
+          name: aip-release-artifacts
           path: |
             release_body.md
             ${{ steps.pack.outputs.package_file }}
@@ -146,12 +146,12 @@ jobs:
       - name: Verify existing npm artifact matches candidate
         if: steps.npm_publish_state.outputs.already_published == 'true'
         env:
-          ECC_RELEASE_PACKAGE: ${{ steps.pack.outputs.package_file }}
+          AIP_RELEASE_PACKAGE: ${{ steps.pack.outputs.package_file }}
         run: |
           PACKAGE_NAME=$(node -p "require('./package.json').name")
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           REGISTRY_INTEGRITY=$(npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" dist.integrity)
-          ECC_REGISTRY_INTEGRITY="$REGISTRY_INTEGRITY" node -e "const crypto = require('crypto'); const fs = require('fs'); const expected = process.env.ECC_REGISTRY_INTEGRITY; if (!/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(expected || '')) throw new Error('Invalid registry integrity'); const actual = 'sha512-' + crypto.createHash('sha512').update(fs.readFileSync(process.env.ECC_RELEASE_PACKAGE)).digest('base64'); if (actual !== expected) throw new Error('Existing npm artifact does not match tested candidate')"
+          AIP_REGISTRY_INTEGRITY="$REGISTRY_INTEGRITY" node -e "const crypto = require('crypto'); const fs = require('fs'); const expected = process.env.AIP_REGISTRY_INTEGRITY; if (!/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(expected || '')) throw new Error('Invalid registry integrity'); const actual = 'sha512-' + crypto.createHash('sha512').update(fs.readFileSync(process.env.AIP_RELEASE_PACKAGE)).digest('base64'); if (actual !== expected) throw new Error('Existing npm artifact does not match tested candidate')"
 
   lifecycle:
     name: Packed Lifecycle (${{ matrix.os }})
@@ -173,13 +173,13 @@ jobs:
       - name: Download exact packed artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: ecc-release-artifacts
+          name: aip-release-artifacts
           path: release-artifacts
 
       - name: Verify packed install lifecycle
         env:
-          ECC_RELEASE_PACKAGE: release-artifacts/${{ needs.verify.outputs.package_file }}
-          ECC_RELEASE_SHA256: ${{ needs.verify.outputs.package_sha256 }}
+          AIP_RELEASE_PACKAGE: release-artifacts/${{ needs.verify.outputs.package_file }}
+          AIP_RELEASE_SHA256: ${{ needs.verify.outputs.package_sha256 }}
         run: node release-artifacts/tests/ci/packed-artifact-lifecycle.js
 
   publish:
@@ -194,7 +194,7 @@ jobs:
       - name: Download release artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: ecc-release-artifacts
+          name: aip-release-artifacts
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -204,21 +204,21 @@ jobs:
 
       - name: Verify artifact before publish
         env:
-          ECC_RELEASE_PACKAGE: ${{ needs.verify.outputs.package_file }}
-          ECC_RELEASE_SHA256: ${{ needs.verify.outputs.package_sha256 }}
-        run: node -e "const crypto = require('crypto'); const fs = require('fs'); const file = process.env.ECC_RELEASE_PACKAGE; const expected = process.env.ECC_RELEASE_SHA256; if (!/^ecc-universal-[0-9A-Za-z.+-]+\.tgz$/.test(file || '')) throw new Error('Unexpected packed filename'); if (!/^[a-f0-9]{64}$/.test(expected || '')) throw new Error('Invalid packed SHA-256'); const archives = fs.readdirSync('.').filter(name => name.endsWith('.tgz')); if (archives.length !== 1 || archives[0] !== file) throw new Error('Expected exactly one downloaded archive'); const actual = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); if (actual !== expected) throw new Error('Downloaded publish artifact SHA-256 mismatch')"
+          AIP_RELEASE_PACKAGE: ${{ needs.verify.outputs.package_file }}
+          AIP_RELEASE_SHA256: ${{ needs.verify.outputs.package_sha256 }}
+        run: node -e "const crypto = require('crypto'); const fs = require('fs'); const file = process.env.AIP_RELEASE_PACKAGE; const expected = process.env.AIP_RELEASE_SHA256; if (!/^aip-universal-[0-9A-Za-z.+-]+\.tgz$/.test(file || '')) throw new Error('Unexpected packed filename'); if (!/^[a-f0-9]{64}$/.test(expected || '')) throw new Error('Invalid packed SHA-256'); const archives = fs.readdirSync('.').filter(name => name.endsWith('.tgz')); if (archives.length !== 1 || archives[0] !== file) throw new Error('Expected exactly one downloaded archive'); const actual = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); if (actual !== expected) throw new Error('Downloaded publish artifact SHA-256 mismatch')"
 
       - name: Publish npm package
         if: needs.verify.outputs.already_published != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          ECC_RELEASE_PACKAGE: ${{ needs.verify.outputs.package_file }}
+          AIP_RELEASE_PACKAGE: ${{ needs.verify.outputs.package_file }}
           NPM_PUBLISH_TAG: ${{ needs.verify.outputs.publish_tag }}
-        run: npm publish "./${ECC_RELEASE_PACKAGE}" --access public --provenance --tag "${NPM_PUBLISH_TAG}"
+        run: npm publish "./${AIP_RELEASE_PACKAGE}" --access public --provenance --tag "${NPM_PUBLISH_TAG}"
 
       - name: Verify published npm artifact
         env:
-          ECC_RELEASE_PACKAGE: ${{ needs.verify.outputs.package_file }}
+          AIP_RELEASE_PACKAGE: ${{ needs.verify.outputs.package_file }}
           PACKAGE_NAME: ${{ needs.verify.outputs.package_name }}
           PACKAGE_VERSION: ${{ needs.verify.outputs.package_version }}
         run: |
@@ -238,7 +238,7 @@ jobs:
             fi
             sleep 5
           done
-          ECC_REGISTRY_INTEGRITY="$REGISTRY_INTEGRITY" node -e "const crypto = require('crypto'); const fs = require('fs'); const expected = process.env.ECC_REGISTRY_INTEGRITY; if (!/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(expected || '')) throw new Error('Invalid published registry integrity'); const actual = 'sha512-' + crypto.createHash('sha512').update(fs.readFileSync(process.env.ECC_RELEASE_PACKAGE)).digest('base64'); if (actual !== expected) throw new Error('Published npm artifact does not match tested candidate')"
+          AIP_REGISTRY_INTEGRITY="$REGISTRY_INTEGRITY" node -e "const crypto = require('crypto'); const fs = require('fs'); const expected = process.env.AIP_REGISTRY_INTEGRITY; if (!/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(expected || '')) throw new Error('Invalid published registry integrity'); const actual = 'sha512-' + crypto.createHash('sha512').update(fs.readFileSync(process.env.AIP_RELEASE_PACKAGE)).digest('base64'); if (actual !== expected) throw new Error('Published npm artifact does not match tested candidate')"
 
       - name: Promote verified npm version
         env:

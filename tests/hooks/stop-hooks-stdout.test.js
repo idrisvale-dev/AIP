@@ -1,7 +1,7 @@
 /**
  * Regression tests for #2090: "Stop hook error: JSON validation failed".
  *
- * Stop hooks follow the ECC pass-through convention (echo stdin on stdout).
+ * Stop hooks follow the AIP pass-through convention (echo stdin on stdout).
  * The Stop payload carries `last_assistant_message`, which can be large; any
  * hook that caps stdin and echoes the capped string emits a JSON document cut
  * mid-stream, which the harness reports as a Stop hook JSON validation
@@ -33,8 +33,8 @@ const SUBPROCESS_TIMEOUT_MS = process.platform === 'darwin' && process.env.CI ==
   ? 120_000
   : 60_000;
 
-const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-stop-stdout-')); // non-git cwd
-const dataHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-stop-data-'));
+const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-stop-stdout-')); // non-git cwd
+const dataHome = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-stop-data-'));
 
 function test(name, fn) {
   try {
@@ -62,13 +62,13 @@ function stopPayload(messageCharacters, character = 'm') {
 function hookEnv() {
   const env = {
     ...process.env,
-    ECC_HOOK_PROFILE: 'standard',
-    ECC_AGENT_DATA_HOME: dataHome,
+    AIP_HOOK_PROFILE: 'standard',
+    AIP_AGENT_DATA_HOME: dataHome,
     CLAUDE_SESSION_ID: `stop-stdout-test-${process.pid}`
   };
-  delete env.ECC_GATEGUARD;
-  delete env.ECC_DISABLED_HOOKS;
-  delete env.ECC_DRY_RUN;
+  delete env.AIP_GATEGUARD;
+  delete env.AIP_DISABLED_HOOKS;
+  delete env.AIP_DRY_RUN;
   return env;
 }
 
@@ -100,7 +100,7 @@ function runRegisteredStopHook(entry, input, envOverrides = {}) {
   const env = {
     ...hookEnv(),
     CLAUDE_PLUGIN_ROOT: repoRoot,
-    ECC_DISABLED_HOOKS: entry.id,
+    AIP_DISABLED_HOOKS: entry.id,
     ...envOverrides
   };
 
@@ -203,8 +203,8 @@ else failed++;
 if (
   test('registered Stop wrapper flushes a 100KB dry-run payload', () => {
     const result = runRegisteredStopHook(representativeStopEntry, realisticPayload, {
-      ECC_DISABLED_HOOKS: '',
-      ECC_DRY_RUN: '1'
+      AIP_DISABLED_HOOKS: '',
+      AIP_DRY_RUN: '1'
     });
     assert.strictEqual(result.status, 0, `expected exit 0, got ${result.status}: ${result.stderr}`);
     assert.ok(
@@ -264,8 +264,8 @@ const oversizedPayload = stopPayload(MAX_STDIN + 64 * 1024);
 if (
   test('registered Stop wrapper suppresses a >1MB dry-run payload', () => {
     const result = runRegisteredStopHook(representativeStopEntry, oversizedPayload, {
-      ECC_DISABLED_HOOKS: '',
-      ECC_DRY_RUN: '1'
+      AIP_DISABLED_HOOKS: '',
+      AIP_DRY_RUN: '1'
     });
     assert.strictEqual(result.status, 0, `expected exit 0, got ${result.status}: ${result.stderr}`);
     assert.strictEqual(

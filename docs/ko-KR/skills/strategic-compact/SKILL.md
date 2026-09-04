@@ -1,7 +1,7 @@
 ---
 name: strategic-compact
 description: 임의의 자동 컴팩션 대신 논리적 간격에서 수동 컨텍스트 압축을 제안하여 작업 단계를 통해 컨텍스트를 보존합니다.
-origin: ECC
+origin: AIP
 ---
 
 # 전략적 컴팩트 스킬

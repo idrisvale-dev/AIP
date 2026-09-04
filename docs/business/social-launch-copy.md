@@ -5,16 +5,16 @@ Use these templates as launch-ready starting points. Review channel tone before 
 ## X Post: Release Announcement
 
 ```text
-ECC v2.0.0-rc.1 preview pack is ready for final release review.
+AIP v2.0.0-rc.1 preview pack is ready for final release review.
 
-ECC 2.0 is the harness-native operator system for agentic work: skills, hooks,
+AIP 2.0 is the harness-native operator system for agentic work: skills, hooks,
 rules, MCP conventions, release gates, and an optional Hermes operator shell.
 
 What ships:
 - Hermes setup guide
 - release notes and launch collateral
 - cross-harness architecture docs
-- Hermes import guidance for turning local operator workflows into public ECC skills
+- Hermes import guidance for turning local operator workflows into public AIP skills
 
 Start here: https://github.com/reborncursed/AIP
 Release notes: https://github.com/reborncursed/AIP/blob/main/docs/releases/2.0.0-rc.1/release-notes.md
@@ -23,8 +23,8 @@ Release notes: https://github.com/reborncursed/AIP/blob/main/docs/releases/2.0.0
 ## X Post: Proof + Metrics
 
 ```text
-ECC v2.0.0-rc.1 keeps the public surface honest:
-- reusable ECC substrate in repo
+AIP v2.0.0-rc.1 keeps the public surface honest:
+- reusable AIP substrate in repo
 - Hermes documented as the operator shell
 - private workspace state left out
 - release metadata and docs covered by tests
@@ -37,7 +37,7 @@ This is the release-candidate line: public system shape now, deeper local integr
 ```text
 Strong point on eval discipline.
 
-In ECC we turned this into production checks via:
+In AIP we turned this into production checks via:
 - /harness-audit
 - /quality-gate
 - Stop-phase session summaries
@@ -50,21 +50,21 @@ In v2.0.0-rc.1, that discipline extends to the release surface: docs, manifests,
 ```text
 This workflow direction is right: optimize the harness, not just prompts.
 
-ECC v2.0.0-rc.1 pushes that further: reusable skills, thin harness adapters, and Hermes as the operator shell on top.
+AIP v2.0.0-rc.1 pushes that further: reusable skills, thin harness adapters, and Hermes as the operator shell on top.
 ```
 
 ## LinkedIn Post: Partner-Friendly Summary
 
 ```text
-ECC v2.0.0-rc.1 preview pack is ready for final release review.
+AIP v2.0.0-rc.1 preview pack is ready for final release review.
 
-ECC 2.0 is the harness-native operator system for agentic work. The same reusable layer now reaches Claude Code, Codex, OpenCode, Cursor, Gemini, Zed, GitHub Copilot workflows, and terminal-only operator lanes.
+AIP 2.0 is the harness-native operator system for agentic work. The same reusable layer now reaches Claude Code, Codex, OpenCode, Cursor, Gemini, Zed, GitHub Copilot workflows, and terminal-only operator lanes.
 
 This release-candidate surface includes:
 - sanitized Hermes setup documentation
 - release notes and launch collateral
 - cross-harness architecture notes
-- Hermes import guidance for turning local operator patterns into public ECC skills
+- Hermes import guidance for turning local operator patterns into public AIP skills
 
 It does not include private workspace state, credentials, raw local exports, or personal datasets.
 

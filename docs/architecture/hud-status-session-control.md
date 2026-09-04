@@ -1,6 +1,6 @@
 # HUD Status And Session Control Contract
 
-This contract defines the portable status payload ECC uses for local operator
+This contract defines the portable status payload AIP uses for local operator
 surfaces, handoffs, and future HUDs. It is intentionally harness-neutral: a
 Claude Code statusline, Codex pane, dmux session, OpenCode run, or terminal-only
 workflow can emit partial data without changing field names.
@@ -10,7 +10,7 @@ The canonical example lives at
 
 ## Payload Shape
 
-Every status payload uses `schema_version: "ecc.hud-status.v1"` and keeps these
+Every status payload uses `schema_version: "aip.hud-status.v1"` and keeps these
 top-level sections stable:
 
 | Field | Purpose | Primary Source |
@@ -23,7 +23,7 @@ top-level sections stable:
 | `cost` | Session spend, token counts, budget, and trend | cost tracker, metrics bridge |
 | `risk` | Attention state, conflict pressure, stale calls, dirty worktree, and manual-review flags | readiness gates, git, queue state |
 | `queueState` | GitHub PR/issue/discussion counts, conflict queue, merge queue, and stale-salvage queue | GitHub sync, work items |
-| `sessionControls` | Supported operator actions for the current target | ECC CLI, dmux, git/GitHub |
+| `sessionControls` | Supported operator actions for the current target | AIP CLI, dmux, git/GitHub |
 | `sync` | Linear, GitHub, and handoff publication state | status updates, work items, handoff writer |
 
 Fields can be `null`, empty arrays, or `"unknown"` when a harness cannot expose
@@ -67,14 +67,14 @@ handoffs.
 
 ## Current Implementations
 
-- `ecc status --json` exposes readiness, active sessions, skill runs, install
+- `aip status --json` exposes readiness, active sessions, skill runs, install
   health, governance, and linked work items from the SQLite state store.
-- `ecc loop-status --json --write-dir <dir>` writes live transcript snapshots
+- `aip loop-status --json --write-dir <dir>` writes live transcript snapshots
   and attention signals for long-running loops.
-- `ecc session-inspect <target> --write <path>` emits canonical session
+- `aip session-inspect <target> --write <path>` emits canonical session
   snapshots from dmux and Claude-history adapters.
-- `scripts/hooks/ecc-statusline.js` renders compact model, task, cost, tool,
+- `scripts/hooks/aip-statusline.js` renders compact model, task, cost, tool,
   file, duration, directory, and context pressure signals inside Claude Code.
 
-The `ecc.hud-status.v1` payload is the common outer contract these surfaces can
-project into before ECC grows a dedicated full-screen HUD.
+The `aip.hud-status.v1` payload is the common outer contract these surfaces can
+project into before AIP grows a dedicated full-screen HUD.

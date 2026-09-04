@@ -32,7 +32,7 @@ function test(name, fn) {
 }
 
 function createTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-instinct-relevance-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-instinct-relevance-'));
 }
 
 function cleanupDir(dir) {
@@ -206,21 +206,21 @@ function runTests() {
 
   // --- isRelevanceRankingEnabled ---------------------------------------
   if (test('isRelevanceRankingEnabled defaults on and honours the opt-out toggle', () => {
-    const original = process.env.ECC_INSTINCT_RELEVANCE_RANKING;
+    const original = process.env.AIP_INSTINCT_RELEVANCE_RANKING;
     try {
-      delete process.env.ECC_INSTINCT_RELEVANCE_RANKING;
+      delete process.env.AIP_INSTINCT_RELEVANCE_RANKING;
       assert.strictEqual(isRelevanceRankingEnabled(), true, 'unset should be on');
       for (const off of ['off', 'OFF', 'false', '0', 'no']) {
-        process.env.ECC_INSTINCT_RELEVANCE_RANKING = off;
+        process.env.AIP_INSTINCT_RELEVANCE_RANKING = off;
         assert.strictEqual(isRelevanceRankingEnabled(), false, `${off} should be off`);
       }
       for (const on of ['on', '1', 'true', 'yes', 'anything']) {
-        process.env.ECC_INSTINCT_RELEVANCE_RANKING = on;
+        process.env.AIP_INSTINCT_RELEVANCE_RANKING = on;
         assert.strictEqual(isRelevanceRankingEnabled(), true, `${on} should be on`);
       }
     } finally {
-      if (original === undefined) delete process.env.ECC_INSTINCT_RELEVANCE_RANKING;
-      else process.env.ECC_INSTINCT_RELEVANCE_RANKING = original;
+      if (original === undefined) delete process.env.AIP_INSTINCT_RELEVANCE_RANKING;
+      else process.env.AIP_INSTINCT_RELEVANCE_RANKING = original;
     }
   })) passed++; else failed++;
 

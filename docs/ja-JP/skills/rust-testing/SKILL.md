@@ -1,7 +1,7 @@
 ---
 name: rust-testing
 description: 単体テスト、統合テスト、非同期テスト、プロパティベーステスト、モック、カバレッジを含むRustテストパターン。TDD方法論に従う。
-origin: ECC
+origin: AIP
 ---
 
 # Rust テストパターン

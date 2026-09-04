@@ -1,7 +1,7 @@
 ---
 name: investor-outreach
 description: 投資家へのアウトリーチ、関係構築、ファンドレイジング戦略、およびパイプラインマネジメント。
-origin: ECC
+origin: AIP
 ---
 
 # Investor Outreach

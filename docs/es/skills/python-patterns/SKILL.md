@@ -1,7 +1,7 @@
 ---
 name: python-patterns
 description: Patrones idiomáticos de Python, estándares PEP 8, type hints y buenas prácticas para construir aplicaciones Python robustas, eficientes y mantenibles.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Desarrollo Python

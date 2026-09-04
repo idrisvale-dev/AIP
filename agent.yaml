@@ -1,7 +1,7 @@
 spec_version: "0.1.0"
-name: ecc
+name: aip
 version: 2.2.1
-description: "Initial gitagent export surface for ECC's shared skill catalog, governance, and identity. Native agents, commands, and hooks remain authoritative in the repository while manifest coverage expands."
+description: "Initial gitagent export surface for AIP's shared skill catalog, governance, and identity. Native agents, commands, and hooks remain authoritative in the repository while manifest coverage expands."
 author: reborncursed
 license: MIT
 model:
@@ -36,7 +36,7 @@ skills:
   - codebase-onboarding
   - coding-standards
   - compose-multiplatform-patterns
-  - configure-ecc
+  - configure-aip
   - contract-first
   - content-engine
   - content-hash-cache-pattern
@@ -168,7 +168,7 @@ commands:
   - cpp-build
   - cpp-review
   - cpp-test
-  - ecc-guide
+  - aip-guide
   - epic-claim
   - epic-decompose
   - epic-publish

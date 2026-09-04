@@ -21,7 +21,7 @@
 
 ## これらのフックを手動でインストールする
 
-Claude Codeを手動でインストールする場合、リポジトリの生の `hooks.json` を `~/.claude/settings.json` に貼り付けたり、`~/.claude/hooks/hooks.json` に直接コピーしたりしないでください。チェックインされたファイルはプラグイン/リポジトリ向けであり、ECCインストーラーを通じてインストールされるか、プラグインとして読み込まれることを想定しています。
+Claude Codeを手動でインストールする場合、リポジトリの生の `hooks.json` を `~/.claude/settings.json` に貼り付けたり、`~/.claude/hooks/hooks.json` に直接コピーしたりしないでください。チェックインされたファイルはプラグイン/リポジトリ向けであり、AIPインストーラーを通じてインストールされるか、プラグインとして読み込まれることを想定しています。
 
 代わりにインストーラーを使用することで、フックコマンドが実際のClaudeルートに対して書き換えられます：
 
@@ -97,19 +97,19 @@ pwsh -File .\install.ps1 --target claude --modules hooks-runtime
 
 ```bash
 # minimal | standard | strict（デフォルト: standard）
-export ECC_HOOK_PROFILE=standard
+export AIP_HOOK_PROFILE=standard
 
 # 特定のフックIDを無効化（カンマ区切り）
-export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
+export AIP_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 
 # セットアップまたは復旧中にGateGuardのみを無効化
-export ECC_GATEGUARD=off
+export AIP_GATEGUARD=off
 
 # SessionStart追加コンテキストを制限（デフォルト: 8000文字）
-export ECC_SESSION_START_MAX_CHARS=4000
+export AIP_SESSION_START_MAX_CHARS=4000
 
 # SessionStart追加コンテキストを完全に無効化
-export ECC_SESSION_START_CONTEXT=off
+export AIP_SESSION_START_CONTEXT=off
 ```
 
 プロファイル：

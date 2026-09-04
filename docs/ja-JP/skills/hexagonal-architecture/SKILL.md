@@ -1,7 +1,7 @@
 ---
 name: hexagonal-architecture
 description: ヘキサゴナルアーキテクチャ（ポート・アダプタパターン）、境界の分離、および外部依存関係の管理。
-origin: ECC
+origin: AIP
 ---
 
 # Hexagonal Architecture

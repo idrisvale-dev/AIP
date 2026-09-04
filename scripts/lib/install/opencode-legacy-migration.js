@@ -8,7 +8,7 @@ const { readInstallState } = require('../install-state');
 const { assertWithinTrustedRoot } = require('../path-safety');
 
 const OPENCODE_TARGET = 'opencode';
-const INSTALL_STATE_NAME = 'ecc-install-state.json';
+const INSTALL_STATE_NAME = 'aip-install-state.json';
 
 function samePath(leftPath, rightPath) {
   const left = path.resolve(leftPath);
@@ -240,7 +240,7 @@ function removeVerifiedLegacyFile(entry, location, fileSystem = fs) {
   );
   const quarantineDir = fileSystem.mkdtempSync(path.join(
     path.dirname(location.targetRoot),
-    '.ecc-opencode-remove-'
+    '.aip-opencode-remove-'
   ));
   const quarantinePath = path.join(quarantineDir, path.basename(safePath));
   try {

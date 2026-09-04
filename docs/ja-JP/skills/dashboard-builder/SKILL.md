@@ -1,7 +1,7 @@
 ---
 name: dashboard-builder
 description: Grafana、SigNoz、および同様のプラットフォーム用の実際のオペレータ質問に答える監視ダッシュボードを構築します。メトリクスを虚栄ボードではなく機能するダッシュボードに変える場合に使用します。
-origin: ECC direct-port adaptation
+origin: AIP direct-port adaptation
 version: "1.0.0"
 ---
 

@@ -26,8 +26,8 @@ const publicInstallDocs = [
   'README.zh-CN.md',
   'docs/pt-BR/README.md',
   'docs/zh-CN/README.md',
-  'docs/ja-JP/skills/configure-ecc/SKILL.md',
-  'docs/zh-CN/skills/configure-ecc/SKILL.md',
+  'docs/ja-JP/skills/configure-aip/SKILL.md',
+  'docs/zh-CN/skills/configure-aip/SKILL.md',
 ];
 
 console.log('\n=== Testing public install identifiers ===\n');
@@ -36,11 +36,11 @@ for (const relativePath of publicInstallDocs) {
   const content = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 
   test(`${relativePath} does not use the overlong legacy marketplace plugin identifier`, () => {
-    assert.ok(!content.includes('everything-claude-code@everything-claude-code'));
+    assert.ok(!content.includes('aip@aip'));
   });
 
   test(`${relativePath} documents the short marketplace plugin identifier`, () => {
-    assert.ok(content.includes('ecc@ecc'));
+    assert.ok(content.includes('aip@aip'));
   });
 }
 
@@ -97,7 +97,7 @@ function executableLegacyInstallerLines(content) {
 
   for (const codeBlock of codeBlocks) {
     for (const line of codeBlock[1].split('\n')) {
-      if (/^\s*(?:(?:\$|PS>)\s*)?npx\s+ecc-install(?:\s|$)/i.test(line)) {
+      if (/^\s*(?:(?:\$|PS>)\s*)?npx\s+aip-install(?:\s|$)/i.test(line)) {
         executableLines.push(line.trim());
       }
     }
@@ -106,10 +106,10 @@ function executableLegacyInstallerLines(content) {
   return executableLines;
 }
 
-function unrelatedEccPackageLines(content) {
+function unrelatedAipPackageLines(content) {
   return content
     .split('\n')
-    .filter(line => /\bnpx\s+ecc(?=\s|$)/i.test(line))
+    .filter(line => /\bnpx\s+aip(?=\s|$)/i.test(line))
     .map(line => line.trim());
 }
 
@@ -133,33 +133,33 @@ function trackedMarkdownFiles(directoryPath) {
 for (const relativePath of publicUniversalInstallDocs) {
   const content = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 
-  test(`${relativePath} does not invoke the unpublished ecc-install package`, () => {
+  test(`${relativePath} does not invoke the unpublished aip-install package`, () => {
     const executableLines = executableLegacyInstallerLines(content);
 
     assert.deepStrictEqual(
       executableLines,
       [],
-      `Replace executable npx ecc-install commands with npx ecc-universal install: ${executableLines.join(', ')}`
+      `Replace executable npx aip-install commands with npx aip-universal install: ${executableLines.join(', ')}`
     );
   });
 
-  test(`${relativePath} does not invoke the unrelated ecc package`, () => {
-    const executableLines = unrelatedEccPackageLines(content);
+  test(`${relativePath} does not invoke the unrelated aip package`, () => {
+    const executableLines = unrelatedAipPackageLines(content);
 
     assert.deepStrictEqual(
       executableLines,
       [],
-      `Replace npx ecc commands with npx ecc-universal: ${executableLines.join(', ')}`
+      `Replace npx aip commands with npx aip-universal: ${executableLines.join(', ')}`
     );
   });
 }
 
-test('repository Markdown does not invoke the unrelated ecc package', () => {
+test('repository Markdown does not invoke the unrelated aip package', () => {
   const offenders = [];
 
   for (const filePath of trackedMarkdownFiles(repoRoot)) {
     const content = fs.readFileSync(filePath, 'utf8');
-    for (const line of unrelatedEccPackageLines(content)) {
+    for (const line of unrelatedAipPackageLines(content)) {
       offenders.push(`${path.relative(repoRoot, filePath)}: ${line}`);
     }
   }
@@ -167,11 +167,11 @@ test('repository Markdown does not invoke the unrelated ecc package', () => {
   assert.deepStrictEqual(
     offenders,
     [],
-    `Replace npx ecc commands with npx ecc-universal: ${offenders.join(', ')}`
+    `Replace npx aip commands with npx aip-universal: ${offenders.join(', ')}`
   );
 });
 
-test('repository Markdown does not execute the unpublished ecc-install package', () => {
+test('repository Markdown does not execute the unpublished aip-install package', () => {
   const offenders = [];
 
   for (const filePath of trackedMarkdownFiles(repoRoot)) {
@@ -184,7 +184,7 @@ test('repository Markdown does not execute the unpublished ecc-install package',
   assert.deepStrictEqual(
     offenders,
     [],
-    `Replace executable npx ecc-install commands with npx ecc-universal install: ${offenders.join(', ')}`
+    `Replace executable npx aip-install commands with npx aip-universal install: ${offenders.join(', ')}`
   );
 });
 
@@ -213,11 +213,11 @@ for (const relativePath of publicCommandNamespaceDocs) {
 
   test(`${relativePath} uses the canonical plugin command namespace`, () => {
     assert.ok(
-      !content.includes('/everything-claude-code:'),
+      !content.includes('/aip:'),
       'Expected docs not to advertise the overlong legacy plugin command namespace'
     );
     assert.ok(
-      content.includes('/ecc:plan'),
+      content.includes('/aip:plan'),
       'Expected docs to show the short plugin command namespace'
     );
   });
@@ -228,8 +228,8 @@ for (const relativePath of manualClaudeSkillInstallDocs) {
 
   test(`${relativePath} keeps manual Claude skill installs top-level`, () => {
     assert.ok(
-      !/^\s*#?\s*(mkdir\s+-p|md\s+.*|cp\s+.*|copy\s+.*|cpi\s+.*|New-Item\s+.*|Copy-Item\s+.*)\s+.*(~|\$HOME)[\\/]\.claude[\\/]skills[\\/]ecc([\\/]|\b)/mi.test(content),
-      'Claude Code does not discover skills installed by commands targeting ~/.claude/skills/ecc'
+      !/^\s*#?\s*(mkdir\s+-p|md\s+.*|cp\s+.*|copy\s+.*|cpi\s+.*|New-Item\s+.*|Copy-Item\s+.*)\s+.*(~|\$HOME)[\\/]\.claude[\\/]skills[\\/]aip([\\/]|\b)/mi.test(content),
+      'Claude Code does not discover skills installed by commands targeting ~/.claude/skills/aip'
     );
     assert.ok(
       content.includes('~/.claude/skills/'),

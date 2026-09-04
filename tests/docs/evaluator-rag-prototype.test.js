@@ -50,7 +50,7 @@ test('architecture doc records the artifact contract and reference pressure', ()
     'Claude HUD',
     'Hermes Agent',
     'dmux, Orca, Superset, and Ghast',
-    'ECC Tools'
+    'AIP Tools'
   ]) {
     assert.ok(source.includes(required), `Missing doc requirement: ${required}`);
   }
@@ -62,10 +62,10 @@ test('fixtures use one scenario id and declare read-only behavior', () => {
   const report = readJson('report.json');
   const verifier = readJson('verifier-result.json');
 
-  assert.strictEqual(scenario.schema_version, 'ecc.evaluator-rag.scenario.v1');
-  assert.strictEqual(trace.schema_version, 'ecc.evaluator-rag.trace.v1');
-  assert.strictEqual(report.schema_version, 'ecc.evaluator-rag.report.v1');
-  assert.strictEqual(verifier.schema_version, 'ecc.evaluator-rag.verifier.v1');
+  assert.strictEqual(scenario.schema_version, 'aip.evaluator-rag.scenario.v1');
+  assert.strictEqual(trace.schema_version, 'aip.evaluator-rag.trace.v1');
+  assert.strictEqual(report.schema_version, 'aip.evaluator-rag.report.v1');
+  assert.strictEqual(verifier.schema_version, 'aip.evaluator-rag.verifier.v1');
 
   for (const artifact of [trace, report, verifier]) {
     assert.strictEqual(artifact.scenario_id, scenario.scenario_id);
@@ -131,7 +131,7 @@ test('candidate playbook preserves stale-salvage operating rules', () => {
 });
 
 test('roadmap points to the evaluator RAG prototype and hosted PR check', () => {
-  const roadmap = read('docs/ECC-2.0-GA-ROADMAP.md');
+  const roadmap = read('docs/AIP-2.0-GA-ROADMAP.md');
 
   assert.ok(roadmap.includes('docs/architecture/evaluator-rag-prototype.md'));
   assert.ok(roadmap.includes('examples/evaluator-rag-prototype/'));
@@ -172,7 +172,7 @@ test('billing readiness scenario rejects launch copy overclaims', () => {
   assert.strictEqual(verifier.promoted_candidate_id, accepted.candidate_id);
   assert.ok(rejected.reasons.join('\n').includes('roadmap acceptance criteria'));
   assert.ok(playbook.includes('remove-before-publication'));
-  assert.ok(playbook.includes('https://github.com/marketplace/ecc-tools'));
+  assert.ok(playbook.includes('https://github.com/marketplace/aip-tools'));
 });
 
 test('ci failure diagnosis scenario rejects rerun-only fixes', () => {
@@ -286,7 +286,7 @@ test('AgentShield policy exception scenario rejects blanket suppression', () => 
     'approving policy exceptions without SARIF or report evidence',
     'treating expired exceptions as active',
     'blanket-suppressing AgentShield policy packs or organization-policy gates',
-    'editing AgentShield code or policy files from this ECC evaluator run'
+    'editing AgentShield code or policy files from this AIP evaluator run'
   ]) {
     assert.ok(scenario.forbidden_actions.includes(blocked), `Missing AgentShield forbidden action: ${blocked}`);
   }
@@ -311,7 +311,7 @@ test('AgentShield policy exception scenario rejects blanket suppression', () => 
   assert.ok(rejected.reasons.join('\n').includes('blanket-suppresses'));
   assert.ok(playbook.includes('agentshield-policy/*'));
   assert.ok(playbook.includes('owner, ticket, scope, expiry'));
-  assert.ok(playbook.includes('npx ecc-agentshield scan --format json'));
+  assert.ok(playbook.includes('npx aip-agentshield scan --format json'));
 });
 
 test('skill quality evidence scenario rejects vague rewrites', () => {
@@ -404,7 +404,7 @@ test('deep analyzer evidence scenario rejects no-corpus analyzer changes', () =>
   assert.strictEqual(rejected.decision, 'rejected');
   assert.strictEqual(verifier.promoted_candidate_id, accepted.candidate_id);
   assert.ok(rejected.reasons.join('\n').includes('does not compare expected outputs'));
-  assert.ok(playbook.includes('../ECC-Tools/src/analyzers/fixtures/deep-analyzer-corpus.ts'));
+  assert.ok(playbook.includes('../AIP-Tools/src/analyzers/fixtures/deep-analyzer-corpus.ts'));
   assert.ok(playbook.includes('npm test -- src/analyzers/deep-analyzer-corpus.test.ts src/lib/analyzer.compare.test.ts'));
   assert.ok(playbook.includes('Deep Analyzer Evidence'));
 });

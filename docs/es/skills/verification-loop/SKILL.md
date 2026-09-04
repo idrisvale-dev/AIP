@@ -1,7 +1,7 @@
 ---
 name: verification-loop
 description: "Sistema de verificación completo para sesiones de Claude Code."
-origin: ECC
+origin: AIP
 ---
 
 # Skill de Bucle de Verificación

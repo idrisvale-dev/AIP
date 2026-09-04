@@ -19,7 +19,7 @@ const {
   resolveClaudePaths,
 } = require('./install/inventory');
 
-const OFFICIAL_MARKETPLACE_NAME = 'ecc';
+const OFFICIAL_MARKETPLACE_NAME = 'aip';
 const OFFICIAL_MARKETPLACE_REPO = 'reborncursed/AIP';
 const OFFICIAL_MARKETPLACE_URL = 'https://github.com/reborncursed/AIP';
 const PROVIDER_COMMAND_TIMEOUT_MS = 120 * 1000;
@@ -95,9 +95,9 @@ function parsePluginList(stdout) {
   for (const plugin of plugins) {
     const isRelevant = plugin && (
       plugin.id === CURRENT_PLUGIN_ID
-      || String(plugin.id || '').startsWith('ecc@')
+      || String(plugin.id || '').startsWith('aip@')
       || LEGACY_PLUGIN_IDS.has(plugin.id)
-      || String(plugin.id || '').startsWith('everything-claude-code@')
+      || String(plugin.id || '').startsWith('aip@')
     );
     if (!isRelevant) continue;
     if (
@@ -107,7 +107,7 @@ function parsePluginList(stdout) {
     ) {
       fail(
         'INVALID_PLUGIN_INVENTORY',
-        'Claude plugin inventory contains an invalid ECC plugin entry'
+        'Claude plugin inventory contains an invalid AIP plugin entry'
       );
     }
   }
@@ -126,7 +126,7 @@ function parseMarketplaceList(stdout) {
     ) {
       fail(
         'INVALID_MARKETPLACE_INVENTORY',
-        'Claude marketplace inventory contains an invalid `ecc` entry'
+        'Claude marketplace inventory contains an invalid `aip` entry'
       );
     }
   }
@@ -186,12 +186,12 @@ function assertGitAvailable(options = {}, dependencies = {}) {
   if (result.error?.code === 'ENOENT') {
     fail(
       'GIT_NOT_FOUND',
-      'Git is required for Claude marketplace setup but `git` is not on PATH. Install Git, ensure `git` is on PATH, then rerun ECC setup.',
+      'Git is required for Claude marketplace setup but `git` is not on PATH. Install Git, ensure `git` is on PATH, then rerun AIP setup.',
       {
         phase: 'preflight',
         recovery: [
           'Install Git from https://git-scm.com/downloads and ensure `git` is on PATH.',
-          'Rerun ECC setup.',
+          'Rerun AIP setup.',
         ],
       }
     );
@@ -203,7 +203,7 @@ function assertGitAvailable(options = {}, dependencies = {}) {
       `Git is required for Claude marketplace setup but could not run${detail ? `: ${detail}` : '.'}`,
       {
         phase: 'preflight',
-        recovery: ['Repair Git, ensure `git --version` succeeds, then rerun ECC setup.'],
+        recovery: ['Repair Git, ensure `git --version` succeeds, then rerun AIP setup.'],
       }
     );
   }
@@ -259,7 +259,7 @@ function runClaude(args, options = {}, dependencies = {}) {
     if (result.error.code === 'ENOENT') {
       fail(
         'CLAUDE_NOT_FOUND',
-        'Claude Code is not installed or `claude` is not on PATH. Install Claude Code, then rerun ECC setup.',
+        'Claude Code is not installed or `claude` is not on PATH. Install Claude Code, then rerun AIP setup.',
         { phase: options.phase || 'inventory' }
       );
     }
@@ -311,11 +311,11 @@ function readSettings(settingsPath) {
       { phase: 'preflight' }
     );
   }
-  const eccConfig = pluginConfigs?.[CURRENT_PLUGIN_ID];
-  if (eccConfig !== undefined && (
-    !eccConfig
-    || typeof eccConfig !== 'object'
-    || Array.isArray(eccConfig)
+  const aipConfig = pluginConfigs?.[CURRENT_PLUGIN_ID];
+  if (aipConfig !== undefined && (
+    !aipConfig
+    || typeof aipConfig !== 'object'
+    || Array.isArray(aipConfig)
   )) {
     fail(
       'INVALID_CLAUDE_SETTINGS',
@@ -323,10 +323,10 @@ function readSettings(settingsPath) {
       { phase: 'preflight' }
     );
   }
-  if (eccConfig?.options !== undefined && (
-    !eccConfig.options
-    || typeof eccConfig.options !== 'object'
-    || Array.isArray(eccConfig.options)
+  if (aipConfig?.options !== undefined && (
+    !aipConfig.options
+    || typeof aipConfig.options !== 'object'
+    || Array.isArray(aipConfig.options)
   )) {
     fail(
       'INVALID_CLAUDE_SETTINGS',
@@ -371,8 +371,8 @@ function needsClaudeCommitAttributionPreferenceWrite(settings) {
 function writeClaudePluginOptions(settingsPath, hooks) {
   const settings = readSettings(settingsPath);
   const pluginConfigs = settings.pluginConfigs || {};
-  const eccConfig = pluginConfigs[CURRENT_PLUGIN_ID] || {};
-  const options = eccConfig.options || {};
+  const aipConfig = pluginConfigs[CURRENT_PLUGIN_ID] || {};
+  const options = aipConfig.options || {};
   const nextOptions = hooks === undefined
     ? { ...options }
     : {
@@ -384,7 +384,7 @@ function writeClaudePluginOptions(settingsPath, hooks) {
     pluginConfigs: {
       ...pluginConfigs,
       [CURRENT_PLUGIN_ID]: {
-        ...eccConfig,
+        ...aipConfig,
         options: nextOptions,
       },
     },
@@ -393,14 +393,14 @@ function writeClaudePluginOptions(settingsPath, hooks) {
   return settingsPath;
 }
 
-function currentEccPlugins(plugins) {
+function currentAipPlugins(plugins) {
   return plugins.filter(plugin => plugin?.id === CURRENT_PLUGIN_ID);
 }
 
-function assertNoConflictingEccPlugins(plugins) {
+function assertNoConflictingAipPlugins(plugins) {
   const legacy = plugins.find(plugin => (
     LEGACY_PLUGIN_IDS.has(plugin?.id)
-    || String(plugin?.id || '').startsWith('everything-claude-code@')
+    || String(plugin?.id || '').startsWith('aip@')
   ));
   if (legacy) {
     fail(
@@ -413,19 +413,19 @@ function assertNoConflictingEccPlugins(plugins) {
     );
   }
 
-  const conflictingEcc = plugins.find(plugin => (
+  const conflictingAip = plugins.find(plugin => (
     typeof plugin?.id === 'string'
-    && plugin.id.startsWith('ecc@')
+    && plugin.id.startsWith('aip@')
     && plugin.id !== CURRENT_PLUGIN_ID
   ));
-  if (conflictingEcc) {
+  if (conflictingAip) {
     fail(
-      'DUPLICATE_ECC_PLUGIN',
-      `${conflictingEcc.id} is already installed and would duplicate ECC surfaces. Uninstall it before setting up ${CURRENT_PLUGIN_ID}.`,
+      'DUPLICATE_AIP_PLUGIN',
+      `${conflictingAip.id} is already installed and would duplicate AIP surfaces. Uninstall it before setting up ${CURRENT_PLUGIN_ID}.`,
       {
-        observedScopes: [conflictingEcc.scope],
+        observedScopes: [conflictingAip.scope],
         recovery: [
-          `claude plugin uninstall ${conflictingEcc.id} --scope ${conflictingEcc.scope} --keep-data`,
+          `claude plugin uninstall ${conflictingAip.id} --scope ${conflictingAip.scope} --keep-data`,
         ],
       }
     );
@@ -433,8 +433,8 @@ function assertNoConflictingEccPlugins(plugins) {
 }
 
 function inspectPluginInventory(plugins, requestedScope) {
-  assertNoConflictingEccPlugins(plugins);
-  const installed = currentEccPlugins(plugins);
+  assertNoConflictingAipPlugins(plugins);
+  const installed = currentAipPlugins(plugins);
   const observedScopes = installed.map(plugin => plugin.scope);
   if (installed.length > 1 || new Set(observedScopes).size !== observedScopes.length) {
     fail(
@@ -462,7 +462,7 @@ function inspectPluginInventory(plugins, requestedScope) {
       {
         observedScopes,
         recovery: [
-          `ecc setup --mode claude-plugin --scope ${scope} --move-scope --yes`,
+          `aip setup --mode claude-plugin --scope ${scope} --move-scope --yes`,
         ],
       }
     );
@@ -480,7 +480,7 @@ function assertSafeLocalInventory(options) {
   if (manual) {
     fail(
       'MANUAL_PLUGIN_INSTALL',
-      `A manual ECC plugin layout exists at ${manual.manifestPath}. Remove or migrate the manual install before setup.`
+      `A manual AIP plugin layout exists at ${manual.manifestPath}. Remove or migrate the manual install before setup.`
     );
   }
   let managedInstalls;
@@ -493,7 +493,7 @@ function assertSafeLocalInventory(options) {
   if (overlap) {
     fail(
       'MANAGED_INSTALL_OVERLAP',
-      `Managed ECC content at ${overlap.statePath} overlaps the Claude plugin. Remove that managed overlap before setup.`
+      `Managed AIP content at ${overlap.statePath} overlaps the Claude plugin. Remove that managed overlap before setup.`
     );
   }
   return managedInstalls;
@@ -505,7 +505,7 @@ function ensureOfficialMarketplace(options) {
   if (existing && !isOfficialMarketplace(existing)) {
     fail(
       'MARKETPLACE_COLLISION',
-      'Refusing the `ecc` marketplace collision because it is not the official reborncursed/AIP source.'
+      'Refusing the `aip` marketplace collision because it is not the official reborncursed/AIP source.'
     );
   }
 
@@ -534,7 +534,7 @@ function ensureOfficialMarketplace(options) {
   if (!verified || !isOfficialMarketplace(verified)) {
     fail(
       'MARKETPLACE_VERIFICATION_FAILED',
-      'Could not verify the official ECC marketplace after the marketplace change.',
+      'Could not verify the official AIP marketplace after the marketplace change.',
       { phase: 'marketplace-verification' }
     );
   }
@@ -549,7 +549,7 @@ function verifyPluginAtScope(options) {
       { cwd: options.projectRoot, phase: options.phase || 'plugin-verification' }
     ).stdout
   );
-  const installed = currentEccPlugins(plugins);
+  const installed = currentAipPlugins(plugins);
   const valid = (
     installed.length === 1
     && installed[0].scope === options.scope
@@ -633,7 +633,7 @@ function setupClaudePlugin(options = {}, dependencies = {}) {
   if (namedMarketplace && !isOfficialMarketplace(namedMarketplace)) {
     fail(
       'MARKETPLACE_COLLISION',
-      'Refusing the `ecc` marketplace collision because it is not the official reborncursed/AIP source.'
+      'Refusing the `aip` marketplace collision because it is not the official reborncursed/AIP source.'
     );
   }
 
@@ -698,11 +698,11 @@ module.exports = {
   VALID_HOOK_MODES,
   VALID_SCOPES,
   buildWindowsCommandLine,
-  assertNoConflictingEccPlugins,
+  assertNoConflictingAipPlugins,
   assertSafeLocalInventory,
   assertGitAvailable,
   createDryRunClaudeRunner,
-  currentEccPlugins,
+  currentAipPlugins,
   deriveHookMode,
   ensureOfficialMarketplace,
   ensurePluginAtScope,

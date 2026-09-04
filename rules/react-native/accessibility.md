@@ -5,7 +5,7 @@ paths:
 ---
 # React Native / Expo Accessibility
 
-> Extends the ECC quality bar to accessibility (a11y). Treat a11y as a release requirement, not an afterthought.
+> Extends the AIP quality bar to accessibility (a11y). Treat a11y as a release requirement, not an afterthought.
 > Target: usable with screen readers (VoiceOver on iOS, TalkBack on Android) and at large font sizes.
 
 ## Labeling

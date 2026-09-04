@@ -1,7 +1,7 @@
 ---
 name: django-celery
 description: DjangoおよびCeleryを使用した非同期タスク処理。タスクキューイング、ワーカー管理、エラー処理、スケジューリング。Redis/RabbitMQ ブローカー統合。
-origin: ECC
+origin: AIP
 ---
 
 # Django + Celery 非同期タスク

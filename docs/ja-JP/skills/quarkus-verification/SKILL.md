@@ -1,7 +1,7 @@
 ---
 name: quarkus-verification
 description: Quarkusプロジェクト検証ループ：ビルド、静的分析、カバレッジ付きテスト、セキュリティスキャン、ネイティブコンパイル、本番環境またはPR前の差分レビュー。
-origin: ECC
+origin: AIP
 ---
 
 # Quarkus Verification Loop

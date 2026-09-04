@@ -1,7 +1,7 @@
 ---
 name: django-patterns
 description: DRF ile Django mimari desenleri, REST API tasarımı, ORM en iyi uygulamaları, caching, signal'ler, middleware ve production-grade Django uygulamaları.
-origin: ECC
+origin: AIP
 ---
 
 # Django Geliştirme Desenleri

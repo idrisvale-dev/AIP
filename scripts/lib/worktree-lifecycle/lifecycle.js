@@ -128,7 +128,7 @@ function buildLifecycleReport(repoRoot, options = {}, deps = {}) {
   }, {});
 
   return {
-    schemaVersion: 'ecc.worktree-lifecycle.v1',
+    schemaVersion: 'aip.worktree-lifecycle.v1',
     repoRoot,
     baseBranch,
     staleThresholdMs,

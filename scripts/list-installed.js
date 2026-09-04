@@ -8,7 +8,7 @@ function showHelp(exitCode = 0) {
   console.log(`
 Usage: node scripts/list-installed.js [--target <${SUPPORTED_INSTALL_TARGETS.join('|')}>] [--json]
 
-Inspect ECC install-state files for the current home/project context.
+Inspect AIP install-state files for the current home/project context.
 `);
   process.exit(exitCode);
 }
@@ -41,11 +41,11 @@ function parseArgs(argv) {
 
 function printHuman(records) {
   if (records.length === 0) {
-    console.log('No ECC install-state files found for the current home/project context.');
+    console.log('No AIP install-state files found for the current home/project context.');
     return;
   }
 
-  console.log('Installed ECC targets:\n');
+  console.log('Installed AIP targets:\n');
   for (const record of records) {
     if (record.error) {
       console.log(`- ${record.adapter.id}: INVALID (${record.error})`);

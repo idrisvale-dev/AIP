@@ -1,7 +1,7 @@
 ---
 name: api-connector-builder
 description: ターゲット リポジトリの既存統合パターンに正確に一致する新しい API コネクターまたはプロバイダーを構築します。2 番目のアーキテクチャを発明せずに、1 つ以上の統合を追加するときに使用します。
-origin: ECC direct-port adaptation
+origin: AIP direct-port adaptation
 version: "1.0.0"
 ---
 

@@ -1,8 +1,8 @@
 ---
 name: unified-notifications-ops
-description: Operate notifications as one ECC-native workflow across GitHub, Linear, desktop alerts, hooks, and connected communication surfaces. Use when the real problem is alert routing, deduplication, escalation, or inbox collapse.
+description: Operate notifications as one AIP-native workflow across GitHub, Linear, desktop alerts, hooks, and connected communication surfaces. Use when the real problem is alert routing, deduplication, escalation, or inbox collapse.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Unified Notifications Ops
@@ -20,7 +20,7 @@ The job is to turn scattered events into one operator surface with:
 - the user wants a unified notification lane across GitHub, Linear, local hooks, desktop alerts, chat, or email
 - CI failures, review requests, issue updates, and operator events are arriving in disconnected places
 - the current setup creates noise instead of action
-- the user wants to consolidate overlapping notification branches or backlog proposals into one ECC-native lane
+- the user wants to consolidate overlapping notification branches or backlog proposals into one AIP-native lane
 - the workspace already has hooks, MCPs, or connected tools, but no coherent notification policy
 
 ## Preferred Surface
@@ -32,7 +32,7 @@ Start from what already exists:
 - desktop notification primitives
 - connected email/chat surfaces when they actually exist
 
-Prefer ECC-native orchestration over telling the user to adopt a separate notification product.
+Prefer AIP-native orchestration over telling the user to adopt a separate notification product.
 
 ## Non-Negotiable Rules
 
@@ -80,7 +80,7 @@ List:
 - duplicate paths for the same event
 - silent failure cases where important things are not being surfaced
 
-Call out what ECC already owns.
+Call out what AIP already owns.
 
 ### 2. Decide what deserves interruption
 
@@ -108,7 +108,7 @@ Prefer:
 - one primary channel
 - one fallback path
 
-### 4. Design the ECC-native workflow
+### 4. Design the AIP-native workflow
 
 For each real notification need, define:
 - **source**
@@ -117,7 +117,7 @@ For each real notification need, define:
 - **channel**
 - **action**
 
-If ECC already has the primitive, prefer:
+If AIP already has the primitive, prefer:
 - a skill for operator triage
 - a hook for automatic emission/enforcement
 - an agent for delegated classification
@@ -129,7 +129,7 @@ End with:
 - what to keep
 - what to suppress
 - what to merge
-- what ECC should wrap next
+- what AIP should wrap next
 
 ## Output Format
 
@@ -156,7 +156,7 @@ CONSOLIDATION
 - merge
 - canonical summaries
 
-NEXT ECC MOVE
+NEXT AIP MOVE
 - skill / hook / agent / MCP
 - exact workflow to build next
 ```
@@ -177,7 +177,7 @@ NEXT ECC MOVE
 - "Our CI failures are noisy and people ignore them"
 - "I want one notification policy across Claude, OpenCode, and Codex surfaces"
 - "Figure out what should interrupt versus land in a digest"
-- "Collapse overlapping notification PR ideas into one canonical ECC lane"
+- "Collapse overlapping notification PR ideas into one canonical AIP lane"
 
 ## Related Skills
 

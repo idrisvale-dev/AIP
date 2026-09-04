@@ -1,6 +1,6 @@
-# Everything Claude Code for Trae
+# AIP for Trae
 
-为 Trae IDE 带来 Everything Claude Code (ECC) 工作流。此仓库提供自定义命令、智能体、技能和规则，可以通过单个命令安装到任何 Trae 项目中。
+为 Trae IDE 带来 AIP (AIP) 工作流。此仓库提供自定义命令、智能体、技能和规则，可以通过单个命令安装到任何 Trae 项目中。
 
 ## 快速开始
 
@@ -74,7 +74,7 @@ TRAE_ENV=cn .trae/install.sh
 TRAE_ENV=cn .trae/install.sh ~
 ```
 
-**注意**：全局安装适用于希望在所有项目之间维护单个 ECC 副本的场景。
+**注意**：全局安装适用于希望在所有项目之间维护单个 AIP 副本的场景。
 
 ## 环境支持
 
@@ -96,7 +96,7 @@ cd .trae
 
 ## 卸载
 
-卸载程序使用清单文件（`.ecc-manifest`）跟踪已安装的文件，确保安全删除：
+卸载程序使用清单文件（`.aip-manifest`）跟踪已安装的文件，确保安全删除：
 
 ```bash
 # 从当前目录卸载（如果已经在 .trae 或 .trae-cn 目录中）
@@ -115,10 +115,10 @@ TRAE_ENV=cn .trae/uninstall.sh ~
 
 ### 卸载行为
 
-- **安全删除**：仅删除清单中跟踪的文件（由 ECC 安装的文件）
+- **安全删除**：仅删除清单中跟踪的文件（由 AIP 安装的文件）
 - **保留用户文件**：您手动添加的任何文件都会被保留
 - **非空目录**：包含用户添加文件的目录会被跳过
-- **基于清单**：需要 `.ecc-manifest` 文件（在安装时创建）
+- **基于清单**：需要 `.aip-manifest` 文件（在安装时创建）
 
 ### 环境支持
 
@@ -189,4 +189,4 @@ TRAE_ENV=cn ./uninstall.sh
 
 - 在 Trae 中打开您的项目
 - 输入 `/` 以查看可用命令
-- 享受 ECC 工作流！
+- 享受 AIP 工作流！

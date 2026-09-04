@@ -35,7 +35,7 @@ function runCommand(command, args, options = {}) {
 }
 
 function runGhJson(args, options = {}) {
-  const shimPath = process.env.ECC_GH_SHIM;
+  const shimPath = process.env.AIP_GH_SHIM;
   const command = shimPath ? process.execPath : 'gh';
   const commandArgs = shimPath ? [shimPath, ...args] : args;
   const env = { ...process.env };

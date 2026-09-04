@@ -1,6 +1,6 @@
 'use strict';
 
-const HEALTH_SCHEMA_VERSION = 'ecc.skill-health.v1';
+const HEALTH_SCHEMA_VERSION = 'aip.skill-health.v1';
 
 function roundRate(value) {
   return Math.round(value * 1000) / 1000;

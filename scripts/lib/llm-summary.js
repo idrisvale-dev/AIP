@@ -6,7 +6,7 @@
  * summaries from JSONL transcripts. Requires no API key — reuses Claude Code's
  * own authentication.
  *
- * Recursion guard: sets ECC_SKIP_LLM_SUMMARY=1 in subprocess env so any Stop
+ * Recursion guard: sets AIP_SKIP_LLM_SUMMARY=1 in subprocess env so any Stop
  * hooks fired by the subprocess do NOT re-enter LLM summarization.
  */
 
@@ -20,11 +20,11 @@ const MAX_TURNS = 25;
 const LLM_TIMEOUT_MS = 90000;
 
 function getLLMModel() {
-  return process.env.ECC_LLM_SUMMARY_MODEL || 'haiku';
+  return process.env.AIP_LLM_SUMMARY_MODEL || 'haiku';
 }
 
 function getContextThreshold() {
-  const raw = parseInt(process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD || '20', 10);
+  const raw = parseInt(process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD || '20', 10);
   return Number.isFinite(raw) && raw > 0 && raw <= 100 ? raw : 20;
 }
 
@@ -110,7 +110,7 @@ function getContextRemainingPct(transcriptPath) {
  * Returns the summary string, or null on failure or when recursion guard is active.
  */
 function generateSessionSummary(transcriptPath) {
-  if (process.env.ECC_SKIP_LLM_SUMMARY) return null;
+  if (process.env.AIP_SKIP_LLM_SUMMARY) return null;
 
   const conversation = extractConversationText(transcriptPath);
   if (!conversation) return null;
@@ -156,8 +156,8 @@ function generateSessionSummary(transcriptPath) {
       env: {
         ...process.env,
         CLAUDECODE: '',
-        ECC_SKIP_LLM_SUMMARY: '1',
-        ECC_LLM_SUMMARY_SUBPROCESS: '1'
+        AIP_SKIP_LLM_SUMMARY: '1',
+        AIP_LLM_SUMMARY_SUBPROCESS: '1'
       },
       timeout: LLM_TIMEOUT_MS,
       shell: process.platform === 'win32'

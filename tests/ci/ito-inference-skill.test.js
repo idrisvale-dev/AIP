@@ -70,7 +70,7 @@ const results = [
     assert.doesNotMatch(bridge, /SUPPORTED_COMMANDS[^\n]+serve/);
     assert.match(bridge, /Unsupported Itô command/);
 
-    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ecc-ito-serve-reject-"));
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "aip-ito-serve-reject-"));
     try {
       const canonicalDir = path.join(fixtureRoot, "cli", "ito-compute-cli", "dist", "bin");
       fs.mkdirSync(canonicalDir, { recursive: true });
@@ -78,11 +78,11 @@ const results = [
       const executable = path.join(canonicalDir, "ito.js");
       fs.writeFileSync(executable, `require("fs").writeFileSync(${JSON.stringify(marker)}, "spawned");\n`);
       const result = spawnSync(process.execPath, [
-        path.join(REPO_ROOT, "scripts", "ecc.js"), "ito", "serve",
+        path.join(REPO_ROOT, "scripts", "aip.js"), "ito", "serve",
         "--booking", "booking_test", "--model", "model_test",
       ], {
         encoding: "utf8",
-        env: { ...process.env, ECC_ITO_CLI_EXECUTABLE: executable },
+        env: { ...process.env, AIP_ITO_CLI_EXECUTABLE: executable },
       });
       assert.notStrictEqual(result.status, 0);
       assert.match(result.stderr, /Unsupported Itô command "serve"/);

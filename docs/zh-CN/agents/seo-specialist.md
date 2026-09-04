@@ -60,4 +60,4 @@ model: sonnet
 
 ## 参考
 
-使用 `skills/seo` 获取规范的ECC SEO工作流程和实施指南。
+使用 `skills/seo` 获取规范的AIP SEO工作流程和实施指南。

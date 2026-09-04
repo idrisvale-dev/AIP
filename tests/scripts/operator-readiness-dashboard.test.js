@@ -28,7 +28,7 @@ function writeFile(rootDir, relativePath, content) {
 function seedRepo(rootDir, overrides = {}) {
   const files = {
     'package.json': JSON.stringify({
-      name: 'everything-claude-code',
+      name: 'aip',
       files: [
         'scripts/observability-readiness.js',
         'scripts/operator-readiness-dashboard.js',
@@ -49,22 +49,22 @@ function seedRepo(rootDir, overrides = {}) {
     }, null, 2),
     'scripts/operator-readiness-dashboard.js': 'operator dashboard generator',
     'scripts/preview-pack-smoke.js': [
-      'ecc.preview-pack-smoke.v1',
+      'aip.preview-pack-smoke.v1',
       'preview-pack-artifacts-present',
       'hermes-boundary-sanitized',
       'publication-blockers-preserved'
     ].join('\n'),
     'scripts/release-video-suite.js': [
-      'ecc.release-video-suite.v1',
+      'aip.release-video-suite.v1',
       'video-source-assets-present',
       'video-release-artifacts-present'
     ].join('\n'),
-    'docs/ECC-2.0-GA-ROADMAP.md': [
-      'https://linear.app/itomarkets/project/ecc-platform-roadmap-52b328ee03e1',
+    'docs/AIP-2.0-GA-ROADMAP.md': [
+      'https://linear.app/itomarkets/project/aip-platform-roadmap-52b328ee03e1',
       'Linear ITO-44 ITO-59',
       'AgentShield PR #92 #78-#92 checksum-backed policy export policy promote checksum-verified policy promotion',
       'AgentShield Enterprise Iteration',
-      'ECC-Tools PR #78',
+      'AIP-Tools PR #78',
       'hosted promotion',
       'operator-visible promotion output values',
       'hosted promotion judge audit traces',
@@ -104,9 +104,9 @@ function seedRepo(rootDir, overrides = {}) {
     'docs/releases/2.0.0-rc.1/publication-readiness.md': 'Claude plugin Codex plugin release-name-plugin-publication-checklist-2026-05-18.md',
     'docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md': 'Claude plugin Codex plugin npm package Publication Paths',
     'docs/releases/2.0.0-rc.1/release-name-plugin-publication-checklist-2026-05-18.md': [
-      'Ship `v2.0.0-rc.1` as **ECC**',
+      'Ship `v2.0.0-rc.1` as **AIP**',
       'reborncursed/AIP',
-      'ecc-universal',
+      'aip-universal',
       'claude plugin tag .claude-plugin --dry-run',
       'codex plugin marketplace add',
       'Do not rename the npm package until rc.1 is published'
@@ -221,7 +221,7 @@ function seedRepo(rootDir, overrides = {}) {
       '$1,728/mo',
       '$8,272/mo'
     ].join('\n'),
-    'docs/releases/2.0.0/ecc-2-hypergrowth-release-command-center.md': [
+    'docs/releases/2.0.0/aip-2-hypergrowth-release-command-center.md': [
       'harness-native operator system',
       '| MRR | `$1,728/mo` | `$10,000/mo` | `$8,272/mo` |',
       'Video Suite',
@@ -229,7 +229,7 @@ function seedRepo(rootDir, overrides = {}) {
       'Owner Approvals'
     ].join('\n'),
     'docs/releases/2.0.0-rc.1/video-suite-production.md': [
-      'ECC 2.0 Video Suite Production Manifest',
+      'AIP 2.0 Video Suite Production Manifest',
       'Primary launch video',
       'Self-Eval Gate',
       'timeline'
@@ -346,14 +346,14 @@ function runTests() {
       seedRepo(rootDir);
       const report = buildSeededReport(rootDir);
 
-      assert.strictEqual(report.schema_version, 'ecc.operator-readiness-dashboard.v1');
+      assert.strictEqual(report.schema_version, 'aip.operator-readiness-dashboard.v1');
       assert.strictEqual(report.generatedAt, '2026-05-15T00:00:00.000Z');
       assert.strictEqual(report.dashboardReady, true);
       assert.strictEqual(report.ready, false);
       assert.strictEqual(report.publicationReady, false);
       assert.ok(report.requirements.some(item => item.id === 'completion-dashboard' && item.status === 'complete'));
       assert.ok(report.requirements.some(item => (
-        item.id === 'ecc-preview-pack'
+        item.id === 'aip-preview-pack'
           && item.status === 'current'
           && item.evidence.includes('deterministic smoke gate')
           && item.gap === 'repeat clean-checkout preview-pack smoke before publication'
@@ -364,7 +364,7 @@ function runTests() {
           && item.evidence.includes('covered by preview-pack smoke')
           && item.gap === 'repeat preview-pack smoke before release review'
       )));
-      assert.ok(report.requirements.some(item => item.id === 'ecc-tools-next-level' && item.status === 'in_progress'));
+      assert.ok(report.requirements.some(item => item.id === 'aip-tools-next-level' && item.status === 'in_progress'));
       assert.ok(report.requirements.some(item => (
         item.id === 'agentshield-enterprise-iteration'
           && item.gap === 'deepen live operator approval/readback after Marketplace/payment gates'
@@ -372,7 +372,7 @@ function runTests() {
           && item.evidence.includes('hosted promotion judge audit traces')
       )));
       assert.ok(report.requirements.some(item => (
-        item.id === 'ecc-tools-next-level'
+        item.id === 'aip-tools-next-level'
           && item.gap === 'repeat KV readback and selected-target announcement gate immediately before launch; keep native-payments copy behind the final release, plugin, URL, and owner-approval gates'
           && item.evidence.includes('operator-visible promotion output details')
           && item.evidence.includes('hosted promotion judge audit traces')
@@ -386,7 +386,7 @@ function runTests() {
           && item.evidence.includes('provenance-aware Marketplace billing-state gates')
           && item.evidence.includes('ready Marketplace Pro target selection')
           && item.evidence.includes('hosted team-learning feedback controls')
-          && item.evidence.includes('ECC-Tools Dependabot alert remediation')
+          && item.evidence.includes('AIP-Tools Dependabot alert remediation')
       )));
       assert.ok(report.requirements.some(item => (
         item.id === 'naming-and-plugin-publication'
@@ -400,7 +400,7 @@ function runTests() {
         gapMrr: '$8,272/mo',
         lanes: [
           'GitHub Sponsors and OSS partner sponsors',
-          'ECC Tools Pro subscriptions',
+          'AIP Tools Pro subscriptions',
           'consulting and implementation contracts',
           'talks, podcasts, conference demos, and partner webinars',
         ],
@@ -452,7 +452,7 @@ function runTests() {
       assert.ok(report.top_actions.some(item => item.id === 'release-video-suite'));
       assert.ok(report.top_actions.some(item => item.id === 'partner-sponsor-talks-pack'));
       assert.ok(!report.top_actions.some(item => item.id === 'owner-approval-packet'));
-      assert.ok(!report.top_actions.some(item => item.id === 'ecc-preview-pack'));
+      assert.ok(!report.top_actions.some(item => item.id === 'aip-preview-pack'));
       assert.ok(!report.top_actions.some(item => item.id === 'hermes-specialized-skills'));
       assert.ok(!report.top_actions.some(item => item.id === 'hypergrowth-command-center'));
       assert.ok(!report.top_actions.some(item => item.id === 'legacy-salvage'));
@@ -505,11 +505,11 @@ function runTests() {
 
     try {
       seedRepo(rootDir, {
-        'docs/ECC-2.0-GA-ROADMAP.md': [
-          'https://linear.app/itomarkets/project/ecc-platform-roadmap-52b328ee03e1',
+        'docs/AIP-2.0-GA-ROADMAP.md': [
+          'https://linear.app/itomarkets/project/aip-platform-roadmap-52b328ee03e1',
           'Linear ITO-44 ITO-59',
           'AgentShield Enterprise Iteration',
-          'ECC-Tools PR #78',
+          'AIP-Tools PR #78',
           'hosted promotion',
           'announcementGate',
           'ITO-55'
@@ -552,14 +552,14 @@ function runTests() {
       });
 
       const report = buildSeededReport(rootDir);
-      const previewPack = report.requirements.find(item => item.id === 'ecc-preview-pack');
+      const previewPack = report.requirements.find(item => item.id === 'aip-preview-pack');
       const hermes = report.requirements.find(item => item.id === 'hermes-specialized-skills');
 
       assert.strictEqual(previewPack.status, 'in_progress');
       assert.strictEqual(previewPack.gap, 'final clean-checkout release approval and publish evidence still pending');
       assert.strictEqual(hermes.status, 'in_progress');
       assert.strictEqual(hermes.gap, 'final preview-pack smoke and release review pending');
-      assert.ok(report.top_actions.some(item => item.id === 'ecc-preview-pack'));
+      assert.ok(report.top_actions.some(item => item.id === 'aip-preview-pack'));
       assert.ok(report.top_actions.some(item => item.id === 'hermes-specialized-skills'));
     } finally {
       cleanup(rootDir);
@@ -641,12 +641,12 @@ function runTests() {
 
       try {
         seedRepo(rootDir, {
-          'docs/ECC-2.0-GA-ROADMAP.md': [
-            'https://linear.app/itomarkets/project/ecc-platform-roadmap-52b328ee03e1',
+          'docs/AIP-2.0-GA-ROADMAP.md': [
+            'https://linear.app/itomarkets/project/aip-platform-roadmap-52b328ee03e1',
             'Linear ITO-44 ITO-59',
             'AgentShield Enterprise Iteration',
             marker,
-            'ECC-Tools PR #78',
+            'AIP-Tools PR #78',
             'hosted promotion',
             'announcementGate',
             'ITO-55'
@@ -668,12 +668,12 @@ function runTests() {
 
     try {
       seedRepo(rootDir, {
-        'docs/ECC-2.0-GA-ROADMAP.md': [
-          'https://linear.app/itomarkets/project/ecc-platform-roadmap-52b328ee03e1',
+        'docs/AIP-2.0-GA-ROADMAP.md': [
+          'https://linear.app/itomarkets/project/aip-platform-roadmap-52b328ee03e1',
           'Linear ITO-44 ITO-59',
           'AgentShield PR #92 #78-#92 checksum-backed policy export policy promote checksum-verified policy promotion',
           'AgentShield Enterprise Iteration',
-          'ECC-Tools PR #78',
+          'AIP-Tools PR #78',
           'hosted promotion',
           'announcementGate'
         ].join('\n'),
@@ -713,7 +713,7 @@ function runTests() {
       const written = fs.readFileSync(outputPath, 'utf8');
 
       assert.strictEqual(stdout, written);
-      assert.ok(written.includes('# ECC Operator Readiness Dashboard'));
+      assert.ok(written.includes('# AIP Operator Readiness Dashboard'));
       assert.ok(written.includes('Generated: 2026-05-15T00:00:00.000Z'));
       assert.ok(written.includes('## Growth Baseline'));
       assert.ok(written.includes('| MRR | $1,728/mo | $10,000/mo | $8,272/mo |'));
@@ -737,7 +737,7 @@ function runTests() {
         '--generated-at=2026-05-15T00:00:00.000Z'
       ], { cwd: rootDir });
 
-      assert.ok(stdout.includes('ECC Operator Readiness Dashboard'));
+      assert.ok(stdout.includes('AIP Operator Readiness Dashboard'));
       assert.ok(stdout.includes('work remaining'));
       assert.ok(stdout.includes('Dashboard ready: true'));
       assert.ok(stdout.includes('Publication ready: false'));

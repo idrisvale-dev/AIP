@@ -1,7 +1,7 @@
 ---
 name: seo
 description: テクニカル SEO、オンページ最適化、構造化データ、Core Web Vitals、およびコンテンツ戦略にわたる SEO 改善の監査、計画、実施。ユーザーが検索可視性の向上、SEO 修正、スキーママークアップ、サイトマップ/robots の作業、またはキーワードマッピングを希望する場合に使用します。
-origin: ECC
+origin: AIP
 ---
 
 # SEO

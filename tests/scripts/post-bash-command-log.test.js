@@ -52,7 +52,7 @@ else failed++;
 
 if (
   test('audit mode logs sanitized bash commands and preserves stdout', () => {
-    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-bash-log-'));
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-bash-log-'));
     const payload = {
       tool_input: {
         command: 'git push --token abc123',
@@ -78,7 +78,7 @@ else failed++;
 
 if (
   test('cost mode writes command metrics log', () => {
-    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-cost-log-'));
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-cost-log-'));
     const payload = {
       tool_input: {
         command: 'npm publish',

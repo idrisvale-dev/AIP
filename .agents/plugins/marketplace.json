@@ -1,11 +1,11 @@
 {
-  "name": "ecc",
+  "name": "aip",
   "interface": {
-    "displayName": "ECC"
+    "displayName": "AIP"
   },
   "plugins": [
     {
-      "name": "ecc",
+      "name": "aip",
       "version": "2.2.1",
       "source": {
         "source": "local",

@@ -27,7 +27,7 @@ Activate this skill for:
 
 Do not use this skill as the primary source for:
 - feature verification after code changes; use `verification-loop`
-- framework-specific debugging when a narrower ECC skill already exists
+- framework-specific debugging when a narrower AIP skill already exists
 - runtime promises the current harness cannot enforce automatically
 
 ## Four-Phase Loop
@@ -134,7 +134,7 @@ Good pattern:
 - run one direct check
 - change the plan only if the check supports it
 
-## Integration with ECC
+## Integration with AIP
 
 - Use `verification-loop` after recovery if code was changed.
 - Use `continuous-learning-v2` when the failure pattern is worth turning into an instinct or later skill.

@@ -86,7 +86,7 @@ module.exports = createInstallTargetAdapter({
   kind: 'home',
   rootSegments: ['.config', 'opencode'],
   resolveRoot: resolveOpencodeConfigRoot,
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   nativeRootRelativePath: '.opencode',
   validate: defaultValidateOpencodeHome,
 });

@@ -4,7 +4,7 @@ description: 返品承認、受取・検品、処分決定、返金処理、不�
 license: Apache-2.0
 version: 1.0.0
 homepage: https://github.com/reborncursed/AIP
-origin: ECC
+origin: AIP
 metadata:
   author: evos
   clawdbot:

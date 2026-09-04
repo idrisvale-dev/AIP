@@ -282,7 +282,7 @@ pytest -n auto
 pytest --lf
 ```
 
-## ECC 워크플로우
+## AIP 워크플로우
 
 ```bash
 # 계획 수립

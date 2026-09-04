@@ -1,8 +1,8 @@
-# ECC Selective Install Design
+# AIP Selective Install Design
 
 ## Purpose
 
-This document defines the user-facing selective-install design for ECC.
+This document defines the user-facing selective-install design for AIP.
 
 It complements
 `docs/SELECTIVE-INSTALL-ARCHITECTURE.md`, which focuses on internal runtime
@@ -10,15 +10,15 @@ architecture and code boundaries.
 
 This document answers the product and operator questions first:
 
-- how users choose ECC components
+- how users choose AIP components
 - what the CLI should feel like
 - what config file should exist
 - how installation should behave across harness targets
-- how the design maps onto the current ECC codebase without requiring a rewrite
+- how the design maps onto the current AIP codebase without requiring a rewrite
 
 ## Problem
 
-Today ECC still feels like a large payload installer even though the repo now
+Today AIP still feels like a large payload installer even though the repo now
 has first-pass manifest and lifecycle support.
 
 Users need a simpler mental model:
@@ -28,7 +28,7 @@ Users need a simpler mental model:
 - add the framework configs they actually want
 - add optional capability packs like security, research, or orchestration
 
-The selective-install system should make ECC feel composable instead of
+The selective-install system should make AIP feel composable instead of
 all-or-nothing.
 
 In the current substrate, user-facing components are still an alias layer over
@@ -38,7 +38,7 @@ until the underlying module graph is split more finely.
 
 ## Goals
 
-1. Let users install a small default ECC footprint quickly.
+1. Let users install a small default AIP footprint quickly.
 2. Let users compose installs from reusable component families:
    - core rules
    - language packs
@@ -48,12 +48,12 @@ until the underlying module graph is split more finely.
 3. Keep one consistent UX across Claude, Cursor, Antigravity, Codex, and
    OpenCode.
 4. Keep installs inspectable, repairable, and uninstallable.
-5. Preserve backward compatibility with the current `ecc-install typescript`
+5. Preserve backward compatibility with the current `aip-install typescript`
    style during rollout.
 
 ## Non-Goals
 
-- packaging ECC into multiple npm packages in the first phase
+- packaging AIP into multiple npm packages in the first phase
 - building a remote marketplace
 - full control-plane UI in the same phase
 - solving every skill-classification problem before selective install ships
@@ -62,10 +62,10 @@ until the underlying module graph is split more finely.
 
 ### 1. Start Small
 
-A user should be able to get a useful ECC install with one command:
+A user should be able to get a useful AIP install with one command:
 
 ```bash
-ecc install --target claude --profile core
+aip install --target claude --profile core
 ```
 
 The default experience should not assume the user wants every skill family and
@@ -87,7 +87,7 @@ The user should not have to know raw internal repo paths.
 Every install path should support dry-run planning:
 
 ```bash
-ecc install --target cursor --profile developer --with lang:typescript --with framework:nextjs --dry-run
+aip install --target cursor --profile developer --with lang:typescript --with framework:nextjs --dry-run
 ```
 
 The plan should clearly show:
@@ -103,7 +103,7 @@ The plan should clearly show:
 Teams should be able to commit a project-level install config and use:
 
 ```bash
-ecc install --config ecc-install.json
+aip install --config aip-install.json
 ```
 
 That allows deterministic installs across contributors and CI.
@@ -121,7 +121,7 @@ module granularity in later phases.
 
 ### 1. Baseline
 
-These are the default ECC building blocks:
+These are the default AIP building blocks:
 
 - core rules
 - baseline agents
@@ -172,7 +172,7 @@ primitives where appropriate.
 
 ### 4. Capability Packs
 
-Capability packs are cross-cutting ECC feature bundles.
+Capability packs are cross-cutting AIP feature bundles.
 
 Examples:
 
@@ -192,7 +192,7 @@ Profiles remain the fastest on-ramp.
 Recommended user-facing profiles:
 
 - `core`
-  minimal baseline, safe default for most users trying ECC
+  minimal baseline, safe default for most users trying AIP
 - `developer`
   best default for active software engineering work
 - `security`
@@ -207,7 +207,7 @@ Profiles should be composable with additional `--with` and `--without` flags.
 Example:
 
 ```bash
-ecc install --target claude --profile developer --with lang:typescript --with framework:nextjs --without capability:orchestration
+aip install --target claude --profile developer --with lang:typescript --with framework:nextjs --without capability:orchestration
 ```
 
 ## Proposed CLI Design
@@ -215,13 +215,13 @@ ecc install --target claude --profile developer --with lang:typescript --with fr
 ### Primary Commands
 
 ```bash
-ecc install
-ecc plan
-ecc list-installed
-ecc doctor
-ecc repair
-ecc uninstall
-ecc catalog
+aip install
+aip plan
+aip list-installed
+aip doctor
+aip repair
+aip uninstall
+aip catalog
 ```
 
 ### Install CLI
@@ -229,16 +229,16 @@ ecc catalog
 Recommended shape:
 
 ```bash
-ecc install [--target <target>] [--profile <name>] [--with <component>]... [--without <component>]... [--config <path>] [--dry-run] [--json]
+aip install [--target <target>] [--profile <name>] [--with <component>]... [--without <component>]... [--config <path>] [--dry-run] [--json]
 ```
 
 Examples:
 
 ```bash
-ecc install --target claude --profile core
-ecc install --target cursor --profile developer --with lang:typescript --with framework:nextjs
-ecc install --target antigravity --with capability:security --with lang:python
-ecc install --config ecc-install.json
+aip install --target claude --profile core
+aip install --target cursor --profile developer --with lang:typescript --with framework:nextjs
+aip install --target antigravity --with capability:security --with lang:python
+aip install --config aip-install.json
 ```
 
 ### Plan CLI
@@ -246,7 +246,7 @@ ecc install --config ecc-install.json
 Recommended shape:
 
 ```bash
-ecc plan [same selection flags as install]
+aip plan [same selection flags as install]
 ```
 
 Purpose:
@@ -259,10 +259,10 @@ Purpose:
 Recommended shape:
 
 ```bash
-ecc catalog profiles
-ecc catalog components
-ecc catalog components --family language
-ecc catalog show framework:nextjs
+aip catalog profiles
+aip catalog components
+aip catalog components --family language
+aip catalog show framework:nextjs
 ```
 
 Purpose:
@@ -275,9 +275,9 @@ Purpose:
 These legacy flows should still work during migration:
 
 ```bash
-ecc-install typescript
-ecc-install --target cursor typescript
-ecc typescript
+aip-install typescript
+aip-install --target cursor typescript
+aip typescript
 ```
 
 Internally these should normalize into the new request model and write
@@ -289,17 +289,17 @@ install-state the same way as modern installs.
 
 Recommended default:
 
-- `ecc-install.json`
+- `aip-install.json`
 
 Optional future support:
 
-- `.ecc/install.json`
+- `.aip/install.json`
 
 ### Config Shape
 
 ```json
 {
-  "$schema": "./schemas/ecc-install-config.schema.json",
+  "$schema": "./schemas/aip-install-config.schema.json",
   "version": 1,
   "target": "cursor",
   "profile": "developer",
@@ -363,7 +363,7 @@ The important UX property is that the exact same flow powers:
 - `repair`
 - `uninstall`
 
-The commands differ in action, not in how ECC understands the selected install.
+The commands differ in action, not in how AIP understands the selected install.
 
 ## Target Behavior
 
@@ -374,7 +374,7 @@ targets, while letting target adapters decide how content lands.
 
 Best fit for:
 
-- home-scoped ECC baseline
+- home-scoped AIP baseline
 - commands, agents, rules, hooks, platform config, orchestration
 
 ### Cursor
@@ -406,7 +406,7 @@ This design is feasible because the repo already has:
 - plan inspection
 - install-state recording
 - lifecycle commands
-- a unified `ecc` CLI surface
+- a unified `aip` CLI surface
 
 The missing work is not conceptual invention. The missing work is productizing
 the current substrate into a cleaner user-facing component model.
@@ -414,7 +414,7 @@ the current substrate into a cleaner user-facing component model.
 ### Feasible In Phase 1
 
 - profile + include/exclude selection
-- `ecc-install.json` config file parsing
+- `aip-install.json` config file parsing
 - catalog/discovery command
 - alias mapping from user-facing component IDs to internal module sets
 - dry-run and JSON planning
@@ -431,7 +431,7 @@ the current substrate into a cleaner user-facing component model.
 - generated slim bundles
 - remote component fetch
 
-## Mapping To Current ECC Manifests
+## Mapping To Current AIP Manifests
 
 The current manifests do not yet expose a true user-facing `lang:*` /
 `framework:*` / `capability:*` taxonomy. That should be introduced as a
@@ -485,5 +485,5 @@ It should be:
 3. add `include` / `exclude` selection and catalog discovery
 4. let the existing planner and lifecycle stack consume that model
 
-That is the shortest path from the current ECC codebase to a real selective
-install experience that feels like ECC 2.0 instead of a large legacy installer.
+That is the shortest path from the current AIP codebase to a real selective
+install experience that feels like AIP 2.0 instead of a large legacy installer.

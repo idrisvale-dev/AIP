@@ -1,7 +1,7 @@
 ---
 name: tdd-workflow
 description: Yeni özellikler yazarken, hata düzeltirken veya kod refactor ederken bu skill'i kullanın. Unit, integration ve E2E testlerini içeren %80+ kapsam ile test güdümlü geliştirmeyi zorlar.
-origin: ECC
+origin: AIP
 ---
 
 # Test Güdümlü Geliştirme İş Akışı

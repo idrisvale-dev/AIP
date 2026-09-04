@@ -43,7 +43,7 @@ const TEST_CASES = [
     const result = run(['--json']);
     assert.strictEqual(result.status, 0, result.stderr);
     const payload = JSON.parse(result.stdout);
-    assert.strictEqual(payload.schemaVersion, 'ecc.feedback.v1');
+    assert.strictEqual(payload.schemaVersion, 'aip.feedback.v1');
     assert.strictEqual(payload.privacy, 'public-github');
     assert.match(payload.routes.problem, /install-problem\.yml/);
     assert.match(payload.routes.feedback, /quick-feedback\.yml/);
@@ -54,8 +54,8 @@ const TEST_CASES = [
     for (const flag of ['--help', '-h']) {
       const result = run([flag]);
       assert.strictEqual(result.status, 0, result.stderr);
-      assert.match(result.stdout, /Usage: ecc feedback \[--json\] \[--help\|-h\]/);
-      assert.doesNotMatch(result.stdout, /^ECC feedback$/m);
+      assert.match(result.stdout, /Usage: aip feedback \[--json\] \[--help\|-h\]/);
+      assert.doesNotMatch(result.stdout, /^AIP feedback$/m);
     }
   }],
   ['lets stdout and stderr flush through natural process exit', () => {

@@ -25,12 +25,12 @@ function usage() {
     'Usage: mcp-inventory [options]',
     '',
     'Read MCP server configs across every installed harness (Claude Code,',
-    'Codex, OpenCode), normalize them to ecc.mcp.v1, and report which servers',
+    'Codex, OpenCode), normalize them to aip.mcp.v1, and report which servers',
     'are configured in more than one harness. Secrets are never printed; only',
     'env key names are shown.',
     '',
     'Options:',
-    '  --json              Print the full ecc.mcp.v1 inventory as JSON',
+    '  --json              Print the full aip.mcp.v1 inventory as JSON',
     '  --fragmented        Only show servers configured in 2+ harnesses',
     '  -h, --help          Show this help'
   ].join('\n');
@@ -40,7 +40,7 @@ function formatHumanReport(inventory, options = {}) {
   const lines = [];
   const { aggregates, servers, fragmentation } = inventory;
 
-  lines.push('MCP Inventory (ecc.mcp.v1)');
+  lines.push('MCP Inventory (aip.mcp.v1)');
   lines.push(
     `  ${aggregates.serverCount} servers across ${aggregates.harnessCount} harnesses, `
     + `${aggregates.duplicateServerCount} configured in 2+ harnesses `

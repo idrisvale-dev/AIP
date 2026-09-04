@@ -347,7 +347,7 @@ function getManagedDestination(
     const error = new Error(
       `Refusing to ${action}: managed destination is a final symlink.`
     );
-    error.code = 'ECC_FINAL_DESTINATION_SYMLINK';
+    error.code = 'AIP_FINAL_DESTINATION_SYMLINK';
     throw error;
   }
 
@@ -572,7 +572,7 @@ function removeContainedPath(destinationPath, trustedRoot, action, options = {})
   const expectedStat = fs.lstatSync(finalDestination, { bigint: true });
   const quarantineDir = fs.mkdtempSync(path.join(
     path.dirname(managedDestination.canonicalRoot),
-    '.ecc-remove-'
+    '.aip-remove-'
   ));
   const quarantinePath = path.join(quarantineDir, path.basename(finalDestination));
 
@@ -988,7 +988,7 @@ function inspectManagedOperation(repoRoot, trustedRoot, operation, linkIndex = n
       status: 'unsafe-destination',
       operation,
       destinationPath,
-      reason: error && error.code === 'ECC_FINAL_DESTINATION_SYMLINK'
+      reason: error && error.code === 'AIP_FINAL_DESTINATION_SYMLINK'
         ? 'final-symlink'
         : 'outside-root'
     };
@@ -1419,7 +1419,7 @@ function analyzeRecord(record, context) {
     issues.push(buildIssue(
       'warning',
       'legacy-opencode-layout',
-      'Legacy OpenCode install-state remains under ~/.opencode. Rerun the OpenCode install or repair command to migrate unchanged ECC-managed files to ~/.config/opencode; modified files are preserved for review.'
+      'Legacy OpenCode install-state remains under ~/.opencode. Rerun the OpenCode install or repair command to migrate unchanged AIP-managed files to ~/.config/opencode; modified files are preserved for review.'
     ));
   }
 

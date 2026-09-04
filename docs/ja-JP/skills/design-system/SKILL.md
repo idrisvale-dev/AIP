@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: アクセシビリティ、レスポンシブネス、テーマ設定、コンポーネント群、トークンを備えた本番環境対応デザインシステムの構築。Figma、Storybook、コンポーネントライブラリ統合。
-origin: ECC
+origin: AIP
 ---
 
 # デザイン システム

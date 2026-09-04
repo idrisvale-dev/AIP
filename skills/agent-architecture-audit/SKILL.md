@@ -219,7 +219,7 @@ Audits should produce structured reports following this shape:
 
 ```json
 {
-  "schema_version": "ecc.agent-architecture-audit.report.v1",
+  "schema_version": "aip.agent-architecture-audit.report.v1",
   "executive_verdict": {
     "overall_health": "high_risk",
     "primary_failure_mode": "string",

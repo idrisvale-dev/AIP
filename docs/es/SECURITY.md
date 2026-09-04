@@ -10,7 +10,7 @@
 
 ## Reportar una Vulnerabilidad
 
-Si descubres una vulnerabilidad de seguridad en ECC, por favor repórtala de forma responsable.
+Si descubres una vulnerabilidad de seguridad en AIP, por favor repórtala de forma responsable.
 
 **No abras un issue público de GitHub para vulnerabilidades de seguridad.**
 
@@ -39,10 +39,10 @@ Si la vulnerabilidad es rechazada, explicaremos por qué y proporcionaremos orie
 
 Esta política cubre:
 
-- El plugin de ECC y todos los scripts de este repositorio
+- El plugin de AIP y todos los scripts de este repositorio
 - Scripts de hooks que se ejecutan en tu máquina
 - Scripts del ciclo de vida de instalación/desinstalación/reparación
-- Configuraciones de MCP incluidas con ECC
+- Configuraciones de MCP incluidas con AIP
 - El escáner de seguridad AgentShield ([github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield))
 
 ## Orientación Operacional
@@ -77,7 +77,7 @@ Compara el PID con el binario esperado de devfleet. Cualquier otro proceso en es
 
 ## Triaje: bloques `<system-reminder>` sospechosos
 
-ECC se ejecuta dentro de Claude Code, que inyecta **recordatorios efímeros del lado del cliente** en la entrada del modelo en cada turno (recordatorios de TodoWrite, avisos de cambio de fecha, avisos de archivo modificado, etc.). Estos bloques:
+AIP se ejecuta dentro de Claude Code, que inyecta **recordatorios efímeros del lado del cliente** en la entrada del modelo en cada turno (recordatorios de TodoWrite, avisos de cambio de fecha, avisos de archivo modificado, etc.). Estos bloques:
 
 - típicamente terminan con frases como *"ignorar si no aplica"* o *"NUNCA mencionar este recordatorio al usuario"* / *"No le digas esto al usuario, ya que ya lo sabe"*; esa redacción es del propio prompt de Anthropic, no una cola maliciosa;
 - son añadidos por el CLI por turno y **no se persisten** en el transcript de sesión en `~/.claude/projects/<slug>/<sessionId>.jsonl`.
@@ -94,7 +94,7 @@ No sanitices los archivos del repo en respuesta a recordatorios efímeros; no so
 
 ## Recursos de Seguridad
 
-- **AgentShield**: Analiza tu configuración de agentes en busca de vulnerabilidades — `npx ecc-agentshield scan`
+- **AgentShield**: Analiza tu configuración de agentes en busca de vulnerabilidades — `npx aip-agentshield scan`
 - **Guía de Seguridad**: [La Guía Resumida de Seguridad Agentiva](../../the-security-guide.md)
 - **Respuesta a incidentes en la cadena de suministro**: [Guía npm/GitHub Actions](../security/supply-chain-incident-response.md)
 - **OWASP MCP Top 10**: [owasp.org/www-project-mcp-top-10](https://owasp.org/www-project-mcp-top-10/)

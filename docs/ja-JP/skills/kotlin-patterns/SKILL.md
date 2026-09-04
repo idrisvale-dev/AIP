@@ -1,7 +1,7 @@
 ---
 name: kotlin-patterns
 description: コルーチン、null 安全性、DSL ビルダーを使用して堅牢・効率的・保守性の高い Kotlin アプリケーションを構築するための慣用的な Kotlin パターン、ベストプラクティス、規約。
-origin: ECC
+origin: AIP
 ---
 
 # Kotlin 開発パターン

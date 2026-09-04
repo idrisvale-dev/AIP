@@ -1,7 +1,7 @@
 ---
 name: flutter-dart-code-review
 description: ウィジェットのベストプラクティス、状態管理パターン（BLoC、Riverpod、Provider、GetX、MobX、Signals）、Dartのイディオム、パフォーマンス、アクセシビリティ、セキュリティ、クリーンアーキテクチャをカバーするライブラリに依存しないFlutter/Dartのコードレビューチェックリスト。
-origin: ECC
+origin: AIP
 ---
 
 # Flutter/Dartコードレビューベストプラクティス

@@ -24,7 +24,7 @@ function test(name, fn) {
 }
 
 function runValidator(files) {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-workflow-security-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-workflow-security-'));
   try {
     for (const [name, contents] of Object.entries(files)) {
       fs.writeFileSync(path.join(tempDir, name), contents);
@@ -34,7 +34,7 @@ function runValidator(files) {
       encoding: 'utf8',
       env: {
         ...process.env,
-        ECC_WORKFLOWS_DIR: tempDir,
+        AIP_WORKFLOWS_DIR: tempDir,
       },
     });
   } finally {

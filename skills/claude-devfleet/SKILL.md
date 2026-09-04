@@ -13,7 +13,7 @@ Use this skill when you need to dispatch multiple Claude Code agents to work on 
 
 ## Setup
 
-The DevFleet server is a separate project, not bundled with ECC. Install and
+The DevFleet server is a separate project, not bundled with AIP. Install and
 run it from its repository first: <https://github.com/LEC-AI/claude-devfleet>
 
 Then connect the running instance via MCP:

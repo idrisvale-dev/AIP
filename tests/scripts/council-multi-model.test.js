@@ -168,7 +168,7 @@ function runTests() {
     let invocation;
     let removed;
     let verified = false;
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-council-test-'));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-council-test-'));
     const result = runReview('review this draft', {
       consent: true,
       hostProvider: 'openai',
@@ -280,11 +280,11 @@ function runTests() {
     assert.doesNotMatch(skill, /^## Entry B|openai-codex SDK|mcp__codex/m);
   })) passed += 1; else failed += 1;
 
-  if (process.env.ECC_CODEX_ISOLATION_INTEGRATION === '1') {
+  if (process.env.AIP_CODEX_ISOLATION_INTEGRATION === '1') {
     if (test('real Codex cannot read an adversarial sentinel outside the review directory', () => {
-      const sentinelDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-council-sentinel-'));
+      const sentinelDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-council-sentinel-'));
       const sentinelPath = path.join(sentinelDir, 'outside-review.txt');
-      const secret = `ECC-SENTINEL-${Date.now()}-${process.pid}`;
+      const secret = `AIP-SENTINEL-${Date.now()}-${process.pid}`;
       fs.writeFileSync(sentinelPath, secret, 'utf8');
       try {
         const result = runReview([

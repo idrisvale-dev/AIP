@@ -95,7 +95,7 @@ test('stale PR salvage ledger keeps localization tails manual-review only', () =
 
 test('legacy inventory and roadmap link to the durable salvage ledger', () => {
   const inventory = read('docs/legacy-artifact-inventory.md');
-  const roadmap = read('docs/ECC-2.0-GA-ROADMAP.md');
+  const roadmap = read('docs/AIP-2.0-GA-ROADMAP.md');
 
   assert.ok(inventory.includes('docs/stale-pr-salvage-ledger.md'));
   assert.ok(roadmap.includes('docs/stale-pr-salvage-ledger.md'));

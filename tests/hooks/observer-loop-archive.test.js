@@ -40,7 +40,7 @@ function test(name, fn) {
 }
 
 function createTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-observer-archive-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-observer-archive-'));
 }
 
 function cleanupDir(dir) {
@@ -89,7 +89,7 @@ function runAnalyzeOnce(claudeExitCode) {
     const observationsFile = path.join(projectDir, 'observations.jsonl');
     fs.writeFileSync(observationsFile, '{"a":1}\n{"a":2}\n{"a":3}\n');
 
-    // Defensive: never leak CLAUDE_PLUGIN_ROOT into the ECC test shell (it
+    // Defensive: never leak CLAUDE_PLUGIN_ROOT into the AIP test shell (it
     // contaminates this project's hook-root resolution).
     const childEnv = Object.assign({}, process.env);
     delete childEnv.CLAUDE_PLUGIN_ROOT;
@@ -104,7 +104,7 @@ function runAnalyzeOnce(claudeExitCode) {
     childEnv.INSTINCTS_DIR = path.join(projectDir, 'instincts');
     childEnv.CONFIG_DIR = projectDir;
     childEnv.CLV2_IS_WINDOWS = 'false';
-    childEnv.ECC_OBSERVER_TIMEOUT_SECONDS = '2';
+    childEnv.AIP_OBSERVER_TIMEOUT_SECONDS = '2';
     // Make the real session-guardian.sh deterministically proceed (exit 0):
     // disable the active-hours and idle gates, isolate the cooldown log, and
     // zero the cooldown interval so a fresh project always passes.

@@ -6,7 +6,7 @@ description: >
   package organization. Use when working with Python code to apply Pythonic
   patterns.
 metadata:
-  origin: ECC
+  origin: AIP
   globs: ["**/*.py", "**/*.pyi"]
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: ralphinho-rfc-pipeline
 description: RFC駆動の複数エージェントDAG実行パターン、品質ゲート、マージキュー、ワークユニットオーケストレーション。
-origin: ECC
+origin: AIP
 ---
 
 # Ralphinho RFC Pipeline

@@ -92,7 +92,7 @@ function writeManifestSourceFixture(root) {
           'standalone.txt',
           'missing.txt',
           'skills/demo',
-          path.join('runtime', 'ecc', 'install-state.json'),
+          path.join('runtime', 'aip', 'install-state.json'),
           '.claude-plugin',
         ],
         targets: ['claude'],
@@ -121,11 +121,11 @@ function writeManifestSourceFixture(root) {
   writeFile(root, path.join('src', 'stray.pyc'), 'ignored\n');
   writeFile(root, path.join('src', 'stray.pyo'), 'ignored\n');
   writeFile(root, path.join('src', 'stray.pyd'), 'ignored\n');
-  writeFile(root, path.join('src', 'nested', 'ecc-install-state.json'), '{}\n');
+  writeFile(root, path.join('src', 'nested', 'aip-install-state.json'), '{}\n');
   writeFile(root, path.join('rules', 'common', 'coding-style.md'), '# Common\n');
   writeFile(root, path.join('skills', 'demo', 'SKILL.md'), '# Demo\n');
   writeFile(root, 'standalone.txt', 'standalone\n');
-  writeFile(root, path.join('runtime', 'ecc', 'install-state.json'), '{}\n');
+  writeFile(root, path.join('runtime', 'aip', 'install-state.json'), '{}\n');
   writeJson(root, path.join('.claude-plugin', 'plugin.json'), { name: 'fixture' });
 }
 
@@ -216,7 +216,7 @@ function runTests() {
     }
   })) passed++; else failed++;
 
-  if (test('plans Claude legacy rules under the default ECC-managed rules directory', () => {
+  if (test('plans Claude legacy rules under the default AIP-managed rules directory', () => {
     const sourceRoot = createTempDir('install-executor-source-');
     const homeDir = createTempDir('install-executor-home-');
     const projectRoot = createTempDir('install-executor-project-');
@@ -232,10 +232,10 @@ function runTests() {
         languages: ['typescript'],
       });
 
-      const managedRulesDir = path.join(homeDir, '.claude', 'rules', 'ecc');
+      const managedRulesDir = path.join(homeDir, '.claude', 'rules', 'aip');
       assert.strictEqual(plan.installRoot, managedRulesDir);
-      assert.ok(operationFor(plan, path.join('.claude', 'rules', 'ecc', 'common', 'coding-style.md')));
-      assert.ok(operationFor(plan, path.join('.claude', 'rules', 'ecc', 'typescript', 'testing.md')));
+      assert.ok(operationFor(plan, path.join('.claude', 'rules', 'aip', 'common', 'coding-style.md')));
+      assert.ok(operationFor(plan, path.join('.claude', 'rules', 'aip', 'typescript', 'testing.md')));
       assert.ok(!operationFor(plan, path.join('.claude', 'rules', 'common', 'coding-style.md')));
       assert.ok(!plan.warnings.some(warning => warning.includes('files may be overwritten')));
     } finally {
@@ -264,7 +264,7 @@ function runTests() {
       assert.strictEqual(plan.installRoot, targetRoot);
       assert.ok(operationFor(plan, path.join('.cursor', 'rules', 'common-style.md')));
       assert.ok(operationFor(plan, path.join('.cursor', 'rules', 'typescript-style.md')));
-      assert.ok(operationFor(plan, path.join('.cursor', 'agents', 'ecc-planner.md')));
+      assert.ok(operationFor(plan, path.join('.cursor', 'agents', 'aip-planner.md')));
       assert.ok(!plan.operations.some(operation => (
         operation.destinationPath.endsWith(path.join('.cursor', 'agents', 'planner.md'))
       )));
@@ -369,8 +369,8 @@ function runTests() {
       assert.ok(normalizedSources.includes('standalone.txt'));
       assert.ok(normalizedSources.includes('.claude-plugin/plugin.json'));
       assert.ok(!normalizedSources.includes('missing.txt'));
-      assert.ok(!normalizedSources.includes('runtime/ecc/install-state.json'));
-      assert.ok(!normalizedSources.includes('src/nested/ecc-install-state.json'));
+      assert.ok(!normalizedSources.includes('runtime/aip/install-state.json'));
+      assert.ok(!normalizedSources.includes('src/nested/aip-install-state.json'));
       assert.ok(!normalizedSources.some(source => source.includes('node_modules')));
       assert.ok(!normalizedSources.some(source => source.includes('.git')));
       assert.ok(!normalizedSources.some(source => source.includes('__pycache__')));
@@ -382,7 +382,7 @@ function runTests() {
       )));
       assert.ok(plan.operations.some(operation => (
         operation.sourceRelativePath === path.join('rules', 'common', 'coding-style.md')
-        && operation.destinationPath === path.join(homeDir, '.claude', 'rules', 'ecc', 'common', 'coding-style.md')
+        && operation.destinationPath === path.join(homeDir, '.claude', 'rules', 'aip', 'common', 'coding-style.md')
       )));
       assert.ok(plan.operations.some(operation => (
         operation.sourceRelativePath === path.join('skills', 'demo', 'SKILL.md')
@@ -439,12 +439,12 @@ function runTests() {
       const applied = applyInstallPlan(plan);
 
       assert.strictEqual(applied.applied, true);
-      assert.ok(fs.existsSync(path.join(homeDir, '.claude', 'rules', 'ecc', 'common', 'coding-style.md')));
+      assert.ok(fs.existsSync(path.join(homeDir, '.claude', 'rules', 'aip', 'common', 'coding-style.md')));
       assert.ok(fs.existsSync(path.join(homeDir, '.claude', 'skills', 'demo', 'SKILL.md')));
       assert.ok(fs.existsSync(path.join(homeDir, '.claude', 'src', 'app.js')));
       assert.ok(fs.existsSync(path.join(homeDir, '.claude', 'standalone.txt')));
       assert.ok(fs.existsSync(path.join(homeDir, '.claude', 'plugin.json')));
-      const state = JSON.parse(fs.readFileSync(path.join(homeDir, '.claude', 'ecc', 'install-state.json'), 'utf8'));
+      const state = JSON.parse(fs.readFileSync(path.join(homeDir, '.claude', 'aip', 'install-state.json'), 'utf8'));
       assert.strictEqual(state.request.profile, 'minimal');
       assert.deepStrictEqual(state.resolution.selectedModules, ['fixture-core']);
       for (const operation of state.operations) {
@@ -465,11 +465,11 @@ function runTests() {
     const tempDir = createTempDir('install-executor-write-guard-');
     try {
       const targetRoot = path.join(tempDir, 'target');
-      const sourcePath = writeFile(tempDir, path.join('source', 'security.md'), 'ecc\n');
+      const sourcePath = writeFile(tempDir, path.join('source', 'security.md'), 'aip\n');
       const destinationPath = path.join(targetRoot, 'rules', 'security.md');
       const plan = {
         adapter: { id: 'kimi-project', target: 'kimi', kind: 'project' },
-        installStatePath: path.join(targetRoot, 'ecc-install-state.json'),
+        installStatePath: path.join(targetRoot, 'aip-install-state.json'),
         operations: [{
           kind: 'copy-file',
           moduleId: 'core',
@@ -573,7 +573,7 @@ function runTests() {
         sourceRoot,
         targetRoot,
         installRoot: targetRoot,
-        installStatePath: path.join(targetRoot, 'ecc-install-state.json'),
+        installStatePath: path.join(targetRoot, 'aip-install-state.json'),
         warnings: [],
         statePreview: {
           target: 'kimi',
@@ -622,7 +622,7 @@ function runTests() {
         sourceRoot: path.join(tempDir, 'source'),
         targetRoot,
         installRoot: targetRoot,
-        installStatePath: path.join(targetRoot, 'ecc', 'install-state.json'),
+        installStatePath: path.join(targetRoot, 'aip', 'install-state.json'),
         warnings: [],
         statePreview: {
           target: 'claude',
@@ -663,7 +663,7 @@ function runTests() {
         sourceRoot,
         targetRoot,
         installRoot: targetRoot,
-        installStatePath: path.join(targetRoot, 'ecc', 'install-state.json'),
+        installStatePath: path.join(targetRoot, 'aip', 'install-state.json'),
         warnings: [],
         hookConsent: 'enabled',
         statePreview: {

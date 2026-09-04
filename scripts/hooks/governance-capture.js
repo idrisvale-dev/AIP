@@ -12,8 +12,8 @@
  *   - approval_requested: Operations requiring explicit approval
  *   - hook_input_truncated: Hook input exceeded the safe inspection limit
  *
- * Enable: Set ECC_GOVERNANCE_CAPTURE=1
- * Configure session: Set ECC_SESSION_ID for session correlation
+ * Enable: Set AIP_GOVERNANCE_CAPTURE=1
+ * Configure session: Set AIP_SESSION_ID for session correlation
  */
 
 'use strict';
@@ -252,11 +252,11 @@ function analyzeForGovernanceEvents(input, context = {}) {
  */
 function run(rawInput, options = {}) {
   // Gate on feature flag
-  if (String(process.env.ECC_GOVERNANCE_CAPTURE || '').toLowerCase() !== '1') {
+  if (String(process.env.AIP_GOVERNANCE_CAPTURE || '').toLowerCase() !== '1') {
     return rawInput;
   }
 
-  const sessionId = process.env.ECC_SESSION_ID || null;
+  const sessionId = process.env.AIP_SESSION_ID || null;
   const hookPhase = process.env.CLAUDE_HOOK_EVENT_NAME || 'unknown';
 
   if (options.truncated) {
@@ -297,7 +297,7 @@ function run(rawInput, options = {}) {
 // ── stdin entry point ────────────────────────────────
 if (require.main === module) {
   let raw = '';
-  let truncated = /^(1|true|yes)$/i.test(String(process.env.ECC_HOOK_INPUT_TRUNCATED || ''));
+  let truncated = /^(1|true|yes)$/i.test(String(process.env.AIP_HOOK_INPUT_TRUNCATED || ''));
   process.stdin.setEncoding('utf8');
   process.stdin.on('data', chunk => {
     if (raw.length < MAX_STDIN) {
@@ -314,7 +314,7 @@ if (require.main === module) {
   process.stdin.on('end', () => {
     const result = run(raw, {
       truncated,
-      maxStdin: Number(process.env.ECC_HOOK_INPUT_MAX_BYTES) || MAX_STDIN,
+      maxStdin: Number(process.env.AIP_HOOK_INPUT_MAX_BYTES) || MAX_STDIN,
     });
     process.stdout.write(result);
   });

@@ -1,12 +1,12 @@
 # Itô Prediction-Market Skill Pack
 
-This rc.1 note records a public teaser skill pack that connects ECC's skill
+This rc.1 note records a public teaser skill pack that connects AIP's skill
 distribution loop with Itô prediction-market workflows while keeping the two
 businesses separate.
 
-ECC remains the open agent-harness substrate and ECC Tools remains the hosted
+AIP remains the open agent-harness substrate and AIP Tools remains the hosted
 GitHub App / Pro surface. Itô remains a separate prediction-market basket
-business. The link is distribution: ECC can ship reusable skills that make
+business. The link is distribution: AIP can ship reusable skills that make
 agents better at researching, comparing, explaining, and planning around
 prediction-market baskets. Live Itô API access stays gated.
 
@@ -56,13 +56,13 @@ For the general product-integration contract, see
 
 The loop is intentionally simple:
 
-1. ECC users discover useful public prediction-market skills.
+1. AIP users discover useful public prediction-market skills.
 2. Builders run the skills with public sources and see the Itô-shaped workflow.
 3. Serious users request gated API access for live Itô basket data.
 4. Itô usage creates more operator patterns.
-5. Sanitized patterns can become new ECC skills.
+5. Sanitized patterns can become new AIP skills.
 
-This sends agent/tooling traffic toward Itô without making ECC Tools look like
+This sends agent/tooling traffic toward Itô without making AIP Tools look like
 an Itô product or mixing subscription ownership between businesses.
 
 ## Useful Chain

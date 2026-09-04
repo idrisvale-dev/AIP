@@ -15,7 +15,7 @@ const prePushHook = path.join(repoRoot, 'scripts', 'codex-git-hooks', 'pre-push'
 const pluginCacheCheckScript = path.join(repoRoot, 'scripts', 'codex', 'check-plugin-cache.js');
 const mergeCodexConfigScript = path.join(repoRoot, 'scripts', 'codex', 'merge-codex-config.js');
 const mergeMcpConfigScript = path.join(repoRoot, 'scripts', 'codex', 'merge-mcp-config.js');
-const syncScript = path.join(repoRoot, 'scripts', 'sync-ecc-to-codex.sh');
+const syncScript = path.join(repoRoot, 'scripts', 'sync-aip-to-codex.sh');
 const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
 const packageVersion = packageJson.version;
 const deterministicPackageEnv = {
@@ -98,7 +98,7 @@ function makeHermeticCodexEnv(homeDir, codexDir, extraEnv = {}) {
     GIT_CONFIG_GLOBAL: path.join(homeDir, '.gitconfig'),
     CODEX_HOME: codexDir,
     AGENTS_HOME: agentsHome,
-    ECC_GLOBAL_HOOKS_DIR: hooksDir,
+    AIP_GLOBAL_HOOKS_DIR: hooksDir,
     CLAUDE_PACKAGE_MANAGER: 'npm',
     CLAUDE_CODE_PACKAGE_MANAGER: 'npm',
     LANG: 'C.UTF-8',
@@ -113,7 +113,7 @@ function writeJson(filePath, value) {
 }
 
 function seedPluginCache(codexDir, manifest, files = []) {
-  const cacheDir = path.join(codexDir, 'plugins', 'cache', 'ecc', 'ecc', packageVersion);
+  const cacheDir = path.join(codexDir, 'plugins', 'cache', 'aip', 'aip', packageVersion);
   writeJson(path.join(cacheDir, '.codex-plugin', 'plugin.json'), manifest);
   fs.writeFileSync(path.join(cacheDir, 'README.md'), '# cached plugin\n');
   for (const [relativePath, content] of files) {
@@ -125,12 +125,12 @@ function seedPluginCache(codexDir, manifest, files = []) {
 }
 
 const cacheManifestWithLocalRefs = {
-  name: 'ecc',
+  name: 'aip',
   version: packageVersion,
   skills: './skills/',
   mcpServers: './.mcp.json',
   interface: {
-    composerIcon: './assets/ecc-icon.svg',
+    composerIcon: './assets/aip-icon.svg',
     logo: './assets/hero.png',
   },
 };
@@ -151,7 +151,7 @@ else failed++;
 
 if (
   test('shell test runner honors a per-invocation BASH_PATH override', () => {
-    const tempDir = createTempDir('ecc-missing-bash-');
+    const tempDir = createTempDir('aip-missing-bash-');
     try {
       const missingBash = path.join(tempDir, 'bash');
       const result = runBash(prePushHook, { env: { BASH_PATH: missingBash } });
@@ -203,9 +203,9 @@ ${includePnpm ? functionStub('pnpm', false) : ''}
     env: {
       PATH: toBashPath(binDir),
       BASH_ENV: toBashPath(bashEnv),
-      ECC_PREPUSH_AUDIT: audit ? '1' : '0',
-      ECC_SKIP_GIT_HOOKS: '0',
-      ECC_SKIP_PREPUSH: '0',
+      AIP_PREPUSH_AUDIT: audit ? '1' : '0',
+      AIP_SKIP_GIT_HOOKS: '0',
+      AIP_SKIP_PREPUSH: '0',
       MSYS_NO_PATHCONV: '1',
     },
     cwd: projectDir,
@@ -320,7 +320,7 @@ if (
       assert.match(result.stdout, /\[FAIL\] skills missing/);
       assert.match(result.stdout, /\[FAIL\] mcpServers missing/);
       assert.match(result.stdout, /codex plugin list only confirms marketplace registration/);
-      assert.match(result.stdout, /sync-ecc-to-codex\.sh/);
+      assert.match(result.stdout, /sync-aip-to-codex\.sh/);
     } finally {
       cleanup(homeDir);
     }
@@ -336,7 +336,7 @@ if (
 
     try {
       seedPluginCache(codexDir, {
-        name: 'ecc',
+        name: 'aip',
         version: packageVersion,
         skills: '../../../../../etc/passwd',
         mcpServers: '../../.mcp.json',
@@ -363,7 +363,7 @@ if (
     try {
       const cacheDir = seedPluginCache(codexDir, cacheManifestWithLocalRefs, [
         ['.mcp.json', '{"mcpServers":{}}\n'],
-        ['assets/ecc-icon.svg', '<svg />\n'],
+        ['assets/aip-icon.svg', '<svg />\n'],
         ['assets/hero.png', 'png\n'],
       ]);
       fs.mkdirSync(path.join(cacheDir, 'skills'), { recursive: true });
@@ -392,7 +392,7 @@ if (
 
       assert.strictEqual(result.status, 1, `${result.stdout}\n${result.stderr}`);
       assert.match(result.stdout, /Cached plugin manifest missing/);
-      assert.match(result.stdout, /codex plugin marketplace add reborncursed\/ECC/);
+      assert.match(result.stdout, /codex plugin marketplace add reborncursed\/AIP/);
     } finally {
       cleanup(homeDir);
     }
@@ -459,7 +459,7 @@ if (os.platform() === 'win32') {
       const result = runBash(installScript, {
         env: {
           HOME: homeDir,
-          ECC_GLOBAL_HOOKS_DIR: weirdHooksDir,
+          AIP_GLOBAL_HOOKS_DIR: weirdHooksDir,
         },
       });
 
@@ -673,7 +673,7 @@ if (
       const second = runNode(mergeMcpConfigScript, [configPath], deterministicPackageEnv);
       assert.strictEqual(second.status, 0, `${second.stdout}\n${second.stderr}`);
       assert.match(second.stdout, /\[ok\] mcp_servers\.chrome-devtools/);
-      assert.match(second.stdout, /All ECC MCP servers already present/);
+      assert.match(second.stdout, /All AIP MCP servers already present/);
       assert.strictEqual(fs.readFileSync(configPath, 'utf8'), merged);
     } finally {
       cleanup(tempDir);
@@ -684,7 +684,7 @@ if (
 else failed++;
 
 if (
-  test('merge-mcp-config repairs the invalid exa url entry from earlier ECC versions (#2224)', () => {
+  test('merge-mcp-config repairs the invalid exa url entry from earlier AIP versions (#2224)', () => {
     const tempDir = createTempDir('mcp-merge-exa-repair-');
     const configPath = path.join(tempDir, 'config.toml');
     const original = [
@@ -776,7 +776,7 @@ if (
       assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
       assert.match(result.stdout, /\[remove\] mcp_servers\.chrome-devtools/);
       assert.match(result.stdout, /\[mcp_servers\.chrome-devtools\]/);
-      // Retired servers are no longer ECC-managed: never removed or re-added.
+      // Retired servers are no longer AIP-managed: never removed or re-added.
       assert.doesNotMatch(result.stdout, /\[remove\] mcp_servers\.context7/);
       assert.strictEqual(fs.readFileSync(configPath, 'utf8'), original);
     } finally {
@@ -802,11 +802,11 @@ if (
       fs.writeFileSync(configPath, original);
       const result = runNode(mergeMcpConfigScript, [configPath], {
         ...deterministicPackageEnv,
-        ECC_DISABLED_MCPS: 'chrome-devtools',
+        AIP_DISABLED_MCPS: 'chrome-devtools',
       });
 
       assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
-      assert.match(result.stdout, /Disabled via ECC_DISABLED_MCPS/);
+      assert.match(result.stdout, /Disabled via AIP_DISABLED_MCPS/);
       assert.match(result.stdout, /\[skip\] mcp_servers\.chrome-devtools \(disabled\)/);
       assert.match(result.stdout, /\[update\] mcp_servers\.chrome-devtools \(disabled\)/);
       assert.match(result.stdout, /Done\. Removed 1 server section\(s\)\./);
@@ -862,8 +862,8 @@ if (
       assert.strictEqual(syncResult.status, 0, `${syncResult.stdout}\n${syncResult.stderr}`);
 
       const syncedAgents = fs.readFileSync(agentsPath, 'utf8');
-      assert.match(syncedAgents, /^# Everything Claude Code \(ECC\) — Agent Instructions/m);
-      assert.match(syncedAgents, /^# Codex Supplement \(From ECC \.codex\/AGENTS\.md\)/m);
+      assert.match(syncedAgents, /^# AIP \(AIP\) — Agent Instructions/m);
+      assert.match(syncedAgents, /^# Codex Supplement \(From AIP \.codex\/AGENTS\.md\)/m);
 
       const syncedConfig = fs.readFileSync(configPath, 'utf8');
       const parsedConfig = TOML.parse(syncedConfig);

@@ -21,7 +21,7 @@ The executable hook graph remains `hooks/hooks.json`; the memory persistence dir
 
 ## Installing These Hooks Manually
 
-For Claude Code manual installs, do not paste the raw repo `hooks.json` into `~/.claude/settings.json` or copy it directly into `~/.claude/hooks/hooks.json`. The checked-in file is plugin/repo-oriented and is meant to be installed through the ECC installer or loaded as a plugin.
+For Claude Code manual installs, do not paste the raw repo `hooks.json` into `~/.claude/settings.json` or copy it directly into `~/.claude/hooks/hooks.json`. The checked-in file is plugin/repo-oriented and is meant to be installed through the AIP installer or loaded as a plugin.
 
 Use the installer instead so hook commands are rewritten against your actual Claude root:
 
@@ -98,35 +98,35 @@ Use environment variables to control hook behavior without editing `hooks.json`:
 
 ```bash
 # Master switch. Explicit environment values override plugin preferences.
-export ECC_HOOKS_ENABLED=true
+export AIP_HOOKS_ENABLED=true
 
 # minimal | standard | strict (default: standard)
-export ECC_HOOK_PROFILE=standard
+export AIP_HOOK_PROFILE=standard
 
 # Disable specific hook IDs (comma-separated)
-export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
+export AIP_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 
 # Disable only GateGuard during setup or recovery
-export ECC_GATEGUARD=off
+export AIP_GATEGUARD=off
 
 # Cap SessionStart additional context (default: 8000 chars)
-export ECC_SESSION_START_MAX_CHARS=4000
+export AIP_SESSION_START_MAX_CHARS=4000
 
 # Disable SessionStart additional context entirely
-export ECC_SESSION_START_CONTEXT=off
+export AIP_SESSION_START_CONTEXT=off
 
 # Keep context/scope/loop warnings but suppress API-rate cost estimates
-export ECC_CONTEXT_MONITOR_COST_WARNINGS=off
+export AIP_CONTEXT_MONITOR_COST_WARNINGS=off
 ```
 
 Windows PowerShell:
 
 ```powershell
-[Environment]::SetEnvironmentVariable('ECC_CONTEXT_MONITOR_COST_WARNINGS', 'off', 'User')
+[Environment]::SetEnvironmentVariable('AIP_CONTEXT_MONITOR_COST_WARNINGS', 'off', 'User')
 ```
 
 Claude setup-only value:
-- `off` — disables local ECC hook work through `ecc setup`; it is not a runtime hook profile.
+- `off` — disables local AIP hook work through `aip setup`; it is not a runtime hook profile.
 
 Runtime hook profiles:
 - `minimal` — keep essential lifecycle and safety hooks only.
@@ -134,7 +134,7 @@ Runtime hook profiles:
 - `strict` — enables additional reminders and stricter guardrails.
 
 The Claude plugin exposes the same choices as the personal `hooks_enabled` and
-`hook_profile` settings. Run `ecc setup --mode claude-plugin` to install or
+`hook_profile` settings. Run `aip setup --mode claude-plugin` to install or
 update the plugin and change those preferences.
 
 ### Writing Your Own Hook

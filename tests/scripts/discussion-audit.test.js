@@ -102,10 +102,10 @@ function runTests() {
 
     try {
       const shimPath = writeGhShim(rootDir, {
-        [discussionEnabledGhKey('reborncursed', 'ECC')]: {
+        [discussionEnabledGhKey('reborncursed', 'AIP')]: {
           data: { repository: { hasDiscussionsEnabled: true } }
         },
-        [discussionGhKey('reborncursed', 'ECC')]: {
+        [discussionGhKey('reborncursed', 'AIP')]: {
           data: {
             repository: {
               hasDiscussionsEnabled: true,
@@ -146,7 +146,7 @@ function runTests() {
       ], {
         cwd: rootDir,
         env: {
-          ECC_GH_SHIM: shimPath,
+          AIP_GH_SHIM: shimPath,
           GITHUB_TOKEN: 'must-be-removed'
         }
       }));
@@ -165,10 +165,10 @@ function runTests() {
 
     try {
       const shimPath = writeGhShim(rootDir, {
-        [discussionEnabledGhKey('reborncursed', 'ECC')]: {
+        [discussionEnabledGhKey('reborncursed', 'AIP')]: {
           data: { repository: { hasDiscussionsEnabled: true } }
         },
-        [discussionGhKey('reborncursed', 'ECC')]: {
+        [discussionGhKey('reborncursed', 'AIP')]: {
           data: {
             repository: {
               hasDiscussionsEnabled: true,
@@ -199,7 +199,7 @@ function runTests() {
         '--exit-code'
       ], {
         cwd: rootDir,
-        env: { ECC_GH_SHIM: shimPath }
+        env: { AIP_GH_SHIM: shimPath }
       });
       const parsed = JSON.parse(result.stdout);
 
@@ -220,10 +220,10 @@ function runTests() {
 
     try {
       const shimPath = writeGhShim(rootDir, {
-        [discussionEnabledGhKey('reborncursed', 'ECC')]: {
+        [discussionEnabledGhKey('reborncursed', 'AIP')]: {
           data: { repository: { hasDiscussionsEnabled: true } }
         },
-        [discussionGhKey('reborncursed', 'ECC')]: {
+        [discussionGhKey('reborncursed', 'AIP')]: {
           data: {
             repository: {
               hasDiscussionsEnabled: true,
@@ -240,12 +240,12 @@ function runTests() {
         'reborncursed/AIP'
       ], {
         cwd: rootDir,
-        env: { ECC_GH_SHIM: shimPath }
+        env: { AIP_GH_SHIM: shimPath }
       });
       const written = fs.readFileSync(outputPath, 'utf8');
 
       assert.strictEqual(stdout, written);
-      assert.ok(written.includes('# ECC Discussion Audit'));
+      assert.ok(written.includes('# AIP Discussion Audit'));
       assert.ok(written.includes('Answerable discussions missing accepted answer'));
       assert.ok(written.includes('- none'));
     } finally {
@@ -258,7 +258,7 @@ function runTests() {
 
     try {
       const shimPath = writeGhShim(rootDir, {
-        [discussionEnabledGhKey('ECC-Tools', 'ECC-website')]: {
+        [discussionEnabledGhKey('AIP-Tools', 'AIP-website')]: {
           data: { repository: { hasDiscussionsEnabled: false } }
         }
       });
@@ -266,10 +266,10 @@ function runTests() {
       const parsed = JSON.parse(run([
         '--json',
         '--repo',
-        'ECC-Tools/ECC-website'
+        'AIP-Tools/AIP-website'
       ], {
         cwd: rootDir,
-        env: { ECC_GH_SHIM: shimPath }
+        env: { AIP_GH_SHIM: shimPath }
       }));
 
       assert.strictEqual(parsed.ready, true);

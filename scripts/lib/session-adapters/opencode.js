@@ -271,7 +271,7 @@ function createOpencodeAdapter(options = {}) {
 
   return {
     id: 'opencode',
-    description: 'OpenCode sessions normalized to ecc.session.v1',
+    description: 'OpenCode sessions normalized to aip.session.v1',
     targetTypes: ['opencode'],
     canOpen(target, context = {}) {
       if (context.adapterId && context.adapterId !== 'opencode') {

@@ -6,7 +6,7 @@ function renderControlPaneHtml() {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ECC Control Pane</title>
+  <title>AIP Control Pane</title>
   <style>
     :root {
       color-scheme: dark;
@@ -353,8 +353,8 @@ function renderControlPaneHtml() {
   <div class="shell">
     <header>
       <div class="brand">
-        <img src="/assets/ecc-icon.svg" alt="">
-        <h1>ECC Control Pane</h1>
+        <img src="/assets/aip-icon.svg" alt="">
+        <h1>AIP Control Pane</h1>
       </div>
       <form class="query" id="query-form">
         <input id="query" type="search" placeholder="Recall operator memory, session context, runbooks">
@@ -478,7 +478,7 @@ function renderControlPaneHtml() {
 
     function renderSessions(sessions) {
       if (!sessions.length) {
-        $('#sessions').innerHTML = '<div class="empty">No ECC2 sessions found.</div>';
+        $('#sessions').innerHTML = '<div class="empty">No AIP2 sessions found.</div>';
         return;
       }
 
@@ -546,9 +546,9 @@ function renderControlPaneHtml() {
         button.addEventListener('click', () => {
           const id = button.getAttribute('data-wi-id');
           if (button.getAttribute('data-wi-action') === 'claim') {
-            eccClaimItem(id);
+            aipClaimItem(id);
           } else {
-            eccMoveItem(id, button.getAttribute('data-wi-lane'));
+            aipMoveItem(id, button.getAttribute('data-wi-lane'));
           }
         });
       });
@@ -665,7 +665,7 @@ function renderControlPaneHtml() {
       await load();
     }
 
-    window.eccClaimItem = function (id) {
+    window.aipClaimItem = function (id) {
       if (!state.allowActions) return;
       const owner = window.prompt('Claim "' + id + '" as (owner name):');
       if (!owner) return;
@@ -673,7 +673,7 @@ function renderControlPaneHtml() {
       postWorkItem(encodeURIComponent(id) + '/claim', { owner: owner.trim(), as: as === 'agent' ? 'agent' : 'human' })
         .catch(error => showError('#app', error));
     };
-    window.eccMoveItem = function (id, lane) {
+    window.aipMoveItem = function (id, lane) {
       if (!state.allowActions) return;
       postWorkItem(encodeURIComponent(id) + '/move', { lane })
         .catch(error => showError('#app', error));

@@ -2,14 +2,14 @@
 name: orch-pipeline
 description: Shared orchestration engine for the orch-* skill family. Defines the gated Research-Plan-TDD-Review-Commit pipeline, the size classifier, the agent map, and the two human gates that the orch-* operation skills delegate to. Not usually invoked directly. Not usually invoked directly; it applies when an orch-* skill delegates its gated Research-Plan-TDD-Review-Commit pipeline.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Orchestrator Pipeline (shared engine)
 
 The `orch-*` skills are thin wrappers. They do not re-implement any work — they
 classify the request, choose which phases of *this* pipeline run, and delegate
-each phase to an existing ECC agent or command. This file is that pipeline.
+each phase to an existing AIP agent or command. This file is that pipeline.
 
 > Invoke an operation skill (`orch-add-feature`, `orch-fix-defect`, …) rather
 > than this engine directly. This file is the reference they point at.
@@ -30,7 +30,7 @@ each phase to an existing ECC agent or command. This file is that pipeline.
 | `orch-refine-code` | refactor | behavior stays, structure improves | restructure while keeping tests green |
 | `orch-build-mvp` | mvp | bootstrap from a design/spec doc | ingest doc → vertical slices |
 
-> These wrappers **compose** existing ECC commands rather than replace them:
+> These wrappers **compose** existing AIP commands rather than replace them:
 > `/feature-dev`, `/plan`, `/code-review`, `/build-fix`, `/refactor-clean`, and
 > `/gan-build`, plus the `tdd-workflow` skill. The orch-* family adds the shared
 > size classifier and the two gates

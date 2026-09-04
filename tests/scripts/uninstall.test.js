@@ -107,7 +107,7 @@ function runTests() {
 
       const normalizedProjectRoot = fs.realpathSync(projectRoot);
       const managedPath = path.join(normalizedProjectRoot, '.cursor', 'hooks.json');
-      const statePath = path.join(normalizedProjectRoot, '.cursor', 'ecc-install-state.json');
+      const statePath = path.join(normalizedProjectRoot, '.cursor', 'aip-install-state.json');
       const unrelatedPath = path.join(normalizedProjectRoot, '.cursor', 'custom-user-note.txt');
       fs.writeFileSync(unrelatedPath, 'leave me alone');
 
@@ -136,7 +136,7 @@ function runTests() {
       const targetRoot = path.join(projectRoot, '.cursor');
       fs.mkdirSync(targetRoot, { recursive: true });
       const normalizedTargetRoot = fs.realpathSync(targetRoot);
-      const statePath = path.join(normalizedTargetRoot, 'ecc-install-state.json');
+      const statePath = path.join(normalizedTargetRoot, 'aip-install-state.json');
       const copiedPath = path.join(normalizedTargetRoot, 'managed-rule.md');
       const mergedPath = path.join(normalizedTargetRoot, 'hooks.json');
       const removedPath = path.join(normalizedTargetRoot, 'legacy-note.txt');
@@ -235,7 +235,7 @@ function runTests() {
       const targetRoot = path.join(projectRoot, '.cursor');
       fs.mkdirSync(targetRoot, { recursive: true });
       const normalizedTargetRoot = fs.realpathSync(targetRoot);
-      const statePath = path.join(normalizedTargetRoot, 'ecc-install-state.json');
+      const statePath = path.join(normalizedTargetRoot, 'aip-install-state.json');
       const renderedPath = path.join(normalizedTargetRoot, 'generated.md');
       fs.writeFileSync(renderedPath, '# generated\n');
 
@@ -299,7 +299,7 @@ function runTests() {
       const targetRoot = path.join(projectRoot, '.agent');
       fs.mkdirSync(path.join(targetRoot, 'rules'), { recursive: true });
       const normalizedTargetRoot = fs.realpathSync(targetRoot);
-      const statePath = path.join(normalizedTargetRoot, 'ecc-install-state.json');
+      const statePath = path.join(normalizedTargetRoot, 'aip-install-state.json');
       const editedPath = path.join(normalizedTargetRoot, 'rules', 'common-coding-style.md');
       fs.writeFileSync(editedPath, 'customer edit\n');
 
@@ -362,7 +362,7 @@ function runTests() {
     }
   })) passed++; else failed++;
 
-  if (test('auto-detects legacy sync-ecc-to-codex.sh install and removes artifacts without touching conversations or unrelated config keys', () => {
+  if (test('auto-detects legacy sync-aip-to-codex.sh install and removes artifacts without touching conversations or unrelated config keys', () => {
     const homeDir = createTempDir('uninstall-legacy-codex-home-');
     const projectRoot = createTempDir('uninstall-legacy-codex-project-');
 
@@ -370,7 +370,7 @@ function runTests() {
       const codexHome = path.join(homeDir, '.codex');
       const configPath = path.join(codexHome, 'config.toml');
       const agentsPath = path.join(codexHome, 'AGENTS.md');
-      const promptPath = path.join(codexHome, 'prompts', 'ecc-plan.md');
+      const promptPath = path.join(codexHome, 'prompts', 'aip-plan.md');
       const conversationPath = path.join(codexHome, 'conversations', 'keep-me.md');
       const userFilePath = path.join(codexHome, 'user-owned.txt');
 
@@ -381,7 +381,7 @@ function runTests() {
 
       const statePath = beginLegacySyncState({
         codexHome,
-        backupDir: path.join(codexHome, 'backups', 'ecc-test'),
+        backupDir: path.join(codexHome, 'backups', 'aip-test'),
       });
       recordLegacySyncPath({ statePath, filePath: configPath });
       recordLegacySyncPath({ statePath, filePath: agentsPath });
@@ -390,9 +390,9 @@ function runTests() {
       fs.writeFileSync(configPath, 'model = "user"\napproval_policy = "on-request"\n');
       fs.writeFileSync(
         agentsPath,
-        '# User instructions\n\n<!-- BEGIN ECC -->\n# ECC managed\n<!-- END ECC -->\n'
+        '# User instructions\n\n<!-- BEGIN AIP -->\n# AIP managed\n<!-- END AIP -->\n'
       );
-      fs.writeFileSync(promptPath, '# ECC generated prompt\n');
+      fs.writeFileSync(promptPath, '# AIP generated prompt\n');
       finalizeLegacySyncState({ statePath });
 
       fs.mkdirSync(path.dirname(conversationPath), { recursive: true });
@@ -401,7 +401,7 @@ function runTests() {
 
       const uninstallResult = run([], { cwd: projectRoot, homeDir });
       assert.strictEqual(uninstallResult.code, 0, uninstallResult.stderr);
-      assert.ok(!uninstallResult.stdout.includes('No ECC install-state files found'), uninstallResult.stdout);
+      assert.ok(!uninstallResult.stdout.includes('No AIP install-state files found'), uninstallResult.stdout);
       assert.ok(uninstallResult.stdout.includes('Legacy Codex sync cleanup summary'), uninstallResult.stdout);
       assert.ok(!fs.existsSync(promptPath));
       assert.strictEqual(fs.readFileSync(configPath, 'utf8'), 'model = "user"\n');
@@ -431,7 +431,7 @@ function runTests() {
 
       const uninstallResult = run([], { cwd: projectRoot, homeDir });
       assert.strictEqual(uninstallResult.code, 0, uninstallResult.stderr);
-      assert.ok(uninstallResult.stdout.includes('No ECC install-state files found'), uninstallResult.stdout);
+      assert.ok(uninstallResult.stdout.includes('No AIP install-state files found'), uninstallResult.stdout);
       assert.ok(!uninstallResult.stdout.includes('Legacy Codex sync cleanup summary'), uninstallResult.stdout);
       assert.strictEqual(fs.readFileSync(configPath, 'utf8'), 'model = "user"\n');
       assert.strictEqual(fs.readFileSync(conversationPath, 'utf8'), 'conversation history');
@@ -479,16 +479,16 @@ function runTests() {
       fs.writeFileSync(configPath, 'model = "user"\n');
       fs.writeFileSync(
         agentsPath,
-        '# User instructions\n\n<!-- BEGIN ECC -->\n# ECC managed\n<!-- END ECC -->\n'
+        '# User instructions\n\n<!-- BEGIN AIP -->\n# AIP managed\n<!-- END AIP -->\n'
       );
       fs.mkdirSync(path.dirname(conversationPath), { recursive: true });
       fs.writeFileSync(conversationPath, 'conversation history');
 
       const uninstallResult = run([], { cwd: projectRoot, homeDir });
       assert.strictEqual(uninstallResult.code, 0, uninstallResult.stderr);
-      assert.ok(uninstallResult.stdout.includes('No ECC install-state files found'), uninstallResult.stdout);
+      assert.ok(uninstallResult.stdout.includes('No AIP install-state files found'), uninstallResult.stdout);
       assert.ok(!uninstallResult.stdout.includes('Legacy Codex sync cleanup summary'), uninstallResult.stdout);
-      assert.strictEqual(fs.readFileSync(agentsPath, 'utf8'), '# User instructions\n\n<!-- BEGIN ECC -->\n# ECC managed\n<!-- END ECC -->\n');
+      assert.strictEqual(fs.readFileSync(agentsPath, 'utf8'), '# User instructions\n\n<!-- BEGIN AIP -->\n# AIP managed\n<!-- END AIP -->\n');
       assert.strictEqual(fs.readFileSync(configPath, 'utf8'), 'model = "user"\n');
       assert.strictEqual(fs.readFileSync(conversationPath, 'utf8'), 'conversation history');
     } finally {
@@ -508,7 +508,7 @@ function runTests() {
       fs.mkdirSync(codexHome, { recursive: true });
       fs.writeFileSync(
         agentsPath,
-        '# User instructions\n\n<!-- BEGIN ECC -->\n# ECC managed\n<!-- END ECC -->\n'
+        '# User instructions\n\n<!-- BEGIN AIP -->\n# AIP managed\n<!-- END AIP -->\n'
       );
 
       const uninstallResult = run(['--legacy-codex-sync'], { cwd: projectRoot, homeDir });

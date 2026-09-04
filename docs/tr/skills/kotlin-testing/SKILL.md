@@ -1,7 +1,7 @@
 ---
 name: kotlin-testing
 description: Kotest, MockK, coroutine testi, property-based testing ve Kover coverage ile Kotlin test kalıpları. İdiomatic Kotlin uygulamalarıyla TDD metodolojisini takip eder.
-origin: ECC
+origin: AIP
 ---
 
 # Kotlin Test Kalıpları

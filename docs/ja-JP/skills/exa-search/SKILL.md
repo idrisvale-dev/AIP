@@ -1,7 +1,7 @@
 ---
 name: exa-search
 description: Exa MCPによるウェブ、コード、企業調査のためのニューラル検索。ユーザーがウェブ検索、コード例、企業情報、人物検索、またはExaのニューラル検索エンジンを使ったAI駆動の詳細調査を必要とする場合に使用します。
-origin: ECC
+origin: AIP
 ---
 
 # Exa検索

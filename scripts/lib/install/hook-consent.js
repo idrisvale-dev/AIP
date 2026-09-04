@@ -179,11 +179,11 @@ function assertHookConsentReady(plan = {}) {
     return;
   }
   throw new Error(
-    'This install would enable ECC\'s automatic hook runtime, which can:\n'
+    'This install would enable AIP\'s automatic hook runtime, which can:\n'
       + `${formatHookCapabilityDisclosure()}\n`
       + 'Confirm with --enable-hooks to install it, or --no-hooks to install '
       + 'everything else without the hook runtime. The guided installer '
-      + '(ecc install --guided) collects this choice interactively.'
+      + '(aip install --guided) collects this choice interactively.'
   );
 }
 

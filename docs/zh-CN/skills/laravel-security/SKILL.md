@@ -1,7 +1,7 @@
 ---
 name: laravel-security
 description: Laravel 安全最佳实践，涵盖认证/授权、验证、CSRF、批量赋值、文件上传、密钥管理、速率限制和安全部署。
-origin: ECC
+origin: AIP
 ---
 
 # Laravel 安全最佳实践

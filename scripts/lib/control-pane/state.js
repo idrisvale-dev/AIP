@@ -9,15 +9,15 @@ const toml = require('@iarna/toml');
 
 const { buildControlPaneActions } = require('./actions');
 
-const SNAPSHOT_SCHEMA_VERSION = 'ecc.control-pane.snapshot.v1';
-const DEFAULT_STATE_STORE_RELATIVE_PATH = path.join('.claude', 'ecc', 'state.db');
+const SNAPSHOT_SCHEMA_VERSION = 'aip.control-pane.snapshot.v1';
+const DEFAULT_STATE_STORE_RELATIVE_PATH = path.join('.claude', 'aip', 'state.db');
 
 function homeDir(env = process.env) {
   return env.HOME || env.USERPROFILE || os.homedir() || '.';
 }
 
 function defaultDbPath(env = process.env) {
-  return path.join(homeDir(env), '.claude', 'ecc2.db');
+  return path.join(homeDir(env), '.claude', 'aip2.db');
 }
 
 function defaultStateDbPath(env = process.env) {
@@ -26,12 +26,12 @@ function defaultStateDbPath(env = process.env) {
 
 function defaultConfigPaths(cwd = process.cwd(), env = process.env) {
   const home = homeDir(env);
-  const paths = [path.join(home, 'Library', 'Application Support', 'ecc2', 'config.toml'), path.join(home, '.config', 'ecc2', 'config.toml'), path.join(home, '.claude', 'ecc2.toml')];
+  const paths = [path.join(home, 'Library', 'Application Support', 'aip2', 'config.toml'), path.join(home, '.config', 'aip2', 'config.toml'), path.join(home, '.claude', 'aip2.toml')];
 
   let current = path.resolve(cwd);
   while (current && current !== path.dirname(current)) {
-    paths.push(path.join(current, '.claude', 'ecc2.toml'));
-    paths.push(path.join(current, 'ecc2.toml'));
+    paths.push(path.join(current, '.claude', 'aip2.toml'));
+    paths.push(path.join(current, 'aip2.toml'));
     current = path.dirname(current);
   }
 
@@ -104,8 +104,8 @@ function resolveControlPaneConfig(options = {}) {
   return {
     ...normalizeConfig(merged, {
       env,
-      dbPath: options.dbPath || env.ECC2_DB_PATH || null,
-      stateDbPath: options.stateDbPath || env.ECC_STATE_DB_PATH || null
+      dbPath: options.dbPath || env.AIP2_DB_PATH || null,
+      stateDbPath: options.stateDbPath || env.AIP_STATE_DB_PATH || null
     }),
     configPaths: configPaths.filter(configPath => fs.existsSync(configPath))
   };

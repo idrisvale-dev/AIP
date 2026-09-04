@@ -13,15 +13,15 @@ const {
 
 function helpText() {
   return `
-ECC experimental Nasiko CLI lifecycle bridge
+AIP experimental Nasiko CLI lifecycle bridge
 
 Usage:
-  ecc nasiko status [--install-dir <absolute-path>] [--json]
-  ecc nasiko install --version v0.1.0 --yes [--install-dir <absolute-path>] [--json]
-  ecc nasiko install --version v0.1.0 --dry-run [--install-dir <absolute-path>] [--json]
-  ecc nasiko uninstall --version v0.1.0 --yes [--install-dir <absolute-path>] [--json]
+  aip nasiko status [--install-dir <absolute-path>] [--json]
+  aip nasiko install --version v0.1.0 --yes [--install-dir <absolute-path>] [--json]
+  aip nasiko install --version v0.1.0 --dry-run [--install-dir <absolute-path>] [--json]
+  aip nasiko uninstall --version v0.1.0 --yes [--install-dir <absolute-path>] [--json]
 
-The installer is opt-in, accepts only ECC-qualified pinned releases, downloads
+The installer is opt-in, accepts only AIP-qualified pinned releases, downloads
 content-addressed OCI artifacts from registry.nasiko.dev, verifies SHA-256
 digests before extraction, and never executes fetched shell or PowerShell code.
 `;
@@ -65,14 +65,14 @@ function defaultExecutablePath() {
 }
 
 function resolveExecutable(options = {}) {
-  const configured = process.env.ECC_NASIKO_CLI_EXECUTABLE;
+  const configured = process.env.AIP_NASIKO_CLI_EXECUTABLE;
   const normalized = normalizePlatform();
   const candidate = options.installDir
     ? path.join(validateInstallDirectory(options.installDir), normalized.binaryName)
     : configured || defaultExecutablePath();
   if (!candidate) return null;
   if (!path.isAbsolute(candidate)) {
-    throw new Error('ECC_NASIKO_CLI_EXECUTABLE must be an absolute path.');
+    throw new Error('AIP_NASIKO_CLI_EXECUTABLE must be an absolute path.');
   }
   return candidate;
 }
@@ -112,7 +112,7 @@ async function main(argumentsList = process.argv.slice(2)) {
       ? `Qualified Nasiko ${status.version} is installed at ${status.executable}.\n`
       : status.installed
         ? `An unqualified Nasiko file exists at ${status.executable}; it was not executed.\n`
-      : 'Nasiko is not installed in the ECC-qualified location.\n');
+      : 'Nasiko is not installed in the AIP-qualified location.\n');
     return 0;
   }
   if (command === 'install') {

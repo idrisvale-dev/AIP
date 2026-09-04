@@ -1,5 +1,5 @@
 /**
- * ECC Custom Tools for OpenCode
+ * AIP Custom Tools for OpenCode
  *
  * These tools extend OpenCode with additional capabilities.
  */

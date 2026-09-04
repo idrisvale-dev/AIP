@@ -46,8 +46,8 @@ const EDIT_WRITE_NARROW_RECOVERY_HINT =
   'Narrow recovery: add a matching path glob to `GATEGUARD_EXEMPT_GLOBS` to skip first-touch Edit/Write checks without disabling destructive Bash checks.';
 const ROUTINE_BASH_NARROW_RECOVERY_HINT =
   'Narrow recovery: set `GATEGUARD_BASH_ROUTINE_DISABLED=1`; destructive Bash checks remain active.';
-const ECC_DISABLE_VALUES = new Set(['0', 'false', 'off', 'disabled', 'disable']);
-const ECC_ENABLE_VALUES = new Set(['1', 'true', 'on', 'enabled', 'enable', 'yes']);
+const AIP_DISABLE_VALUES = new Set(['0', 'false', 'off', 'disabled', 'disable']);
+const AIP_ENABLE_VALUES = new Set(['1', 'true', 'on', 'enabled', 'enable', 'yes']);
 
 // SQL-keyword + dd patterns stay as a single regex — they are stable
 // phrases without shell-flag ordering concerns. Quoted strings are
@@ -140,7 +140,7 @@ function isExemptPath(filePath) {
 }
 
 function isRoutineBashGateDisabled() {
-  return ECC_ENABLE_VALUES.has(normalizeEnvValue(process.env.GATEGUARD_BASH_ROUTINE_DISABLED));
+  return AIP_ENABLE_VALUES.has(normalizeEnvValue(process.env.GATEGUARD_BASH_ROUTINE_DISABLED));
 }
 
 /**
@@ -733,7 +733,7 @@ function isGateGuardDisabled() {
     return true;
   }
 
-  return ECC_DISABLE_VALUES.has(normalizeEnvValue(process.env.ECC_GATEGUARD));
+  return AIP_DISABLE_VALUES.has(normalizeEnvValue(process.env.AIP_GATEGUARD));
 }
 
 function sanitizeSessionKey(value) {
@@ -755,7 +755,7 @@ function hashSessionKey(prefix, value) {
 }
 
 function resolveSessionKey(data) {
-  const directCandidates = [data && data.session_id, data && data.sessionId, data && data.session && data.session.id, process.env.CLAUDE_SESSION_ID, process.env.ECC_SESSION_ID];
+  const directCandidates = [data && data.session_id, data && data.sessionId, data && data.session && data.session.id, process.env.CLAUDE_SESSION_ID, process.env.AIP_SESSION_ID];
 
   for (const candidate of directCandidates) {
     const sanitized = sanitizeSessionKey(candidate);
@@ -1101,7 +1101,7 @@ function condensedGateMsg(action, filePath, ordinal) {
   return (
     `[Fact-Forcing Gate] (denial #${ordinal} this session) First ${action} of ${safe}: ` +
     "briefly state importers/callers, affected API, data schemas if any, and the user's verbatim instruction, then retry. " +
-    '(Use GATEGUARD_EXEMPT_GLOBS for path-scoped exemptions; ECC_GATEGUARD=off disables this gate.)'
+    '(Use GATEGUARD_EXEMPT_GLOBS for path-scoped exemptions; AIP_GATEGUARD=off disables this gate.)'
   );
 }
 
@@ -1139,7 +1139,7 @@ function withRecoveryHint(message, hookIds = [EDIT_WRITE_HOOK_ID], narrowRecover
     message,
     '',
     ...recoveryLines,
-    `Recovery: if GateGuard is blocking setup or repair work, run this session with \`ECC_GATEGUARD=off\` or add ${disableTargets} to \`ECC_DISABLED_HOOKS\`.`
+    `Recovery: if GateGuard is blocking setup or repair work, run this session with \`AIP_GATEGUARD=off\` or add ${disableTargets} to \`AIP_DISABLED_HOOKS\`.`
   ].join('\n');
 }
 

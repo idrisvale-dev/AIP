@@ -1,7 +1,7 @@
 ---
 name: cpp-coding-standards
 description: C++コアガイドラインに基づくC++コーディング標準（isocpp.github.io）。現代的で安全で慣用的なプラクティスを強制するためにC++コードを書き、レビュー、またはリファクタリングする場合に使用します。
-origin: ECC
+origin: AIP
 ---
 
 # C++コーディング標準（C++コアガイドライン）

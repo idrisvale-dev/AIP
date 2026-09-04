@@ -4,7 +4,7 @@ description: 电力与燃气采购、电价优化、需量电费管理、可再�
 license: Apache-2.0
 version: 1.0.0
 homepage: https://github.com/reborncursed/AIP
-origin: ECC
+origin: AIP
 metadata:
   author: evos
   clawdbot:

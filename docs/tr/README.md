@@ -1,11 +1,11 @@
-# Everything Claude Code
+# AIP
 
 [![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
 [![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
 [![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
-[![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20haftalık%20indirme&logo=npm)](https://www.npmjs.com/package/ecc-universal)
-[![npm ecc-agentshield](https://img.shields.io/npm/dw/ecc-agentshield?label=ecc-agentshield%20haftalık%20indirme&logo=npm)](https://www.npmjs.com/package/ecc-agentshield)
-[![GitHub App Install](https://img.shields.io/badge/GitHub%20App-150%20kurulum-2ea44f?logo=github)](https://github.com/marketplace/ecc-tools)
+[![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20haftalık%20indirme&logo=npm)](https://www.npmjs.com/package/aip-universal)
+[![npm aip-agentshield](https://img.shields.io/npm/dw/aip-agentshield?label=aip-agentshield%20haftalık%20indirme&logo=npm)](https://www.npmjs.com/package/aip-agentshield)
+[![GitHub App Install](https://img.shields.io/badge/GitHub%20App-150%20kurulum-2ea44f?logo=github)](https://github.com/marketplace/aip-tools)
 [![License](https://img.shields.io/badge/lisans-MIT-blue.svg)](../../LICENSE)
 ![Shell](https://img.shields.io/badge/-Shell-4EAA25?logo=gnu-bash&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -45,12 +45,12 @@ Bu repository yalnızca ham kodu içerir. Rehberler her şeyi açıklıyor.
 <tr>
 <td width="33%">
 <a href="https://bytecore.org/status/2012378465664745795">
-<img src="../../assets/images/guides/shorthand-guide.png" alt="Everything Claude Code Kısa Rehberi" />
+<img src="../../assets/images/guides/shorthand-guide.png" alt="AIP Kısa Rehberi" />
 </a>
 </td>
 <td width="33%">
 <a href="https://bytecore.org/status/2014040193557471352">
-<img src="../../assets/images/guides/longform-guide.png" alt="Everything Claude Code Uzun Rehberi" />
+<img src="../../assets/images/guides/longform-guide.png" alt="AIP Uzun Rehberi" />
 </a>
 </td>
 <td width="33%">
@@ -87,14 +87,14 @@ Claude Code, Codex ve Kimi Code için incelenebilir çoklu harness kurulumu ve e
 
 2.0 hattının kararlı sürümü: 261 skill, control-pane altyapısı, MCP envanteri, worktree yaşam döngüsü servisi ve [Discord topluluğu](https://discord.gg/36yGMHGFbR).
 
-### v2.0.0-rc.1 — Surface Sync, Operatör İş Akışları ve ECC 2.0 Alpha (Nis 2026)
+### v2.0.0-rc.1 — Surface Sync, Operatör İş Akışları ve AIP 2.0 Alpha (Nis 2026)
 
 - **Public surface canlı repo ile senkronlandı** — metadata, katalog sayıları, plugin manifest'leri ve kurulum odaklı dokümanlar artık gerçek OSS yüzeyiyle eşleşiyor.
 - **Operatör ve dışa dönük iş akışları büyüdü** — `brand-voice`, `social-graph-ranker`, `customer-billing-ops`, `google-workspace-ops` ve ilgili operatör skill'leri aynı sistem içinde tamamlandı.
 - **Medya ve lansman araçları** — `manim-video`, `remotion-video-creation` ve sosyal yayın yüzeyleri teknik anlatım ve duyuru akışlarını aynı repo içine taşıdı.
 - **Framework ve ürün yüzeyi genişledi** — `nestjs-patterns`, daha zengin Codex/OpenCode kurulum yüzeyleri ve çapraz harness paketleme iyileştirmeleri repo'yu Claude Code dışına da taşıdı.
-- **ECC 2.0 alpha repoda** — `ecc2/` altındaki Rust kontrol katmanı artık yerelde derleniyor ve `dashboard`, `start`, `sessions`, `status`, `stop`, `resume` ve `daemon` komutlarını sunuyor.
-- **Ekosistem sağlamlaştırma** — AgentShield, ECC Tools maliyet kontrolleri, billing portal işleri ve web yüzeyi çekirdek plugin etrafında birlikte gelişmeye devam ediyor.
+- **AIP 2.0 alpha repoda** — `aip2/` altındaki Rust kontrol katmanı artık yerelde derleniyor ve `dashboard`, `start`, `sessions`, `status`, `stop`, `resume` ve `daemon` komutlarını sunuyor.
+- **Ekosistem sağlamlaştırma** — AgentShield, AIP Tools maliyet kontrolleri, billing portal işleri ve web yüzeyi çekirdek plugin etrafında birlikte gelişmeye devam ediyor.
 
 ### v1.9.0 — Seçici Kurulum & Dil Genişlemesi (Mar 2026)
 
@@ -110,9 +110,9 @@ Claude Code, Codex ve Kimi Code için incelenebilir çoklu harness kurulumu ve e
 
 ### v1.8.0 — Harness Performans Sistemi (Mar 2026)
 
-- **Harness-first release** — ECC artık açıkça bir agent harness performans sistemi olarak çerçevelendi, sadece bir config paketi değil.
+- **Harness-first release** — AIP artık açıkça bir agent harness performans sistemi olarak çerçevelendi, sadece bir config paketi değil.
 - **Hook güvenilirlik iyileştirmesi** — SessionStart root fallback, Stop-phase session özetleri ve kırılgan inline one-liner'lar yerine script-tabanlı hook'lar.
-- **Hook runtime kontrolleri** — `ECC_HOOK_PROFILE=minimal|standard|strict` ve `ECC_DISABLED_HOOKS=...` hook dosyalarını düzenlemeden runtime gating için.
+- **Hook runtime kontrolleri** — `AIP_HOOK_PROFILE=minimal|standard|strict` ve `AIP_DISABLED_HOOKS=...` hook dosyalarını düzenlemeden runtime gating için.
 - **Yeni harness command'ları** — `/harness-audit`, `/loop-start`, `/loop-status`, `/quality-gate`, `/model-route`.
 - **NanoClaw v2** — Model routing, skill hot-load, session branch/search/export/compact/metrics.
 - **Çapraz harness paritesi** — Claude Code, Cursor, OpenCode ve Codex app/CLI arasında davranış sıkılaştırıldı.
@@ -133,7 +133,7 @@ Claude Code, Codex ve Kimi Code için incelenebilir çoklu harness kurulumu ve e
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # Plugin'i kur
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 ### Adım 2: Rule'ları Kurun (Gerekli)
@@ -143,7 +143,7 @@ Claude Code, Codex ve Kimi Code için incelenebilir çoklu harness kurulumu ve e
 ```bash
 # Önce repo'yu klonlayın
 git clone https://github.com/reborncursed/AIP.git
-cd everything-claude-code
+cd aip
 
 # Bağımlılıkları kurun (paket yöneticinizi seçin)
 npm install        # veya: pnpm install | yarn install | bun install
@@ -163,7 +163,7 @@ npm install        # veya: pnpm install | yarn install | bun install
 # .\install.ps1 --target antigravity typescript
 
 # Yayımlanmış npm paketinin entry point'i de çapraz platform çalışır
-npx ecc-universal install typescript
+npx aip-universal install typescript
 ```
 
 Manuel kurulum talimatları için `rules/` klasöründeki README'ye bakın.
@@ -172,13 +172,13 @@ Manuel kurulum talimatları için `rules/` klasöründeki README'ye bakın.
 
 ```bash
 # Bir command deneyin (plugin kurulumu namespace'li form kullanır)
-/ecc:plan "Kullanıcı kimlik doğrulaması ekle"
+/aip:plan "Kullanıcı kimlik doğrulaması ekle"
 
 # Manuel kurulum (Seçenek 2) daha kısa formu kullanır:
 # /plan "Kullanıcı kimlik doğrulaması ekle"
 
 # Mevcut command'ları kontrol edin
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
 **Bu kadar!** Artık 28 agent, 116 skill ve 59 command'a erişiminiz var.
@@ -224,10 +224,10 @@ Sıkılığı ayarlamak veya belirli hook'ları geçici olarak devre dışı bı
 
 ```bash
 # Hook sıkılık profili (varsayılan: standard)
-export ECC_HOOK_PROFILE=standard
+export AIP_HOOK_PROFILE=standard
 
 # Devre dışı bırakılacak hook ID'leri (virgülle ayrılmış)
-export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
+export AIP_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 ```
 
 ---
@@ -237,7 +237,7 @@ export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 Bu repo bir **Claude Code plugin'i** - doğrudan kurun veya component'leri manuel olarak kopyalayın.
 
 ```
-everything-claude-code/
+aip/
 |-- .claude-plugin/   # Plugin ve marketplace manifest'leri
 |   |-- plugin.json         # Plugin metadata ve component path'leri
 |   |-- marketplace.json    # /plugin marketplace add için marketplace kataloğu
@@ -316,8 +316,8 @@ Nereden başlayacağınızdan emin değil misiniz? Bu hızlı referansı kullan�
 
 | Yapmak istediğim... | Bu command'ı kullan | Kullanılan agent |
 |---------------------|---------------------|------------------|
-| Yeni bir feature planla | `/ecc:plan "Auth ekle"` | planner |
-| Sistem mimarisi tasarla | `/ecc:plan` + architect agent | architect |
+| Yeni bir feature planla | `/aip:plan "Auth ekle"` | planner |
+| Sistem mimarisi tasarla | `/aip:plan` + architect agent | architect |
 | Önce testlerle kod yaz | `/tdd` | tdd-guide |
 | Yazdığım kodu incele | `/code-review` | code-reviewer |
 | Başarısız bir build'i düzelt | `/build-fix` | build-error-resolver |
@@ -332,7 +332,7 @@ Nereden başlayacağınızdan emin değil misiniz? Bu hızlı referansı kullan�
 
 **Yeni bir feature başlatma:**
 ```
-/ecc:plan "OAuth ile kullanıcı kimlik doğrulaması ekle"
+/aip:plan "OAuth ile kullanıcı kimlik doğrulaması ekle"
                                               → planner implementasyon planı oluşturur
 /tdd                                          → tdd-guide önce-test-yaz'ı zorunlu kılar
 /code-review                                  → code-reviewer çalışmanızı kontrol eder
@@ -360,7 +360,7 @@ Nereden başlayacağınızdan emin değil misiniz? Bu hızlı referansı kullan�
 <summary><b>Hangi agent/command'ların kurulu olduğunu nasıl kontrol ederim?</b></summary>
 
 ```bash
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
 Bu, plugin'den mevcut tüm agent'ları, command'ları ve skill'leri gösterir.
@@ -395,10 +395,10 @@ Evet. Seçenek 2'yi (manuel kurulum) kullanın ve yalnızca ihtiyacınız olanı
 
 ```bash
 # Sadece agent'lar
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp aip/agents/*.md ~/.claude/agents/
 
 # Sadece rule'lar
-cp -r everything-claude-code/rules/common ~/.claude/rules/common
+cp -r aip/rules/common ~/.claude/rules/common
 ```
 
 Her component tamamen bağımsızdır.
@@ -407,7 +407,7 @@ Her component tamamen bağımsızdır.
 <details>
 <summary><b>Bu Cursor / OpenCode / Codex / Antigravity ile çalışır mı?</b></summary>
 
-Evet. ECC çapraz platformdur:
+Evet. AIP çapraz platformdur:
 - **Cursor**: `.cursor/` içinde önceden çevrilmiş config'ler. [Cursor IDE Desteği](../../README.md#cursor-ide-support) bölümüne bakın.
 - **OpenCode**: `.opencode/` içinde tam plugin desteği. [OpenCode Desteği](../../README.md#opencode-support) bölümüne bakın.
 - **Codex**: macOS app ve CLI için birinci sınıf destek. PR [#257](https://github.com/reborncursed/AIP/pull/257)'ye bakın.

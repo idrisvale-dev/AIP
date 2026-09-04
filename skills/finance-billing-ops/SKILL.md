@@ -1,8 +1,8 @@
 ---
 name: finance-billing-ops
-description: Evidence-first revenue, pricing, refunds, team-billing, and billing-model truth workflow for ECC. Use when the user wants a sales snapshot, pricing comparison, duplicate-charge diagnosis, or code-backed billing reality instead of generic payments advice.
+description: Evidence-first revenue, pricing, refunds, team-billing, and billing-model truth workflow for AIP. Use when the user wants a sales snapshot, pricing comparison, duplicate-charge diagnosis, or code-backed billing reality instead of generic payments advice.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Finance Billing Ops
@@ -13,7 +13,7 @@ This is broader than `customer-billing-ops`. That skill is for customer remediat
 
 ## Skill Stack
 
-Pull these ECC-native skills into the workflow when relevant:
+Pull these AIP-native skills into the workflow when relevant:
 
 - `customer-billing-ops` for customer-specific remediation and follow-up
 - `research-ops` when competitor pricing or current market evidence matters

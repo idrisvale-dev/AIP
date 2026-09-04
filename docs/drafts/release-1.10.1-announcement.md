@@ -1,11 +1,11 @@
-# ECC 1.10.1 release announcement draft
+# AIP 1.10.1 release announcement draft
 
-ECC 1.10.1 is the follow-up stabilization release to 1.10.0.
+AIP 1.10.1 is the follow-up stabilization release to 1.10.0.
 
 This release is focused on install correctness, cross-surface naming clarity, Windows/PowerShell recovery, Cursor project install correctness, and Claude Code hook compatibility. It is not a feature-heavy release.
 
 ## What landed in the stabilization pass
-- npm/package/release surfaces are aligned and `ecc-universal@1.10.0` is live on npm
+- npm/package/release surfaces are aligned and `aip-universal@1.10.0` is live on npm
 - Windows locale/path and PowerShell install-path regressions fixed
 - Bash hook process-storm regression fixed
 - Claude Code 2.1.x hook schema compatibility fixed
@@ -31,11 +31,11 @@ This release is focused on install correctness, cross-surface naming clarity, Wi
 - `#1535` hero overflow follow-up
 
 ## Important naming clarification
-- Claude marketplace/plugin identifier: `everything-claude-code@everything-claude-code`
-- npm package: `ecc-universal`
+- Claude marketplace/plugin identifier: `aip@aip`
+- npm package: `aip-universal`
 - GitHub repo: `reborncursed/AIP`
 
-Those are intentionally different surfaces. The plugin identifier follows Anthropic marketplace rules; the npm package remains `ecc-universal`.
+Those are intentionally different surfaces. The plugin identifier follows Anthropic marketplace rules; the npm package remains `aip-universal`.
 
 ## Still being monitored
 This should be announced as a stabilization release, not as “all edge cases are solved.”

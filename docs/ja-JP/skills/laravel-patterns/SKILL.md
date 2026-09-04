@@ -1,7 +1,7 @@
 ---
 name: laravel-patterns
 description: Laravel言語固有のパターン、Eloquent ORM、ミドルウェア、およびサービスコンテナ。
-origin: ECC
+origin: AIP
 ---
 
 # Laravel Development Patterns

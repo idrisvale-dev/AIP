@@ -1,7 +1,7 @@
 ---
 name: coding-standards
 description: TypeScript, JavaScript, React ve Node.js geliştirme için evrensel kodlama standartları, en iyi uygulamalar ve kalıplar.
-origin: ECC
+origin: AIP
 ---
 
 # Kodlama Standartları ve En İyi Uygulamalar

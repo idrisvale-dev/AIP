@@ -1,5 +1,5 @@
 /**
- * ECC Custom Tool: Lint Check
+ * AIP Custom Tool: Lint Check
  *
  * Detects the appropriate linter and returns a runnable lint command.
  * Supports cross-platform command generation and error handling.

@@ -89,13 +89,13 @@ test('builds pinned Debian and Ubuntu images as a non-root user', () => {
     /@anthropic-ai\/claude-code\/install\.cjs/
   );
   assert.match(dockerfile, /ENV DISABLE_AUTOUPDATER=1/);
-  assert.match(dockerfile, /ENV HOME=\/tmp\/ecc-home/);
+  assert.match(dockerfile, /ENV HOME=\/tmp\/aip-home/);
   assert.match(dockerfile, /ENV NODE_PATH=\/usr\/local\/lib\/node_modules/);
   assert.match(dockerfile, /chown 1000:1000 \/workspace/);
   assert.match(dockerfile, /USER 1000:1000/);
   assert.doesNotMatch(dockerfile, /:latest/);
-  assert.match(compose, /image:\s*ecc-plugin-setup:debian/);
-  assert.match(compose, /image:\s*ecc-plugin-setup:ubuntu/);
+  assert.match(compose, /image:\s*aip-plugin-setup:debian/);
+  assert.match(compose, /image:\s*aip-plugin-setup:ubuntu/);
   assert.match(compose, /ubuntu:24\.04@sha256:[a-f0-9]{64}/);
   assert.match(compose, /real-cli-ubuntu:/);
   assert.match(
@@ -125,16 +125,16 @@ test('keeps checkout and source project read-only with hardened defaults', () =>
   assert.match(compose, /no-new-privileges:true/);
   assert.match(compose, /cap_drop:\s*\n\s*-\s*ALL/);
   assert.match(compose, /pids_limit:\s*256/);
-  assert.match(compose, /target:\s*\/ecc\s*\n\s*read_only:\s*true/);
+  assert.match(compose, /target:\s*\/aip\s*\n\s*read_only:\s*true/);
   assert.match(compose, /target:\s*\/source-project\s*\n\s*read_only:\s*true/);
-  assert.match(compose, /CLAUDE_CONFIG_DIR:\s*\/tmp\/ecc-claude-config/);
+  assert.match(compose, /CLAUDE_CONFIG_DIR:\s*\/tmp\/aip-claude-config/);
   assert.match(
     compose,
-    /\/tmp:rw,nosuid,nodev,exec,size=\$\{ECC_TMPFS_SIZE:-2g\},uid=1000,gid=1000,mode=0700/
+    /\/tmp:rw,nosuid,nodev,exec,size=\$\{AIP_TMPFS_SIZE:-2g\},uid=1000,gid=1000,mode=0700/
   );
   assert.match(
     compose,
-    /\/workspace:rw,nosuid,nodev,noexec,size=\$\{ECC_WORKSPACE_SIZE:-1g\},uid=1000,gid=1000,mode=0700/
+    /\/workspace:rw,nosuid,nodev,noexec,size=\$\{AIP_WORKSPACE_SIZE:-1g\},uid=1000,gid=1000,mode=0700/
   );
   assert.match(compose, /NPM_CONFIG_CACHE:\s*\/tmp\/npm-cache/);
   assert.doesNotMatch(
@@ -145,7 +145,7 @@ test('keeps checkout and source project read-only with hardened defaults', () =>
 
 test('real runner copies into tmpfs and exposes only explicit safe modes', () => {
   const runner = read(files.realRunner);
-  assert.match(runner, /ECC_PROJECT_DIR:-\/workspace\/project/);
+  assert.match(runner, /AIP_PROJECT_DIR:-\/workspace\/project/);
   assert.match(runner, /mkdir -p "\$HOME" "\$CLAUDE_CONFIG_DIR" "\$NPM_CONFIG_CACHE"/);
   assert.match(runner, /dry-run\|install\|plugin\|shell/);
   assert.match(runner, /--target claude-project/);
@@ -158,15 +158,15 @@ test('real runner copies into tmpfs and exposes only explicit safe modes', () =>
   );
   assert.doesNotMatch(runner, /readonly project_dir="\$\(/);
   assert.match(runner, /prepare-packed-cli\.js/);
-  assert.match(runner, /run_ecc install/);
-  assert.match(runner, /run_ecc list-installed --json/);
-  assert.match(runner, /run_ecc doctor --target claude-project/);
+  assert.match(runner, /run_aip install/);
+  assert.match(runner, /run_aip list-installed --json/);
+  assert.match(runner, /run_aip doctor --target claude-project/);
   assert.match(runner, /\[\[ -e "\$project_dir\/\.claude" \]\]/);
   assert.doesNotMatch(
     runner,
-    /scripts\/ecc\.js" setup|--move-scope|\bmigrate\b/
+    /scripts\/aip\.js" setup|--move-scope|\bmigrate\b/
   );
-  assert.doesNotMatch(runner, /scripts\/ecc\.js" install/);
+  assert.doesNotMatch(runner, /scripts\/aip\.js" install/);
   assert.doesNotMatch(runner, /\beval\b|rm\s+-rf/);
 });
 
@@ -187,7 +187,7 @@ test('prepares a local npm artifact through the confined public bin contract', (
   assert.doesNotMatch(preparer, /execSync\(|\beval\b/);
 
   const { validatePackedPackage } = require(files.packedCliPreparer);
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-packed-cli-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-packed-cli-'));
 
   function createFixture(name, options = {}) {
     const packageRoot = path.join(fixtureRoot, name);
@@ -196,13 +196,13 @@ test('prepares a local npm artifact through the confined public bin contract', (
     fs.writeFileSync(
       path.join(packageRoot, 'package.json'),
       JSON.stringify({
-        name: options.packageName || 'ecc-universal',
+        name: options.packageName || 'aip-universal',
         version: '2.1.0',
-        bin: options.bin === undefined ? { ecc: 'scripts/ecc.js' } : options.bin,
+        bin: options.bin === undefined ? { aip: 'scripts/aip.js' } : options.bin,
       })
     );
-    fs.writeFileSync(path.join(packageRoot, 'scripts', 'ecc.js'), '#!/usr/bin/env node\n');
-    fs.chmodSync(path.join(packageRoot, 'scripts', 'ecc.js'), 0o755);
+    fs.writeFileSync(path.join(packageRoot, 'scripts', 'aip.js'), '#!/usr/bin/env node\n');
+    fs.chmodSync(path.join(packageRoot, 'scripts', 'aip.js'), 0o755);
     for (const manifest of [
       'install-components.json',
       'install-modules.json',
@@ -219,13 +219,13 @@ test('prepares a local npm artifact through the confined public bin contract', (
     const validRoot = createFixture('valid');
     assert.strictEqual(
       validatePackedPackage(validRoot),
-      path.join(validRoot, 'scripts', 'ecc.js')
+      path.join(validRoot, 'scripts', 'aip.js')
     );
 
     for (const [name, options, pattern] of [
-      ['wrong-name', { packageName: 'not-ecc' }, /package name/i],
-      ['missing-bin', { bin: {} }, /bin\.ecc/i],
-      ['escaping-bin', { bin: { ecc: '../escape.js' } }, /bin\.ecc/i],
+      ['wrong-name', { packageName: 'not-aip' }, /package name/i],
+      ['missing-bin', { bin: {} }, /bin\.aip/i],
+      ['escaping-bin', { bin: { aip: '../escape.js' } }, /bin\.aip/i],
       ['missing-manifest', { omitManifest: 'install-profiles.json' }, /missing/i],
     ]) {
       assert.throws(() => validatePackedPackage(createFixture(name, options)), pattern);
@@ -301,7 +301,7 @@ test('uses one shell-free focused runner across Linux, macOS, and Windows', () =
 test('emits docker exec as an executable plus argv integration contract', () => {
   const result = runNode([
     files.interactivePlan,
-    '--container', 'ecc-plugin-shell',
+    '--container', 'aip-plugin-shell',
     '--workdir', '/workspace/project',
     '--json',
     '--',
@@ -321,7 +321,7 @@ test('emits docker exec as an executable plus argv integration contract', () => 
       '-it',
       '-w',
       '/workspace/project',
-      'ecc-plugin-shell',
+      'aip-plugin-shell',
       'node',
       '-p',
       'process.stdin.isTTY',
@@ -333,7 +333,7 @@ test('keeps Docker session values as argv entries and validates boundaries', () 
   const literalArgument = '$(touch should-not-run)';
   const result = runNode([
     files.interactivePlan,
-    '--container', 'ecc.plugin-shell_1',
+    '--container', 'aip.plugin-shell_1',
     '--workdir', '/workspace/project with spaces',
     '--json',
     '--',
@@ -374,7 +374,7 @@ test('validates dry-run target confinement and nonempty operations', () => {
       target: 'claude-project',
       installRoot,
       operations: [
-        { destinationPath: path.join(installRoot, 'rules', 'ecc', 'base.md') },
+        { destinationPath: path.join(installRoot, 'rules', 'aip', 'base.md') },
       ],
     },
   };

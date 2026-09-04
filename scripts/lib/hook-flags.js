@@ -3,12 +3,12 @@
  * Shared hook enable/disable controls.
  *
  * Controls:
- * - ECC_HOOKS_ENABLED=true|false (default: true)
- * - ECC_HOOK_PROFILE=minimal|standard|strict (default: standard)
- * - ECC_DISABLED_HOOKS=comma,separated,hook,ids
+ * - AIP_HOOKS_ENABLED=true|false (default: true)
+ * - AIP_HOOK_PROFILE=minimal|standard|strict (default: standard)
+ * - AIP_DISABLED_HOOKS=comma,separated,hook,ids
  *
- * Claude plugin options are used when their corresponding ECC variable is
- * absent. A managed install can provide ecc/setup.json as the final fallback.
+ * Claude plugin options are used when their corresponding AIP variable is
+ * absent. A managed install can provide aip/setup.json as the final fallback.
  */
 
 'use strict';
@@ -41,10 +41,10 @@ function sanitizeDiagnostic(value) {
 
 function readManagedHookConfig(env = process.env) {
   const pluginRoot = String(
-    env.CLAUDE_PLUGIN_ROOT || env.ECC_PLUGIN_ROOT || ''
+    env.CLAUDE_PLUGIN_ROOT || env.AIP_PLUGIN_ROOT || ''
   ).trim();
-  const configPath = String(env.ECC_HOOK_CONFIG || '').trim()
-    || (pluginRoot ? path.join(pluginRoot, 'ecc', 'setup.json') : '');
+  const configPath = String(env.AIP_HOOK_CONFIG || '').trim()
+    || (pluginRoot ? path.join(pluginRoot, 'aip', 'setup.json') : '');
   if (!configPath || !fs.existsSync(configPath)) return {};
 
   try {
@@ -56,15 +56,15 @@ function readManagedHookConfig(env = process.env) {
       : {};
   } catch (error) {
     process.stderr.write(`${sanitizeDiagnostic(
-      `Warning: unable to read managed ECC hook config at ${configPath}: ${error.message}`
+      `Warning: unable to read managed AIP hook config at ${configPath}: ${error.message}`
     )}\n`);
     return {};
   }
 }
 
 function areHooksEnabled(env = process.env, managed = readManagedHookConfig(env)) {
-  const raw = env.ECC_HOOKS_ENABLED !== undefined
-    ? env.ECC_HOOKS_ENABLED
+  const raw = env.AIP_HOOKS_ENABLED !== undefined
+    ? env.AIP_HOOKS_ENABLED
     : (
       env.CLAUDE_PLUGIN_OPTION_HOOKS_ENABLED !== undefined
         ? env.CLAUDE_PLUGIN_OPTION_HOOKS_ENABLED
@@ -74,8 +74,8 @@ function areHooksEnabled(env = process.env, managed = readManagedHookConfig(env)
 }
 
 function getHookProfile(env = process.env, managed = readManagedHookConfig(env)) {
-  const selected = env.ECC_HOOK_PROFILE !== undefined
-    ? env.ECC_HOOK_PROFILE
+  const selected = env.AIP_HOOK_PROFILE !== undefined
+    ? env.AIP_HOOK_PROFILE
     : (
       env.CLAUDE_PLUGIN_OPTION_HOOK_PROFILE !== undefined
         ? env.CLAUDE_PLUGIN_OPTION_HOOK_PROFILE
@@ -86,7 +86,7 @@ function getHookProfile(env = process.env, managed = readManagedHookConfig(env))
 }
 
 function getDisabledHookIds(env = process.env) {
-  const raw = String(env.ECC_DISABLED_HOOKS || '');
+  const raw = String(env.AIP_DISABLED_HOOKS || '');
   if (!raw.trim()) return new Set();
 
   return new Set(
@@ -116,7 +116,7 @@ function parseProfiles(rawProfiles, fallback = ['standard', 'strict']) {
 }
 
 function isDryRun(env = process.env) {
-  return env.ECC_DRY_RUN === '1';
+  return env.AIP_DRY_RUN === '1';
 }
 
 function isHookEnabled(hookId, options = {}) {

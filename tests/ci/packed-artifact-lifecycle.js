@@ -9,22 +9,22 @@ const path = require('path');
 const { pathToFileURL } = require('url');
 const { spawnSync } = require('child_process');
 
-const PACKAGE_NAME = 'ecc-universal';
+const PACKAGE_NAME = 'aip-universal';
 const HASH_PATTERN = /^[a-f0-9]{64}$/i;
-const PACKAGE_PATH_PATTERN = /^release-artifacts\/ecc-universal-[0-9A-Za-z.+-]+\.tgz$/;
+const PACKAGE_PATH_PATTERN = /^release-artifacts\/aip-universal-[0-9A-Za-z.+-]+\.tgz$/;
 
 function parseEnvironment(environment = process.env, cwd = process.cwd()) {
-  const packageValue = environment.ECC_RELEASE_PACKAGE;
-  const hashValue = environment.ECC_RELEASE_SHA256;
+  const packageValue = environment.AIP_RELEASE_PACKAGE;
+  const hashValue = environment.AIP_RELEASE_SHA256;
 
   if (!packageValue) {
-    throw new Error('ECC_RELEASE_PACKAGE must name the downloaded release .tgz');
+    throw new Error('AIP_RELEASE_PACKAGE must name the downloaded release .tgz');
   }
   if (!PACKAGE_PATH_PATTERN.test(String(packageValue))) {
-    throw new Error('ECC_RELEASE_PACKAGE must name one ECC .tgz under release-artifacts');
+    throw new Error('AIP_RELEASE_PACKAGE must name one AIP .tgz under release-artifacts');
   }
   if (!HASH_PATTERN.test(hashValue || '')) {
-    throw new Error('ECC_RELEASE_SHA256 must be a 64-character SHA-256 digest');
+    throw new Error('AIP_RELEASE_SHA256 must be a 64-character SHA-256 digest');
   }
 
   return {
@@ -148,7 +148,7 @@ function getNpmExecInvocation(publicArgs, environment, platform = process.platfo
 
 function installPackage(projectDir, packagePath, environment) {
   const projectManifest = {
-    name: 'ecc-packed-artifact-lifecycle',
+    name: 'aip-packed-artifact-lifecycle',
     version: '1.0.0',
     private: true,
     dependencies: {
@@ -189,8 +189,8 @@ function fakeClaudeProviderMain() {
   const fs = require('fs');
   const path = require('path');
   const args = process.argv.slice(2);
-  const statePath = process.env.ECC_TEST_CLAUDE_STATE;
-  const callsPath = process.env.ECC_TEST_CLAUDE_CALLS;
+  const statePath = process.env.AIP_TEST_CLAUDE_STATE;
+  const callsPath = process.env.AIP_TEST_CLAUDE_CALLS;
 
   if (!statePath || !callsPath) {
     process.stderr.write('Fake Claude requires explicit state and call-log paths.\n');
@@ -205,7 +205,7 @@ function fakeClaudeProviderMain() {
     'utf8'
   );
   const createReadArtifacts = () => {
-    if (process.env.ECC_TEST_CLAUDE_CREATE_READ_ARTIFACTS !== '1') return;
+    if (process.env.AIP_TEST_CLAUDE_CREATE_READ_ARTIFACTS !== '1') return;
     const configDir = process.env.CLAUDE_CONFIG_DIR;
     const backupDir = path.join(configDir, 'backups');
     fs.mkdirSync(backupDir, { recursive: true });
@@ -233,7 +233,7 @@ function fakeClaudeProviderMain() {
     writeState({
       ...state,
       marketplaces: [{
-        name: 'ecc',
+        name: 'aip',
         repo: 'reborncursed/AIP',
         scope: 'user',
         source: 'github',
@@ -241,21 +241,21 @@ function fakeClaudeProviderMain() {
     });
     return;
   }
-  if (joined === 'plugin marketplace update ecc') {
+  if (joined === 'plugin marketplace update aip') {
     return;
   }
-  if (joined.startsWith('plugin install ecc@ecc ')) {
+  if (joined.startsWith('plugin install aip@aip ')) {
     writeState({
       ...state,
-      plugins: [{ enabled: true, id: 'ecc@ecc', scope: 'user', version: '2.2.0' }],
+      plugins: [{ enabled: true, id: 'aip@aip', scope: 'user', version: '2.2.0' }],
     });
     return;
   }
-  if (joined.startsWith('plugin update ecc@ecc ')) {
+  if (joined.startsWith('plugin update aip@aip ')) {
     writeState({
       ...state,
       plugins: (state.plugins || []).map(plugin => (
-        plugin.id === 'ecc@ecc' && plugin.scope === 'user'
+        plugin.id === 'aip@aip' && plugin.scope === 'user'
           ? { ...plugin, enabled: true, version: '2.2.0' }
           : plugin
       )),
@@ -387,7 +387,7 @@ function runTargetSmoke(options) {
     ]),
     `${options.target} packed install`
   );
-  const statePath = path.join(options.targetRoot, 'ecc-install-state.json');
+  const statePath = path.join(options.targetRoot, 'aip-install-state.json');
   const installedSkillPath = path.join(
     options.targetRoot,
     'skills',
@@ -423,7 +423,7 @@ function runLifecycle(options) {
   assertDownloadedArtifact(options.packagePath, process.cwd());
   assertHash(hashFile(options.packagePath), options.expectedSha256);
 
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-packed-lifecycle-'));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-packed-lifecycle-'));
   const homeDir = path.join(tempRoot, 'home');
   const projectDir = path.join(tempRoot, 'project');
   fs.mkdirSync(homeDir, { recursive: true });
@@ -435,7 +435,7 @@ function runLifecycle(options) {
     installPackage(projectDir, options.packagePath, environment);
 
     const cursorRoot = path.join(projectDir, '.cursor');
-    const statePath = path.join(cursorRoot, 'ecc-install-state.json');
+    const statePath = path.join(cursorRoot, 'aip-install-state.json');
     const sentinelPath = path.join(cursorRoot, 'user-sentinel.txt');
     fs.mkdirSync(cursorRoot, { recursive: true });
     fs.writeFileSync(sentinelPath, 'keep this user file\n', 'utf8');
@@ -450,13 +450,13 @@ function runLifecycle(options) {
       });
     };
     const runCli = (args, commandOptions = {}) => runPublicCli(
-      ['ecc', ...args],
+      ['aip', ...args],
       commandOptions
     );
 
-    const setupHelp = runPublicCli(['ecc-universal', 'setup', '--help']);
-    assert.match(setupHelp.stdout, /ECC guided setup/);
-    assert.match(setupHelp.stdout, /ecc setup --mode claude-plugin/);
+    const setupHelp = runPublicCli(['aip-universal', 'setup', '--help']);
+    assert.match(setupHelp.stdout, /AIP guided setup/);
+    assert.match(setupHelp.stdout, /aip setup --mode claude-plugin/);
 
     for (const credentialName of [
       'ANTHROPIC_API_KEY',
@@ -487,14 +487,14 @@ function runLifecycle(options) {
     const claudeSetupEnvironment = {
       ...environment,
       CLAUDE_CONFIG_DIR: claudeConfigDir,
-      ECC_TEST_CLAUDE_CALLS: fakeClaudeCallsPath,
-      ECC_TEST_CLAUDE_CREATE_READ_ARTIFACTS: '1',
-      ECC_TEST_CLAUDE_STATE: fakeClaudeStatePath,
+      AIP_TEST_CLAUDE_CALLS: fakeClaudeCallsPath,
+      AIP_TEST_CLAUDE_CREATE_READ_ARTIFACTS: '1',
+      AIP_TEST_CLAUDE_STATE: fakeClaudeStatePath,
       PATH: `${fakeClaudeBinDir}${path.delimiter}${environment.PATH || environment.Path || ''}`,
       Path: `${fakeClaudeBinDir}${path.delimiter}${environment.Path || environment.PATH || ''}`,
     };
     const claudeSetupArgs = [
-      'ecc-universal', 'setup',
+      'aip-universal', 'setup',
       '--mode', 'claude-plugin',
       '--scope', 'user',
     ];
@@ -554,10 +554,10 @@ function runLifecycle(options) {
 
     const fakeClaudeState = JSON.parse(fs.readFileSync(fakeClaudeStatePath, 'utf8'));
     assert.deepStrictEqual(fakeClaudeState.plugins, [
-      { enabled: true, id: 'ecc@ecc', scope: 'user', version: '2.2.0' },
+      { enabled: true, id: 'aip@aip', scope: 'user', version: '2.2.0' },
     ]);
     assert.deepStrictEqual(fakeClaudeState.marketplaces, [
-      { name: 'ecc', repo: 'reborncursed/AIP', scope: 'user', source: 'github' },
+      { name: 'aip', repo: 'reborncursed/AIP', scope: 'user', source: 'github' },
     ]);
     const fakeClaudeCalls = readJsonLines(fakeClaudeCallsPath).map(args => args.join(' '));
     assert.ok(
@@ -565,22 +565,22 @@ function runLifecycle(options) {
       'initial packed Claude setup must add the official marketplace'
     );
     assert.ok(
-      fakeClaudeCalls.includes('plugin marketplace update ecc'),
+      fakeClaudeCalls.includes('plugin marketplace update aip'),
       'repeat packed Claude setup must update the official marketplace'
     );
     assert.ok(
-      fakeClaudeCalls.some(call => call.startsWith('plugin install ecc@ecc ')),
-      'initial packed Claude setup must install ecc@ecc'
+      fakeClaudeCalls.some(call => call.startsWith('plugin install aip@aip ')),
+      'initial packed Claude setup must install aip@aip'
     );
     assert.ok(
-      fakeClaudeCalls.includes('plugin update ecc@ecc --scope user'),
-      'repeat packed Claude setup must update ecc@ecc'
+      fakeClaudeCalls.includes('plugin update aip@aip --scope user'),
+      'repeat packed Claude setup must update aip@aip'
     );
     const claudeSettings = JSON.parse(
       fs.readFileSync(path.join(claudeConfigDir, 'settings.json'), 'utf8')
     );
     assert.strictEqual(
-      claudeSettings.pluginConfigs['ecc@ecc'].options.hook_profile,
+      claudeSettings.pluginConfigs['aip@aip'].options.hook_profile,
       'strict'
     );
     assert.strictEqual(
@@ -590,7 +590,7 @@ function runLifecycle(options) {
     );
 
     const guidedKimiRoot = path.join(projectDir, '.kimi-code');
-    const guidedKimiStatePath = path.join(guidedKimiRoot, 'ecc-install-state.json');
+    const guidedKimiStatePath = path.join(guidedKimiRoot, 'aip-install-state.json');
     const guidedKimiSkillPath = path.join(
       guidedKimiRoot,
       'skills',
@@ -602,7 +602,7 @@ function runLifecycle(options) {
     fs.writeFileSync(guidedKimiSentinel, 'keep this Kimi user file\n', 'utf8');
     const guidedKimiBeforeDryRun = fs.readdirSync(guidedKimiRoot).sort();
     const guidedKimiInstallArgs = [
-      'ecc-universal', 'install', '--guided',
+      'aip-universal', 'install', '--guided',
       '--harness', 'kimi',
       '--profile', 'core',
     ];
@@ -662,14 +662,14 @@ function runLifecycle(options) {
     );
 
     const guidedKimiDoctor = parseJsonOutput(
-      runPublicCli(['ecc', 'doctor', '--target', 'kimi', '--json']),
+      runPublicCli(['aip', 'doctor', '--target', 'kimi', '--json']),
       'guided Kimi doctor'
     );
     assert.strictEqual(guidedKimiDoctor.summary.errorCount, 0);
     assert.strictEqual(guidedKimiDoctor.summary.warningCount, 0);
 
     const guidedKimiUninstall = parseJsonOutput(
-      runPublicCli(['ecc', 'uninstall', '--target', 'kimi', '--json']),
+      runPublicCli(['aip', 'uninstall', '--target', 'kimi', '--json']),
       'guided Kimi uninstall'
     );
     assert.strictEqual(guidedKimiUninstall.summary.errorCount, 0);
@@ -784,7 +784,7 @@ function runLifecycle(options) {
 
     const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
     const driftPath = findDriftCandidate(state, cursorRoot);
-    fs.appendFileSync(driftPath, '\nECC_PACKED_LIFECYCLE_DRIFT\n', 'utf8');
+    fs.appendFileSync(driftPath, '\nAIP_PACKED_LIFECYCLE_DRIFT\n', 'utf8');
 
     const driftedDoctor = parseJsonOutput(
       runCli(['doctor', '--target', 'cursor', '--json'], { expectedStatus: 1 }),
@@ -864,7 +864,7 @@ function runLifecycle(options) {
       node: process.version,
       lifecycle: [
         'npm-install',
-        'public-ecc-universal-setup',
+        'public-aip-universal-setup',
         'claude-setup-dry-run-isolated',
         'claude-setup-git-preflight',
         'claude-setup-install',
@@ -876,7 +876,7 @@ function runLifecycle(options) {
         'guided-kimi-uninstall',
         'guided-kimi-sentinel-preserved',
         'cursor-ito-install',
-        'public-ecc-ito-fail-closed',
+        'public-aip-ito-fail-closed',
         'cursor-repeat-install',
         'doctor-clean',
         'status-installed',

@@ -122,8 +122,8 @@ function runTests() {
 
     const kimiHooks = getHarnessCapability('kimi').hooks;
     assert.strictEqual(kimiHooks.mode, 'not-configured');
-    assert.strictEqual(kimiHooks.eccConfigured, false);
-    assert.match(kimiHooks.note, /ECC hooks are not configured/i);
+    assert.strictEqual(kimiHooks.aipConfigured, false);
+    assert.match(kimiHooks.note, /AIP hooks are not configured/i);
     assert.strictEqual(kimiHooks.summary, kimiHooks.note);
     assert.doesNotMatch(kimiHooks.note, /provider.*unsupported|Kimi.*unsupported/i);
   })) passed++; else failed++;

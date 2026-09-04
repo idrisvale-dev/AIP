@@ -1,7 +1,7 @@
 ---
 name: bun-runtime
 description: ランタイムとしてのBun、パッケージマネージャー、バンドラー、テストランナー。Bun対Nodeを選択する場合、移行メモ、Vercelサポート。
-origin: ECC
+origin: AIP
 ---
 
 # Bunランタイム

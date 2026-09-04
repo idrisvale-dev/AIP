@@ -2,7 +2,7 @@
 name: clickhouse-io
 description: ClickHouse database patterns, query optimization, analytics, and data engineering best practices for high-performance analytical workloads. Use when writing ClickHouse schemas or queries, or when an analytical query is too slow.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # ClickHouse Analytics Patterns

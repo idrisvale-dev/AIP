@@ -1,11 +1,11 @@
 # Harness Adapter Compliance Matrix
 
-This matrix is the public onramp for teams that want to use ECC across more
+This matrix is the public onramp for teams that want to use AIP across more
 than one coding harness. It turns the cross-harness architecture into a
 practical scorecard: what works today, what is instruction-only, what needs an
 adapter, and what evidence an operator should collect before trusting a setup.
 
-ECC's durable units stay in shared sources:
+AIP's durable units stay in shared sources:
 
 - `skills/*/SKILL.md`
 - `rules/`
@@ -22,10 +22,10 @@ or platform limits.
 
 | State | Meaning |
 | --- | --- |
-| Native | ECC can install or verify the surface directly for this harness. |
-| Adapter-backed | ECC has a thin adapter, plugin, or package surface, but parity differs by harness. |
-| Instruction-backed | ECC can provide the guidance and files, but the harness does not expose the runtime hook/session surface ECC needs for enforcement. |
-| Reference-only | The tool is useful as a design pressure or external runtime, but ECC does not yet ship a direct installer or adapter for it. |
+| Native | AIP can install or verify the surface directly for this harness. |
+| Adapter-backed | AIP has a thin adapter, plugin, or package surface, but parity differs by harness. |
+| Instruction-backed | AIP can provide the guidance and files, but the harness does not expose the runtime hook/session surface AIP needs for enforcement. |
+| Reference-only | The tool is useful as a design pressure or external runtime, but AIP does not yet ship a direct installer or adapter for it. |
 
 ## Matrix
 
@@ -39,20 +39,20 @@ The matrix below is rendered from
 | Claude Code | Native | Claude plugin assets; skills; commands; hooks; MCP config; local rules; statusline-oriented workflows | Claude-native hooks do not imply parity in other harnesses | `./install.sh --profile minimal --target claude`; Claude plugin install | `npm run harness:audit -- --format json`; `node scripts/session-inspect.js --list-adapters` | Avoid loading every skill by default; keep hooks opt-in and inspectable. |
 | Codex | Instruction-backed | `AGENTS.md`; Codex plugin metadata; skills; MCP reference config; command patterns | Native hook enforcement and Claude slash-command semantics are not equivalent | `./install.sh --profile minimal --target codex`; repo-local `AGENTS.md` review | `npm run harness:audit -- --format json` | Treat hooks as policy text unless a native Codex hook surface exists. |
 | OpenCode | Adapter-backed | OpenCode package/plugin metadata; shared skills; MCP config; event adapter patterns | Event names, plugin packaging, and command dispatch differ from Claude Code | OpenCode package or plugin surface from this repo | `node tests/scripts/build-opencode.test.js`; `npm run harness:audit -- --format json` | Keep hook logic in shared scripts and adapt only event shape at the edge. |
-| Pi | Adapter-backed | Pi package manifest; canonical ECC skills (skills/); canonical ECC commands as prompt templates (commands/); canonical ECC engineering rules (rules/common/) injected into the system prompt; session lifecycle hook adapter; /ecc-doctor diagnostics command | Subagents, chains, approval prompts, and persistent todos require companion Pi packages and are not part of this adapter; Pi core has no MCP surface, though ECC MCP configs load verbatim through the community pi-mcp-adapter package, which ECC neither installs nor depends on | `pi install git:github.com/reborncursed/AIP`; `pi install /path/to/ECC` from a local checkout | `node tests/pi/pi-package-manifest.test.js`; `node tests/pi/pi-extension-adapter.test.js`; `npm run harness:adapters -- --check` | Pi extensions execute with full user permissions, and hooks run without a shell and resolve from the installed package rather than the user project; Keep canonical skills and commands as the single source of truth, and never generate copies under .pi/ |
+| Pi | Adapter-backed | Pi package manifest; canonical AIP skills (skills/); canonical AIP commands as prompt templates (commands/); canonical AIP engineering rules (rules/common/) injected into the system prompt; session lifecycle hook adapter; /aip-doctor diagnostics command | Subagents, chains, approval prompts, and persistent todos require companion Pi packages and are not part of this adapter; Pi core has no MCP surface, though AIP MCP configs load verbatim through the community pi-mcp-adapter package, which AIP neither installs nor depends on | `pi install git:github.com/reborncursed/AIP`; `pi install /path/to/AIP` from a local checkout | `node tests/pi/pi-package-manifest.test.js`; `node tests/pi/pi-extension-adapter.test.js`; `npm run harness:adapters -- --check` | Pi extensions execute with full user permissions, and hooks run without a shell and resolve from the installed package rather than the user project; Keep canonical skills and commands as the single source of truth, and never generate copies under .pi/ |
 | Cursor | Adapter-backed | Cursor rules; project-local skills; hook adapter; shared scripts | Cursor hook events and rule loading differ from Claude Code | `./install.sh --profile minimal --target cursor` | `node tests/lib/install-targets.test.js`; `npm run harness:audit -- --format json` | Cursor adapters must preserve existing project rules and avoid silent overwrite. |
-| Gemini | Instruction-backed | Gemini project-local instructions; shared skills; rules; compatibility docs | No full ECC hook parity; ecosystem ports must document drift from upstream ECC | `./install.sh --profile minimal --target gemini` | `node tests/lib/install-targets.test.js` | Treat Gemini ports as ecosystem adapters until validated end to end inside Gemini CLI. |
+| Gemini | Instruction-backed | Gemini project-local instructions; shared skills; rules; compatibility docs | No full AIP hook parity; ecosystem ports must document drift from upstream AIP | `./install.sh --profile minimal --target gemini` | `node tests/lib/install-targets.test.js` | Treat Gemini ports as ecosystem adapters until validated end to end inside Gemini CLI. |
 | Zed | Adapter-backed | Zed project settings; flattened project rules; shared skills; commands; agents | Zed external agents and native Agent Panel permissions are not Claude hooks | `./install.sh --profile minimal --target zed` | `node tests/lib/install-targets.test.js`; `npm run harness:audit -- --format json` | Keep project settings conservative and do not copy BYOK/OpenRouter secrets into `.zed/`. |
 | dmux | Adapter-backed | session snapshots; tmux/worktree orchestration status; handoff exports | dmux is an orchestration runtime, not an install target for skills/rules | `node scripts/session-inspect.js --list-adapters`; dmux session target inspection | `node tests/lib/session-adapters.test.js` | Treat dmux events as session/runtime signals, not as a replacement for repo validation. |
-| Orca | Reference-only | worktree lifecycle; review state; notification; provider-identity design pressure | No ECC installer or direct adapter today | Use as a comparison target for worktree/session state requirements | `npm run observability:ready` | Do not import product-specific assumptions; convert lessons into ECC event fields. |
-| Superset | Reference-only | workspace presets; parallel-agent review loops; worktree isolation design pressure | No ECC installer or direct adapter today | Use as a comparison target for workspace preset taxonomy | `npm run observability:ready` | Keep ECC portable; do not require a desktop workspace to get basic value. |
-| Ghast | Reference-only | terminal-native pane grouping; cwd grouping; search; notifications | No ECC installer or direct adapter today | Use as a comparison target for terminal-first session grouping | `node scripts/session-inspect.js --list-adapters` | Preserve terminal ergonomics before adding visual UI assumptions. |
+| Orca | Reference-only | worktree lifecycle; review state; notification; provider-identity design pressure | No AIP installer or direct adapter today | Use as a comparison target for worktree/session state requirements | `npm run observability:ready` | Do not import product-specific assumptions; convert lessons into AIP event fields. |
+| Superset | Reference-only | workspace presets; parallel-agent review loops; worktree isolation design pressure | No AIP installer or direct adapter today | Use as a comparison target for workspace preset taxonomy | `npm run observability:ready` | Keep AIP portable; do not require a desktop workspace to get basic value. |
+| Ghast | Reference-only | terminal-native pane grouping; cwd grouping; search; notifications | No AIP installer or direct adapter today | Use as a comparison target for terminal-first session grouping | `node scripts/session-inspect.js --list-adapters` | Preserve terminal ergonomics before adding visual UI assumptions. |
 | Terminal-only | Native | skills; rules; commands; scripts; harness audit; observability readiness; handoffs | No external UI, no automatic session control unless scripts are run explicitly | Clone repo; run commands directly; use minimal profile for project installs | `npm run harness:audit -- --format json`; `npm run observability:ready` | This is the fallback contract; every higher-level adapter should degrade to it. |
 <!-- harness-adapter-compliance:matrix-end -->
 
 ## Scorecard Onramp
 
-Use this sequence before asking ECC to make a team or repo setup more
+Use this sequence before asking AIP to make a team or repo setup more
 autonomous:
 
 ```bash
@@ -60,7 +60,7 @@ npm run harness:adapters -- --check
 npm run harness:audit -- --format json
 npm run observability:ready
 node scripts/session-inspect.js --list-adapters
-node scripts/loop-status.js --json --write-dir .ecc/loop-status
+node scripts/loop-status.js --json --write-dir .aip/loop-status
 ```
 
 Read the result as a setup scorecard, not a product badge:
@@ -102,5 +102,5 @@ verification command, risk note, owner, source doc, or verification date.
   verification command.
 - Keep Codex, Gemini, and Zed surfaces honest when enforcement is
   instruction-backed rather than runtime-backed.
-- Treat reference-only tools as design pressure until ECC has a direct adapter.
+- Treat reference-only tools as design pressure until AIP has a direct adapter.
 - Keep the terminal-only path healthy; it is the portability floor.

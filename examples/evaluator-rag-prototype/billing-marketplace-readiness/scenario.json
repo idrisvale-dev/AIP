@@ -1,9 +1,9 @@
 {
-  "schema_version": "ecc.evaluator-rag.scenario.v1",
+  "schema_version": "aip.evaluator-rag.scenario.v1",
   "scenario_id": "billing-marketplace-readiness",
   "title": "Verify billing and Marketplace claims before launch copy",
   "mode": "read_only_prototype",
-  "objective": "Given rc.1 release docs and ECC Tools billing roadmap evidence, separate verified Marketplace/App/billing state from assumptions before any announcement or publication action.",
+  "objective": "Given rc.1 release docs and AIP Tools billing roadmap evidence, separate verified Marketplace/App/billing state from assumptions before any announcement or publication action.",
   "sources": [
     {
       "kind": "repo_doc",
@@ -17,17 +17,17 @@
     },
     {
       "kind": "roadmap",
-      "path": "docs/ECC-2.0-GA-ROADMAP.md",
-      "purpose": "ECC Tools billing audit acceptance criteria and remaining release blockers"
+      "path": "docs/AIP-2.0-GA-ROADMAP.md",
+      "purpose": "AIP Tools billing audit acceptance criteria and remaining release blockers"
     },
     {
       "kind": "github_api",
-      "command": "gh api repos/ECC-Tools/ECC-Tools",
+      "command": "gh api repos/AIP-Tools/AIP-Tools",
       "purpose": "Fresh repository access and app-surface evidence before launch claims"
     },
     {
       "kind": "public_url",
-      "url": "https://github.com/marketplace/ecc-tools",
+      "url": "https://github.com/marketplace/aip-tools",
       "purpose": "Marketplace listing that must be checked live before copy says billing is ready"
     }
   ],

@@ -1,7 +1,7 @@
 ---
 name: architecture-decision-records
 description: コーディングセッション中にアーキテクチャ決定を構造化ADRとして記録し、自動的に決定の瞬間を検出し、コンテキスト、検討された代替案、根拠を記録します。今後の開発者がコードベースの形成理由を理解するためのADRログを維持します。
-origin: ECC
+origin: AIP
 ---
 
 # アーキテクチャ決定記録

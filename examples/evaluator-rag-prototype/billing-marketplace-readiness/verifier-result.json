@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.verifier.v1",
+  "schema_version": "aip.evaluator-rag.verifier.v1",
   "scenario_id": "billing-marketplace-readiness",
   "run_id": "2026-05-12-billing-marketplace-readiness-prototype",
   "read_only": true,

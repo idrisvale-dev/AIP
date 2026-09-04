@@ -1,6 +1,6 @@
 # Cross-Harness Architecture
 
-ECC is the reusable workflow layer. Harnesses are execution surfaces.
+AIP is the reusable workflow layer. Harnesses are execution surfaces.
 
 The goal is to keep the durable parts of agentic work in one repo:
 
@@ -17,7 +17,7 @@ Claude Code, Codex, OpenCode, Cursor, Gemini, and future harnesses should adapt 
 For the operator-facing support matrix and scorecard workflow, see
 [Harness Adapter Compliance Matrix](harness-adapter-compliance.md).
 For the full-stack platform framing and product-integration loop, see
-[ECC Platform Value Loop](platform-value-loop.md).
+[AIP Platform Value Loop](platform-value-loop.md).
 
 ## Portability Model
 
@@ -28,14 +28,14 @@ For the full-stack platform framing and product-integration loop, see
 | Hooks | `hooks/hooks.json`, `scripts/hooks/` | Claude native hooks, OpenCode plugin events, Cursor hook adapter | Hook-backed in Claude/OpenCode/Cursor; instruction-backed in Codex |
 | MCPs | `.mcp.json`, `mcp-configs/` | Native MCP config import per harness | Supported where the harness exposes MCP |
 | Commands | `commands/`, CLI scripts | Claude slash commands, compatibility shims, CLI entrypoints | Supported, but command semantics vary |
-| Memory | `.ecc/memory/`, `~/.ecc/memory/` | `ecc memory` CLI or opt-in `ecc-memory-mcp` stdio server | Supported with explicit recall and unreviewed writes |
-| Sessions | `ecc2/`, session adapters, orchestration scripts | TUI/daemon, tmux/worktree orchestration, harness-specific runners | Alpha |
+| Memory | `.aip/memory/`, `~/.aip/memory/` | `aip memory` CLI or opt-in `aip-memory-mcp` stdio server | Supported with explicit recall and unreviewed writes |
+| Sessions | `aip2/`, session adapters, orchestration scripts | TUI/daemon, tmux/worktree orchestration, harness-specific runners | Alpha |
 
 ## What Travels Unchanged
 
 `SKILL.md` is the most portable unit.
 
-A good ECC skill should:
+A good AIP skill should:
 
 - use YAML frontmatter with `name`, `description`, and `origin`
 - describe when to use the skill
@@ -51,26 +51,26 @@ Each harness has different loading and enforcement behavior:
 
 - Claude Code loads plugin assets and has native hook execution.
 - Codex reads `AGENTS.md`, plugin metadata, skills, and MCP config, but hook parity is instruction-driven.
-- OpenCode has a plugin/event system that can reuse ECC hook logic through an adapter layer.
-- Cursor uses its own rule and hook layout, so ECC maintains translated surfaces under `.cursor/`.
+- OpenCode has a plugin/event system that can reuse AIP hook logic through an adapter layer.
+- Cursor uses its own rule and hook layout, so AIP maintains translated surfaces under `.cursor/`.
 - Gemini support is install/instruction oriented and should be treated as a compatibility surface, not as full hook parity.
 
 Adapters should stay thin. The shared behavior belongs in `skills/`, `rules/`, `hooks/`, `scripts/`, and `mcp-configs/`.
 
 ## Shared Memory Contract
 
-ECC Memory Vault is the common knowledge-transfer surface for Claude, Codex,
+AIP Memory Vault is the common knowledge-transfer surface for Claude, Codex,
 Hermes, Cursor, OpenCode, and other agents. It stores portable
-`ecc.memory.v1` Markdown documents in three scopes:
+`aip.memory.v1` Markdown documents in three scopes:
 
-- project: `<repo>/.ecc/memory/project/`
-- team: `<repo>/.ecc/memory/team/`
-- user: `~/.ecc/memory/`
+- project: `<repo>/.aip/memory/project/`
+- team: `<repo>/.aip/memory/team/`
+- user: `~/.aip/memory/`
 
 Every harness must use the same repository working directory or the same
-`ECC_MEMORY_PROJECT_ROOT` and `ECC_MEMORY_USER_ROOT` overrides. The deterministic
-`ecc memory` CLI is the baseline interface. Harnesses with MCP support may
-instead launch `ecc-memory-mcp` and use `memory_save`, `memory_search`,
+`AIP_MEMORY_PROJECT_ROOT` and `AIP_MEMORY_USER_ROOT` overrides. The deterministic
+`aip memory` CLI is the baseline interface. Harnesses with MCP support may
+instead launch `aip-memory-mcp` and use `memory_save`, `memory_search`,
 `memory_read`, and `memory_doctor`. Normal search recall is active-only across
 `project` and `team`; a direct ID read can inspect a non-active entry, and
 `user` must be requested explicitly. The CLI target flag is a caller-selected
@@ -80,10 +80,10 @@ The MCP server is opt-in. Its reference entry lives in
 `mcp-configs/mcp-servers.json`; it is intentionally absent from the default
 `.mcp.json` so installations do not silently gain a writable context surface
 or pay its tool-schema cost. Each MCP process requires a lowercase
-`ECC_MEMORY_HARNESS`; this server-bound identity supplies the source harness
+`AIP_MEMORY_HARNESS`; this server-bound identity supplies the source harness
 and target filter, so a tool caller cannot select another identity. User-scope
 MCP access remains blocked unless the operator launches the process with
-`ECC_MEMORY_ALLOW_USER_SCOPE=1`.
+`AIP_MEMORY_ALLOW_USER_SCOPE=1`.
 
 The trust boundary is consistent across every adapter:
 
@@ -103,14 +103,14 @@ separate authoritative memory store.
 
 ## Hermes Boundary
 
-Hermes is not the public ECC runtime.
+Hermes is not the public AIP runtime.
 
-Hermes is an operator shell that can consume ECC assets:
+Hermes is an operator shell that can consume AIP assets:
 
-- import selected ECC skills into a Hermes skills directory
-- use ECC MCP conventions for tool access
-- route chat, CLI, cron, and handoff workflows through reusable ECC patterns
-- distill repeated local operator work back into sanitized ECC skills
+- import selected AIP skills into a Hermes skills directory
+- use AIP MCP conventions for tool access
+- route chat, CLI, cron, and handoff workflows through reusable AIP patterns
+- distill repeated local operator work back into sanitized AIP skills
 
 The public repo should ship reusable patterns, not local Hermes state.
 
@@ -144,7 +144,7 @@ Claude Code gets the skill through the Claude plugin surface and can enforce rel
 
 Codex reads the repo instructions, `.codex-plugin/plugin.json`, and the MCP reference config. The same skill source still describes the workflow, but hook parity is instruction-backed unless Codex adds a native hook surface.
 
-OpenCode gets the skill through the OpenCode package/plugin surface. Event handling can reuse ECC hook logic through the adapter layer, while the skill text stays unchanged.
+OpenCode gets the skill through the OpenCode package/plugin surface. Event handling can reuse AIP hook logic through the adapter layer, while the skill text stays unchanged.
 
 If a change requires editing three harness copies of the same workflow, the shared source is in the wrong place. Put the workflow back in `skills/`, then adapt only loading, event shape, or command routing at the harness edge.
 
@@ -158,21 +158,21 @@ Supported today:
 - OpenCode package/plugin surface
 - Cursor-adapted rules, hooks, and skills
 - file-first cross-harness memory through the CLI and opt-in MCP adapter
-- `ecc2/` as an alpha Rust control plane
+- `aip2/` as an alpha Rust control plane
 
 Still maturing:
 
 - exact hook parity across all harnesses
 - automated skill sync into Hermes
-- release packaging for `ecc2/`
+- release packaging for `aip2/`
 - cross-harness session resume semantics
 - optional semantic reranking and governed memory-promotion workflows
 - the full platform loop where external products contribute skill packs,
-  gated APIs, evals, and case studies back into ECC
+  gated APIs, evals, and case studies back into AIP
 
 ## Rule For New Work
 
-When adding a workflow, put the durable behavior in ECC first.
+When adding a workflow, put the durable behavior in AIP first.
 
 Use harness-specific files only for:
 

@@ -36,13 +36,13 @@ Usage:
   node scripts/work-items.js claim [<id>] --owner <name> [--as agent|human] [--db <path>] [--json]
   node scripts/work-items.js sync-github --repo <owner/repo> [--db <path>] [--json]
 
-Track Linear, GitHub, handoff, and manual roadmap items in the ECC SQLite state
-store so "ecc status" can include linked work and blocked operator follow-up.
+Track Linear, GitHub, handoff, and manual roadmap items in the AIP SQLite state
+store so "aip status" can include linked work and blocked operator follow-up.
 
 Options:
   --id <id>                 Stable local work-item id for upsert
   --source <source>         Source system, e.g. linear, github, handoff, manual
-  --source-id <id>          Source-local identifier, e.g. ECC-20 or PR number
+  --source-id <id>          Source-local identifier, e.g. AIP-20 or PR number
   --status <status>         Status such as open, in-progress, blocked, done
   --priority <priority>     Optional priority label
   --url <url>               Optional source URL
@@ -51,7 +51,7 @@ Options:
   --repo-root <path>        Optional repo root to associate with this item
   --repo <path>             GitHub repo for sync-github, otherwise alias for --repo-root
   --github-repo <owner/repo> Explicit GitHub repo for sync-github
-  --session-id <id>         Optional ECC session id
+  --session-id <id>         Optional AIP session id
   --session <id>            Alias for --session-id
   --metadata-json <json>    Optional JSON metadata payload
   --db <path>               SQLite state database path
@@ -143,7 +143,7 @@ function normalizeLimit(value) {
 }
 
 function runGhJson(args) {
-  const shimPath = process.env.ECC_GH_SHIM;
+  const shimPath = process.env.AIP_GH_SHIM;
   const command = shimPath ? process.execPath : 'gh';
   const commandArgs = shimPath ? [shimPath, ...args] : args;
   const displayCommand = shimPath ? `node ${shimPath} ${args.join(' ')}` : `gh ${args.join(' ')}`;
@@ -211,7 +211,7 @@ function buildGithubPrWorkItem(repo, pr, options = {}) {
       isDraft: Boolean(pr.isDraft),
       headRefName: pr.headRefName || null,
       sourceUpdatedAt: pr.updatedAt || null,
-      syncedBy: 'ecc-work-items-sync-github'
+      syncedBy: 'aip-work-items-sync-github'
     }
   };
 }
@@ -233,7 +233,7 @@ function buildGithubIssueWorkItem(repo, issue, options = {}) {
       type: 'issue',
       labels: Array.isArray(issue.labels) ? issue.labels.map(label => label.name || label).filter(Boolean) : [],
       sourceUpdatedAt: issue.updatedAt || null,
-      syncedBy: 'ecc-work-items-sync-github'
+      syncedBy: 'aip-work-items-sync-github'
     }
   };
 }
@@ -242,7 +242,7 @@ function closeStaleGithubItems(store, repo, activeIds, options = {}) {
   const payload = store.listWorkItems({ limit: options.limit || 10000 });
   const closed = [];
   for (const item of payload.items) {
-    if (!item.metadata || item.metadata.syncedBy !== 'ecc-work-items-sync-github') {
+    if (!item.metadata || item.metadata.syncedBy !== 'aip-work-items-sync-github') {
       continue;
     }
     if (item.metadata.repo !== repo || activeIds.has(item.id)) {

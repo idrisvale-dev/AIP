@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ECC install state",
+  "title": "AIP install state",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "ecc.install.v1"
+      "const": "aip.install.v1"
     },
     "installedAt": {
       "type": "string",

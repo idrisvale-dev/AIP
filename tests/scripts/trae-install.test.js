@@ -48,7 +48,7 @@ function runUninstall(options = {}) {
 }
 
 function readManifestLines(projectRoot) {
-  const manifestPath = path.join(projectRoot, '.trae', '.ecc-manifest');
+  const manifestPath = path.join(projectRoot, '.trae', '.aip-manifest');
   return fs.readFileSync(manifestPath, 'utf8')
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -159,7 +159,7 @@ function runTests() {
       const outsideSecretPath = path.join(externalRoot, 'secret.txt');
       fs.writeFileSync(outsideSecretPath, 'do not remove\n');
       fs.symlinkSync(externalRoot, path.join(traeRoot, 'escape-link'));
-      fs.writeFileSync(path.join(traeRoot, '.ecc-manifest'), 'escape-link/secret.txt\n.ecc-manifest\n');
+      fs.writeFileSync(path.join(traeRoot, '.aip-manifest'), 'escape-link/secret.txt\n.aip-manifest\n');
 
       const stdout = runUninstall({ cwd: projectRoot, homeDir });
 

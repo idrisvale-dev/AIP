@@ -1,7 +1,7 @@
 ---
 name: verification-loop
 description: "Claude Code 会话的全面验证系统。"
-origin: ECC
+origin: AIP
 ---
 
 # 验证循环技能

@@ -16,10 +16,10 @@ PLUGIN_JSON=".claude-plugin/plugin.json"
 MARKETPLACE_JSON=".claude-plugin/marketplace.json"
 CODEX_MARKETPLACE_JSON=".agents/plugins/marketplace.json"
 CODEX_PLUGIN_JSON=".codex-plugin/plugin.json"
-CODEX_MARKETPLACE_PLUGIN_JSON="plugins/ecc/.codex-plugin/plugin.json"
+CODEX_MARKETPLACE_PLUGIN_JSON="plugins/aip/.codex-plugin/plugin.json"
 OPENCODE_PACKAGE_JSON=".opencode/package.json"
 OPENCODE_PACKAGE_LOCK_JSON=".opencode/package-lock.json"
-OPENCODE_ECC_HOOKS_PLUGIN=".opencode/plugins/ecc-hooks.ts"
+OPENCODE_AIP_HOOKS_PLUGIN=".opencode/plugins/aip-hooks.ts"
 README_FILE="README.md"
 ROOT_ZH_CN_README_FILE="README.zh-CN.md"
 TR_README_FILE="docs/tr/README.md"
@@ -60,7 +60,7 @@ if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
 fi
 
 # Verify versioned manifests exist
-for FILE in "$ROOT_PACKAGE_JSON" "$PACKAGE_LOCK_JSON" "$ROOT_AGENTS_MD" "$TR_AGENTS_MD" "$ZH_CN_AGENTS_MD" "$AGENT_YAML" "$VERSION_FILE" "$PLUGIN_JSON" "$MARKETPLACE_JSON" "$CODEX_MARKETPLACE_JSON" "$CODEX_PLUGIN_JSON" "$OPENCODE_PACKAGE_JSON" "$OPENCODE_PACKAGE_LOCK_JSON" "$OPENCODE_ECC_HOOKS_PLUGIN" "$README_FILE" "$ROOT_ZH_CN_README_FILE" "$TR_README_FILE" "$PT_BR_README_FILE" "$ZH_CN_README_FILE" "$SELECTIVE_INSTALL_ARCHITECTURE_DOC"; do
+for FILE in "$ROOT_PACKAGE_JSON" "$PACKAGE_LOCK_JSON" "$ROOT_AGENTS_MD" "$TR_AGENTS_MD" "$ZH_CN_AGENTS_MD" "$AGENT_YAML" "$VERSION_FILE" "$PLUGIN_JSON" "$MARKETPLACE_JSON" "$CODEX_MARKETPLACE_JSON" "$CODEX_PLUGIN_JSON" "$OPENCODE_PACKAGE_JSON" "$OPENCODE_PACKAGE_LOCK_JSON" "$OPENCODE_AIP_HOOKS_PLUGIN" "$README_FILE" "$ROOT_ZH_CN_README_FILE" "$TR_README_FILE" "$PT_BR_README_FILE" "$ZH_CN_README_FILE" "$SELECTIVE_INSTALL_ARCHITECTURE_DOC"; do
   if [[ ! -f "$FILE" ]]; then
     echo "Error: $FILE not found"
     exit 1
@@ -266,9 +266,9 @@ update_codex_marketplace_version() {
       console.error(`Error: ${file} does not contain a marketplace plugins array`);
       process.exit(1);
     }
-    const plugin = marketplace.plugins.find(entry => entry && entry.name === "ecc");
+    const plugin = marketplace.plugins.find(entry => entry && entry.name === "aip");
     if (!plugin || typeof plugin !== "object") {
-      console.error(`Error: could not find ecc plugin entry in ${file}`);
+      console.error(`Error: could not find aip plugin entry in ${file}`);
       process.exit(1);
     }
     plugin.version = version;
@@ -283,7 +283,7 @@ update_opencode_hook_banner_version() {
     const version = process.argv[2];
     const current = fs.readFileSync(file, "utf8");
     const updated = current.replace(
-      /(## Active Plugin: (?:Everything Claude Code|ECC) v)[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?/,
+      /(## Active Plugin: (?:AIP|AIP) v)[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?/,
       `$1${version}`
     );
     if (updated === current) {
@@ -291,7 +291,7 @@ update_opencode_hook_banner_version() {
       process.exit(1);
     }
     fs.writeFileSync(file, updated);
-  ' "$OPENCODE_ECC_HOOKS_PLUGIN" "$VERSION"
+  ' "$OPENCODE_AIP_HOOKS_PLUGIN" "$VERSION"
 }
 
 # Update all shipped package/plugin manifests
@@ -329,7 +329,7 @@ node tests/scripts/build-opencode.test.js
 node tests/plugin-manifest.test.js
 
 # Stage, commit, tag, and push
-git add "$ROOT_PACKAGE_JSON" "$PACKAGE_LOCK_JSON" "$ROOT_AGENTS_MD" "$TR_AGENTS_MD" "$ZH_CN_AGENTS_MD" "$AGENT_YAML" "$VERSION_FILE" "$PLUGIN_JSON" "$MARKETPLACE_JSON" "$CODEX_MARKETPLACE_JSON" "$CODEX_PLUGIN_JSON" "$CODEX_MARKETPLACE_PLUGIN_JSON" "$OPENCODE_PACKAGE_JSON" "$OPENCODE_PACKAGE_LOCK_JSON" "$OPENCODE_ECC_HOOKS_PLUGIN" "$README_FILE" "$ROOT_ZH_CN_README_FILE" "$TR_README_FILE" "$PT_BR_README_FILE" "$ZH_CN_README_FILE" "$SELECTIVE_INSTALL_ARCHITECTURE_DOC"
+git add "$ROOT_PACKAGE_JSON" "$PACKAGE_LOCK_JSON" "$ROOT_AGENTS_MD" "$TR_AGENTS_MD" "$ZH_CN_AGENTS_MD" "$AGENT_YAML" "$VERSION_FILE" "$PLUGIN_JSON" "$MARKETPLACE_JSON" "$CODEX_MARKETPLACE_JSON" "$CODEX_PLUGIN_JSON" "$CODEX_MARKETPLACE_PLUGIN_JSON" "$OPENCODE_PACKAGE_JSON" "$OPENCODE_PACKAGE_LOCK_JSON" "$OPENCODE_AIP_HOOKS_PLUGIN" "$README_FILE" "$ROOT_ZH_CN_README_FILE" "$TR_README_FILE" "$PT_BR_README_FILE" "$ZH_CN_README_FILE" "$SELECTIVE_INSTALL_ARCHITECTURE_DOC"
 git commit -m "chore: bump plugin version to $VERSION"
 git tag "v$VERSION"
 git push origin main "v$VERSION"

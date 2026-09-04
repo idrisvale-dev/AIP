@@ -90,13 +90,13 @@ Triggers on: `rm -rf`, `git reset --hard`, `git push --force`, `drop table`, etc
 
 ## Quick Start
 
-### Option A: Use the ECC hook (zero install)
+### Option A: Use the AIP hook (zero install)
 
 The hook at `scripts/hooks/gateguard-fact-force.js` is included in this plugin. Enable it via hooks.json.
 
 If GateGuard blocks setup or repair work, start the session with
-`ECC_GATEGUARD=off`. For hook-level control, keep using
-`ECC_DISABLED_HOOKS` with the GateGuard hook ID.
+`AIP_GATEGUARD=off`. For hook-level control, keep using
+`AIP_DISABLED_HOOKS` with the GateGuard hook ID.
 
 ### Option B: Full package with config
 

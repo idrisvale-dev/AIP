@@ -5,14 +5,14 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const SCHEMA_VERSION = 'ecc.release-video-suite.v1';
-const HYPERGROWTH_DOC_PATH = 'docs/releases/2.0.0/ecc-2-hypergrowth-release-command-center.md';
+const SCHEMA_VERSION = 'aip.release-video-suite.v1';
+const HYPERGROWTH_DOC_PATH = 'docs/releases/2.0.0/aip-2-hypergrowth-release-command-center.md';
 
 const REQUIRED_DOC_MARKERS = [
-  'ECC 2.0 Video Suite Production Manifest',
+  'AIP 2.0 Video Suite Production Manifest',
   'video-use compatible workflow',
-  'ECC_VIDEO_SOURCE_ROOT',
-  'ECC_VIDEO_RELEASE_SUITE_ROOT',
+  'AIP_VIDEO_SOURCE_ROOT',
+  'AIP_VIDEO_RELEASE_SUITE_ROOT',
   'Primary launch video',
   'Self-Eval Gate',
   'Do Not Publish If',
@@ -32,9 +32,9 @@ const REQUIRED_SOURCE_ASSETS = [
     proof: 'structured context opener',
   },
   {
-    id: 'what-is-ecc-wide',
-    file: 'sf-thread-2-whatisecc.mp4',
-    lane: 'what-is-ecc',
+    id: 'what-is-aip-wide',
+    file: 'sf-thread-2-whatisaip.mp4',
+    lane: 'what-is-aip',
     proof: 'category clarity and GitHub App explanation',
   },
   {
@@ -124,12 +124,12 @@ const REQUIRED_SUITE_ARTIFACTS = [
   },
   {
     id: 'primary-captions-v1',
-    relativePath: 'renders/ecc-2-primary-launch-rough-v1.captions.srt',
+    relativePath: 'renders/aip-2-primary-launch-rough-v1.captions.srt',
     kind: 'captions',
   },
   {
     id: 'primary-render-v1',
-    relativePath: 'renders/ecc-2-primary-launch-rough-v1.mp4',
+    relativePath: 'renders/aip-2-primary-launch-rough-v1.mp4',
     kind: 'video',
     minDurationSeconds: 90,
     maxDurationSeconds: 150,
@@ -184,7 +184,7 @@ const REQUIRED_SUITE_ARTIFACTS = [
 const REQUIRED_PUBLISH_CANDIDATES = [
   {
     id: 'publish-primary-launch',
-    relativePath: 'renders/publish-candidates/ecc-2-primary-launch.mp4',
+    relativePath: 'renders/publish-candidates/aip-2-primary-launch.mp4',
     kind: 'video',
     minDurationSeconds: 90,
     maxDurationSeconds: 150,
@@ -195,12 +195,12 @@ const REQUIRED_PUBLISH_CANDIDATES = [
   },
   {
     id: 'publish-primary-launch-captions',
-    relativePath: 'renders/publish-candidates/ecc-2-primary-launch.captions.srt',
+    relativePath: 'renders/publish-candidates/aip-2-primary-launch.captions.srt',
     kind: 'captions',
   },
   {
     id: 'publish-install-proof-wide',
-    relativePath: 'renders/publish-candidates/ecc-2-install-proof-wide.mp4',
+    relativePath: 'renders/publish-candidates/aip-2-install-proof-wide.mp4',
     kind: 'video',
     minDurationSeconds: 25,
     maxDurationSeconds: 35,
@@ -211,7 +211,7 @@ const REQUIRED_PUBLISH_CANDIDATES = [
   },
   {
     id: 'publish-install-proof-vertical',
-    relativePath: 'renders/publish-candidates/ecc-2-install-proof-vertical.mp4',
+    relativePath: 'renders/publish-candidates/aip-2-install-proof-vertical.mp4',
     kind: 'video',
     minDurationSeconds: 25,
     maxDurationSeconds: 35,
@@ -221,8 +221,8 @@ const REQUIRED_PUBLISH_CANDIDATES = [
     requiresAudio: true,
   },
   {
-    id: 'publish-what-is-ecc-wide',
-    relativePath: 'renders/publish-candidates/ecc-2-what-is-ecc-wide.mp4',
+    id: 'publish-what-is-aip-wide',
+    relativePath: 'renders/publish-candidates/aip-2-what-is-aip-wide.mp4',
     kind: 'video',
     minDurationSeconds: 45,
     maxDurationSeconds: 60,
@@ -232,8 +232,8 @@ const REQUIRED_PUBLISH_CANDIDATES = [
     requiresAudio: true,
   },
   {
-    id: 'publish-what-is-ecc-vertical',
-    relativePath: 'renders/publish-candidates/ecc-2-what-is-ecc-vertical.mp4',
+    id: 'publish-what-is-aip-vertical',
+    relativePath: 'renders/publish-candidates/aip-2-what-is-aip-vertical.mp4',
     kind: 'video',
     minDurationSeconds: 45,
     maxDurationSeconds: 60,
@@ -244,7 +244,7 @@ const REQUIRED_PUBLISH_CANDIDATES = [
   },
   {
     id: 'publish-security-proof-wide',
-    relativePath: 'renders/publish-candidates/ecc-2-security-proof-wide.mp4',
+    relativePath: 'renders/publish-candidates/aip-2-security-proof-wide.mp4',
     kind: 'video',
     minDurationSeconds: 45,
     maxDurationSeconds: 60,
@@ -255,7 +255,7 @@ const REQUIRED_PUBLISH_CANDIDATES = [
   },
   {
     id: 'publish-security-proof-vertical',
-    relativePath: 'renders/publish-candidates/ecc-2-security-proof-vertical.mp4',
+    relativePath: 'renders/publish-candidates/aip-2-security-proof-vertical.mp4',
     kind: 'video',
     minDurationSeconds: 45,
     maxDurationSeconds: 60,
@@ -266,7 +266,7 @@ const REQUIRED_PUBLISH_CANDIDATES = [
   },
   {
     id: 'publish-money-proof-wide',
-    relativePath: 'renders/publish-candidates/ecc-2-money-proof-wide.mp4',
+    relativePath: 'renders/publish-candidates/aip-2-money-proof-wide.mp4',
     kind: 'video',
     minDurationSeconds: 30,
     maxDurationSeconds: 45,
@@ -277,7 +277,7 @@ const REQUIRED_PUBLISH_CANDIDATES = [
   },
   {
     id: 'publish-money-proof-vertical',
-    relativePath: 'renders/publish-candidates/ecc-2-money-proof-vertical.mp4',
+    relativePath: 'renders/publish-candidates/aip-2-money-proof-vertical.mp4',
     kind: 'video',
     minDurationSeconds: 30,
     maxDurationSeconds: 45,
@@ -288,7 +288,7 @@ const REQUIRED_PUBLISH_CANDIDATES = [
   },
   {
     id: 'publish-social-proof-wide',
-    relativePath: 'renders/publish-candidates/ecc-2-social-proof-wide.mp4',
+    relativePath: 'renders/publish-candidates/aip-2-social-proof-wide.mp4',
     kind: 'video',
     minDurationSeconds: 30,
     maxDurationSeconds: 45,
@@ -299,7 +299,7 @@ const REQUIRED_PUBLISH_CANDIDATES = [
   },
   {
     id: 'publish-social-proof-vertical',
-    relativePath: 'renders/publish-candidates/ecc-2-social-proof-vertical.mp4',
+    relativePath: 'renders/publish-candidates/aip-2-social-proof-vertical.mp4',
     kind: 'video',
     minDurationSeconds: 30,
     maxDurationSeconds: 45,
@@ -318,21 +318,21 @@ function usage() {
   console.log([
     'Usage: node scripts/release-video-suite.js [options]',
     '',
-    'Validates the ECC 2.0 release video production lane for the package.json release version without committing raw media paths.',
+    'Validates the AIP 2.0 release video production lane for the package.json release version without committing raw media paths.',
     '',
     'Options:',
     '  --format <text|json>     Output format (default: text)',
     '  --json                   Alias for --format json',
     '  --root <dir>             Repository root to inspect (default: cwd)',
-    '  --source-root <dir>      Directory containing ECC 2 source media, with optional _edited subdir',
+    '  --source-root <dir>      Directory containing AIP 2 source media, with optional _edited subdir',
     '  --suite-root <dir>       Directory containing render/timeline/transcript outputs',
     '  --skip-probe             Skip ffprobe duration reads for fixture or dry-run checks',
     '  --summary                Emit compact JSON when used with --format json',
     '  --help, -h               Show this help',
     '',
     'Environment:',
-    '  ECC_VIDEO_SOURCE_ROOT',
-    '  ECC_VIDEO_RELEASE_SUITE_ROOT',
+    '  AIP_VIDEO_SOURCE_ROOT',
+    '  AIP_VIDEO_RELEASE_SUITE_ROOT',
   ].join('\n'));
 }
 
@@ -350,8 +350,8 @@ function parseArgs(argv) {
     format: 'text',
     help: false,
     root: path.resolve(process.cwd()),
-    sourceRoot: process.env.ECC_VIDEO_SOURCE_ROOT || '',
-    suiteRoot: process.env.ECC_VIDEO_RELEASE_SUITE_ROOT || '',
+    sourceRoot: process.env.AIP_VIDEO_SOURCE_ROOT || '',
+    suiteRoot: process.env.AIP_VIDEO_RELEASE_SUITE_ROOT || '',
     skipProbe: false,
     summary: false,
   };
@@ -920,7 +920,7 @@ function buildReport(options = {}) {
       missingSourceAssets.length === 0
         ? `${sourceAssets.length} source assets are present`
         : `missing source assets: ${missingSourceAssets.map(asset => asset.file).join(', ')}`,
-      'Set ECC_VIDEO_SOURCE_ROOT or pass --source-root to the edited ECC 2 media directory.',
+      'Set AIP_VIDEO_SOURCE_ROOT or pass --source-root to the edited AIP 2 media directory.',
       {
         configured: Boolean(sourceRoot),
         missing: missingSourceAssets.map(asset => asset.file),
@@ -932,7 +932,7 @@ function buildReport(options = {}) {
       missingSuiteArtifacts.length === 0
         ? `${suiteArtifacts.length} render, timeline, caption, EDL, and segment artifacts are present`
         : `missing or invalid suite artifacts: ${missingSuiteArtifacts.map(artifact => artifact.relativePath).join(', ')}`,
-      'Set ECC_VIDEO_RELEASE_SUITE_ROOT or pass --suite-root to the ECC 2 release suite workspace.',
+      'Set AIP_VIDEO_RELEASE_SUITE_ROOT or pass --suite-root to the AIP 2 release suite workspace.',
       {
         configured: Boolean(suiteRoot),
         missing: missingSuiteArtifacts.map(artifact => artifact.relativePath),
@@ -967,11 +967,11 @@ function buildReport(options = {}) {
   const topActions = [];
 
   if (!sourceRoot) {
-    topActions.push('Set ECC_VIDEO_SOURCE_ROOT to the edited ECC 2 media directory.');
+    topActions.push('Set AIP_VIDEO_SOURCE_ROOT to the edited AIP 2 media directory.');
   }
 
   if (!suiteRoot) {
-    topActions.push('Set ECC_VIDEO_RELEASE_SUITE_ROOT to the local release suite workspace.');
+    topActions.push('Set AIP_VIDEO_RELEASE_SUITE_ROOT to the local release suite workspace.');
   }
 
   for (const check of failed) {
@@ -1040,7 +1040,7 @@ function summarizeReport(report) {
 
 function renderText(report) {
   const lines = [
-    `ECC ${report.release} release video suite`,
+    `AIP ${report.release} release video suite`,
     `Ready: ${report.ready ? 'yes' : 'no'}`,
     `Source root configured: ${report.sourceRootConfigured ? 'yes' : 'no'}`,
     `Suite root configured: ${report.suiteRootConfigured ? 'yes' : 'no'}`,

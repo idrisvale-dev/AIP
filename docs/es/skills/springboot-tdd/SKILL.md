@@ -1,7 +1,7 @@
 ---
 name: springboot-tdd
 description: Desarrollo guiado por pruebas para Spring Boot usando JUnit 5, Mockito, MockMvc, Testcontainers y JaCoCo. Usar al agregar funcionalidades, corregir bugs o refactorizar.
-origin: ECC
+origin: AIP
 ---
 
 # Flujo de Trabajo TDD en Spring Boot

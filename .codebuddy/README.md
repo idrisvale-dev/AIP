@@ -1,6 +1,6 @@
-# Everything Claude Code for CodeBuddy
+# AIP for CodeBuddy
 
-Bring Everything Claude Code (ECC) workflows to CodeBuddy IDE. This repository provides custom commands, agents, skills, and rules that can be installed into any CodeBuddy project using the unified Target Adapter architecture.
+Bring AIP (AIP) workflows to CodeBuddy IDE. This repository provides custom commands, agents, skills, and rules that can be installed into any CodeBuddy project using the unified Target Adapter architecture.
 
 ## Quick Start (Recommended)
 
@@ -69,7 +69,7 @@ Rules provide always-on rules and context that shape how the agent works with yo
 ├── agents/             # Agent files (reused from project root)
 ├── skills/             # Skill files (reused from skills/)
 ├── rules/              # Rule files (flattened from rules/)
-├── ecc-install-state.json  # Install state tracking
+├── aip-install-state.json  # Install state tracking
 ├── install.sh          # Legacy install script
 ├── uninstall.sh        # Legacy uninstall script
 └── README.md           # This file
@@ -77,7 +77,7 @@ Rules provide always-on rules and context that shape how the agent works with yo
 
 ## Benefits of Target Adapter Install
 
-- **Install-state tracking**: Safe uninstall that only removes ECC-managed files
+- **Install-state tracking**: Safe uninstall that only removes AIP-managed files
 - **Doctor checks**: Verify installation health and detect drift
 - **Repair**: Auto-fix broken installations
 - **Selective install**: Choose specific modules via profiles
@@ -95,4 +95,4 @@ Rules provide always-on rules and context that shape how the agent works with yo
 
 - Open your project in CodeBuddy
 - Type `/` to see available commands
-- Enjoy the ECC workflows!
+- Enjoy the AIP workflows!

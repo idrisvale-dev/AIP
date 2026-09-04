@@ -1,0 +1,16 @@
+---
+description: "AIP Cursor memory boundary — keeps session data out of Claude Code's ~/.claude"
+alwaysApply: true
+---
+
+# AIP agent data home (Cursor)
+
+This project uses AIP with **isolated memory persistence** for Cursor:
+
+- Default data root: `~/.cursor/aip` (not `~/.claude`)
+- Env var: `AIP_AGENT_DATA_HOME` (set automatically by AIP's Cursor `sessionStart` hook when hooks are wired)
+- Project override: `.cursor/aip-agent-data.json` → `agentDataHome`
+
+If the user asks where AIP stored session context or learned skills, point them at `$AIP_AGENT_DATA_HOME/session-data/` and `$AIP_AGENT_DATA_HOME/skills/learned/`.
+
+To **share** memory with Claude Code intentionally (not recommended for parallel use), set `AIP_AGENT_DATA_HOME` to `~/.claude` in the shell or in `.cursor/aip-agent-data.json`.

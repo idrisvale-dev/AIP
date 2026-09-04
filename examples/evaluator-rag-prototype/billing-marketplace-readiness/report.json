@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.report.v1",
+  "schema_version": "aip.evaluator-rag.report.v1",
   "scenario_id": "billing-marketplace-readiness",
   "run_id": "2026-05-12-billing-marketplace-readiness-prototype",
   "result": "prototype_passed",
@@ -15,7 +15,7 @@
     {
       "id": "billing-claim-gate-needed",
       "severity": "warning",
-      "summary": "Release docs require a fresh ECC Tools billing/App/Marketplace check before launch copy can claim live billing readiness."
+      "summary": "Release docs require a fresh AIP Tools billing/App/Marketplace check before launch copy can claim live billing readiness."
     },
     {
       "id": "dry-run-not-live-state",

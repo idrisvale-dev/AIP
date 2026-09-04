@@ -1,6 +1,6 @@
 ---
 description: エージェント、フック、MCP、パーミッション、シークレットのサーフェスに対してAgentShieldを実行します。
-agent: everything-claude-code:security-reviewer
+agent: aip:security-reviewer
 subtask: true
 ---
 
@@ -22,7 +22,7 @@ subtask: true
 パッケージ化されたスキャナーを優先:
 
 ```bash
-npx ecc-agentshield scan --path "${TARGET_PATH:-.}" --format text
+npx aip-agentshield scan --path "${TARGET_PATH:-.}" --format text
 ```
 
 ローカルAgentShield開発の場合、AgentShieldチェックアウトから実行:

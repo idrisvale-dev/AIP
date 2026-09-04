@@ -2,7 +2,7 @@
 name: orch-refine-code
 description: Orchestrate a behavior-preserving refactor — confirm tests are green, restructure without changing behavior, keep tests green, review, and gated commit. Use when the structure should improve but behavior must not change.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # orch-refine-code

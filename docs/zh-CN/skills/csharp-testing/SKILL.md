@@ -1,7 +1,7 @@
 ---
 name: csharp-testing
 description: 使用 xUnit、FluentAssertions、模拟、集成测试和测试组织最佳实践的 C# 和 .NET 测试模式。
-origin: ECC
+origin: AIP
 ---
 
 # C# 测试模式

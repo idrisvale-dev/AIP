@@ -6,7 +6,7 @@
  * pre-commit, commit-msg, and pre-push hooks from being skipped by AI agents.
  *
  * Replaces the previous npx-based invocation that failed in pnpm-only projects
- * (EBADDEVENGINES) and could not be disabled via ECC_DISABLED_HOOKS.
+ * (EBADDEVENGINES) and could not be disabled via AIP_DISABLED_HOOKS.
  *
  * Exit codes:
  *   0 = allow (not a git command or no bypass flags)

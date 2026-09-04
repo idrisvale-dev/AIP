@@ -1,7 +1,7 @@
 ---
 name: nextjs-turbopack
 description: Next.js 16+ y Turbopack — bundling incremental, caché en sistema de archivos, velocidad de desarrollo y cuándo usar Turbopack frente a webpack.
-origin: ECC
+origin: AIP
 ---
 
 # Next.js y Turbopack

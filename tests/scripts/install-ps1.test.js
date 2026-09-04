@@ -101,9 +101,9 @@ function runTests() {
   let failed = 0;
   const powerShellCommand = resolvePowerShellCommand();
 
-  if (test('publishes ecc-install through the Node installer runtime for cross-platform npm usage', () => {
+  if (test('publishes aip-install through the Node installer runtime for cross-platform npm usage', () => {
     const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
-    assert.strictEqual(packageJson.bin['ecc-install'], 'scripts/install-apply.js');
+    assert.strictEqual(packageJson.bin['aip-install'], 'scripts/install-apply.js');
   })) passed++; else failed++;
 
   if (test('compares planned install roots by canonical path instead of leaf name', () => {
@@ -155,7 +155,7 @@ function runTests() {
     const result = run(powerShellCommand, ['--help']);
     assert.strictEqual(result.code, 0, result.stderr);
     assert.ok(
-      result.stdout.includes('claude       (default) - Install ECC into ~/.claude/'),
+      result.stdout.includes('claude       (default) - Install AIP into ~/.claude/'),
       'help text should describe the Claude target as a full ~/.claude install surface'
     );
   })) passed++; else failed++;

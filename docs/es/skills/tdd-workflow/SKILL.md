@@ -1,7 +1,7 @@
 ---
 name: tdd-workflow
 description: Usar este skill al escribir nuevas funcionalidades, corregir bugs o refactorizar código. Aplica el desarrollo guiado por pruebas con 80%+ de cobertura incluyendo pruebas unitarias, de integración y E2E.
-origin: ECC
+origin: AIP
 ---
 
 # Flujo de Trabajo de Desarrollo Guiado por Pruebas

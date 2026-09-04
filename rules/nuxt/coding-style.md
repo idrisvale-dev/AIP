@@ -42,6 +42,6 @@ Three distinct files, do not conflate.
 
 ## Reference
 
-- ECC skills: `nuxt4-patterns`, `vite-patterns`, `frontend-patterns`.
+- AIP skills: `nuxt4-patterns`, `vite-patterns`, `frontend-patterns`.
 - [Nuxt directory structure](https://nuxt.com/docs/guide/directory-structure/app)
 - [Nuxt configuration](https://nuxt.com/docs/api/nuxt-config)

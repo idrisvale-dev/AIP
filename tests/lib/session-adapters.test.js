@@ -130,7 +130,7 @@ function canonicalSnapshot(overrides = {}) {
 }
 
 test('dmux adapter normalizes orchestration snapshots into canonical form', () => {
-  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-recordings-'));
+  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-recordings-'));
 
   try {
     const recentUpdated = new Date(Date.now() - 60000).toISOString();
@@ -195,7 +195,7 @@ test('dmux adapter normalizes orchestration snapshots into canonical form', () =
     const recordingPath = getFallbackSessionRecordingPath(snapshot, { recordingDir });
     const persisted = JSON.parse(fs.readFileSync(recordingPath, 'utf8'));
 
-    assert.strictEqual(snapshot.schemaVersion, 'ecc.session.v1');
+    assert.strictEqual(snapshot.schemaVersion, 'aip.session.v1');
     assert.strictEqual(snapshot.adapterId, 'dmux-tmux');
     assert.strictEqual(snapshot.session.id, 'workflow-visual-proof');
     assert.strictEqual(snapshot.session.kind, 'orchestrated');
@@ -214,7 +214,7 @@ test('dmux adapter normalizes orchestration snapshots into canonical form', () =
 });
 
 test('dmux adapter marks finished sessions as completed and records history', () => {
-  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-recordings-'));
+  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-recordings-'));
 
   try {
     const adapter = createDmuxTmuxAdapter({
@@ -302,7 +302,7 @@ test('dmux adapter marks finished sessions as completed and records history', ()
 });
 
 test('fallback recording does not append duplicate history entries for unchanged snapshots', () => {
-  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-recordings-'));
+  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-recordings-'));
 
   try {
     const adapter = createDmuxTmuxAdapter({
@@ -363,8 +363,8 @@ test('fallback recording does not append duplicate history entries for unchanged
 });
 
 test('claude-history adapter loads the latest recorded session', () => {
-  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-adapter-home-'));
-  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-recordings-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-adapter-home-'));
+  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-recordings-'));
   const sessionsDir = path.join(homeDir, '.claude', 'sessions');
   fs.mkdirSync(sessionsDir, { recursive: true });
 
@@ -375,9 +375,9 @@ test('claude-history adapter loads the latest recorded session', () => {
     '**Date:** 2026-03-13',
     '**Started:** 09:00',
     '**Last Updated:** 11:30',
-    '**Project:** everything-claude-code',
+    '**Project:** aip',
     '**Branch:** feat/session-adapter',
-    '**Worktree:** /tmp/ecc-worktree',
+    '**Worktree:** /tmp/aip-worktree',
     '',
     '### Completed',
     '- [x] Build snapshot prototype',
@@ -404,13 +404,13 @@ test('claude-history adapter loads the latest recorded session', () => {
       const recordingPath = getFallbackSessionRecordingPath(snapshot, { recordingDir });
       const persisted = JSON.parse(fs.readFileSync(recordingPath, 'utf8'));
 
-      assert.strictEqual(snapshot.schemaVersion, 'ecc.session.v1');
+      assert.strictEqual(snapshot.schemaVersion, 'aip.session.v1');
       assert.strictEqual(snapshot.adapterId, 'claude-history');
       assert.strictEqual(snapshot.session.kind, 'history');
       assert.strictEqual(snapshot.session.state, 'recorded');
       assert.strictEqual(snapshot.workers.length, 1);
       assert.strictEqual(snapshot.workers[0].branch, 'feat/session-adapter');
-      assert.strictEqual(snapshot.workers[0].worktree, '/tmp/ecc-worktree');
+      assert.strictEqual(snapshot.workers[0].worktree, '/tmp/aip-worktree');
       assert.strictEqual(snapshot.workers[0].runtime.kind, 'claude-session');
       assert.deepStrictEqual(snapshot.workers[0].intent.seedPaths, ['scripts/lib/orchestration-session.js']);
       assert.strictEqual(snapshot.workers[0].artifacts.sessionFile, sessionPath);
@@ -425,7 +425,7 @@ test('claude-history adapter loads the latest recorded session', () => {
 });
 
 test('adapter registry routes plan files to dmux and explicit claude targets to history', () => {
-  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-registry-repo-'));
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-registry-repo-'));
   const planPath = path.join(repoRoot, 'workflow.json');
   fs.writeFileSync(planPath, JSON.stringify({
     sessionName: 'workflow-visual-proof',
@@ -433,7 +433,7 @@ test('adapter registry routes plan files to dmux and explicit claude targets to 
     coordinationRoot: path.join(repoRoot, '.claude', 'orchestration')
   }));
 
-  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-registry-home-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-registry-home-'));
   const sessionsDir = path.join(homeDir, '.claude', 'sessions');
   fs.mkdirSync(sessionsDir, { recursive: true });
   fs.writeFileSync(
@@ -477,7 +477,7 @@ test('adapter registry routes plan files to dmux and explicit claude targets to 
 });
 
 test('adapter registry resolves structured target types into the correct adapter', () => {
-  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-typed-repo-'));
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-typed-repo-'));
   const planPath = path.join(repoRoot, 'workflow.json');
   fs.writeFileSync(planPath, JSON.stringify({
     sessionName: 'workflow-typed-proof',
@@ -485,7 +485,7 @@ test('adapter registry resolves structured target types into the correct adapter
     coordinationRoot: path.join(repoRoot, '.claude', 'orchestration')
   }));
 
-  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-typed-home-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-typed-home-'));
   const sessionsDir = path.join(homeDir, '.claude', 'sessions');
   fs.mkdirSync(sessionsDir, { recursive: true });
   fs.writeFileSync(
@@ -532,7 +532,7 @@ test('adapter registry resolves structured target types into the correct adapter
 });
 
 test('default registry forwards a nested state-store writer to adapters', () => {
-  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-registry-home-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-registry-home-'));
   const sessionsDir = path.join(homeDir, '.claude', 'sessions');
   fs.mkdirSync(sessionsDir, { recursive: true });
   fs.writeFileSync(
@@ -586,7 +586,7 @@ test('adapter registry lists adapter metadata and target types', () => {
 test('canonical snapshot validation rejects malformed required fields', () => {
   const invalidCases = [
     [null, /must be an object/],
-    [canonicalSnapshot({ schemaVersion: 'ecc.session.v0' }), /Unsupported canonical session schema version/],
+    [canonicalSnapshot({ schemaVersion: 'aip.session.v0' }), /Unsupported canonical session schema version/],
     [canonicalSnapshot({ adapterId: '' }), /adapterId/],
     [canonicalSnapshot({ session: { id: '' } }), /session.id/],
     [canonicalSnapshot({ session: { repoRoot: 42 } }), /session.repoRoot/],
@@ -786,7 +786,7 @@ test('claude history normalization falls back to filename ids and empty metadata
     metadata: {
       title: 'Path Only',
       inProgress: ['Continue work'],
-      context: ' README.md \n\n scripts/ecc.js ',
+      context: ' README.md \n\n scripts/aip.js ',
       notes: 'No risks'
     }
   }, {
@@ -796,16 +796,16 @@ test('claude history normalization falls back to filename ids and empty metadata
 
   assert.strictEqual(pathOnly.session.id, 'path-only-session');
   assert.strictEqual(pathOnly.workers[0].intent.objective, 'Continue work');
-  assert.deepStrictEqual(pathOnly.workers[0].intent.seedPaths, ['README.md', 'scripts/ecc.js']);
+  assert.deepStrictEqual(pathOnly.workers[0].intent.seedPaths, ['README.md', 'scripts/aip.js']);
   assert.deepStrictEqual(pathOnly.workers[0].outputs.remainingRisks, ['No risks']);
 });
 
 test('fallback recordings sanitize paths, use env dirs, and preserve changed history', () => {
-  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-recordings-env-'));
-  const previousRecordingDir = process.env.ECC_SESSION_RECORDING_DIR;
+  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-recordings-env-'));
+  const previousRecordingDir = process.env.AIP_SESSION_RECORDING_DIR;
 
   try {
-    process.env.ECC_SESSION_RECORDING_DIR = recordingDir;
+    process.env.AIP_SESSION_RECORDING_DIR = recordingDir;
     const first = canonicalSnapshot({
       adapterId: 'adapter with spaces',
       session: { id: 'session id/with:chars' }
@@ -830,7 +830,7 @@ test('fallback recordings sanitize paths, use env dirs, and preserve changed his
     const persisted = JSON.parse(fs.readFileSync(recordingPath, 'utf8'));
     assert.strictEqual(firstPersistence.backend, 'json-file');
     assert.strictEqual(firstPersistence.path, recordingPath);
-    assert.strictEqual(persisted.schemaVersion, 'ecc.session.recording.v1');
+    assert.strictEqual(persisted.schemaVersion, 'aip.session.recording.v1');
     assert.strictEqual(persisted.latest.session.state, 'idle');
     assert.strictEqual(persisted.history.length, 2);
     assert.strictEqual(persisted.history[0].snapshot.session.state, 'active');
@@ -838,9 +838,9 @@ test('fallback recordings sanitize paths, use env dirs, and preserve changed his
     assert.strictEqual(persisted.createdAt, persisted.history[0].recordedAt);
   } finally {
     if (typeof previousRecordingDir === 'string') {
-      process.env.ECC_SESSION_RECORDING_DIR = previousRecordingDir;
+      process.env.AIP_SESSION_RECORDING_DIR = previousRecordingDir;
     } else {
-      delete process.env.ECC_SESSION_RECORDING_DIR;
+      delete process.env.AIP_SESSION_RECORDING_DIR;
     }
     fs.rmSync(recordingDir, { recursive: true, force: true });
   }
@@ -877,8 +877,8 @@ test('persistence supports skip mode, writer variants, and missing state-store f
   persistCanonicalSnapshot(snapshot, { stateStore: nestedStore });
   assert.strictEqual(nestedStore.sessions.calls.length, 1);
 
-  const noWriterDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-no-writer-'));
-  const missingModuleDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-missing-module-'));
+  const noWriterDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-no-writer-'));
+  const missingModuleDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-missing-module-'));
   try {
     const noWriter = persistCanonicalSnapshot(snapshot, {
       recordingDir: noWriterDir,
@@ -903,7 +903,7 @@ test('persistence supports skip mode, writer variants, and missing state-store f
 
 test('persistence only falls back when the state-store module is missing', () => {
   const snapshot = {
-    schemaVersion: 'ecc.session.v1',
+    schemaVersion: 'aip.session.v1',
     adapterId: 'claude-history',
     session: {
       id: 'a1b2c3d4',

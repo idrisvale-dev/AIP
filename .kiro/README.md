@@ -1,6 +1,6 @@
-# Everything Claude Code for Kiro
+# AIP for Kiro
 
-Bring [Everything Claude Code](https://github.com/anthropics/courses/tree/master/everything-claude-code) (ECC) workflows to [Kiro](https://kiro.dev). This repository provides custom agents, skills, hooks, steering files, and scripts that can be installed into any Kiro project with a single command.
+Bring [AIP](https://github.com/anthropics/courses/tree/master/aip) (AIP) workflows to [Kiro](https://kiro.dev). This repository provides custom agents, skills, hooks, steering files, and scripts that can be installed into any Kiro project with a single command.
 
 ## Quick Start
 
@@ -372,8 +372,8 @@ docs/                             # 5 documentation files
 ├── longform-guide.md             # Deep dive on agentic workflows
 ├── shortform-guide.md            # Quick reference guide
 ├── security-guide.md             # Security best practices
-├── migration-from-ecc.md         # Migration guide from ECC
-└── ECC-KIRO-INTEGRATION-PLAN.md  # Integration plan and analysis
+├── migration-from-aip.md         # Migration guide from AIP
+└── AIP-KIRO-INTEGRATION-PLAN.md  # Integration plan and analysis
 ```
 
 ## Customization

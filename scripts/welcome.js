@@ -2,7 +2,7 @@
 'use strict';
 
 const {
-  ECC_VERSION_PATTERN,
+  AIP_VERSION_PATTERN,
   renderTerminalWelcome,
 } = require('./lib/terminal-welcome');
 
@@ -43,7 +43,7 @@ function parseArgs(argv) {
   if (!VALID_ACTIONS.has(action)) {
     throw new Error('Invalid --action value');
   }
-  if (version !== undefined && !ECC_VERSION_PATTERN.test(version)) {
+  if (version !== undefined && !AIP_VERSION_PATTERN.test(version)) {
     throw new Error('Invalid --version value');
   }
   return { action, version };

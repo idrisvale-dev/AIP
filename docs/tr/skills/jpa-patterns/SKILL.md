@@ -1,7 +1,7 @@
 ---
 name: jpa-patterns
 description: Spring Boot'ta entity tasarımı, ilişkiler, sorgu optimizasyonu, transaction'lar, auditing, indeksleme, sayfalama ve pooling için JPA/Hibernate kalıpları.
-origin: ECC
+origin: AIP
 ---
 
 # JPA/Hibernate Kalıpları

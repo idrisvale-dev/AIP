@@ -1,6 +1,6 @@
-# .codex-plugin — Codex Native Plugin for ECC
+# .codex-plugin — Codex Native Plugin for AIP
 
-This directory contains the **Codex plugin manifest** for ECC.
+This directory contains the **Codex plugin manifest** for AIP.
 
 ## Structure
 
@@ -21,33 +21,33 @@ hooks/codex-hooks.json — Codex-compatible lifecycle hook projection
 
 ## Installation
 
-Codex 0.146.0 and newer use `plugin add`, not `plugin install`. Add ECC's
+Codex 0.146.0 and newer use `plugin add`, not `plugin install`. Add AIP's
 repository marketplace, install the native plugin, and verify the registration:
 
 ```bash
 codex plugin marketplace add reborncursed/AIP
-codex plugin add ecc@ecc
+codex plugin add aip@aip
 codex plugin list --json
 ```
 
 Both add commands are safe to run again. A repeated marketplace add reports
 `alreadyAdded: true`, and a repeated plugin add keeps the same enabled plugin
-registration. To fetch a newer marketplace snapshot before applying a new ECC
+registration. To fetch a newer marketplace snapshot before applying a new AIP
 release, run:
 
 ```bash
-codex plugin marketplace upgrade ecc
-codex plugin add ecc@ecc
+codex plugin marketplace upgrade aip
+codex plugin add aip@aip
 ```
 
 For local development, the same native journey accepts a checkout path:
 
 ```bash
-codex plugin marketplace add /absolute/path/to/ECC
-codex plugin add ecc@ecc
+codex plugin marketplace add /absolute/path/to/AIP
+codex plugin add aip@aip
 ```
 
-ECC's marketplace entry points at the repository root. Codex copies the selected
+AIP's marketplace entry points at the repository root. Codex copies the selected
 plugin source into its cache, so the root source keeps `skills/`, `.mcp.json`,
 `hooks/`, hook scripts, and presentation assets together. Parent-relative paths
 from a thin plugin directory would escape that cache and produce an installed
@@ -68,31 +68,31 @@ profiles are not Codex hook profiles: handlers that block tools, use unsupported
 events, run asynchronously, or fail Codex's hook protocol stay out of the native
 bundle. Codex enables hook support by default, but native plugin installation
 does not silently authorize commands. Start a new Codex session, open `/hooks`,
-then review and trust the ECC hook definition before enabling it.
+then review and trust the AIP hook definition before enabling it.
 Codex records trust against each definition's hash, so changed hooks require
 review again. Use `/plugins` for plugin enablement and `/hooks` for hook trust;
 these are separate controls.
 
-Once the cached skills are available, invoke `$configure-ecc` inside Codex for
-ECC's guided configuration. Installing the plugin again is idempotent and does
+Once the cached skills are available, invoke `$configure-aip` inside Codex for
+AIP's guided configuration. Installing the plugin again is idempotent and does
 not create a second scope or duplicate hook registration.
 
 ## Native plugin versus legacy managed sync
 
 The commands above are the native Codex plugin path. The deprecated legacy managed sync
-(`bash scripts/sync-ecc-to-codex.sh`) is a separate compatibility
+(`bash scripts/sync-aip-to-codex.sh`) is a separate compatibility
 path that merges files into `~/.codex`. It is not a native plugin install and
 does not create a marketplace registration. Prefer the native path on current
 Codex; use the legacy managed sync only when you intentionally need its copied
 configuration layer.
 
 New sync runs record a versioned ownership manifest. Inspect or remove that
-layer explicitly with `ecc uninstall --legacy-codex-sync --dry-run`, followed
-by `ecc uninstall --legacy-codex-sync`. Cleanup never targets conversation
+layer explicitly with `aip uninstall --legacy-codex-sync --dry-run`, followed
+by `aip uninstall --legacy-codex-sync`. Cleanup never targets conversation
 history or native plugin caches. Older pre-manifest installs are cleaned
 conservatively and unverifiable files are retained with warnings.
 
-After install, `codex plugin list` is only a registration check. From an ECC
+After install, `codex plugin list` is only a registration check. From an AIP
 checkout, run the cache check to verify that the installed manifest can resolve
 its referenced skills, MCP config, and assets:
 
@@ -100,7 +100,7 @@ its referenced skills, MCP config, and assets:
 node scripts/codex/check-plugin-cache.js
 ```
 
-The installed plugin registers under the short slug `ecc` so tool and command names
+The installed plugin registers under the short slug `aip` so tool and command names
 stay below provider length limits.
 
 ## MCP Servers Included
@@ -115,7 +115,7 @@ The former defaults (`github`, `context7`, `exa`, `memory`, `playwright`, `seque
 
 - The `skills/` directory at the repo root is the source of truth for the Codex
   plugin package; do not duplicate skill content inside `.codex-plugin/`.
-- ECC is moving to a skills-first workflow surface. Legacy `commands/` remain for
+- AIP is moving to a skills-first workflow surface. Legacy `commands/` remain for
   compatibility on harnesses that still expect slash-entry shims.
 - MCP server credentials are inherited from the launching environment (env vars)
 - This manifest does **not** override `~/.codex/config.toml` settings

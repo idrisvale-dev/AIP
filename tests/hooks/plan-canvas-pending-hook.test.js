@@ -58,7 +58,7 @@ function readPending(stateDir, key) {
 // before each invocation; a fresh require keeps the cases independent.
 function loadHook(stateDir) {
   delete require.cache[require.resolve(HOOK)];
-  process.env.ECC_PLAN_CANVAS_STATE_DIR = stateDir;
+  process.env.AIP_PLAN_CANVAS_STATE_DIR = stateDir;
   return require(HOOK);
 }
 
@@ -66,7 +66,7 @@ async function runTests() {
   console.log('\n=== Testing plan-canvas-pending Stop hook ===\n');
   let passed = 0;
   let failed = 0;
-  const originalStateDir = process.env.ECC_PLAN_CANVAS_STATE_DIR;
+  const originalStateDir = process.env.AIP_PLAN_CANVAS_STATE_DIR;
 
   if (await test('blocks the stop and hands over undelivered feedback', async () => {
     const stateDir = freshStateDir();
@@ -132,7 +132,7 @@ async function runTests() {
     const hook = loadHook(stateDir);
     assert.strictEqual(hook.pendingSessions({ sessions: state }, projectDir, {}).length, 0);
     assert.strictEqual(
-      hook.pendingSessions({ sessions: state }, projectDir, { ECC_PLAN_CANVAS_STOP_SCOPE: 'all' }).length,
+      hook.pendingSessions({ sessions: state }, projectDir, { AIP_PLAN_CANVAS_STOP_SCOPE: 'all' }).length,
       1
     );
   })) passed++; else failed++;
@@ -177,8 +177,8 @@ async function runTests() {
     assert.strictEqual((await hook.run('{}')).exitCode, 0);
   })) passed++; else failed++;
 
-  if (originalStateDir === undefined) delete process.env.ECC_PLAN_CANVAS_STATE_DIR;
-  else process.env.ECC_PLAN_CANVAS_STATE_DIR = originalStateDir;
+  if (originalStateDir === undefined) delete process.env.AIP_PLAN_CANVAS_STATE_DIR;
+  else process.env.AIP_PLAN_CANVAS_STATE_DIR = originalStateDir;
 
   console.log('\n========================================');
   console.log(`Passed: ${passed}`);

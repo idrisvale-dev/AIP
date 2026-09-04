@@ -1,7 +1,7 @@
 ---
 name: agent-introspection-debugging
 description: 针对AI代理故障的结构化自调试工作流程，包括捕获、诊断、受限恢复和内省报告。
-origin: ECC
+origin: AIP
 ---
 
 # 智能体内省调试
@@ -30,7 +30,7 @@ origin: ECC
 请勿将此技能作为以下情况的主要来源：
 
 * 代码变更后的功能验证；请使用 `verification-loop`
-* 当已有更窄的 ECC 技能时的框架特定调试
+* 当已有更窄的 AIP 技能时的框架特定调试
 * 当前框架无法自动强制执行的运行时承诺
 
 ## 四阶段循环
@@ -142,7 +142,7 @@ origin: ECC
 * 运行一次直接检查
 * 仅当检查支持时才更改计划
 
-## 与 ECC 集成
+## 与 AIP 集成
 
 * 如果代码已更改，在恢复后使用 `verification-loop`。
 * 当失败模式值得转化为本能或后续技能时，使用 `continuous-learning-v2`。

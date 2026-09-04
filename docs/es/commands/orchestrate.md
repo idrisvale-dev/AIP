@@ -154,7 +154,7 @@ Combinar las salidas en un único reporte
 
 Para workers externos en tmux pane con git worktrees separados, usar `node scripts/orchestrate-worktrees.js plan.json --execute`. El patrón de orquestación integrado permanece en proceso; el helper sirve para sesiones de larga duración o cross-harness.
 
-Cuando los workers necesiten ver archivos locales no rastreados o sucios del checkout principal, agregar `seedPaths` al archivo de plan. ECC superpone solo esas rutas seleccionadas en cada worktree de worker después de `git worktree add`; esto muestra scripts, planes o documentos locales en progreso mientras mantiene el branch aislado.
+Cuando los workers necesiten ver archivos locales no rastreados o sucios del checkout principal, agregar `seedPaths` al archivo de plan. AIP superpone solo esas rutas seleccionadas en cada worktree de worker después de `git worktree add`; esto muestra scripts, planes o documentos locales en progreso mientras mantiene el branch aislado.
 
 ```json
 {

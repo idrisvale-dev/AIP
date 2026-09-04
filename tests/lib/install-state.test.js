@@ -46,7 +46,7 @@ function runTests() {
     const state = createInstallState({
       adapter: { id: 'cursor-project' },
       targetRoot: '/repo/.cursor',
-      installStatePath: '/repo/.cursor/ecc-install-state.json',
+      installStatePath: '/repo/.cursor/aip-install-state.json',
       request: {
         profile: 'developer',
         modules: ['orchestration'],
@@ -77,7 +77,7 @@ function runTests() {
       installedAt: '2026-03-13T00:00:00Z',
     });
 
-    assert.strictEqual(state.schemaVersion, 'ecc.install.v1');
+    assert.strictEqual(state.schemaVersion, 'aip.install.v1');
     assert.strictEqual(state.target.id, 'cursor-project');
     assert.strictEqual(state.request.profile, 'developer');
     assert.strictEqual(state.request.hookConsent, 'declined');
@@ -86,7 +86,7 @@ function runTests() {
 
   if (test('writes and reads install-state from disk', () => {
     const testDir = createTestDir();
-    const statePath = path.join(testDir, 'ecc-install-state.json');
+    const statePath = path.join(testDir, 'aip-install-state.json');
 
     try {
       const state = createInstallState({
@@ -146,7 +146,7 @@ function runTests() {
     const state = createInstallState({
       adapter: { id: 'cursor-project' },
       targetRoot: '/repo/.cursor',
-      installStatePath: '/repo/.cursor/ecc-install-state.json',
+      installStatePath: '/repo/.cursor/aip-install-state.json',
       request: {
         profile: null,
         modules: ['platform-configs'],
@@ -174,10 +174,10 @@ function runTests() {
 
   if (test('rejects invalid install-state payloads on read', () => {
     const testDir = createTestDir();
-    const statePath = path.join(testDir, 'ecc-install-state.json');
+    const statePath = path.join(testDir, 'aip-install-state.json');
 
     try {
-      fs.writeFileSync(statePath, JSON.stringify({ schemaVersion: 'ecc.install.v1' }, null, 2));
+      fs.writeFileSync(statePath, JSON.stringify({ schemaVersion: 'aip.install.v1' }, null, 2));
       assert.throws(
         () => readInstallState(statePath),
         /Invalid install-state/
@@ -189,17 +189,17 @@ function runTests() {
 
   if (test('rejects unexpected properties and missing required request fields', () => {
     const testDir = createTestDir();
-    const statePath = path.join(testDir, 'ecc-install-state.json');
+    const statePath = path.join(testDir, 'aip-install-state.json');
 
     try {
       fs.writeFileSync(statePath, JSON.stringify({
-        schemaVersion: 'ecc.install.v1',
+        schemaVersion: 'aip.install.v1',
         installedAt: '2026-03-13T00:00:00Z',
         unexpected: true,
         target: {
           id: 'cursor-project',
           root: '/repo/.cursor',
-          installStatePath: '/repo/.cursor/ecc-install-state.json',
+          installStatePath: '/repo/.cursor/aip-install-state.json',
         },
         request: {
           modules: [],

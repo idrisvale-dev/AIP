@@ -1,7 +1,7 @@
 ---
 name: canary-watch
 description: このスキルを使用して、デプロイメント、マージ、または依存関係アップグレード後にデプロイされたURLの回帰を監視します。
-origin: ECC
+origin: AIP
 ---
 
 # カナリアウォッチ — デプロイ後の監視

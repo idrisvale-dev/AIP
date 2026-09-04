@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# ECC CodeBuddy Installer
-# Installs Everything Claude Code workflows into a CodeBuddy project.
+# AIP CodeBuddy Installer
+# Installs AIP workflows into a CodeBuddy project.
 #
 # Usage:
 #   ./install.sh              # Install to current directory
@@ -16,7 +16,7 @@ shopt -s nullglob
 # Resolve the directory where this script lives
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Locate the ECC repo root by walking up from SCRIPT_DIR to find the marker
+# Locate the AIP repo root by walking up from SCRIPT_DIR to find the marker
 # file (VERSION). This keeps the script working even when it has been copied
 # into a target project's .codebuddy/ directory.
 find_repo_root() {
@@ -32,8 +32,8 @@ find_repo_root() {
 
 REPO_ROOT="$(find_repo_root)"
 if [ -z "$REPO_ROOT" ]; then
-    echo "Error: Cannot locate the ECC repository root."
-    echo "This script must be run from within the ECC repository's .codebuddy/ directory."
+    echo "Error: Cannot locate the AIP repository root."
+    echo "This script must be run from within the AIP repository's .codebuddy/ directory."
     exit 1
 fi
 
@@ -107,7 +107,7 @@ do_install() {
         codebuddy_full_path="$target_dir/$CODEBUDDY_DIR"
     fi
 
-    echo "ECC CodeBuddy Installer"
+    echo "AIP CodeBuddy Installer"
     echo "======================="
     echo ""
     echo "Source:  $REPO_ROOT"
@@ -123,7 +123,7 @@ do_install() {
     done
 
     # Manifest file to track installed files
-    MANIFEST="$codebuddy_full_path/.ecc-manifest"
+    MANIFEST="$codebuddy_full_path/.aip-manifest"
     touch "$MANIFEST"
 
     # Counters for summary
@@ -204,7 +204,7 @@ do_install() {
     done
 
     # Add manifest file itself to manifest
-    ensure_manifest_entry "$MANIFEST" ".ecc-manifest"
+    ensure_manifest_entry "$MANIFEST" ".aip-manifest"
 
     # Installation summary
     echo "Installation complete!"
@@ -220,7 +220,7 @@ do_install() {
     echo "Next steps:"
     echo "  1. Open your project in CodeBuddy"
     echo "  2. Type / to see available commands"
-    echo "  3. Enjoy the ECC workflows!"
+    echo "  3. Enjoy the AIP workflows!"
     echo ""
     echo "To uninstall later:"
     echo "  cd $codebuddy_full_path"

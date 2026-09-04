@@ -3,7 +3,7 @@
  * Session Activity Tracker Hook
  *
  * PostToolUse hook that records sanitized per-tool activity to
- * ~/.claude/metrics/tool-usage.jsonl for ECC2 metric sync.
+ * ~/.claude/metrics/tool-usage.jsonl for AIP2 metric sync.
  */
 
 'use strict';
@@ -567,7 +567,7 @@ function buildActivityRow(input, env = process.env) {
   }
 
   const toolName = String(input?.tool_name || '').trim();
-  const sessionId = String(env.ECC_SESSION_ID || env.CLAUDE_SESSION_ID || '').trim();
+  const sessionId = String(env.AIP_SESSION_ID || env.CLAUDE_SESSION_ID || '').trim();
   if (!toolName || !sessionId) {
     return null;
   }

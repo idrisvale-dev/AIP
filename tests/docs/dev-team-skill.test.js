@@ -86,7 +86,7 @@ function runTests() {
 
   if (test('does not reference surfaces that are not on main', () => {
     assert.ok(!body.includes('story-lifecycle'), 'story-lifecycle is not merged');
-    assert.ok(!body.includes('ecc:plan-prd'), 'plan-prd resolves as a command, not a skill');
+    assert.ok(!body.includes('aip:plan-prd'), 'plan-prd resolves as a command, not a skill');
   })) passed++; else failed++;
 
   if (test('every referenced skill, agent, and command resolves in the repo', () => {

@@ -1,7 +1,7 @@
 ---
 name: springboot-security
 description: Buenas prácticas de Spring Security para autenticación/autorización, validación, CSRF, secretos, cabeceras, limitación de velocidad y seguridad de dependencias en servicios Java Spring Boot.
-origin: ECC
+origin: AIP
 ---
 
 # Revisión de Seguridad Spring Boot

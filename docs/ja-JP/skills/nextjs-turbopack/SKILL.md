@@ -1,7 +1,7 @@
 ---
 name: nextjs-turbopack
 description: Next.js 16+とTurbopack — インクリメンタルバンドリング、FSキャッシング、開発速度、Turbopackとwebpackをいつどちらかどうかを選ぶか。
-origin: ECC
+origin: AIP
 ---
 
 # Next.jsとTurbopack

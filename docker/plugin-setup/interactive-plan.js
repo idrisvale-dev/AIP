@@ -9,7 +9,7 @@ const usage = `Usage: node docker/plugin-setup/interactive-plan.js [options] [--
 Emit the Docker side of the terminal-opener executable-plus-argv contract.
 
 Options:
-  --container <name>  Named running container (default: ecc-plugin-shell).
+  --container <name>  Named running container (default: aip-plugin-shell).
   --workdir <path>    Absolute container working directory (default: /workspace/project).
   --json              Emit compact JSON.
   --help, -h          Show this help.
@@ -31,7 +31,7 @@ function readValue(argv, index, option) {
 }
 
 function parseArgs(argv) {
-  let container = 'ecc-plugin-shell';
+  let container = 'aip-plugin-shell';
   let workdir = '/workspace/project';
   let json = false;
   let command = ['bash'];

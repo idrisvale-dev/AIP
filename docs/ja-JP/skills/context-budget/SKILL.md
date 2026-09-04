@@ -1,7 +1,7 @@
 ---
 name: context-budget
 description: エージェント、スキル、MCPサーバー、ルールにわたってClaude Codeのコンテキストウィンドウ消費を監査します。肥大化、冗長なコンポーネントを特定し、優先順位付けされたトークン節約の推奨事項を生成します。
-origin: ECC
+origin: AIP
 ---
 
 # コンテキストバジェット

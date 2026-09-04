@@ -1,12 +1,12 @@
 {
-  "schema_version": "ecc.evaluator-rag.trace.v1",
+  "schema_version": "aip.evaluator-rag.trace.v1",
   "scenario_id": "billing-marketplace-readiness",
   "run_id": "2026-05-12-billing-marketplace-readiness-prototype",
   "read_only": true,
   "events": [
     {
       "phase": "observation",
-      "summary": "Publication readiness still marks ECC Tools billing references and announcement copy as pending. Dry-run publication evidence says billing/App/Marketplace claims must be verified before launch copy uses them.",
+      "summary": "Publication readiness still marks AIP Tools billing references and announcement copy as pending. Dry-run publication evidence says billing/App/Marketplace claims must be verified before launch copy uses them.",
       "evidence": [
         "docs/releases/2.0.0-rc.1/publication-readiness.md",
         "docs/releases/2.0.0-rc.1/publication-evidence-2026-05-12.md"
@@ -16,9 +16,9 @@
       "phase": "retrieval",
       "summary": "Retrieved the release gate, dry-run evidence, roadmap billing acceptance criteria, and the public Marketplace URL that requires a live operator check.",
       "evidence": [
-        "docs/ECC-2.0-GA-ROADMAP.md",
-        "gh api repos/ECC-Tools/ECC-Tools",
-        "https://github.com/marketplace/ecc-tools"
+        "docs/AIP-2.0-GA-ROADMAP.md",
+        "gh api repos/AIP-Tools/AIP-Tools",
+        "https://github.com/marketplace/aip-tools"
       ]
     },
     {

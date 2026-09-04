@@ -31,7 +31,7 @@ function writeFile(rootDir, relativePath, content) {
 function seedRepo(rootDir, overrides = {}) {
   const files = {
     'package.json': JSON.stringify({
-      name: 'everything-claude-code',
+      name: 'aip',
       scripts: {
         'platform:audit': 'node scripts/platform-audit.js',
         'discussion:audit': 'node scripts/discussion-audit.js',
@@ -42,9 +42,9 @@ function seedRepo(rootDir, overrides = {}) {
         'harness:audit': 'node scripts/harness-audit.js'
       }
     }, null, 2),
-    'docs/ECC-2.0-GA-ROADMAP.md': [
-      'ECC Platform Roadmap',
-      'https://linear.app/itomarkets/project/ecc-platform-roadmap-52b328ee03e1',
+    'docs/AIP-2.0-GA-ROADMAP.md': [
+      'AIP Platform Roadmap',
+      'https://linear.app/itomarkets/project/aip-platform-roadmap-52b328ee03e1',
       'ITO-44',
       'ITO-59'
     ].join('\n'),
@@ -213,7 +213,7 @@ function runTests() {
       seedRepo(projectRoot);
       const parsed = JSON.parse(run(['--format=json', `--root=${projectRoot}`, '--skip-github'], { cwd: projectRoot }));
 
-      assert.strictEqual(parsed.schema_version, 'ecc.platform-audit.v1');
+      assert.strictEqual(parsed.schema_version, 'aip.platform-audit.v1');
       assert.strictEqual(parsed.ready, true);
       assert.strictEqual(parsed.github.skipped, true);
       assert.ok(parsed.checks.some(check => check.id === 'roadmap-linear-mirror' && check.status === 'pass'));
@@ -268,7 +268,7 @@ function runTests() {
       const written = fs.readFileSync(outputPath, 'utf8');
 
       assert.strictEqual(stdout, written);
-      assert.ok(written.includes('# ECC Platform Audit'));
+      assert.ok(written.includes('# AIP Platform Audit'));
       assert.ok(written.includes('## Queue Summary'));
       assert.ok(written.includes('| Open PRs | 0 | 20 | PASS |'));
       assert.ok(written.includes('`roadmap-linear-mirror`'));
@@ -287,10 +287,10 @@ function runTests() {
       const shimPath = writeGhShim(projectRoot, {
         'pr list --repo reborncursed/AIP --state open --json number,title,isDraft,mergeStateStatus,updatedAt,url,author': [],
         'issue list --repo reborncursed/AIP --state open --json number,title,updatedAt,url,author,labels': [],
-        [discussionEnabledGhKey('reborncursed', 'ECC')]: {
+        [discussionEnabledGhKey('reborncursed', 'AIP')]: {
           data: { repository: { hasDiscussionsEnabled: true } }
         },
-        [discussionGhKey('reborncursed', 'ECC')]: {
+        [discussionGhKey('reborncursed', 'AIP')]: {
           data: {
             repository: {
               hasDiscussionsEnabled: true,
@@ -322,7 +322,7 @@ function runTests() {
       ], {
         cwd: projectRoot,
         env: {
-          ECC_GH_SHIM: shimPath,
+          AIP_GH_SHIM: shimPath,
           GITHUB_TOKEN: 'must-be-removed'
         }
       }));
@@ -356,10 +356,10 @@ function runTests() {
       const shimPath = writeGhShim(projectRoot, {
         'pr list --repo reborncursed/AIP --state open --json number,title,isDraft,mergeStateStatus,updatedAt,url,author': prs,
         'issue list --repo reborncursed/AIP --state open --json number,title,updatedAt,url,author,labels': [],
-        [discussionEnabledGhKey('reborncursed', 'ECC')]: {
+        [discussionEnabledGhKey('reborncursed', 'AIP')]: {
           data: { repository: { hasDiscussionsEnabled: true } }
         },
-        [discussionGhKey('reborncursed', 'ECC')]: {
+        [discussionGhKey('reborncursed', 'AIP')]: {
           data: {
             repository: {
               hasDiscussionsEnabled: true,
@@ -392,7 +392,7 @@ function runTests() {
         '2'
       ], {
         cwd: projectRoot,
-        env: { ECC_GH_SHIM: shimPath }
+        env: { AIP_GH_SHIM: shimPath }
       }));
 
       assert.strictEqual(parsed.ready, false);
@@ -412,9 +412,9 @@ function runTests() {
     try {
       seedRepo(projectRoot);
       const shimPath = writeGhShim(projectRoot, {
-        'pr list --repo ECC-Tools/ECC-website --state open --json number,title,isDraft,mergeStateStatus,updatedAt,url,author': [],
-        'issue list --repo ECC-Tools/ECC-website --state open --json number,title,updatedAt,url,author,labels': [],
-        [discussionEnabledGhKey('ECC-Tools', 'ECC-website')]: {
+        'pr list --repo AIP-Tools/AIP-website --state open --json number,title,isDraft,mergeStateStatus,updatedAt,url,author': [],
+        'issue list --repo AIP-Tools/AIP-website --state open --json number,title,updatedAt,url,author,labels': [],
+        [discussionEnabledGhKey('AIP-Tools', 'AIP-website')]: {
           data: { repository: { hasDiscussionsEnabled: false } }
         }
       });
@@ -423,10 +423,10 @@ function runTests() {
         '--format=json',
         `--root=${projectRoot}`,
         '--repo',
-        'ECC-Tools/ECC-website'
+        'AIP-Tools/AIP-website'
       ], {
         cwd: projectRoot,
-        env: { ECC_GH_SHIM: shimPath }
+        env: { AIP_GH_SHIM: shimPath }
       }));
 
       assert.strictEqual(parsed.ready, true);

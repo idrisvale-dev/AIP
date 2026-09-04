@@ -35,7 +35,7 @@ function run(args = [], options = {}) {
     env: {
       ...process.env,
       CLAUDE_PLUGIN_ROOT: options.root || '',
-      ECC_PLUGIN_ROOT: options.eccRoot || '',
+      AIP_PLUGIN_ROOT: options.aipRoot || '',
       ...(options.env || {}),
     },
     cwd: options.cwd || process.cwd(),
@@ -84,45 +84,45 @@ function runTests() {
 
   if (test('normalizes Windows Git Bash POSIX drive roots', () => {
     assert.strictEqual(
-      normalizePluginRootForPlatform('/c/Users/x/.claude/plugins/ecc', 'win32'),
-      'C:/Users/x/.claude/plugins/ecc'
+      normalizePluginRootForPlatform('/c/Users/x/.claude/plugins/aip', 'win32'),
+      'C:/Users/x/.claude/plugins/aip'
     );
     assert.strictEqual(
-      normalizePluginRootForPlatform('/z/Work/ECC/scripts/hooks/check-console-log.js', 'win32'),
-      'Z:/Work/ECC/scripts/hooks/check-console-log.js'
+      normalizePluginRootForPlatform('/z/Work/AIP/scripts/hooks/check-console-log.js', 'win32'),
+      'Z:/Work/AIP/scripts/hooks/check-console-log.js'
     );
   })) passed++; else failed++;
 
   if (test('leaves already-Windows roots unchanged', () => {
     assert.strictEqual(
-      normalizePluginRootForPlatform('C:/Users/x/.claude/plugins/ecc', 'win32'),
-      'C:/Users/x/.claude/plugins/ecc'
+      normalizePluginRootForPlatform('C:/Users/x/.claude/plugins/aip', 'win32'),
+      'C:/Users/x/.claude/plugins/aip'
     );
     assert.strictEqual(
-      normalizePluginRootForPlatform('D:\\Users\\x\\.claude\\plugins\\ecc', 'win32'),
-      'D:\\Users\\x\\.claude\\plugins\\ecc'
+      normalizePluginRootForPlatform('D:\\Users\\x\\.claude\\plugins\\aip', 'win32'),
+      'D:\\Users\\x\\.claude\\plugins\\aip'
     );
   })) passed++; else failed++;
 
   if (test('leaves POSIX-looking roots unchanged off Windows', () => {
     assert.strictEqual(
-      normalizePluginRootForPlatform('/c/Users/x/.claude/plugins/ecc', 'darwin'),
-      '/c/Users/x/.claude/plugins/ecc'
+      normalizePluginRootForPlatform('/c/Users/x/.claude/plugins/aip', 'darwin'),
+      '/c/Users/x/.claude/plugins/aip'
     );
     assert.strictEqual(
-      normalizePluginRootForPlatform('/c/Users/x/.claude/plugins/ecc', 'linux'),
-      '/c/Users/x/.claude/plugins/ecc'
+      normalizePluginRootForPlatform('/c/Users/x/.claude/plugins/aip', 'linux'),
+      '/c/Users/x/.claude/plugins/aip'
     );
   })) passed++; else failed++;
 
   if (test('does not mangle UNC or non-drive absolute paths on Windows', () => {
     assert.strictEqual(
-      normalizePluginRootForPlatform('\\\\server\\share\\ecc', 'win32'),
-      '\\\\server\\share\\ecc'
+      normalizePluginRootForPlatform('\\\\server\\share\\aip', 'win32'),
+      '\\\\server\\share\\aip'
     );
     assert.strictEqual(
-      normalizePluginRootForPlatform('/workspace/ecc', 'win32'),
-      '/workspace/ecc'
+      normalizePluginRootForPlatform('/workspace/aip', 'win32'),
+      '/workspace/aip'
     );
   })) passed++; else failed++;
 
@@ -136,7 +136,7 @@ process.stdout.write(JSON.stringify({
   raw,
   args: process.argv.slice(2),
   claudeRoot: process.env.CLAUDE_PLUGIN_ROOT,
-  eccRoot: process.env.ECC_PLUGIN_ROOT,
+  aipRoot: process.env.AIP_PLUGIN_ROOT,
 }));
 `);
 
@@ -150,7 +150,7 @@ process.stdout.write(JSON.stringify({
       assert.strictEqual(parsed.raw, 'payload');
       assert.deepStrictEqual(parsed.args, ['one', 'two']);
       assert.strictEqual(parsed.claudeRoot, root);
-      assert.strictEqual(parsed.eccRoot, root);
+      assert.strictEqual(parsed.aipRoot, root);
     } finally {
       cleanup(root);
     }

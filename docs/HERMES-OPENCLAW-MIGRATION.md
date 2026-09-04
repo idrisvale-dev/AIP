@@ -1,6 +1,6 @@
-# Hermes / OpenClaw -> ECC Migration
+# Hermes / OpenClaw -> AIP Migration
 
-This document is the public migration guide for moving a Hermes or OpenClaw-style operator setup into the current ECC model.
+This document is the public migration guide for moving a Hermes or OpenClaw-style operator setup into the current AIP model.
 
 The goal is not to reproduce a private operator workspace byte-for-byte.
 
@@ -23,7 +23,7 @@ while removing the parts that should stay private:
 
 Treat Hermes and OpenClaw as source systems, not as the final runtime.
 
-ECC is the durable public system:
+AIP is the durable public system:
 
 - skills
 - agents
@@ -31,14 +31,14 @@ ECC is the durable public system:
 - hooks
 - install surfaces
 - session adapters
-- ECC 2.0 control-plane work
+- AIP 2.0 control-plane work
 
-Hermes and OpenClaw are useful inputs because they contain repeated operator workflows that can be distilled into ECC-native surfaces.
+Hermes and OpenClaw are useful inputs because they contain repeated operator workflows that can be distilled into AIP-native surfaces.
 
 That means the shortest safe path is:
 
 1. extract the reusable behavior
-2. translate it into ECC-native skills, hooks, docs, or adapter work
+2. translate it into AIP-native skills, hooks, docs, or adapter work
 3. keep secrets and personal data outside the repo
 
 ## Current Workspace Model
@@ -65,14 +65,14 @@ Source examples:
 Translate into:
 
 - Claude-native scheduling where available
-- ECC hook / command automation for local repeatability
-- ECC 2.0 scheduler work under issue `#1050`
+- AIP hook / command automation for local repeatability
+- AIP 2.0 scheduler work under issue `#1050`
 
 Today, the repo already has the right public framing:
 
 - hooks for low-latency repo-local automation
 - commands for explicit operator actions
-- ECC 2.0 as the future long-lived scheduling/control plane
+- AIP 2.0 as the future long-lived scheduling/control plane
 
 ### 2. Gateway / dispatch layer
 
@@ -84,9 +84,9 @@ Source examples:
 
 Translate into:
 
-- ECC session adapter and control-plane work
+- AIP session adapter and control-plane work
 - orchestration/session inspection commands
-- ECC 2.0 control-plane backlog under:
+- AIP 2.0 control-plane backlog under:
   - `#1045`
   - `#1046`
   - `#1047`
@@ -125,7 +125,7 @@ Source examples:
 
 Translate into:
 
-- ECC-native top-level skills when the workflow is reusable
+- AIP-native top-level skills when the workflow is reusable
 - docs/examples when the content is only a template
 - hooks or commands when the behavior is procedural rather than knowledge-shaped
 
@@ -140,7 +140,7 @@ Recent examples already salvaged this way:
 - `messages-ops`
 - `research-ops`
 - `terminal-ops`
-- `ecc-tools-cost-audit`
+- `aip-tools-cost-audit`
 
 ### 5. Tool / service layer
 
@@ -153,22 +153,22 @@ Source examples:
 Translate into:
 
 - MCP-backed surfaces when a connector exists
-- ECC-native operator skills when the workflow logic is the real asset
+- AIP-native operator skills when the workflow logic is the real asset
 - adapter/control-plane work when the missing piece is session/runtime coordination
 
-Do not import opaque third-party runtimes into ECC just because a private workflow depended on them.
+Do not import opaque third-party runtimes into AIP just because a private workflow depended on them.
 
 If a workflow is valuable:
 
 1. understand the behavior
-2. rebuild the minimum ECC-native version
+2. rebuild the minimum AIP-native version
 3. document the auth/connectors required locally
 
 ## What Already Exists Publicly
 
 The current repo already covers meaningful parts of the migration:
 
-- ECC 2.0 adapter/control-plane discovery docs
+- AIP 2.0 adapter/control-plane discovery docs
 - orchestration/session inspection substrate
 - operator workflow skills
 - cost / billing / workflow audit skills
@@ -181,22 +181,22 @@ It is mostly:
 
 - distilling missing private workflows
 - clarifying public docs
-- continuing the ECC 2.0 operator/control-plane buildout
+- continuing the AIP 2.0 operator/control-plane buildout
 
-ECC 2.0 now ships a bounded migration audit entrypoint:
+AIP 2.0 now ships a bounded migration audit entrypoint:
 
-- `ecc migrate audit --source ~/.hermes`
-- `ecc migrate plan --source ~/.hermes --output migration-plan.md`
-- `ecc migrate scaffold --source ~/.hermes --output-dir migration-artifacts`
-- `ecc migrate import-skills --source ~/.hermes --output-dir migration-artifacts/skills`
-- `ecc migrate import-tools --source ~/.hermes --output-dir migration-artifacts/tools`
-- `ecc migrate import-plugins --source ~/.hermes --output-dir migration-artifacts/plugins`
-- `ecc migrate import-schedules --source ~/.hermes --dry-run`
-- `ecc migrate import-remote --source ~/.hermes --dry-run`
-- `ecc migrate import-env --source ~/.hermes --dry-run`
-- `ecc migrate import-memory --source ~/.hermes`
+- `aip migrate audit --source ~/.hermes`
+- `aip migrate plan --source ~/.hermes --output migration-plan.md`
+- `aip migrate scaffold --source ~/.hermes --output-dir migration-artifacts`
+- `aip migrate import-skills --source ~/.hermes --output-dir migration-artifacts/skills`
+- `aip migrate import-tools --source ~/.hermes --output-dir migration-artifacts/tools`
+- `aip migrate import-plugins --source ~/.hermes --output-dir migration-artifacts/plugins`
+- `aip migrate import-schedules --source ~/.hermes --dry-run`
+- `aip migrate import-remote --source ~/.hermes --dry-run`
+- `aip migrate import-env --source ~/.hermes --dry-run`
+- `aip migrate import-memory --source ~/.hermes`
 
-Use that first to inventory the legacy workspace and map detected surfaces onto the current ECC2 scheduler, remote dispatch, memory graph, templates, and manual-translation lanes.
+Use that first to inventory the legacy workspace and map detected surfaces onto the current AIP2 scheduler, remote dispatch, memory graph, templates, and manual-translation lanes.
 
 ## What Still Belongs In Backlog
 
@@ -216,11 +216,11 @@ Do not pretend the migration is "done" just because the public docs exist.
 
 ## Recommended Bring-Up Order
 
-1. Keep the public ECC repo as the canonical reusable layer.
-2. Port reusable Hermes/OpenClaw workflows into ECC-native skills one lane at a time.
+1. Keep the public AIP repo as the canonical reusable layer.
+2. Port reusable Hermes/OpenClaw workflows into AIP-native skills one lane at a time.
 3. Keep private auth and personal context outside the repo.
 4. Use GitHub / Linear / KB systems as durable truth.
-5. Treat ECC 2.0 as the path to a native operator shell, not as a finished product.
+5. Treat AIP 2.0 as the path to a native operator shell, not as a finished product.
 
 ## Decision Rule
 

@@ -49,4 +49,4 @@ Before writing any code for this feature/task, produce a structured plan.
 - [ ] Docs updated if public API changed
 ```
 
-Apply ECC coding standards throughout: immutable patterns, small focused files, explicit error handling.
+Apply AIP coding standards throughout: immutable patterns, small focused files, explicit error handling.

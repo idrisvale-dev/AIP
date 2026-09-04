@@ -26,7 +26,7 @@ function test(name, fn) {
 }
 
 function createTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-observer-sessions-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-observer-sessions-'));
 }
 
 function cleanup(dir) {
@@ -85,7 +85,7 @@ test('getHomunculusDir ignores relative overrides and uses XDG_DATA_HOME', () =>
   try {
     const xdg = path.join(root, 'xdg');
     withEnv({ CLV2_HOMUNCULUS_DIR: 'relative-store', XDG_DATA_HOME: xdg }, () => {
-      assert.strictEqual(getHomunculusDir(), path.join(xdg, 'ecc-homunculus'));
+      assert.strictEqual(getHomunculusDir(), path.join(xdg, 'aip-homunculus'));
     });
   } finally {
     cleanup(root);

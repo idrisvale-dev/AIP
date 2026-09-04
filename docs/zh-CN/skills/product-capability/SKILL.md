@@ -1,7 +1,7 @@
 ---
 name: product-capability
-description: 将PRD意图、路线图需求或产品讨论转化为可实施的方案计划，在开始多服务工作之前暴露约束、不变性、接口和未解决的决策。当用户需要ECC原生的PRD到SRS通道，而不是模糊的规划文本时使用。
-origin: ECC
+description: 将PRD意图、路线图需求或产品讨论转化为可实施的方案计划，在开始多服务工作之前暴露约束、不变性、接口和未解决的决策。当用户需要AIP原生的PRD到SRS通道，而不是模糊的规划文本时使用。
+origin: AIP
 ---
 
 # 产品能力
@@ -98,7 +98,7 @@ origin: ECC
 * 需先进行架构评审
 * 需先明确产品细节
 
-如有帮助，可指向下一个ECC原生通道：
+如有帮助，可指向下一个AIP原生通道：
 
 * `project-flow-ops`
 * `workspace-surface-audit`
@@ -131,11 +131,11 @@ origin: ECC
 - 仍需解决的阻碍或产品决策
 
 交接
-- 下一步应执行的操作及应由哪个ECC通道负责
+- 下一步应执行的操作及应由哪个AIP通道负责
 ```
 
 ## 良好成果
 
 * 产品意图已足够具体，无需在PR评审中重新发现隐藏约束即可实现。
 * 工程评审拥有持久化工件，而非依赖记忆或Slack上下文。
-* 生成的计划可在Claude Code、Codex、Cursor、OpenCode和ECC 2.0规划界面中复用。
+* 生成的计划可在Claude Code、Codex、Cursor、OpenCode和AIP 2.0规划界面中复用。

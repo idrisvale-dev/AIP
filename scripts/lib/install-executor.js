@@ -21,7 +21,7 @@ const { getInstallTargetAdapter } = require('./install-targets/registry');
 const { resolveInvocationEnvironment } = require('./invocation-environment');
 
 const LANGUAGE_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
-const CLAUDE_ECC_NAMESPACE = 'ecc';
+const CLAUDE_AIP_NAMESPACE = 'aip';
 
 function readDirectoryNames(dirPath) {
   if (!fs.existsSync(dirPath)) {
@@ -125,16 +125,16 @@ function addCursorAgentDataScaffoldOperations(operations, options) {
   addFileCopyOperation(operations, {
     moduleId: options.moduleId,
     sourceRoot: options.sourceRoot,
-    sourceRelativePath: path.join('scaffolds', 'cursor', 'ecc-agent-data.json'),
-    destinationPath: path.join(options.targetRoot, 'ecc-agent-data.json'),
+    sourceRelativePath: path.join('scaffolds', 'cursor', 'aip-agent-data.json'),
+    destinationPath: path.join(options.targetRoot, 'aip-agent-data.json'),
     strategy: 'preserve-relative-path'
   });
 
   addFileCopyOperation(operations, {
     moduleId: options.moduleId,
     sourceRoot: options.sourceRoot,
-    sourceRelativePath: path.join('scaffolds', 'cursor', 'rules', 'ecc-agent-data-home.mdc'),
-    destinationPath: path.join(options.targetRoot, 'rules', 'ecc-agent-data-home.mdc'),
+    sourceRelativePath: path.join('scaffolds', 'cursor', 'rules', 'aip-agent-data-home.mdc'),
+    destinationPath: path.join(options.targetRoot, 'rules', 'aip-agent-data-home.mdc'),
     strategy: 'preserve-relative-path'
   });
 
@@ -216,7 +216,7 @@ function isDirectoryNonEmpty(dirPath) {
 function planClaudeStyleLegacyInstall(context, { adapterId, adapterRootInput, rulesDir: rulesDirOverride }) {
   const adapter = getInstallTargetAdapter(adapterId);
   const targetRoot = adapter.resolveRoot(adapterRootInput);
-  const rulesDir = rulesDirOverride || path.join(targetRoot, 'rules', CLAUDE_ECC_NAMESPACE);
+  const rulesDir = rulesDirOverride || path.join(targetRoot, 'rules', CLAUDE_AIP_NAMESPACE);
   const installStatePath = adapter.getInstallStatePath(adapterRootInput);
   const operations = [];
   const warnings = [];

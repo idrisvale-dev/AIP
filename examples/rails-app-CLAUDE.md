@@ -360,7 +360,7 @@ COVERAGE=true bin/rspec
 
 Coverage target is 90% line coverage as a floor, not a goal. Sharp tests with 85% beat exhaustive tests with 100%. System tests use Capybara with the rack_test driver by default and switch to headless Chrome only when JavaScript is required.
 
-## ECC Workflow
+## AIP Workflow
 
 ```bash
 # Planning

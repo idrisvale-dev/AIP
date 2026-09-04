@@ -2,7 +2,7 @@
 name: orch-change-feature
 description: Orchestrate altering an existing, working feature to new desired behavior — update its tests to the new spec, change the implementation to match, review, and gated commit. Use when behavior is not broken but should be different.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # orch-change-feature

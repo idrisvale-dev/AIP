@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# ECC Kiro Installer
-# Installs Everything Claude Code workflows into a Kiro project.
+# AIP Kiro Installer
+# Installs AIP workflows into a Kiro project.
 #
 # Usage:
 #   ./install.sh              # Install to current directory
@@ -33,7 +33,7 @@ fi
 # Resolve to absolute path
 TARGET="$(cd "$TARGET" 2>/dev/null && pwd || echo "$TARGET")"
 
-echo "ECC Kiro Installer"
+echo "AIP Kiro Installer"
 echo "=================="
 echo ""
 echo "Source:  $SOURCE_KIRO"

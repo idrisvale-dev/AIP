@@ -11,7 +11,7 @@ license: Apache-2.0
 homepage: https://github.com/reborncursed/AIP
 metadata:
   version: 1.0.0
-  origin: ECC
+  origin: AIP
   author: evos
   clawdbot:
     emoji: ""

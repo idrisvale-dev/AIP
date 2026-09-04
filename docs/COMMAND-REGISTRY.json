@@ -13,7 +13,7 @@
     },
     {
       "command": "auto-update",
-      "description": "Pull the latest ECC repo changes and reinstall the current managed targets.",
+      "description": "Pull the latest AIP repo changes and reinstall the current managed targets.",
       "type": "testing",
       "primaryAgents": [],
       "allAgents": [],
@@ -49,7 +49,7 @@
     },
     {
       "command": "cost-report",
-      "description": "Generate a local Claude Code cost report from the ECC cost-tracker metrics log.",
+      "description": "Generate a local Claude Code cost report from the AIP cost-tracker metrics log.",
       "type": "testing",
       "primaryAgents": [],
       "allAgents": [],
@@ -100,16 +100,16 @@
       "path": "commands/cpp-test.md"
     },
     {
-      "command": "ecc-guide",
-      "description": "Navigate ECC's current agents, skills, commands, hooks, install profiles, and docs from the live repository surface.",
+      "command": "aip-guide",
+      "description": "Navigate AIP's current agents, skills, commands, hooks, install profiles, and docs from the live repository surface.",
       "type": "review",
       "primaryAgents": [],
       "allAgents": [],
       "skills": [
-        "ecc-guide",
+        "aip-guide",
         "security-scan"
       ],
-      "path": "commands/ecc-guide.md"
+      "path": "commands/aip-guide.md"
     },
     {
       "command": "epic-claim",
@@ -681,12 +681,12 @@
     },
     {
       "command": "project-init",
-      "description": "Detect a project's stack and produce a dry-run ECC onboarding plan using the repository's install manifests and stack mappings.",
+      "description": "Detect a project's stack and produce a dry-run AIP onboarding plan using the repository's install manifests and stack mappings.",
       "type": "testing",
       "primaryAgents": [],
       "allAgents": [],
       "skills": [
-        "ecc-guide"
+        "aip-guide"
       ],
       "path": "commands/project-init.md"
     },
@@ -786,7 +786,7 @@
     },
     {
       "command": "quality-gate",
-      "description": "Run the ECC formatter quality gate for a single file and report remediation steps.",
+      "description": "Run the AIP formatter quality gate for a single file and report remediation steps.",
       "type": "testing",
       "primaryAgents": [],
       "allAgents": [],

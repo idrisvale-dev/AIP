@@ -1,4 +1,4 @@
-# ECC v2.0.0-rc.1 Release URL Ledger
+# AIP v2.0.0-rc.1 Release URL Ledger
 
 This ledger separates links that are already public from links that only become
 valid after the remaining approval-gated plugin, video, billing, and
@@ -23,8 +23,8 @@ must still be checked from the exact release commit before publication.
 | May 18 operator dashboard | <https://github.com/reborncursed/AIP/blob/main/docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-18.md> | Previous prompt-to-artifact dashboard |
 | May 19 operator dashboard | <https://github.com/reborncursed/AIP/blob/main/docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-19.md> | Previous prompt-to-artifact dashboard with hypergrowth, video, and outbound lanes |
 | May 20 operator dashboard | <https://github.com/reborncursed/AIP/blob/main/docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-20.md> | Current prompt-to-artifact dashboard with Marketplace Pro release-gate sync |
-| npm package page | <https://www.npmjs.com/package/ecc-universal> | `npm view ecc-universal name version dist-tags versions --json` returned `latest: 1.10.0`, `next: 2.0.0-rc.1`, and included `2.0.0-rc.1` in `versions` |
-| npm rc package URL | <https://www.npmjs.com/package/ecc-universal/v/2.0.0-rc.1> | `npm view ecc-universal@2.0.0-rc.1 name version dist.tarball dist.integrity time --json` returned version `2.0.0-rc.1`, tarball `https://registry.npmjs.org/ecc-universal/-/ecc-universal-2.0.0-rc.1.tgz`, and published time `2026-05-26T00:36:22.940Z` |
+| npm package page | <https://www.npmjs.com/package/aip-universal> | `npm view aip-universal name version dist-tags versions --json` returned `latest: 1.10.0`, `next: 2.0.0-rc.1`, and included `2.0.0-rc.1` in `versions` |
+| npm rc package URL | <https://www.npmjs.com/package/aip-universal/v/2.0.0-rc.1> | `npm view aip-universal@2.0.0-rc.1 name version dist.tarball dist.integrity time --json` returned version `2.0.0-rc.1`, tarball `https://registry.npmjs.org/aip-universal/-/aip-universal-2.0.0-rc.1.tgz`, and published time `2026-05-26T00:36:22.940Z` |
 | Codex marketplace CLI docs | <https://developers.openai.com/codex/cli/reference#codex-plugin-marketplace> | Official docs list `codex plugin marketplace add` for GitHub shorthand, Git URLs, SSH URLs, and local marketplace roots |
 | Codex official Plugin Directory status | <https://developers.openai.com/codex/plugins/build#publish-official-public-plugins> | Official docs say public Plugin Directory publishing and self-serve management are coming soon |
 
@@ -34,7 +34,7 @@ must still be checked from the exact release commit before publication.
 | --- | --- | --- |
 | Claude plugin tag | `claude plugin tag .claude-plugin --dry-run`, then real tag only after approval | Clean release commit and plugin tag/push approval |
 | Codex repo marketplace install | `codex plugin marketplace add reborncursed/AIP --ref v2.0.0-rc.1` | GitHub tag must exist; official Plugin Directory submission remains separate |
-| ECC Tools native-payments announcement | ECC Tools Marketplace/App URL plus selected-target billing readiness readback through the operator bearer path | Marketplace-managed selected target returned `announcementGate.ready === true` on 2026-05-20; repeat immediately before publication |
+| AIP Tools native-payments announcement | AIP Tools Marketplace/App URL plus selected-target billing readiness readback through the operator bearer path | Marketplace-managed selected target returned `announcementGate.ready === true` on 2026-05-20; repeat immediately before publication |
 | Public announcements | X, LinkedIn, GitHub release, and longform URLs | Remaining plugin, video, and billing URLs must resolve or be explicitly marked blocked; exact outbound copy still needs owner approval |
 
 ## Pre-Post Check
@@ -44,8 +44,8 @@ Run these immediately before publication:
 ```bash
 git status --short --branch
 gh release view v2.0.0-rc.1 --repo reborncursed/AIP --json tagName,url,isPrerelease
-npm view ecc-universal name version dist-tags --json
-npm view ecc-universal@2.0.0-rc.1 name version dist.tarball dist.integrity time --json
+npm view aip-universal name version dist-tags --json
+npm view aip-universal@2.0.0-rc.1 name version dist.tarball dist.integrity time --json
 codex plugin marketplace add --help
 rg -n "TODO|TBD|PLACEHOLDER" docs/releases/2.0.0-rc.1
 npm run preview-pack:smoke
@@ -53,5 +53,5 @@ npm run release:approval-gate -- --format json
 ```
 
 Do not claim plugin propagation, official Codex Plugin Directory listing, video
-upload, ECC Tools billing/native payments, or final outbound readiness until the
+upload, AIP Tools billing/native payments, or final outbound readiness until the
 remaining approval-gated URLs above resolve from a clean release commit.

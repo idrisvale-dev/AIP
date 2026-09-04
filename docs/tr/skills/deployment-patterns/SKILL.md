@@ -1,7 +1,7 @@
 ---
 name: deployment-patterns
 description: Deployment iş akışları, CI/CD pipeline kalıpları, Docker konteynerizasyonu, sağlık kontrolleri, rollback stratejileri ve web uygulamaları için üretim hazırlığı kontrol listeleri.
-origin: ECC
+origin: AIP
 ---
 
 # Deployment Kalıpları

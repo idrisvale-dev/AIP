@@ -5,8 +5,8 @@
  * Stateful Claude plugin CLI fake.
  *
  * Environment:
- * - ECC_TEST_CLAUDE_STATE: JSON state file (required)
- * - ECC_TEST_CLAUDE_CALLS: JSONL argv log (optional)
+ * - AIP_TEST_CLAUDE_STATE: JSON state file (required)
+ * - AIP_TEST_CLAUDE_CALLS: JSONL argv log (optional)
  *
  * State supports:
  * {
@@ -22,11 +22,11 @@ const fs = require('fs');
 const path = require('path');
 
 const args = process.argv.slice(2);
-const statePath = process.env.ECC_TEST_CLAUDE_STATE;
-const callsPath = process.env.ECC_TEST_CLAUDE_CALLS;
+const statePath = process.env.AIP_TEST_CLAUDE_STATE;
+const callsPath = process.env.AIP_TEST_CLAUDE_CALLS;
 
 if (!statePath) {
-  process.stderr.write('ECC_TEST_CLAUDE_STATE is required\n');
+  process.stderr.write('AIP_TEST_CLAUDE_STATE is required\n');
   process.exit(2);
 }
 
@@ -63,7 +63,7 @@ function printJsonResponse(response) {
 }
 
 function createProviderReadArtifacts() {
-  if (process.env.ECC_TEST_CLAUDE_CREATE_READ_ARTIFACTS !== '1') return;
+  if (process.env.AIP_TEST_CLAUDE_CREATE_READ_ARTIFACTS !== '1') return;
   const homeDir = process.env.HOME || process.env.USERPROFILE;
   const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(homeDir, '.claude');
   const claudeStatePath = process.env.CLAUDE_CONFIG_DIR
@@ -73,7 +73,7 @@ function createProviderReadArtifacts() {
   const projectSettingsPath = path.join(process.cwd(), '.claude', 'settings.local.json');
   fs.mkdirSync(backupDir, { recursive: true });
   fs.mkdirSync(path.dirname(projectSettingsPath), { recursive: true });
-  if (process.env.ECC_TEST_CLAUDE_OVERWRITE_READ_ARTIFACTS === '1') {
+  if (process.env.AIP_TEST_CLAUDE_OVERWRITE_READ_ARTIFACTS === '1') {
     for (const entry of fs.readdirSync(backupDir)) {
       const entryPath = path.join(backupDir, entry);
       if (fs.statSync(entryPath).isFile()) fs.writeFileSync(entryPath, 'provider-overwrite\n');
@@ -86,7 +86,7 @@ function createProviderReadArtifacts() {
     '{"providerRead":true}\n'
   );
   if (
-    process.env.ECC_TEST_CLAUDE_WRITE_XDG_DATA === '1'
+    process.env.AIP_TEST_CLAUDE_WRITE_XDG_DATA === '1'
     && process.env.XDG_DATA_HOME
   ) {
     fs.mkdirSync(process.env.XDG_DATA_HOME, { recursive: true });
@@ -135,9 +135,9 @@ if (args[0] === 'plugin' && args[1] === 'marketplace' && args[2] === 'add') {
   const scopeIndex = args.indexOf('--scope');
   const scope = scopeIndex >= 0 ? args[scopeIndex + 1] : 'user';
   const marketplaces = [
-    ...(state.marketplaces || []).filter(entry => entry.name !== 'ecc'),
+    ...(state.marketplaces || []).filter(entry => entry.name !== 'aip'),
     {
-      name: 'ecc',
+      name: 'aip',
       source: 'github',
       repo: 'reborncursed/AIP',
       url: source,
@@ -152,24 +152,24 @@ if (args[0] === 'plugin' && args[1] === 'marketplace' && args[2] === 'update') {
   process.exit(0);
 }
 
-if (args[0] === 'plugin' && args[1] === 'install' && args[2] === 'ecc@ecc') {
+if (args[0] === 'plugin' && args[1] === 'install' && args[2] === 'aip@aip') {
   const scopeIndex = args.indexOf('--scope');
   const scope = scopeIndex >= 0 ? args[scopeIndex + 1] : 'user';
   const plugins = [
     ...(state.plugins || []).filter(plugin => (
-      plugin.id !== 'ecc@ecc' || plugin.scope !== scope
+      plugin.id !== 'aip@aip' || plugin.scope !== scope
     )),
-    { id: 'ecc@ecc', scope, enabled: true, version: '2.0.0' },
+    { id: 'aip@aip', scope, enabled: true, version: '2.0.0' },
   ];
   writeState({ ...state, plugins });
   process.exit(0);
 }
 
-if (args[0] === 'plugin' && args[1] === 'update' && args[2] === 'ecc@ecc') {
+if (args[0] === 'plugin' && args[1] === 'update' && args[2] === 'aip@aip') {
   const scopeIndex = args.indexOf('--scope');
   const scope = scopeIndex >= 0 ? args[scopeIndex + 1] : 'user';
   const plugins = (state.plugins || []).map(plugin => (
-    plugin.id === 'ecc@ecc' && plugin.scope === scope
+    plugin.id === 'aip@aip' && plugin.scope === scope
       ? { ...plugin, enabled: true, version: '2.0.0' }
       : plugin
   ));

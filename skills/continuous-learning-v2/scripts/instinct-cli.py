@@ -56,15 +56,15 @@ def _resolve_homunculus_dir() -> Path:
     if override:
         if Path(override).is_absolute():
             return Path(override)
-        print(f"[ecc] CLV2_HOMUNCULUS_DIR={override!r} is not absolute; ignoring", file=sys.stderr)
+        print(f"[aip] CLV2_HOMUNCULUS_DIR={override!r} is not absolute; ignoring", file=sys.stderr)
 
     xdg = os.environ.get("XDG_DATA_HOME")
     if xdg:
         if Path(xdg).is_absolute():
-            return Path(xdg) / "ecc-homunculus"
-        print(f"[ecc] XDG_DATA_HOME={xdg!r} is not absolute; ignoring", file=sys.stderr)
+            return Path(xdg) / "aip-homunculus"
+        print(f"[aip] XDG_DATA_HOME={xdg!r} is not absolute; ignoring", file=sys.stderr)
 
-    return Path.home() / ".local" / "share" / "ecc-homunculus"
+    return Path.home() / ".local" / "share" / "aip-homunculus"
 
 
 def _strip_remote_credentials(remote_url: str) -> str:
@@ -221,7 +221,7 @@ def _validate_import_url(source: str) -> str:
 def _fetch_import_url(source: str, *, max_bytes: int = 2 * 1024 * 1024) -> str:
     """Fetch a validated remote instinct file with bounded size and timeout."""
     url = _validate_import_url(source)
-    req = urllib.request.Request(url, headers={"User-Agent": "ECC-instinct-import/2"})
+    req = urllib.request.Request(url, headers={"User-Agent": "AIP-instinct-import/2"})
     with urllib.request.urlopen(req, timeout=15) as response:
         content_type = response.headers.get("Content-Type", "")
         if content_type and not any(

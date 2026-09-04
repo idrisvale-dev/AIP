@@ -102,7 +102,7 @@ for (const workflowPath of workflowPaths) {
 
     assert.ok(packIndex >= 0, 'missing pack step');
     assert.ok(uploadIndex > packIndex, 'artifact upload must happen after pack and hash');
-    assert.match(verify, /name:\s*ecc-release-artifacts/);
+    assert.match(verify, /name:\s*aip-release-artifacts/);
     assert.match(verify, /\$\{\{ steps\.pack\.outputs\.package_file \}\}/);
     assert.match(verify, /tests\/ci\/packed-artifact-lifecycle\.js/);
   });
@@ -124,9 +124,9 @@ for (const workflowPath of workflowPaths) {
     assert.match(lifecycle, /runs-on:\s*\$\{\{ matrix\.os \}\}/);
     assert.match(lifecycle, /node-version:\s*['"]20\.x['"]/);
     assert.match(lifecycle, /uses:\s*actions\/download-artifact@/);
-    assert.match(lifecycle, /name:\s*ecc-release-artifacts/);
-    assert.match(lifecycle, /ECC_RELEASE_PACKAGE:\s*release-artifacts\/\$\{\{ needs\.verify\.outputs\.package_file \}\}/);
-    assert.match(lifecycle, /ECC_RELEASE_SHA256:\s*\$\{\{ needs\.verify\.outputs\.package_sha256 \}\}/);
+    assert.match(lifecycle, /name:\s*aip-release-artifacts/);
+    assert.match(lifecycle, /AIP_RELEASE_PACKAGE:\s*release-artifacts\/\$\{\{ needs\.verify\.outputs\.package_file \}\}/);
+    assert.match(lifecycle, /AIP_RELEASE_SHA256:\s*\$\{\{ needs\.verify\.outputs\.package_sha256 \}\}/);
     assert.match(lifecycle, /node release-artifacts\/tests\/ci\/packed-artifact-lifecycle\.js/);
     assert.doesNotMatch(lifecycle, /actions\/checkout@/);
     assert.doesNotMatch(lifecycle, /\bsecrets\s*:/, 'lifecycle job must not receive secrets');
@@ -137,12 +137,12 @@ for (const workflowPath of workflowPaths) {
     const publish = jobBlock(source, 'publish');
 
     assert.match(publish, /needs:\s*\[verify, lifecycle\]/);
-    assert.match(publish, /ECC_RELEASE_PACKAGE:\s*\$\{\{ needs\.verify\.outputs\.package_file \}\}/);
-    assert.match(publish, /npm publish "\.\/\$\{ECC_RELEASE_PACKAGE\}"/);
+    assert.match(publish, /AIP_RELEASE_PACKAGE:\s*\$\{\{ needs\.verify\.outputs\.package_file \}\}/);
+    assert.match(publish, /npm publish "\.\/\$\{AIP_RELEASE_PACKAGE\}"/);
     assert.match(publish, /name:\s*Verify artifact before publish/);
-    assert.match(publish, /ECC_RELEASE_SHA256:\s*\$\{\{ needs\.verify\.outputs\.package_sha256 \}\}/);
+    assert.match(publish, /AIP_RELEASE_SHA256:\s*\$\{\{ needs\.verify\.outputs\.package_sha256 \}\}/);
     assert.match(publish, /createHash\(['"]sha256['"]\)/);
-    assert.match(publish, /ecc-universal-\[0-9A-Za-z\.\+-\]/);
+    assert.match(publish, /aip-universal-\[0-9A-Za-z\.\+-\]/);
     assert.ok(
       publish.indexOf('name: Verify artifact before publish')
         < publish.indexOf('name: Create GitHub Release'),
@@ -164,7 +164,7 @@ test('pull-request CI packs once and exports the exact installer artifact identi
   assert.match(pack, /package_file:\s*\$\{\{ steps\.pack\.outputs\.package_file \}\}/);
   assert.match(pack, /package_sha256:\s*\$\{\{ steps\.pack\.outputs\.package_sha256 \}\}/);
   assert.match(pack, /createHash\(['"]sha256['"]\)/);
-  assert.match(pack, /name:\s*ecc-ci-installer-artifact/);
+  assert.match(pack, /name:\s*aip-ci-installer-artifact/);
 });
 
 test('pull-request CI runs the same packed installer on Linux, macOS, and Windows', () => {
@@ -173,25 +173,25 @@ test('pull-request CI runs the same packed installer on Linux, macOS, and Window
   assert.match(lifecycle, /needs:\s*pack-installer/);
   assert.match(lifecycle, /os:\s*\[ubuntu-latest, macos-latest, windows-latest\]/);
   assert.match(lifecycle, /node-version:\s*['"]20\.x['"]/);
-  assert.match(lifecycle, /name:\s*ecc-ci-installer-artifact/);
-  assert.match(lifecycle, /ECC_RELEASE_PACKAGE:\s*release-artifacts\/\$\{\{ needs\.pack-installer\.outputs\.package_file \}\}/);
-  assert.match(lifecycle, /ECC_RELEASE_SHA256:\s*\$\{\{ needs\.pack-installer\.outputs\.package_sha256 \}\}/);
+  assert.match(lifecycle, /name:\s*aip-ci-installer-artifact/);
+  assert.match(lifecycle, /AIP_RELEASE_PACKAGE:\s*release-artifacts\/\$\{\{ needs\.pack-installer\.outputs\.package_file \}\}/);
+  assert.match(lifecycle, /AIP_RELEASE_SHA256:\s*\$\{\{ needs\.pack-installer\.outputs\.package_sha256 \}\}/);
   assert.match(lifecycle, /node tests\/ci\/packed-artifact-lifecycle\.js/);
   assert.doesNotMatch(lifecycle, /\$\{\{\s*secrets\./);
 });
 
 test('packed lifecycle invokes installed public bins, including setup help', () => {
   assert.match(lifecycleRunnerSource, /getNpmExecInvocation/);
-  assert.match(lifecycleRunnerSource, /\['ecc-universal', 'setup', '--help'\]/);
-  assert.match(lifecycleRunnerSource, /\['ecc', \.\.\.args\]/);
-  assert.doesNotMatch(lifecycleRunnerSource, /node_modules.*scripts.*ecc\.js/);
+  assert.match(lifecycleRunnerSource, /\['aip-universal', 'setup', '--help'\]/);
+  assert.match(lifecycleRunnerSource, /\['aip', \.\.\.args\]/);
+  assert.doesNotMatch(lifecycleRunnerSource, /node_modules.*scripts.*aip\.js/);
 });
 
 test('packed lifecycle applies and updates README-primary Claude setup with a fake provider', () => {
   assert.match(lifecycleRunnerSource, /createFakeClaudeExecutable/);
   assert.match(
     lifecycleRunnerSource,
-    /const claudeSetupArgs = \[\s*'ecc-universal', 'setup',\s*'--mode', 'claude-plugin',\s*'--scope', 'user',\s*\]/
+    /const claudeSetupArgs = \[\s*'aip-universal', 'setup',\s*'--mode', 'claude-plugin',\s*'--scope', 'user',\s*\]/
   );
   assert.match(
     lifecycleRunnerSource,
@@ -203,13 +203,13 @@ test('packed lifecycle applies and updates README-primary Claude setup with a fa
   assert.match(lifecycleRunnerSource, /runPackedClaudeSetup\('strict'\)/);
   assert.match(lifecycleRunnerSource, /CLAUDE_CODE_OAUTH_TOKEN/);
   assert.match(lifecycleRunnerSource, /plugin marketplace add/);
-  assert.match(lifecycleRunnerSource, /plugin update ecc@ecc/);
+  assert.match(lifecycleRunnerSource, /plugin update aip@aip/);
 });
 
 test('packed lifecycle mutates through the fully explicit guided Kimi install', () => {
   assert.match(
     lifecycleRunnerSource,
-    /const guidedKimiInstallArgs = \[\s*'ecc-universal', 'install', '--guided',\s*'--harness', 'kimi',\s*'--profile', 'core',\s*\]/
+    /const guidedKimiInstallArgs = \[\s*'aip-universal', 'install', '--guided',\s*'--harness', 'kimi',\s*'--profile', 'core',\s*\]/
   );
   assert.match(
     lifecycleRunnerSource,
@@ -226,11 +226,11 @@ test('packed lifecycle mutates through the fully explicit guided Kimi install', 
   );
   assert.match(
     lifecycleRunnerSource,
-    /runPublicCli\(\['ecc', 'doctor', '--target', 'kimi', '--json'\]\)/
+    /runPublicCli\(\['aip', 'doctor', '--target', 'kimi', '--json'\]\)/
   );
   assert.match(
     lifecycleRunnerSource,
-    /runPublicCli\(\['ecc', 'uninstall', '--target', 'kimi', '--json'\]\)/
+    /runPublicCli\(\['aip', 'uninstall', '--target', 'kimi', '--json'\]\)/
   );
   assert.match(lifecycleRunnerSource, /guidedKimiSentinel/);
   assert.match(lifecycleRunnerSource, /dry-run must not mutate the Kimi target/);

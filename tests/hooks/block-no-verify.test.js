@@ -27,7 +27,7 @@ function runHook(input, env = {}) {
     encoding: 'utf8',
     env: {
       ...process.env,
-      ECC_HOOK_PROFILE: 'standard',
+      AIP_HOOK_PROFILE: 'standard',
       ...env
     },
     timeout: 15000,

@@ -1,5 +1,5 @@
 /**
- * ECC Custom Tool: Dependency Analyzer
+ * AIP Custom Tool: Dependency Analyzer
  *
  * Analyzes project dependencies for outdated packages, security vulnerabilities,
  * and unused dependencies. Supports multiple package managers.

@@ -30,8 +30,8 @@ function inTempRepo(fn) {
 
   try {
     spawnSync('git', ['init'], { cwd: repoDir, stdio: 'pipe', encoding: 'utf8' });
-    spawnSync('git', ['config', 'user.name', 'ECC Test'], { cwd: repoDir, stdio: 'pipe', encoding: 'utf8' });
-    spawnSync('git', ['config', 'user.email', 'ecc@example.com'], { cwd: repoDir, stdio: 'pipe', encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.name', 'AIP Test'], { cwd: repoDir, stdio: 'pipe', encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.email', 'aip@example.com'], { cwd: repoDir, stdio: 'pipe', encoding: 'utf8' });
     process.chdir(repoDir);
     return fn(repoDir);
   } finally {

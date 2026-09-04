@@ -10,7 +10,7 @@
 
 ## 报告漏洞
 
-如果您在 ECC 中发现安全漏洞，请负责任地报告。
+如果您在 AIP 中发现安全漏洞，请负责任地报告。
 
 **请勿为安全漏洞创建公开的 GitHub 议题。**
 
@@ -39,15 +39,15 @@
 
 本政策涵盖：
 
-* ECC 插件及此仓库中的所有脚本
+* AIP 插件及此仓库中的所有脚本
 * 在您机器上执行的钩子脚本
 * 安装/卸载/修复生命周期脚本
-* 随 ECC 分发的 MCP 配置
+* 随 AIP 分发的 MCP 配置
 * AgentShield 安全扫描器 ([github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield))
 
 ## 安全资源
 
-* **AgentShield**：扫描您的代理配置以查找漏洞 — `npx ecc-agentshield scan`
+* **AgentShield**：扫描您的代理配置以查找漏洞 — `npx aip-agentshield scan`
 * **安全指南**：[The Shorthand Guide to Everything Agentic Security](the-security-guide.md)
 * **OWASP MCP Top 10**：[owasp.org/www-project-mcp-top-10](https://owasp.org/www-project-mcp-top-10/)
 * **OWASP Agentic Applications Top 10**：[genai.owasp.org](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/)

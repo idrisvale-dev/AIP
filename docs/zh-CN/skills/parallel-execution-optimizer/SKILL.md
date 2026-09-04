@@ -1,7 +1,7 @@
 ---
 name: parallel-execution-optimizer
 description: 当用户希望通过并行工作、并发 agents、批量工具调用、隔离 worktree 或多条独立验证通道来大幅加速任务、同时不损失正确性时使用。
-origin: ECC
+origin: AIP
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

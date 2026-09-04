@@ -1,7 +1,7 @@
 ---
 name: laravel-security
 description: Laravel セキュリティベストプラクティス：認証・認可、バリデーション、CSRF、一括割当、ファイルアップロード、シークレット管理、レート制限、安全なデプロイメント
-origin: ECC
+origin: AIP
 ---
 
 # Laravel セキュリティベストプラクティス

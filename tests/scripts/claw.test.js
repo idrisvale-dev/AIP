@@ -17,7 +17,7 @@ const {
   listSessions,
   loadHistory,
   appendTurn,
-  loadECCContext,
+  loadAIPContext,
   buildPrompt,
   askClaude,
   isValidSessionName,
@@ -29,7 +29,7 @@ const {
   compactSession
 } = require(path.join(__dirname, '..', '..', 'scripts', 'claw.js'));
 
-// Test helper — matches ECC's custom test pattern
+// Test helper — matches AIP's custom test pattern
 function test(name, fn) {
   try {
     fn();
@@ -118,18 +118,18 @@ function runTests() {
 
   console.log('\nContext:');
 
-  if (test('loadECCContext() returns "" when no skills specified', () => {
-    const result = loadECCContext('');
+  if (test('loadAIPContext() returns "" when no skills specified', () => {
+    const result = loadAIPContext('');
     assert.strictEqual(result, '');
   })) passed++; else failed++;
 
-  if (test('loadECCContext() skips missing skill directories gracefully', () => {
-    const result = loadECCContext('nonexistent-skill-xyz');
+  if (test('loadAIPContext() skips missing skill directories gracefully', () => {
+    const result = loadAIPContext('nonexistent-skill-xyz');
     assert.strictEqual(result, '');
   })) passed++; else failed++;
 
-  if (test('loadECCContext() concatenates multiple skill files', () => {
-    // Use real skills from the ECC repo if they exist
+  if (test('loadAIPContext() concatenates multiple skill files', () => {
+    // Use real skills from the AIP repo if they exist
     const skillsDir = path.join(process.cwd(), 'skills');
     if (!fs.existsSync(skillsDir)) {
       console.log('    (skipped — no skills/ directory in CWD)');
@@ -144,7 +144,7 @@ function runTests() {
       return;
     }
     const twoSkills = available.slice(0, 2).join(',');
-    const result = loadECCContext(twoSkills);
+    const result = loadAIPContext(twoSkills);
     assert.ok(result.length > 0, 'Should return non-empty context');
     // Should contain content from both skills
     for (const name of available.slice(0, 2)) {
@@ -198,7 +198,7 @@ function runTests() {
     const claw = require(path.join(__dirname, '..', '..', 'scripts', 'claw.js'));
     const required = [
       'getClawDir', 'getSessionPath', 'listSessions', 'loadHistory',
-      'appendTurn', 'loadECCContext', 'askClaude', 'main'
+      'appendTurn', 'loadAIPContext', 'askClaude', 'main'
     ];
     for (const fn of required) {
       assert.strictEqual(typeof claw[fn], 'function',

@@ -1,6 +1,6 @@
 **言語:** [English](../../README.md) | [Português (Brasil)](../pt-BR/README.md) | [简体中文](../../README.zh-CN.md) | [繁體中文](../zh-TW/README.md) | [日本語](README.md) | [한국어](../ko-KR/README.md) | [Türkçe](../tr/README.md) | [Русский](../ru/README.md) | [Tiếng Việt](../vi-VN/README.md) | [ไทย](../th/README.md) | [Deutsch](../de-DE/README.md) | [Українська](../uk-UA/README.md)
 
-# Everything Claude Code
+# AIP
 
 [![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
 [![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
@@ -40,12 +40,12 @@
 <tr>
 <td width="50%">
 <a href="https://bytecore.org/status/2012378465664745795">
-<img src="https://github.com/user-attachments/assets/1a471488-59cc-425b-8345-5245c7efbcef" alt="The Shorthand Guide to Everything Claude Code" />
+<img src="https://github.com/user-attachments/assets/1a471488-59cc-425b-8345-5245c7efbcef" alt="The Shorthand Guide to AIP" />
 </a>
 </td>
 <td width="50%">
 <a href="https://bytecore.org/status/2014040193557471352">
-<img src="https://github.com/user-attachments/assets/c9ca43bc-b149-427f-b551-af6840c368f0" alt="The Longform Guide to Everything Claude Code" />
+<img src="https://github.com/user-attachments/assets/c9ca43bc-b149-427f-b551-af6840c368f0" alt="The Longform Guide to AIP" />
 </a>
 </td>
 </tr>
@@ -74,7 +74,7 @@
 
 ### v1.4.0 — マルチ言語ルール、インストールウィザード & PM2（2026年2月）
 
-- **インタラクティブインストールウィザード** — 新しい`configure-ecc`スキルがマージ/上書き検出付きガイドセットアップを提供
+- **インタラクティブインストールウィザード** — 新しい`configure-aip`スキルがマージ/上書き検出付きガイドセットアップを提供
 - **PM2 & マルチエージェントオーケストレーション** — 複雑なマルチサービスワークフロー管理用の6つの新コマンド（`/pm2`, `/multi-plan`, `/multi-execute`, `/multi-backend`, `/multi-frontend`, `/multi-workflow`）
 - **マルチ言語ルールアーキテクチャ** — ルールをフラットファイルから`common/` + `typescript/` + `python/` + `golang/`ディレクトリに再構成。必要な言語のみインストール可能
 - **中国語（zh-CN）翻訳** — すべてのエージェント、コマンド、スキル、ルールの完全翻訳（80+ファイル）
@@ -109,7 +109,7 @@
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # プラグインをインストール
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 ### ステップ2：ルールをインストール（必須）
@@ -121,25 +121,25 @@
 git clone https://github.com/reborncursed/AIP.git
 
 # 共通ルールをインストール（必須）
-cp -r everything-claude-code/rules/common ~/.claude/rules/common
+cp -r aip/rules/common ~/.claude/rules/common
 
 # 言語固有ルールをインストール（スタックを選択）
-cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript
-cp -r everything-claude-code/rules/python ~/.claude/rules/python
-cp -r everything-claude-code/rules/golang ~/.claude/rules/golang
+cp -r aip/rules/typescript ~/.claude/rules/typescript
+cp -r aip/rules/python ~/.claude/rules/python
+cp -r aip/rules/golang ~/.claude/rules/golang
 ```
 
 ### ステップ3：使用開始
 
 ```bash
 # コマンドを試す（プラグインはネームスペース形式）
-/ecc:plan "ユーザー認証を追加"
+/aip:plan "ユーザー認証を追加"
 
 # 手動インストール（オプション2）は短縮形式：
 # /plan "ユーザー認証を追加"
 
 # 利用可能なコマンドを確認
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
 **完了です！** これで13のエージェント、43のスキル、31のコマンドにアクセスできます。
@@ -186,7 +186,7 @@ node scripts/setup-package-manager.js --detect
 このリポジトリは**Claude Codeプラグイン**です - 直接インストールするか、コンポーネントを手動でコピーできます。
 
 ```
-everything-claude-code/
+aip/
 |-- .claude-plugin/   # プラグインとマーケットプレイスマニフェスト
 |   |-- plugin.json         # プラグインメタデータとコンポーネントパス
 |   |-- marketplace.json    # /plugin marketplace add 用のマーケットプレイスカタログ
@@ -235,7 +235,7 @@ everything-claude-code/
 |   |-- springboot-security/        # Spring Boot セキュリティ（新規）
 |   |-- springboot-tdd/             # Spring Boot TDD（新規）
 |   |-- springboot-verification/    # Spring Boot 検証（新規）
-|   |-- configure-ecc/              # インタラクティブインストールウィザード（新規）
+|   |-- configure-aip/              # インタラクティブインストールウィザード（新規）
 |   |-- security-scan/              # AgentShield セキュリティ監査統合（新規）
 |
 |-- commands/         # スラッシュコマンド用クイック実行
@@ -359,23 +359,23 @@ Claude Code 設定の脆弱性、誤設定、インジェクションリスク�
 
 ```bash
 # クイックスキャン（インストール不要）
-npx ecc-agentshield scan
+npx aip-agentshield scan
 
 # 安全な問題を自動修正
-npx ecc-agentshield scan --fix
+npx aip-agentshield scan --fix
 
 # Opus 4.6 による深い分析
-npx ecc-agentshield scan --opus --stream
+npx aip-agentshield scan --opus --stream
 
 # ゼロから安全な設定を生成
-npx ecc-agentshield init
+npx aip-agentshield init
 ```
 
 CLAUDE.md、settings.json、MCP サーバー、フック、エージェント定義をチェックします。セキュリティグレード（A-F）と実行可能な結果を生成します。
 
 Claude Codeで`/security-scan`を実行、または[GitHub Action](https://github.com/reborncursed/agentshield)でCIに追加できます。
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/ecc-agentshield)
+[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 
 ### 継続的学習 v2
 
@@ -430,7 +430,7 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # プラグインをインストール
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 または、`~/.claude/settings.json` に直接追加：
@@ -438,7 +438,7 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
 ```json
 {
   "extraKnownMarketplaces": {
-    "ecc": {
+    "aip": {
       "source": {
         "source": "github",
         "repo": "reborncursed/AIP"
@@ -446,7 +446,7 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
     }
   },
   "enabledPlugins": {
-    "ecc@ecc": true
+    "aip@aip": true
   }
 }
 ```
@@ -461,15 +461,15 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
 >
 > # オプション A：ユーザーレベルルール（すべてのプロジェクトに適用）
 > mkdir -p ~/.claude/rules
-> cp -r everything-claude-code/rules/common ~/.claude/rules/common
-> cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript   # スタックを選択
-> cp -r everything-claude-code/rules/python ~/.claude/rules/python
-> cp -r everything-claude-code/rules/golang ~/.claude/rules/golang
+> cp -r aip/rules/common ~/.claude/rules/common
+> cp -r aip/rules/typescript ~/.claude/rules/typescript   # スタックを選択
+> cp -r aip/rules/python ~/.claude/rules/python
+> cp -r aip/rules/golang ~/.claude/rules/golang
 >
 > # オプション B：プロジェクトレベルルール（現在のプロジェクトのみ）
 > mkdir -p .claude/rules
-> cp -r everything-claude-code/rules/common .claude/rules/common
-> cp -r everything-claude-code/rules/typescript .claude/rules/typescript     # スタックを選択
+> cp -r aip/rules/common .claude/rules/common
+> cp -r aip/rules/typescript .claude/rules/typescript     # スタックを選択
 > ```
 
 ---
@@ -483,26 +483,26 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
 git clone https://github.com/reborncursed/AIP.git
 
 # エージェントを Claude 設定にコピー
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp aip/agents/*.md ~/.claude/agents/
 
 # ルール（共通 + 言語固有）をコピー
-cp -r everything-claude-code/rules/common ~/.claude/rules/common
-cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript   # スタックを選択
-cp -r everything-claude-code/rules/python ~/.claude/rules/python
-cp -r everything-claude-code/rules/golang ~/.claude/rules/golang
+cp -r aip/rules/common ~/.claude/rules/common
+cp -r aip/rules/typescript ~/.claude/rules/typescript   # スタックを選択
+cp -r aip/rules/python ~/.claude/rules/python
+cp -r aip/rules/golang ~/.claude/rules/golang
 
 # コマンドをコピー
-cp everything-claude-code/commands/*.md ~/.claude/commands/
+cp aip/commands/*.md ~/.claude/commands/
 
 # スキルをコピー
-cp -r everything-claude-code/skills/* ~/.claude/skills/
+cp -r aip/skills/* ~/.claude/skills/
 ```
 
 #### settings.json にフックを追加
 
 手動インストール時のみ、`hooks/hooks.json` のフックを `~/.claude/settings.json` にコピーします。
 
-`/plugin install` で ECC を導入した場合は、これらのフックを `settings.json` にコピーしないでください。Claude Code v2.1+ はプラグインの `hooks/hooks.json` を自動読み込みするため、二重登録すると重複実行や `${CLAUDE_PLUGIN_ROOT}` の解決失敗が発生します。
+`/plugin install` で AIP を導入した場合は、これらのフックを `settings.json` にコピーしないでください。Claude Code v2.1+ はプラグインの `hooks/hooks.json` を自動読み込みするため、二重登録すると重複実行や `${CLAUDE_PLUGIN_ROOT}` の解決失敗が発生します。
 
 #### MCP を設定
 
@@ -614,13 +614,13 @@ node tests/hooks/hooks.test.js
 
 ## Cursor IDE サポート
 
-ecc-universal は [Cursor IDE](https://cursor.com) の事前翻訳設定を含みます。`.cursor/` ディレクトリには、Cursor フォーマット向けに適応されたルール、エージェント、スキル、コマンド、MCP 設定が含まれています。
+aip-universal は [Cursor IDE](https://cursor.com) の事前翻訳設定を含みます。`.cursor/` ディレクトリには、Cursor フォーマット向けに適応されたルール、エージェント、スキル、コマンド、MCP 設定が含まれています。
 
 ### クイックスタート (Cursor)
 
 ```bash
 # パッケージをインストール
-npm install ecc-universal
+npm install aip-universal
 
 # 言語をインストール
 ./install.sh --target cursor typescript
@@ -644,7 +644,7 @@ npm install ecc-universal
 
 ## OpenCodeサポート
 
-ECCは**フルOpenCodeサポート**をプラグインとフック含めて提供。
+AIPは**フルOpenCodeサポート**をプラグインとフック含めて提供。
 
 ### クイックスタート
 
@@ -717,19 +717,19 @@ OpenCodeのプラグインシステムはClaude Codeより高度で、20+イベ�
 
 **オプション1：直接使用**
 ```bash
-cd everything-claude-code
+cd aip
 opencode
 ```
 
 **オプション2：npmパッケージとしてインストール**
 ```bash
-npm install ecc-universal
+npm install aip-universal
 ```
 
 その後`opencode.json`に追加：
 ```json
 {
-  "plugin": ["ecc-universal"]
+  "plugin": ["aip-universal"]
 }
 ```
 
@@ -781,8 +781,8 @@ npm install ecc-universal
 
 ## リンク
 
-- **簡潔ガイド（まずはこれ）:** [Everything Claude Code 簡潔ガイド](https://bytecore.org/status/2012378465664745795)
-- **詳細ガイド（高度）:** [Everything Claude Code 詳細ガイド](https://bytecore.org/status/2014040193557471352)
+- **簡潔ガイド（まずはこれ）:** [AIP 簡潔ガイド](https://bytecore.org/status/2012378465664745795)
+- **詳細ガイド（高度）:** [AIP 詳細ガイド](https://bytecore.org/status/2014040193557471352)
 - **フォロー:** [@bytecore](https://bytecore.org)
 - **bytecore.org:** [bytecore.org](https://bytecore.org)
 - **スキル ディレクトリ:** awesome-agent-skills（コミュニティ管理のエージェントスキル ディレクトリ）

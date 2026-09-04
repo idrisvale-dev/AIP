@@ -1,12 +1,12 @@
 {
-  "schema_version": "ecc.hud-status.v1",
+  "schema_version": "aip.hud-status.v1",
   "generatedAt": "2026-05-12T00:00:00.000Z",
   "context": {
     "harness": "codex",
     "model": "gpt-5",
     "repo": "reborncursed/AIP",
     "branch": "main",
-    "worktree": "/repo/everything-claude-code",
+    "worktree": "/repo/aip",
     "sessionId": "session-active",
     "contextWindow": {
       "remainingPct": 62,
@@ -28,9 +28,9 @@
       "id": "worker-release-docs",
       "state": "completed",
       "branch": "codex/release-docs",
-      "worktree": "/tmp/ecc-release-docs",
+      "worktree": "/tmp/aip-release-docs",
       "objective": "Update release readiness docs",
-      "handoffPath": "/tmp/ecc-release-docs/handoff.md"
+      "handoffPath": "/tmp/aip-release-docs/handoff.md"
     }
   ],
   "todos": {
@@ -100,7 +100,7 @@
   },
   "sync": {
     "Linear": {
-      "project": "ECC 2.0 GA",
+      "project": "AIP 2.0 GA",
       "health": "atRisk",
       "issueCapacityBlocked": true,
       "latestStatusUpdateId": "status-update-id"
@@ -110,7 +110,7 @@
       "latestPullRequest": 1820
     },
     "handoff": {
-      "path": "~/.cluster-swarm/handoffs/ecc-update.md",
+      "path": "~/.cluster-swarm/handoffs/aip-update.md",
       "written": true
     }
   }

@@ -69,7 +69,7 @@ function createMockContext(projectDir) {
 }
 
 async function withTempProject(files, fn) {
-  const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "ecc-opencode-tools-"))
+  const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "aip-opencode-tools-"))
   try {
     for (const file of files) {
       const filePath = path.join(projectDir, file)
@@ -256,7 +256,7 @@ async function main() {
             (error) => {
               assert.ok(error instanceof Error)
               assert.ok(
-                error.message.includes("ecc repair --target opencode"),
+                error.message.includes("aip repair --target opencode"),
                 "Expected the error to point at the repair command"
               )
               assert.ok(

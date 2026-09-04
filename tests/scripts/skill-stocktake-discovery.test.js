@@ -58,7 +58,7 @@ test('both scanners use canonical, error-visible, NUL-delimited discovery', () =
 if (process.platform === 'win32') {
   console.log('  ↷ POSIX symlink and newline-path integration cases skipped on Windows');
 } else {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-skill-stocktake-'));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-skill-stocktake-'));
   try {
     const projectSkills = path.join(tempRoot, 'project', '.claude', 'skills');
     const directSkill = path.join(projectSkills, 'direct skill');

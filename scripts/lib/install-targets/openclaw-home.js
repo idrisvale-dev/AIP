@@ -5,6 +5,6 @@ module.exports = createInstallTargetAdapter({
   target: 'openclaw',
   kind: 'home',
   rootSegments: ['.openclaw'],
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   nativeRootRelativePath: '.openclaw',
 });

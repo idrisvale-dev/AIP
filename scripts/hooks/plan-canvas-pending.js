@@ -5,7 +5,7 @@
  * Cross-platform (Windows, macOS, Linux)
  *
  * Browser feedback only reaches an agent while that agent is parked inside
- * `ecc-plan-canvas await`. The moment a turn ends, nothing is listening, so
+ * `aip-plan-canvas await`. The moment a turn ends, nothing is listening, so
  * messages the human sends land in sessions.json and stay there: the canvas
  * looks alive, the agent never hears a word.
  *
@@ -16,7 +16,7 @@
  *
  * Scope: sessions whose artifact lives under the hook's cwd, so parallel
  * agents in other repos cannot swallow a message meant for this one. Set
- * ECC_PLAN_CANVAS_STOP_SCOPE=all to consider every open session.
+ * AIP_PLAN_CANVAS_STOP_SCOPE=all to consider every open session.
  *
  * Never blocks on failure: any error, unreachable server, or undrainable
  * queue exits 0 with stdin passed through.
@@ -35,7 +35,7 @@ const SERVER_TIMEOUT_MS = 1000;
 const MAX_ITEMS_REPORTED = 20;
 
 function stateDir() {
-  const override = process.env.ECC_PLAN_CANVAS_STATE_DIR;
+  const override = process.env.AIP_PLAN_CANVAS_STATE_DIR;
   if (override && override.trim()) return path.resolve(override.trim());
   return path.join(os.homedir(), '.claude', 'plan-canvas');
 }
@@ -69,7 +69,7 @@ function isInside(dir, file) {
  * Sessions holding feedback the agent has never seen, oldest activity first.
  */
 function pendingSessions(state, cwd, env = process.env) {
-  const scopeAll = String(env.ECC_PLAN_CANVAS_STOP_SCOPE || '').trim().toLowerCase() === 'all';
+  const scopeAll = String(env.AIP_PLAN_CANVAS_STOP_SCOPE || '').trim().toLowerCase() === 'all';
   return Object.values((state && state.sessions) || {})
     .filter(session => session && session.status !== 'ended')
     .filter(session => Array.isArray(session.pendingFeedback) && session.pendingFeedback.length > 0)
@@ -173,7 +173,7 @@ function buildReason(delivered) {
       lines.push('  your normal reply; do not reopen the canvas.');
     } else {
       lines.push('  Reply IN THE CANVAS so the human sees it, and keep listening, with one command:');
-      lines.push(`    ecc-plan-canvas await ${JSON.stringify(entry.file)} --reply "<what you did>"`);
+      lines.push(`    aip-plan-canvas await ${JSON.stringify(entry.file)} --reply "<what you did>"`);
     }
     lines.push('');
   }

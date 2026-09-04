@@ -1,7 +1,7 @@
 ---
 name: content-hash-cache-pattern
 description: SHA-256コンテンツハッシュを使用して、高コストなファイル処理結果をキャッシュします — パス非依存、自動無効化、サービスレイヤーの分離。
-origin: ECC
+origin: AIP
 ---
 
 # コンテンツハッシュファイルキャッシュパターン

@@ -1,7 +1,7 @@
 ---
 name: angular-developer
 description: Angular コードを生成し、アーキテクチャ ガイダンスを提供します。プロジェクトの作成、コンポーネント、またはサービスを作成するとき、または反応性（シグナル、linkedSignal、リソース）、フォーム、依存性注入、ルーティング、SSR、アクセシビリティ（ARIA）、アニメーション、スタイリング（コンポーネント スタイル、Tailwind CSS）、テスト、または CLI ツール作成のベスト プラクティスについてトリガーされます。
-origin: ECC
+origin: AIP
 ---
 
 # Angular 開発者 ガイドライン

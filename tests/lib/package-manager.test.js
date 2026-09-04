@@ -1401,7 +1401,7 @@ function runTests() {
       console.log(' (skipped — chmod ineffective on Windows/root)');
       return;
     }
-    const isoHome = path.join(os.tmpdir(), `ecc-pm-r71-${Date.now()}`);
+    const isoHome = path.join(os.tmpdir(), `aip-pm-r71-${Date.now()}`);
     const claudeDir = path.join(isoHome, '.claude');
     fs.mkdirSync(claudeDir, { recursive: true });
     const savedHome = process.env.HOME;
@@ -1440,7 +1440,7 @@ function runTests() {
       console.log(' (skipped — chmod ineffective on Windows/root)');
       return;
     }
-    const isoProject = path.join(os.tmpdir(), `ecc-pm-proj-r72-${Date.now()}`);
+    const isoProject = path.join(os.tmpdir(), `aip-pm-proj-r72-${Date.now()}`);
     const claudeDir = path.join(isoProject, '.claude');
     fs.mkdirSync(claudeDir, { recursive: true });
     // Make .claude directory read-only — can't create new files

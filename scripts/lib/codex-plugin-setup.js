@@ -4,8 +4,8 @@ const { execFile: nodeExecFile } = require('child_process');
 const path = require('path');
 const { normalizeGitHubGitOrigin } = require('./github-origin');
 
-const CODEX_PLUGIN_ID = 'ecc@ecc';
-const OFFICIAL_MARKETPLACE_NAME = 'ecc';
+const CODEX_PLUGIN_ID = 'aip@aip';
+const OFFICIAL_MARKETPLACE_NAME = 'aip';
 const OFFICIAL_MARKETPLACE_REPO = 'reborncursed/AIP';
 const NORMALIZED_OFFICIAL_MARKETPLACE_REPO = OFFICIAL_MARKETPLACE_REPO.toLowerCase();
 const MAX_OUTPUT_BYTES = 10 * 1024 * 1024;
@@ -70,13 +70,13 @@ function parseMarketplaceInventory(stdout, phase) {
       );
     }
   }
-  const eccEntries = inventory.marketplaces.filter(
+  const aipEntries = inventory.marketplaces.filter(
     marketplace => marketplace.name === OFFICIAL_MARKETPLACE_NAME
   );
-  if (eccEntries.length > 1) {
+  if (aipEntries.length > 1) {
     fail(
       'INVALID_MARKETPLACE_INVENTORY',
-      'Codex marketplace inventory contains duplicate `ecc` entries',
+      'Codex marketplace inventory contains duplicate `aip` entries',
       { phase }
     );
   }
@@ -124,10 +124,10 @@ function parsePluginInventory(stdout, phase) {
   const inventory = parseJsonObject(stdout, 'plugin', phase);
   assertPluginEntries(inventory.installed, 'installed', phase);
   assertPluginEntries(inventory.available, 'available', phase);
-  const eccEntries = inventory.installed.filter(
+  const aipEntries = inventory.installed.filter(
     plugin => plugin.pluginId === CODEX_PLUGIN_ID
   );
-  if (eccEntries.length > 1) {
+  if (aipEntries.length > 1) {
     fail(
       'INVALID_PLUGIN_INVENTORY',
       `Codex plugin inventory contains duplicate ${CODEX_PLUGIN_ID} entries`,
@@ -187,7 +187,7 @@ async function runCodexCommand(args, options = {}, dependencies = {}) {
     if (error?.code === 'ENOENT') {
       fail(
         'CODEX_NOT_FOUND',
-        'Codex CLI is not installed or `codex` is not on PATH. Install Codex, then rerun ECC setup.',
+        'Codex CLI is not installed or `codex` is not on PATH. Install Codex, then rerun AIP setup.',
         { argv, phase: options.phase }
       );
     }
@@ -232,7 +232,7 @@ async function resolveMarketplaceRepository(marketplace, options = {}, dependenc
     const detail = String(error?.stderr || error?.message || '').trim();
     fail(
       'MARKETPLACE_COLLISION',
-      `Refusing the existing \`ecc\` marketplace because its Git provenance could not be verified${detail ? `: ${detail}` : ''}.`,
+      `Refusing the existing \`aip\` marketplace because its Git provenance could not be verified${detail ? `: ${detail}` : ''}.`,
       { phase: options.phase || 'marketplace-provenance' }
     );
   }
@@ -260,14 +260,14 @@ async function assertOfficialMarketplace(
     const detail = String(error?.message || error || '').trim();
     fail(
       'MARKETPLACE_COLLISION',
-      `Refusing the existing \`ecc\` marketplace because its provenance could not be verified${detail ? `: ${detail}` : ''}.`,
+      `Refusing the existing \`aip\` marketplace because its provenance could not be verified${detail ? `: ${detail}` : ''}.`,
       { phase }
     );
   }
   if (repository !== NORMALIZED_OFFICIAL_MARKETPLACE_REPO) {
     fail(
       'MARKETPLACE_COLLISION',
-      'Refusing the existing `ecc` marketplace because it is not the official reborncursed/AIP source.',
+      'Refusing the existing `aip` marketplace because it is not the official reborncursed/AIP source.',
       { phase }
     );
   }
@@ -326,20 +326,20 @@ function parseMarketplaceUpgradeResult(stdout, marketplace) {
   ) {
     fail(
       'MARKETPLACE_REFRESH_FAILED',
-      'Codex did not confirm that the official ECC marketplace was refreshed.',
+      'Codex did not confirm that the official AIP marketplace was refreshed.',
       { phase, argv }
     );
   }
   return result;
 }
 
-function findEccMarketplace(marketplaces) {
+function findAipMarketplace(marketplaces) {
   return marketplaces.find(
     marketplace => marketplace.name === OFFICIAL_MARKETPLACE_NAME
   ) || null;
 }
 
-function findInstalledEccPlugin(inventory) {
+function findInstalledAipPlugin(inventory) {
   return inventory.installed.find(
     plugin => plugin.pluginId === CODEX_PLUGIN_ID
   ) || null;
@@ -371,8 +371,8 @@ async function reconcileCodexPlugin(options = {}, dependencies = {}) {
   );
   const marketplaces = await readMarketplaceInventory(run, 'marketplace-inventory');
   const plugins = await readPluginInventory(run, 'plugin-inventory');
-  const marketplace = findEccMarketplace(marketplaces);
-  const installedPlugin = findInstalledEccPlugin(plugins);
+  const marketplace = findAipMarketplace(marketplaces);
+  const installedPlugin = findInstalledAipPlugin(plugins);
   await assertOfficialMarketplace(marketplace, options, dependencies);
   const pluginReady = (
     installedPlugin?.installed === true
@@ -409,15 +409,15 @@ async function reconcileCodexPlugin(options = {}, dependencies = {}) {
     run,
     'marketplace-verification'
   );
-  if (!findEccMarketplace(verifiedMarketplaces)) {
+  if (!findAipMarketplace(verifiedMarketplaces)) {
     fail(
       'MARKETPLACE_VERIFICATION_FAILED',
-      'Could not verify the ECC marketplace after reconciliation.',
+      'Could not verify the AIP marketplace after reconciliation.',
       { phase: 'marketplace-verification' }
     );
   }
   await assertOfficialMarketplace(
-    findEccMarketplace(verifiedMarketplaces),
+    findAipMarketplace(verifiedMarketplaces),
     options,
     dependencies,
     'marketplace-verification'
@@ -426,7 +426,7 @@ async function reconcileCodexPlugin(options = {}, dependencies = {}) {
   const pluginsAfterMarketplace = marketplace
     ? await readPluginInventory(run, 'plugin-verification')
     : plugins;
-  const pluginAfterMarketplace = findInstalledEccPlugin(pluginsAfterMarketplace);
+  const pluginAfterMarketplace = findInstalledAipPlugin(pluginsAfterMarketplace);
   const pluginReadyAfterMarketplace = (
     pluginAfterMarketplace?.installed === true
     && pluginAfterMarketplace.enabled === true
@@ -442,7 +442,7 @@ async function reconcileCodexPlugin(options = {}, dependencies = {}) {
   const verifiedPlugins = pluginReadyAfterMarketplace
     ? pluginsAfterMarketplace
     : await readPluginInventory(run, 'plugin-verification');
-  const verifiedPlugin = findInstalledEccPlugin(verifiedPlugins);
+  const verifiedPlugin = findInstalledAipPlugin(verifiedPlugins);
   if (!(verifiedPlugin?.installed === true && verifiedPlugin.enabled === true)) {
     fail(
       'PLUGIN_VERIFICATION_FAILED',
@@ -466,8 +466,8 @@ module.exports = {
   OFFICIAL_MARKETPLACE_REPO,
   PROVIDER_COMMAND_TIMEOUT_MS,
   executeFile,
-  findEccMarketplace,
-  findInstalledEccPlugin,
+  findAipMarketplace,
+  findInstalledAipPlugin,
   normalizeGitHubGitOrigin,
   parseMarketplaceInventory,
   parseMarketplaceUpgradeResult,

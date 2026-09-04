@@ -25,7 +25,7 @@ function test(desc, fn) {
 }
 
 test('fails fast for an unreadable task file and records failure artifacts', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-orch-worker-'));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-orch-worker-'));
   const handoffFile = path.join(tempRoot, '.orchestration', 'docs', 'handoff.md');
   const statusFile = path.join(tempRoot, '.orchestration', 'docs', 'status.md');
   const missingTaskFile = path.join(tempRoot, '.orchestration', 'docs', 'task.md');

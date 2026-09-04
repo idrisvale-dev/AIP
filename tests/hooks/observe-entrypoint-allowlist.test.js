@@ -9,9 +9,9 @@
  *
  * This test pins the allowlist by spawning observe.sh under `bash -x` for
  * each entrypoint value and asserting that allowed entrypoints reach
- * Layer 2 (the ECC_HOOK_PROFILE check) while denied entrypoints stop at
+ * Layer 2 (the AIP_HOOK_PROFILE check) while denied entrypoints stop at
  * Layer 1's `exit 0`. We force Layer 2 to short-circuit via
- * ECC_HOOK_PROFILE=minimal so the test is fast and side-effect-free
+ * AIP_HOOK_PROFILE=minimal so the test is fast and side-effect-free
  * regardless of whether downstream layers find python3 / write state.
  *
  * Run with: node tests/hooks/observe-entrypoint-allowlist.test.js
@@ -50,7 +50,7 @@ function test(name, fn) {
 }
 
 function makeTempHome() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-observe-allowlist-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-observe-allowlist-'));
 }
 
 function cleanup(dir) {
@@ -63,7 +63,7 @@ function cleanup(dir) {
 
 /**
  * Spawn observe.sh under `bash -x` with a given CLAUDE_CODE_ENTRYPOINT.
- * Layer 2 is forced to short-circuit (ECC_HOOK_PROFILE=minimal) so the only
+ * Layer 2 is forced to short-circuit (AIP_HOOK_PROFILE=minimal) so the only
  * observable difference between an allowed entrypoint and a denied one is
  * whether the bash trace records the Layer 2 check at all.
  */
@@ -83,8 +83,8 @@ function runObserve(entrypoint) {
         ...process.env,
         HOME: home,
         CLAUDE_CODE_ENTRYPOINT: entrypoint,
-        ECC_HOOK_PROFILE: 'minimal',
-        ECC_SKIP_OBSERVE: '0',
+        AIP_HOOK_PROFILE: 'minimal',
+        AIP_SKIP_OBSERVE: '0',
         CLAUDE_PROJECT_DIR: home
       },
       timeout: 5000,
@@ -96,7 +96,7 @@ function runObserve(entrypoint) {
 }
 
 // `bash -x` expands variables before printing trace lines. Layer 2's
-// `[ "${ECC_HOOK_PROFILE:-standard}" = "minimal" ] && exit 0` therefore
+// `[ "${AIP_HOOK_PROFILE:-standard}" = "minimal" ] && exit 0` therefore
 // shows up as a literal `[ minimal = minimal ]` line on stderr, but only
 // when Layer 1's case statement let the entrypoint pass through. We use
 // that line as the discriminator between allowed and denied paths.

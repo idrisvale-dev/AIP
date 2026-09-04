@@ -1,6 +1,6 @@
 # Reference Attribution and Licensing Notes
 
-ECC v1.8.0 references research and workflow inspiration from:
+AIP v1.8.0 references research and workflow inspiration from:
 
 - `plankton`
 - `ralphinho`
@@ -11,6 +11,6 @@ ECC v1.8.0 references research and workflow inspiration from:
 ## Policy
 
 1. No direct code copying from unlicensed or incompatible sources.
-2. ECC implementations are re-authored for this repository’s architecture and licensing model.
+2. AIP implementations are re-authored for this repository’s architecture and licensing model.
 3. Referenced material is used for ideas, patterns, and conceptual framing only unless licensing explicitly permits reuse.
 4. Any future direct reuse requires explicit license verification and source attribution in-file and in release notes.

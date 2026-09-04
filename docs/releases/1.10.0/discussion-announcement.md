@@ -1,6 +1,6 @@
-# ECC v1.10.0 is live
+# AIP v1.10.0 is live
 
-ECC just crossed **140K stars**, and the public release surface had drifted too far from the actual repo.
+AIP just crossed **140K stars**, and the public release surface had drifted too far from the actual repo.
 
 So v1.10.0 is a hard sync release:
 
@@ -24,7 +24,7 @@ This release also folds in the operator/media lane that has been growing around 
 
 And on the 2.0 side:
 
-ECC 2.0 is now **real as an alpha control-plane surface** in-tree under `ecc2/`.
+AIP 2.0 is now **real as an alpha control-plane surface** in-tree under `aip2/`.
 
 It builds today and exposes:
 
@@ -36,14 +36,14 @@ It builds today and exposes:
 - `resume`
 - `daemon`
 
-That does **not** mean the full ECC 2.0 roadmap is done.
+That does **not** mean the full AIP 2.0 roadmap is done.
 
 It means the control-plane alpha is here, usable, and moving out of the “just a vision” category.
 
 The shortest honest framing right now:
 
-- ECC 1.x is the battle-tested harness/workflow layer shipping broadly today
-- ECC 2.0 is the alpha control-plane growing on top of it
+- AIP 1.x is the battle-tested harness/workflow layer shipping broadly today
+- AIP 2.0 is the alpha control-plane growing on top of it
 
 If you have been waiting for:
 

@@ -1,7 +1,7 @@
 ---
 name: x-api
 description: ツイートの投稿、スレッド、タイムラインの読み取り、検索、分析のためのX/Twitter API統合。OAuth認証パターン、レートリミット、プラットフォームネイティブなコンテンツ投稿をカバーする。ユーザーがプログラムでXと対話したい場合に使用する。
-origin: ECC
+origin: AIP
 ---
 
 # X API

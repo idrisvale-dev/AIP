@@ -10,7 +10,7 @@ function usage() {
   console.log([
     'Usage: node scripts/observability-readiness.js [--format <text|json>] [--root <dir>]',
     '',
-    'Deterministic ECC 2.0 observability readiness gate.',
+    'Deterministic AIP 2.0 observability readiness gate.',
     '',
     'Options:',
     '  --format <text|json>  Output format (default: text)',
@@ -119,13 +119,13 @@ function buildChecks(rootDir) {
   const sessionInspect = readText(rootDir, 'scripts/session-inspect.js');
   const harnessAudit = readText(rootDir, 'scripts/harness-audit.js');
   const activityTracker = readText(rootDir, 'scripts/hooks/session-activity-tracker.js');
-  const observabilityRust = readText(rootDir, 'ecc2/src/observability/mod.rs');
-  const sessionStoreRust = readText(rootDir, 'ecc2/src/session/store.rs');
-  const sessionManagerRust = readText(rootDir, 'ecc2/src/session/manager.rs');
+  const observabilityRust = readText(rootDir, 'aip2/src/observability/mod.rs');
+  const sessionStoreRust = readText(rootDir, 'aip2/src/session/store.rs');
+  const sessionManagerRust = readText(rootDir, 'aip2/src/session/manager.rs');
   const readinessDoc = readText(rootDir, 'docs/architecture/observability-readiness.md');
   const hudStatusContract = readText(rootDir, 'docs/architecture/hud-status-session-control.md');
   const progressSyncContract = readText(rootDir, 'docs/architecture/progress-sync-contract.md');
-  const gaRoadmap = readText(rootDir, 'docs/ECC-2.0-GA-ROADMAP.md');
+  const gaRoadmap = readText(rootDir, 'docs/AIP-2.0-GA-ROADMAP.md');
   const workItems = readText(rootDir, 'scripts/work-items.js');
   const publicationReadiness = readText(rootDir, 'docs/releases/2.0.0-rc.1/publication-readiness.md');
   const postHardeningEvidence = readText(rootDir, 'docs/releases/2.0.0-rc.1/publication-evidence-2026-05-13-post-hardening.md');
@@ -133,7 +133,7 @@ function buildChecks(rootDir) {
   const workflowSecurityValidator = readText(rootDir, 'scripts/ci/validate-workflow-security.js');
   const workflowSecurityValidatorTests = readText(rootDir, 'tests/ci/validate-workflow-security.test.js');
   const publishSurfaceTest = readText(rootDir, 'tests/scripts/npm-publish-surface.test.js');
-  const releaseSurfaceTest = readText(rootDir, 'tests/docs/ecc2-release-surface.test.js');
+  const releaseSurfaceTest = readText(rootDir, 'tests/docs/aip2-release-surface.test.js');
   const hudStatusFixture = safeParseJson(readText(rootDir, 'examples/hud-status-contract.json')) || {};
   const quickstart = readText(rootDir, 'docs/releases/2.0.0-rc.1/quickstart.md');
   const releaseNotes = readText(rootDir, 'docs/releases/2.0.0-rc.1/release-notes.md');
@@ -178,7 +178,7 @@ function buildChecks(rootDir) {
           'GitHub',
           'handoff'
         ])
-        && hudStatusFixture.schema_version === 'ecc.hud-status.v1'
+        && hudStatusFixture.schema_version === 'aip.hud-status.v1'
         && hasObjectKeys(hudStatusFixture, [
           'context',
           'toolCalls',
@@ -226,16 +226,16 @@ function buildChecks(rootDir) {
       fix: 'Restore hook-side tool activity recording to metrics/tool-usage.jsonl.'
     },
     {
-      id: 'ecc2-tool-risk-ledger',
+      id: 'aip2-tool-risk-ledger',
       category: 'Tool Activity',
       points: 3,
-      path: 'ecc2/src/observability/mod.rs',
-      description: 'ECC2 records tool calls with risk scoring and paginated queries',
-      pass: fileExists(rootDir, 'ecc2/src/observability/mod.rs')
+      path: 'aip2/src/observability/mod.rs',
+      description: 'AIP2 records tool calls with risk scoring and paginated queries',
+      pass: fileExists(rootDir, 'aip2/src/observability/mod.rs')
         && includesAll(observabilityRust, ['ToolCallEvent', 'RiskAssessment', 'ToolLogger'])
         && includesAll(sessionStoreRust, ['insert_tool_log', 'query_tool_logs'])
         && includesAll(sessionManagerRust, ['sync_tool_activity_metrics', 'tool-usage.jsonl']),
-      fix: 'Restore ECC2 tool logging, risk scoring, store queries, and metrics sync.'
+      fix: 'Restore AIP2 tool logging, risk scoring, store queries, and metrics sync.'
     },
     {
       id: 'release-observability-onramp',
@@ -278,7 +278,7 @@ function buildChecks(rootDir) {
           'github-pr',
           'github-issue',
           'sourceClosedAt',
-          'ecc-work-items-sync-github'
+          'aip-work-items-sync-github'
         ]),
       fix: 'Add the progress sync contract, link it from the GA roadmap, and preserve work-items GitHub sync.'
     },
@@ -296,7 +296,7 @@ function buildChecks(rootDir) {
         && fileExists(rootDir, 'tests/ci/scan-supply-chain-iocs.test.js')
         && fileExists(rootDir, 'tests/ci/validate-workflow-security.test.js')
         && fileExists(rootDir, 'tests/scripts/npm-publish-surface.test.js')
-        && fileExists(rootDir, 'tests/docs/ecc2-release-surface.test.js')
+        && fileExists(rootDir, 'tests/docs/aip2-release-surface.test.js')
         && includesAll(publicationReadiness, [
           'Publication Gates',
           'Required Command Evidence',
@@ -381,7 +381,7 @@ function buildReport(rootDir) {
   const failingChecks = checks.filter(check => !check.pass);
 
   return {
-    schema_version: 'ecc.observability-readiness.v1',
+    schema_version: 'aip.observability-readiness.v1',
     rubric_version: RUBRIC_VERSION,
     deterministic: true,
     root_dir: fs.realpathSync(rootDir),

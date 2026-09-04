@@ -1,7 +1,7 @@
 ---
 name: quarkus-patterns
 description: Patrones de arquitectura Quarkus 3.x LTS con Camel para mensajería, diseño de API RESTful, servicios CDI, acceso a datos con Panache y procesamiento asíncrono.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Desarrollo Quarkus

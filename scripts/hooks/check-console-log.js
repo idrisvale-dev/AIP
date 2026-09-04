@@ -42,7 +42,7 @@ process.stdin.on('data', chunk => {
 });
 
 /**
- * Echo stdin back (ECC pass-through convention), then exit once the pipe has
+ * Echo stdin back (AIP pass-through convention), then exit once the pipe has
  * flushed. Truncated stdin is never echoed: a JSON document cut mid-stream is
  * reported by the harness as a Stop hook JSON validation failure (#2090).
  */

@@ -31,13 +31,13 @@ AgentShield がインストールされている必要があります。確認�
 
 ```bash
 # インストール済みか確認
-npx ecc-agentshield --version
+npx aip-agentshield --version
 
 # グローバルにインストール（推奨）
-npm install -g ecc-agentshield
+npm install -g aip-agentshield
 
 # または npx 経由で直接実行（インストール不要）
-npx ecc-agentshield scan .
+npx aip-agentshield scan .
 ```
 
 ## 使用方法
@@ -48,29 +48,29 @@ npx ecc-agentshield scan .
 
 ```bash
 # 現在のプロジェクトをスキャン
-npx ecc-agentshield scan
+npx aip-agentshield scan
 
 # 特定のパスをスキャン
-npx ecc-agentshield scan --path /path/to/.claude
+npx aip-agentshield scan --path /path/to/.claude
 
 # 最小深刻度フィルタでスキャン
-npx ecc-agentshield scan --min-severity medium
+npx aip-agentshield scan --min-severity medium
 ```
 
 ### 出力フォーマット
 
 ```bash
 # ターミナル出力（デフォルト） — グレード付きのカラーレポート
-npx ecc-agentshield scan
+npx aip-agentshield scan
 
 # JSON — CI/CD 統合用
-npx ecc-agentshield scan --format json
+npx aip-agentshield scan --format json
 
 # Markdown — ドキュメント用
-npx ecc-agentshield scan --format markdown
+npx aip-agentshield scan --format markdown
 
 # HTML — 自己完結型のダークテーマレポート
-npx ecc-agentshield scan --format html > security-report.html
+npx aip-agentshield scan --format html > security-report.html
 ```
 
 ### 自動修正
@@ -78,7 +78,7 @@ npx ecc-agentshield scan --format html > security-report.html
 安全な修正を自動的に適用します（自動修正可能とマークされた修正のみ）：
 
 ```bash
-npx ecc-agentshield scan --fix
+npx aip-agentshield scan --fix
 ```
 
 これにより以下が実行されます：
@@ -93,7 +93,7 @@ npx ecc-agentshield scan --fix
 ```bash
 # ANTHROPIC_API_KEY が必要
 export ANTHROPIC_API_KEY=your-key
-npx ecc-agentshield scan --opus --stream
+npx aip-agentshield scan --opus --stream
 ```
 
 これにより以下が実行されます：
@@ -106,7 +106,7 @@ npx ecc-agentshield scan --opus --stream
 新しい安全な `.claude/` 設定をゼロから構築します：
 
 ```bash
-npx ecc-agentshield init
+npx aip-agentshield init
 ```
 
 作成されるもの：
@@ -161,4 +161,4 @@ CI パイプラインに追加します：
 ## リンク
 
 - **GitHub**: [github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield)
-- **npm**: [npmjs.com/package/ecc-agentshield](https://www.npmjs.com/package/ecc-agentshield)
+- **npm**: [npmjs.com/package/aip-agentshield](https://www.npmjs.com/package/aip-agentshield)

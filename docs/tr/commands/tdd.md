@@ -319,9 +319,9 @@ RED aşamasını asla atlamayın. Testlerden önce asla kod yazmayın.
 
 ## İlgili Agent'lar
 
-Bu komut, ECC tarafından sağlanan `tdd-guide` agent'ını çağırır.
+Bu komut, AIP tarafından sağlanan `tdd-guide` agent'ını çağırır.
 
-İlgili `tdd-workflow` skill'i de ECC ile birlikte gelir.
+İlgili `tdd-workflow` skill'i de AIP ile birlikte gelir.
 
 Manuel kurulumlar için, kaynak dosyalar şurada bulunur:
 - `agents/tdd-guide.md`

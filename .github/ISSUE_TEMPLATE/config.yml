@@ -1,6 +1,6 @@
 blank_issues_enabled: true
 contact_links:
-  - name: ECC questions and setup help
+  - name: AIP questions and setup help
     url: https://github.com/reborncursed/AIP/discussions/categories/q-a
     about: Ask a public question or get help from the community.
   - name: Private security report

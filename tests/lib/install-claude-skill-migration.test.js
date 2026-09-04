@@ -41,15 +41,15 @@ function createFixture(options = {}) {
     ? path.join(homeDir, '.claude')
     : path.join(projectRoot, target === 'cursor' ? '.cursor' : '.claude');
   const installStatePath = target === 'cursor'
-    ? path.join(targetRoot, 'ecc-install-state.json')
-    : path.join(targetRoot, 'ecc', 'install-state.json');
+    ? path.join(targetRoot, 'aip-install-state.json')
+    : path.join(targetRoot, 'aip', 'install-state.json');
   const adapterId = target === 'claude'
     ? 'claude-home'
     : target === 'cursor' ? 'cursor-project' : 'claude-project';
   const adapterKind = target === 'claude' ? 'home' : 'project';
   const skillFiles = options.skillFiles || {
-    'SKILL.md': '# Current ECC skill\n',
-    'references/guide.md': '# Current ECC guide\n',
+    'SKILL.md': '# Current AIP skill\n',
+    'references/guide.md': '# Current AIP guide\n',
   };
 
   for (const [relativePath, content] of Object.entries(skillFiles)) {
@@ -65,7 +65,7 @@ function createFixture(options = {}) {
     path.join(targetRoot, 'skills', 'demo-skill', relativePath)
   ));
   const statePreview = {
-    schemaVersion: 'ecc.install.v1',
+    schemaVersion: 'aip.install.v1',
     installedAt: new Date().toISOString(),
     target: {
       id: adapterId,
@@ -123,7 +123,7 @@ function createFixture(options = {}) {
 
 function legacyDestinationPath(targetRoot, operation) {
   const sourceParts = operation.sourceRelativePath.split(path.sep);
-  return path.join(targetRoot, 'skills', 'ecc', ...sourceParts.slice(1));
+  return path.join(targetRoot, 'skills', 'aip', ...sourceParts.slice(1));
 }
 
 function seedLegacyInstall(fixture, options = {}) {
@@ -185,7 +185,7 @@ function runTests() {
         const untrackedPath = path.join(
           fixture.targetRoot,
           'skills',
-          'ecc',
+          'aip',
           'demo-skill',
           'user-notes.md'
         );
@@ -209,7 +209,7 @@ function runTests() {
           operation.destinationPath === fixture.operations[0].destinationPath
         )));
         assert.ok(!state.operations.some(operation => (
-          operation.destinationPath.includes(path.join('skills', 'ecc', 'demo-skill'))
+          operation.destinationPath.includes(path.join('skills', 'aip', 'demo-skill'))
         )));
 
         const rerun = applyInstallPlan(fixture.plan);
@@ -235,7 +235,7 @@ function runTests() {
       const otherLegacyPath = path.join(
         fixture.targetRoot,
         'skills',
-        'ecc',
+        'aip',
         'other-skill',
         'SKILL.md'
       );
@@ -299,7 +299,7 @@ function runTests() {
           === fs.readFileSync(operation.sourcePath, 'utf8')
       )));
       assert.ok(legacyOperations.every(operation => !fs.existsSync(operation.destinationPath)));
-      assert.ok(!fs.existsSync(path.join(fixture.targetRoot, 'skills', 'ecc')));
+      assert.ok(!fs.existsSync(path.join(fixture.targetRoot, 'skills', 'aip')));
 
       const uninstall = runUninstall(fixture);
       assert.strictEqual(uninstall.summary.errorCount, 0);
@@ -371,7 +371,7 @@ function runTests() {
   if (test('updates recorded flat files but preserves conflicting unrecorded files', () => {
     const initial = createFixture({
       skillFiles: {
-        'SKILL.md': '# Initial ECC skill\n',
+        'SKILL.md': '# Initial AIP skill\n',
       },
     });
     let expanded;
@@ -379,8 +379,8 @@ function runTests() {
       applyInstallPlan(initial.plan);
       expanded = createFixture({
         skillFiles: {
-          'SKILL.md': '# Updated ECC skill\n',
-          'references/guide.md': '# ECC guide\n',
+          'SKILL.md': '# Updated AIP skill\n',
+          'references/guide.md': '# AIP guide\n',
           'references/new.md': '# New managed file\n',
         },
       });
@@ -421,7 +421,7 @@ function runTests() {
 
       assert.strictEqual(
         fs.readFileSync(expanded.operations[0].destinationPath, 'utf8'),
-        '# Updated ECC skill\n'
+        '# Updated AIP skill\n'
       );
       assert.strictEqual(fs.readFileSync(userGuidePath, 'utf8'), '# User guide\n');
       assert.strictEqual(
@@ -463,7 +463,7 @@ function runTests() {
           'SKILL.md'
         );
         fs.mkdirSync(path.dirname(extraSourcePath), { recursive: true });
-        fs.writeFileSync(extraSourcePath, '# Extra ECC skill\n');
+        fs.writeFileSync(extraSourcePath, '# Extra AIP skill\n');
         const extraOperation = createOperation(
           'skill-extra',
           fixture.sourceRoot,
@@ -631,7 +631,7 @@ function runTests() {
       const ruleDestinationPath = path.join(
         fixture.targetRoot,
         'rules',
-        'ecc',
+        'aip',
         'common',
         'coding.md'
       );
@@ -692,7 +692,7 @@ function runTests() {
       const ruleDestinationPath = path.join(
         fixture.targetRoot,
         'rules',
-        'ecc',
+        'aip',
         'common',
         'coding.md'
       );
@@ -767,7 +767,7 @@ function runTests() {
       assert.ok(fixture.operations.every(operation => !fs.existsSync(operation.destinationPath)));
       const state = readInstallState(fixture.installStatePath);
       assert.ok(state.operations.every(operation => (
-        operation.destinationPath.includes(path.join('skills', 'ecc', 'demo-skill'))
+        operation.destinationPath.includes(path.join('skills', 'aip', 'demo-skill'))
       )));
 
       const retry = applyInstallPlan(fixture.plan);
@@ -811,7 +811,7 @@ function runTests() {
         ))
       )));
       assert.ok(bridgeState.operations.some(operation => (
-        operation.destinationPath.includes(path.join('skills', 'ecc', 'demo-skill'))
+        operation.destinationPath.includes(path.join('skills', 'aip', 'demo-skill'))
       )));
 
       const uninstall = runUninstall(fixture);
@@ -855,7 +855,7 @@ function runTests() {
 
     const fixture = createFixture({
       skillFiles: {
-        'SKILL.md': '# Current ECC skill\n',
+        'SKILL.md': '# Current AIP skill\n',
       },
     });
     const destinationDirectory = path.dirname(fixture.operations[0].destinationPath);
@@ -895,7 +895,7 @@ function runTests() {
 
     const fixture = createFixture({
       skillFiles: {
-        'SKILL.md': '# Current ECC skill\n',
+        'SKILL.md': '# Current AIP skill\n',
       },
     });
     try {

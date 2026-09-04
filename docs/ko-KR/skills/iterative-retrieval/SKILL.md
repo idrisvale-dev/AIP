@@ -1,7 +1,7 @@
 ---
 name: iterative-retrieval
 description: 서브에이전트 컨텍스트 문제를 해결하기 위한 점진적 컨텍스트 검색 개선 패턴
-origin: ECC
+origin: AIP
 ---
 
 # 반복적 검색 패턴

@@ -1,7 +1,7 @@
 ---
 name: e2e-testing
 description: Patrones de pruebas E2E con Playwright, Page Object Model, configuración, integración CI/CD, gestión de artefactos y estrategias para pruebas inestables.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Pruebas E2E

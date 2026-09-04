@@ -5,7 +5,7 @@ description: >
   and cost-aware model routing. Use when AI agents perform most implementation
   work and humans enforce quality and risk controls.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Agentic Engineering

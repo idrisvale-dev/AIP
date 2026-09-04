@@ -1,7 +1,7 @@
 ---
 name: ai-regression-testing
 description: AI 支援開発のためのリグレッションテスト戦略。データベース依存なしのサンドボックスモード API テスト、自動化されたバグチェックワークフロー、同じモデルがコードを書いてレビューする AI のブラインドスポットを捕捉するパターン。
-origin: ECC
+origin: AIP
 ---
 
 # AI リグレッションテスト

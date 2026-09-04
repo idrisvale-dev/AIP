@@ -2,7 +2,7 @@
 name: blender-motion-state-inspection
 description: Use this skill when inspecting Blender characters, rigs, poses, animation retargeting, ground contact, facing direction, or model-vs-motion alignment where screenshots alone are not enough.
 metadata:
-  origin: ECC
+  origin: AIP
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

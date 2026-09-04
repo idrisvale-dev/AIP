@@ -24,7 +24,7 @@
 ## Skill Format
 - Skills live in `skills/<name>/SKILL.md`.
 - Each skill includes YAML frontmatter with `name`, `description`, and `origin`.
-- Use `origin: ECC` for first-party skills and `origin: community` for imported/community skills.
+- Use `origin: AIP` for first-party skills and `origin: community` for imported/community skills.
 - Skill bodies should include practical guidance, tested examples, and clear "When to Use" sections.
 
 ## Hook Format

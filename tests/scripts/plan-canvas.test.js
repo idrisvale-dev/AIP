@@ -139,7 +139,7 @@ async function main() {
 
   if (await test('GET /health identifies the app and version', async () => {
     const res = await request(port, 'GET', '/health');
-    assert.deepStrictEqual(jsonBody(res), { ok: true, app: 'ecc-plan-canvas', version: '9.9.9-test' });
+    assert.deepStrictEqual(jsonBody(res), { ok: true, app: 'aip-plan-canvas', version: '9.9.9-test' });
   })) passed++; else failed++;
 
   if (await test('requests with a non-loopback Host header are rejected', async () => {
@@ -166,7 +166,7 @@ async function main() {
     assert.strictEqual(res.statusCode, 404);
   })) passed++; else failed++;
 
-  if (await test('GET /canvas/:key serves the ECC chrome with CSP', async () => {
+  if (await test('GET /canvas/:key serves the AIP chrome with CSP', async () => {
     const res = await request(port, 'GET', `/canvas/${key}`);
     assert.strictEqual(res.statusCode, 200);
     assert.ok(res.headers['content-security-policy'].includes("default-src 'self'"));
@@ -176,7 +176,7 @@ async function main() {
     assert.ok(res.body.includes('sandbox="allow-scripts allow-forms allow-popups"'));
   })) passed++; else failed++;
 
-  if (await test('markdown artifacts render in the ECC plan template with the SDK', async () => {
+  if (await test('markdown artifacts render in the AIP plan template with the SDK', async () => {
     const res = await request(port, 'GET', `/artifact/${key}/`);
     assert.strictEqual(res.statusCode, 200);
     assert.ok(res.body.includes('<h1 id="plan-demo">'));
@@ -446,7 +446,7 @@ async function main() {
     assert.strictEqual(res.statusCode, 409);
   })) passed++; else failed++;
 
-  if (await test('GET / lists sessions in the ECC shell', async () => {
+  if (await test('GET / lists sessions in the AIP shell', async () => {
     const res = await request(port, 'GET', '/');
     assert.ok(res.body.includes('Plan Canvas sessions'));
     assert.ok(res.body.includes('demo.plan.md'));

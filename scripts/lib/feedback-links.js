@@ -8,7 +8,7 @@ const FEEDBACK_ROUTES = Object.freeze({
 
 function getFeedbackPayload() {
   return {
-    schemaVersion: 'ecc.feedback.v1',
+    schemaVersion: 'aip.feedback.v1',
     privacy: 'public-github',
     diagnosticsUploaded: false,
     routes: { ...FEEDBACK_ROUTES },
@@ -19,7 +19,7 @@ function problemReportLines() {
   return [
     'Report this problem (public GitHub issue):',
     FEEDBACK_ROUTES.problem,
-    'ECC does not upload diagnostics. Redact paths, repository names, prompts, and secrets before sharing output.',
+    'AIP does not upload diagnostics. Redact paths, repository names, prompts, and secrets before sharing output.',
   ];
 }
 
@@ -27,7 +27,7 @@ function exitFeedbackLines() {
   return [
     'Optional 20-second exit feedback (public GitHub issue):',
     FEEDBACK_ROUTES.feedback,
-    'ECC does not upload diagnostics or block uninstall.',
+    'AIP does not upload diagnostics or block uninstall.',
   ];
 }
 

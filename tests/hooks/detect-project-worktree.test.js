@@ -36,7 +36,7 @@ function test(name, fn) {
 }
 
 function createTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-worktree-test-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-worktree-test-'));
 }
 
 function cleanupDir(dir) {

@@ -1,7 +1,7 @@
 ---
 name: jpa-patterns
 description: Patrones JPA/Hibernate para diseño de entidades, relaciones, optimización de consultas, transacciones, auditoría, indexación, paginación y pooling en Spring Boot.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones JPA/Hibernate

@@ -26,7 +26,7 @@ function read(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 
-console.log('\n=== Testing Codex ECC navigation map docs ===\n');
+console.log('\n=== Testing Codex AIP navigation map docs ===\n');
 
 test('Codex navigation map exists and identifies canonical surfaces', () => {
   const source = read(guidePath);

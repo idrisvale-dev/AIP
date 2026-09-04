@@ -69,7 +69,7 @@ async function run() {
       refresh: false,
     });
 
-    assert.strictEqual(report.schema_version, 'ecc.supply-chain-advisory-sources.v1');
+    assert.strictEqual(report.schema_version, 'aip.supply-chain-advisory-sources.v1');
     assert.strictEqual(report.ready, true);
     assert.strictEqual(report.refresh.enabled, false);
     assert.ok(report.sources.length >= 8);
@@ -126,7 +126,7 @@ async function run() {
   })) passed++; else failed++;
 
   if (await test('CLI JSON can be written as a scheduled workflow artifact', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-advisory-sources-'));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-advisory-sources-'));
     const outputPath = path.join(tempDir, 'advisory-sources.json');
     try {
       const result = spawnSync('node', [
@@ -143,7 +143,7 @@ async function run() {
 
       assert.strictEqual(result.status, 0, result.stderr);
       const parsed = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
-      assert.strictEqual(parsed.schema_version, 'ecc.supply-chain-advisory-sources.v1');
+      assert.strictEqual(parsed.schema_version, 'aip.supply-chain-advisory-sources.v1');
       assert.strictEqual(parsed.ready, true);
       assert.ok(parsed.linear.status.evidence.length >= 3);
     } finally {

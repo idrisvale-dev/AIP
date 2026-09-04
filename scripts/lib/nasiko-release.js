@@ -11,7 +11,7 @@ const REGISTRY_ORIGIN = 'https://registry.nasiko.dev';
 const REPOSITORY = 'nasiko/nasiko';
 const SOURCE_URL = 'https://github.com/Nasiko-Labs/nasiko';
 const LICENSE = 'Apache-2.0';
-const METADATA_FILENAME = '.ecc-nasiko-install.json';
+const METADATA_FILENAME = '.aip-nasiko-install.json';
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 const MAX_ARCHIVE_BYTES = 100 * 1024 * 1024;
 const MAX_BINARY_BYTES = 64 * 1024 * 1024;
@@ -338,7 +338,7 @@ function createLifecycleLock(lockPath, fileSystem) {
 }
 
 function acquireLifecycleLock(installDirectory, fileSystem = fs, options = {}) {
-  const lockPath = path.join(installDirectory, '.ecc-nasiko-lifecycle.lock');
+  const lockPath = path.join(installDirectory, '.aip-nasiko-lifecycle.lock');
   try {
     return createLifecycleLock(lockPath, fileSystem);
   } catch (error) {

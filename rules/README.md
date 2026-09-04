@@ -63,30 +63,30 @@ rules/
 > common rules, and breaks the relative `../common/` references used by
 > language-specific files.
 >
-> Use the ECC-owned namespace below for user-level Claude installs. Flat
-> package-level destinations can collide with non-ECC rule packs and do not
+> Use the AIP-owned namespace below for user-level Claude installs. Flat
+> package-level destinations can collide with non-AIP rule packs and do not
 > match the main README guidance.
 
 ```bash
-# Create the ECC rule namespace once.
-mkdir -p ~/.claude/rules/ecc
+# Create the AIP rule namespace once.
+mkdir -p ~/.claude/rules/aip
 
 # Install common rules (required for all projects)
-cp -r rules/common ~/.claude/rules/ecc/
+cp -r rules/common ~/.claude/rules/aip/
 
 # Install language-specific rules based on your project's tech stack
-cp -r rules/typescript ~/.claude/rules/ecc/
-cp -r rules/angular ~/.claude/rules/ecc/
-cp -r rules/vue ~/.claude/rules/ecc/
-cp -r rules/nuxt ~/.claude/rules/ecc/
-cp -r rules/python ~/.claude/rules/ecc/
-cp -r rules/golang ~/.claude/rules/ecc/
-cp -r rules/web ~/.claude/rules/ecc/
-cp -r rules/react-native ~/.claude/rules/ecc/
-cp -r rules/swift ~/.claude/rules/ecc/
-cp -r rules/php ~/.claude/rules/ecc/
-cp -r rules/ruby ~/.claude/rules/ecc/
-cp -r rules/arkts ~/.claude/rules/ecc/
+cp -r rules/typescript ~/.claude/rules/aip/
+cp -r rules/angular ~/.claude/rules/aip/
+cp -r rules/vue ~/.claude/rules/aip/
+cp -r rules/nuxt ~/.claude/rules/aip/
+cp -r rules/python ~/.claude/rules/aip/
+cp -r rules/golang ~/.claude/rules/aip/
+cp -r rules/web ~/.claude/rules/aip/
+cp -r rules/react-native ~/.claude/rules/aip/
+cp -r rules/swift ~/.claude/rules/aip/
+cp -r rules/php ~/.claude/rules/aip/
+cp -r rules/ruby ~/.claude/rules/aip/
+cp -r rules/arkts ~/.claude/rules/aip/
 
 # Attention ! ! ! Configure according to your actual project requirements; the configuration here is for reference only.
 ```
@@ -94,9 +94,9 @@ cp -r rules/arkts ~/.claude/rules/ecc/
 For project-local rules, use the same namespace under the project root:
 
 ```bash
-mkdir -p .claude/rules/ecc
-cp -r rules/common .claude/rules/ecc/
-cp -r rules/typescript .claude/rules/ecc/
+mkdir -p .claude/rules/aip
+cp -r rules/common .claude/rules/aip/
+cp -r rules/typescript .claude/rules/aip/
 ```
 
 ## Rules vs Skills

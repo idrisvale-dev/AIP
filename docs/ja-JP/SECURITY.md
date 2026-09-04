@@ -10,7 +10,7 @@
 
 ## 脆弱性の報告
 
-ECCでセキュリティ脆弱性を発見した場合は、責任ある方法で報告してください。
+AIPでセキュリティ脆弱性を発見した場合は、責任ある方法で報告してください。
 
 **セキュリティ脆弱性についてGitHubの公開Issueを作成しないでください。**
 
@@ -39,10 +39,10 @@ ECCでセキュリティ脆弱性を発見した場合は、責任ある方法�
 
 このポリシーの対象：
 
-- ECCプラグインおよびこのリポジトリ内のすべてのスクリプト
+- AIPプラグインおよびこのリポジトリ内のすべてのスクリプト
 - あなたのマシンで実行されるフックスクリプト
 - インストール/アンインストール/修復ライフサイクルスクリプト
-- ECCに同梱されるMCP設定
+- AIPに同梱されるMCP設定
 - AgentShieldセキュリティスキャナー（[github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield)）
 
 ## 運用ガイダンス
@@ -77,7 +77,7 @@ PIDを期待されるdevfleetバイナリと比較してください。そのポ
 
 ## トリアージ：疑わしい `<system-reminder>` ブロック
 
-ECCはClaude Code内で実行され、モデルの入力に毎ターン**エフェメラルなクライアントサイドのシステムリマインダー**を注入します（TodoWriteのナッジ、日付変更通知、ファイル変更通知など）。これらのブロックは：
+AIPはClaude Code内で実行され、モデルの入力に毎ターン**エフェメラルなクライアントサイドのシステムリマインダー**を注入します（TodoWriteのナッジ、日付変更通知、ファイル変更通知など）。これらのブロックは：
 
 - 通常、*「該当しない場合は無視してください」*や*「このリマインダーをユーザーに言及しないでください」*のような表現で終わります。この文言はAnthropicのプロンプトであり、悪意のあるものではありません。
 - CLIによってターンごとに追加され、`~/.claude/projects/<slug>/<sessionId>.jsonl` のセッション記録には**永続化されません**。
@@ -94,7 +94,7 @@ ECCはClaude Code内で実行され、モデルの入力に毎ターン**エフ�
 
 ## セキュリティリソース
 
-- **AgentShield**: エージェント設定の脆弱性をスキャン — `npx ecc-agentshield scan`
+- **AgentShield**: エージェント設定の脆弱性をスキャン — `npx aip-agentshield scan`
 - **セキュリティガイド**: [The Shorthand Guide to Everything Agentic Security](./the-security-guide.md)
 - **サプライチェーンインシデント対応**: [npm/GitHub Actions package-registry playbook](../security/supply-chain-incident-response.md)
 - **OWASP MCP Top 10**: [owasp.org/www-project-mcp-top-10](https://owasp.org/www-project-mcp-top-10/)

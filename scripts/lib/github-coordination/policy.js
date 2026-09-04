@@ -5,8 +5,8 @@ const path = require('path');
 
 const DEFAULT_CONFIG_FILE = 'github-native-coordination.json';
 const DEFAULT_CONFIG_PATH = path.join(__dirname, '..', '..', '..', 'config', DEFAULT_CONFIG_FILE);
-const DEFAULT_SECTION_MARKER = 'ecc-coordination';
-const DEFAULT_SCHEMA_VERSION = 'ecc.github.coordination.v1';
+const DEFAULT_SECTION_MARKER = 'aip-coordination';
+const DEFAULT_SCHEMA_VERSION = 'aip.github.coordination.v1';
 const DEFAULT_LABELS = Object.freeze({
   epic: 'epic',
   available: 'coordination:available',

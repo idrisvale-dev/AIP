@@ -1,7 +1,7 @@
 ---
 name: defi-amm-security
 description: Solidity AMM 合约、流动性池和交换流程的安全检查清单。涵盖重入、CEI 排序、捐赠或通胀攻击、预言机操纵、滑点、管理员控制和整数数学。
-origin: ECC direct-port adaptation
+origin: AIP direct-port adaptation
 version: "1.0.0"
 ---
 

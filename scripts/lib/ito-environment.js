@@ -40,9 +40,9 @@ const ITO_EVAL_ENVIRONMENT_KEYS = Object.freeze([
   "SSH_AGENT_PID",
 ]);
 
-const ECC_ITO_CONTROL_KEYS = Object.freeze([
-  "ECC_DRY_RUN",
-  "ECC_ITO_CLI_EXECUTABLE",
+const AIP_ITO_CONTROL_KEYS = Object.freeze([
+  "AIP_DRY_RUN",
+  "AIP_ITO_CLI_EXECUTABLE",
   "NODE_ENV",
 ]);
 const ITO_RUNTIME_COMMANDS = new Set(["login", "logout", "auth", "find", "status"]);
@@ -76,7 +76,7 @@ function createSafeItoEnvironment(source = process.env, options = {}) {
   }
 
   if (options.includeControls) {
-    for (const key of ECC_ITO_CONTROL_KEYS) {
+    for (const key of AIP_ITO_CONTROL_KEYS) {
       copyDefined(source, safe, key);
     }
   }
@@ -103,7 +103,7 @@ function createSafeItoInvocationEnvironment(
 }
 
 module.exports = Object.freeze({
-  ECC_ITO_CONTROL_KEYS,
+  AIP_ITO_CONTROL_KEYS,
   ITO_EVAL_ENVIRONMENT_KEYS,
   ITO_RUNTIME_ENVIRONMENT_KEYS,
   SYSTEM_ENVIRONMENT_KEYS,

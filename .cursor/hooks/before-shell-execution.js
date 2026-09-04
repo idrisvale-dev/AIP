@@ -14,8 +14,8 @@ readStdin()
         const devPattern = /\b(npm\s+run\s+dev|pnpm(?:\s+run)?\s+dev|yarn\s+dev|bun\s+run\s+dev)\b/;
         const hasBlockedDev = segments.some(segment => devPattern.test(segment) && !tmuxLauncher.test(segment));
         if (hasBlockedDev) {
-          console.error('[ECC] BLOCKED: Dev server must run in tmux for log access');
-          console.error('[ECC] Use: tmux new-session -d -s dev "npm run dev"');
+          console.error('[AIP] BLOCKED: Dev server must run in tmux for log access');
+          console.error('[AIP] Use: tmux new-session -d -s dev "npm run dev"');
           process.exit(2);
         }
       }
@@ -26,11 +26,11 @@ readStdin()
         !process.env.TMUX &&
         /(npm (install|test)|pnpm (install|test)|yarn (install|test)?|bun (install|test)|cargo build|make\b|docker\b|pytest|vitest|playwright)/.test(cmd)
       ) {
-        console.error('[ECC] Consider running in tmux for session persistence');
+        console.error('[AIP] Consider running in tmux for session persistence');
       }
 
       if (hookEnabled('pre:bash:git-push-reminder', ['strict']) && /\bgit\s+push\b/.test(cmd)) {
-        console.error('[ECC] Review changes before push: git diff origin/main...HEAD');
+        console.error('[AIP] Review changes before push: git diff origin/main...HEAD');
       }
     } catch {
       // noop

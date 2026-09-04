@@ -31,7 +31,7 @@ Do not use generic platform exemplars as source material.
 2. Prefer recent material over old material unless the user says the older writing is more canonical.
 3. Separate "public launch voice" from "private working voice" if the source set clearly splits.
 4. If live X access is available, use `x-api` to pull recent original posts before drafting.
-5. If site copy matters, include the current ECC landing page and repo/plugin framing.
+5. If site copy matters, include the current AIP landing page and repo/plugin framing.
 
 ## What to Extract
 
@@ -51,9 +51,9 @@ Produce a reusable `VOICE PROFILE` block that downstream skills can consume dire
 
 Keep the profile structured and short enough to reuse in session context. The point is not literary criticism. The point is operational reuse.
 
-## ByteCore / ECC Defaults
+## ByteCore / AIP Defaults
 
-If the user wants ByteCore / ECC voice and live sources are thin, start here unless newer source material overrides it:
+If the user wants ByteCore / AIP voice and live sources are thin, start here unless newer source material overrides it:
 
 - direct, compressed, concrete
 - specifics, mechanisms, receipts, and numbers beat adjectives

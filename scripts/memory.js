@@ -43,15 +43,15 @@ const STDIN_RETRY_SIGNAL = new Int32Array(new SharedArrayBuffer(4));
 
 function usage() {
   return `
-ECC Memory Vault
+AIP Memory Vault
 
 Usage:
-  ecc memory init [--scope project|team|user] [--json]
-  ecc memory save --title <text> (--stdin | --body-file <path>) [options]
-  ecc memory handoff --from <harness> --target <harness> --title <text> (--stdin | --body-file <path>) [options]
-  ecc memory search [query] [--scope <scope>] [--target-harness <harness>] [--kind <kind>] [--limit <n>] [--json]
-  ecc memory read <memory-id> [--scope <scope>] [--json]
-  ecc memory doctor [--scope <scope>] [--json]
+  aip memory init [--scope project|team|user] [--json]
+  aip memory save --title <text> (--stdin | --body-file <path>) [options]
+  aip memory handoff --from <harness> --target <harness> --title <text> (--stdin | --body-file <path>) [options]
+  aip memory search [query] [--scope <scope>] [--target-harness <harness>] [--kind <kind>] [--limit <n>] [--json]
+  aip memory read <memory-id> [--scope <scope>] [--json]
+  aip memory doctor [--scope <scope>] [--json]
 
 Recall:
   Default recall scopes: project and team; user scope must be requested explicitly
@@ -59,7 +59,7 @@ Recall:
 
 Write options:
   --scope <scope>            project (default), team, or user
-  --source-harness <name>    Originating harness (default: ECC_MEMORY_HARNESS or unknown)
+  --source-harness <name>    Originating harness (default: AIP_MEMORY_HARNESS or unknown)
   --target <name>            Repeatable target harness; defaults to all
   --kind <kind>              context, decision, fact, handoff, lesson, note,
                              preference, or runbook
@@ -69,7 +69,7 @@ Write options:
   --body-file <path>         Read the body from a regular, non-symlink file
 
 MCP:
-  ecc-memory-mcp             Start the opt-in local stdio MCP server
+  aip-memory-mcp             Start the opt-in local stdio MCP server
 
 Safety:
   Tool-created memories are always unreviewed context, never executable policy.
@@ -305,9 +305,9 @@ function sanitizeTerminalText(value) {
 }
 
 function printInit(result, json) {
-  if (json) return writeJson({ schemaVersion: 'ecc.memory.init.v1', ...result });
+  if (json) return writeJson({ schemaVersion: 'aip.memory.init.v1', ...result });
   process.stdout.write([
-    `Initialized ECC memory scopes: ${sanitizeTerminalText(result.scopes.join(', '))}`,
+    `Initialized AIP memory scopes: ${sanitizeTerminalText(result.scopes.join(', '))}`,
     ...result.scopes.map(scope => (
       `- ${sanitizeTerminalText(scope)}: ${sanitizeTerminalText(result.roots[scope])}`
     )),
@@ -320,7 +320,7 @@ function printWrite(result, json) {
     Object.entries(result.memory).filter(([key]) => key !== 'body')
   );
   const payload = {
-    schemaVersion: 'ecc.memory.write.v1',
+    schemaVersion: 'aip.memory.write.v1',
     memory,
     path: `${memory.scope}:${memory.kind}s/${memory.id}.md`,
   };
@@ -334,7 +334,7 @@ function printWrite(result, json) {
 }
 
 function printSearch(query, result, json) {
-  const payload = { schemaVersion: 'ecc.memory.search.v1', query, ...result };
+  const payload = { schemaVersion: 'aip.memory.search.v1', query, ...result };
   if (json) return writeJson(payload);
   if (result.results.length === 0) {
     process.stdout.write('No matching memories found.\n');
@@ -348,7 +348,7 @@ function printSearch(query, result, json) {
 }
 
 function printRead(result, json) {
-  const payload = { schemaVersion: 'ecc.memory.read.v1', ...result };
+  const payload = { schemaVersion: 'aip.memory.read.v1', ...result };
   if (json) return writeJson(payload);
   process.stdout.write([
     `[${sanitizeTerminalText(result.memory.trust)}] ${sanitizeTerminalText(result.memory.title)}`,
@@ -366,7 +366,7 @@ function printRead(result, json) {
 function printDoctor(report, json) {
   if (json) return writeJson(report);
   process.stdout.write([
-    `ECC memory doctor: ${report.ok ? 'PASS' : 'ISSUES FOUND'}`,
+    `AIP memory doctor: ${report.ok ? 'PASS' : 'ISSUES FOUND'}`,
     `Memories: ${report.memoryCount}`,
     `Invalid files: ${report.invalidFileCount}`,
     `Duplicate IDs: ${report.duplicateIdCount}`,
@@ -379,7 +379,7 @@ function printDoctor(report, json) {
 function saveInput(options, kindOverride = null) {
   const sourceHarness = options.from
     || options.sourceHarness
-    || process.env.ECC_MEMORY_HARNESS
+    || process.env.AIP_MEMORY_HARNESS
     || 'unknown';
   return {
     title: options.title,
@@ -394,7 +394,7 @@ function saveInput(options, kindOverride = null) {
 }
 
 function assertMutationAllowed(command) {
-  if (process.env.ECC_DRY_RUN === '1') {
+  if (process.env.AIP_DRY_RUN === '1') {
     throw new Error(
       `memory ${command} is disabled in dry-run mode; no files were written.`
     );

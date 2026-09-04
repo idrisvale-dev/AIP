@@ -3,7 +3,7 @@
 Status: implemented (`feat/plan-canvas`)
 Inspired by: [lavish-axi](https://github.com/kunchenguid/lavish-axi) by @kunchenguid, the
 idea of a local, annotate-and-chat review loop over agent-generated artifacts. Plan Canvas is
-an original, ECC-native implementation of that idea, not a port.
+an original, AIP-native implementation of that idea, not a port.
 
 ![Plan Canvas reviewing a plan on the left while the agent works in the terminal on the right](assets/plan-canvas-demo.png)
 
@@ -20,7 +20,7 @@ talk to the agent from the page.
 A loopback-only web editor for plan artifacts (and any local HTML artifact):
 
 - The agent runs `node scripts/plan-canvas.js open <artifact>` after writing a plan.
-- The artifact opens in the browser inside ECC-styled chrome (same design tokens as
+- The artifact opens in the browser inside AIP-styled chrome (same design tokens as
   `scripts/dashboard-web.js`): dark-first, `--accent #6885e8`, accent→pink brand gradient,
   light theme toggle.
 - The human reviews visually, clicks elements or selects text to attach numbered annotations,
@@ -33,16 +33,16 @@ A loopback-only web editor for plan artifacts (and any local HTML artifact):
 - The agent replies with `await --reply "..."`, which appears in the canvas chat; edits to the
   artifact file live-reload the page.
 
-## How it fits ECC
+## How it fits AIP
 
 | Piece | Location | Follows |
 |---|---|---|
-| CLI entry | `scripts/plan-canvas.js` (+ npm bin `ecc-plan-canvas`) | `scripts/control-pane.js` |
+| CLI entry | `scripts/plan-canvas.js` (+ npm bin `aip-plan-canvas`) | `scripts/control-pane.js` |
 | Server | `scripts/lib/plan-canvas/server.js` | control-pane loopback server, host-header + Origin allowlist (DNS-rebinding guard) |
 | Editor chrome | `scripts/lib/plan-canvas/ui.js` | `scripts/lib/control-pane/ui.js`, tokens from `scripts/dashboard-web.js` |
 | Markdown plan renderer | `scripts/lib/plan-canvas/markdown.js` | zero new deps; renders the `commands/plan.md` artifact schema (tables, tasks, code fences, Mermaid blocks) |
-| Mermaid diagrams | `scripts/lib/plan-canvas/ui.js` | ` ```mermaid ` blocks render in the browser, themed to ECC; pinned CDN with offline fallback (`ECC_PLAN_CANVAS_MERMAID_URL` for a local mirror) |
-| Session state | `scripts/lib/plan-canvas/sessions.js` | file-path-keyed sessions, state under `~/.claude/plan-canvas/` (`ECC_PLAN_CANVAS_STATE_DIR` override) |
+| Mermaid diagrams | `scripts/lib/plan-canvas/ui.js` | ` ```mermaid ` blocks render in the browser, themed to AIP; pinned CDN with offline fallback (`AIP_PLAN_CANVAS_MERMAID_URL` for a local mirror) |
+| Session state | `scripts/lib/plan-canvas/sessions.js` | file-path-keyed sessions, state under `~/.claude/plan-canvas/` (`AIP_PLAN_CANVAS_STATE_DIR` override) |
 | Skill | `skills/plan-canvas/SKILL.md` | skills-first surface; teaches the open → await → reply loop; defers visual guidance to `frontend-design-direction`, `artifact-design`, `dataviz` |
 | Command shim | `commands/plan-canvas.md` | legacy parity surface, points at the skill |
 | `/plan` pointer | `commands/plan.md` | after writing the artifact, offer canvas review |
@@ -59,15 +59,15 @@ The feature is model- and harness-agnostic by construction: the CLI emits plain 
 skill teaches a shell-plus-stdout loop, so any capable agent drives it identically — the same
 "just a CLI" thesis lavish-axi uses. There is no Claude-only dependency in the core loop; the
 `SessionStart` hook is an additive Claude Code convenience (other harnesses see open sessions
-from a bare `ecc-plan-canvas` invocation).
+from a bare `aip-plan-canvas` invocation).
 
-Surfaces mirror how peer workflow-quality skills ship across ECC's harnesses:
+Surfaces mirror how peer workflow-quality skills ship across AIP's harnesses:
 
 - `skills/plan-canvas/` — canonical (Claude Code and the installer's per-target adapters).
 - `.agents/skills/plan-canvas/` (+ `agents/openai.yaml` interface manifest) — Codex, alongside
   `tdd-workflow`, `e2e-testing`, `verification-loop`.
 - `agent.yaml` skills list — the Codex gitagent manifest.
-- The CLI resolves from any project via the `ecc-plan-canvas` bin (global/plugin install) or
+- The CLI resolves from any project via the `aip-plan-canvas` bin (global/plugin install) or
   `$CLAUDE_PLUGIN_ROOT/scripts/plan-canvas.js`, never a cwd-relative path.
 
 Cursor's checked-in subset is content/marketing skills only, so — matching peers — plan-canvas
@@ -77,15 +77,15 @@ is not added there; the installer still places it for Cursor from the canonical 
 
 Sessions are keyed by canonical artifact path (`sha256(realpath)[:12]`). The CLI talks to a
 detached server (`server.json` in the state dir records pid/port/version; idle self-shutdown
-after 30 min, `ECC_PLAN_CANVAS_IDLE_MS`). Feedback is deliver-and-drain: queued items are
+after 30 min, `AIP_PLAN_CANVAS_IDLE_MS`). Feedback is deliver-and-drain: queued items are
 handed to exactly one `await` call and persisted to disk until then, so nothing is lost if
 the poll is interrupted.
 
-- `GET /health` — `{ok, app: "ecc-plan-canvas", version}` (CLI/server version handshake)
-- `GET /` — session list (ECC chrome)
+- `GET /health` — `{ok, app: "aip-plan-canvas", version}` (CLI/server version handshake)
+- `GET /` — session list (AIP chrome)
 - `POST /api/sessions` `{file, reopen?}` — open/resume; `409 user-ended` unless `reopen`
 - `GET /canvas/<key>` — editor chrome; `GET /artifact/<key>/` — rendered artifact
-  (markdown → ECC plan template, HTML passthrough) with the annotation SDK injected;
+  (markdown → AIP plan template, HTML passthrough) with the annotation SDK injected;
   sibling assets confined to the artifact directory
 - `POST /api/session/<key>/feedback` `{items[], endSession?}` — browser queues
   chat / annotation / verdict items
@@ -100,11 +100,11 @@ the poll is interrupted.
 ## Deliberate differences from lavish-axi
 
 - Plan-first: renders `.plan.md` / `.md` natively (including Mermaid); lavish is HTML-only.
-- Verdict actions wired to ECC's plan-confirmation workflow.
-- ECC design tokens and chrome; JSON (not TOON) agent output.
-- Mermaid renders themed to ECC, but without lavish's pan/zoom or node-id capture —
+- Verdict actions wired to AIP's plan-confirmation workflow.
+- AIP design tokens and chrome; JSON (not TOON) agent output.
+- Mermaid renders themed to AIP, but without lavish's pan/zoom or node-id capture —
   whole-element annotation covers pointing at a diagram or node.
-- No export/share hosting, no layout-audit gate, no bundled playbooks — ECC's existing
+- No export/share hosting, no layout-audit gate, no bundled playbooks — AIP's existing
   design skills (`frontend-design-direction`, `artifact-design`, `dataviz`) cover authoring.
 
 ## Security posture
@@ -117,4 +117,4 @@ never executes artifact content — it only serves it to the browser.
 The one optional outbound request is the pinned Mermaid library, fetched by the browser only
 for artifacts that contain a diagram; it renders with `securityLevel: 'strict'`, degrades to
 showing diagram source if unavailable, and can be repointed at a local mirror via
-`ECC_PLAN_CANVAS_MERMAID_URL`. The server itself still makes no network calls.
+`AIP_PLAN_CANVAS_MERMAID_URL`. The server itself still makes no network calls.

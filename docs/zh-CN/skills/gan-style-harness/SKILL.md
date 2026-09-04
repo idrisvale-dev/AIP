@@ -1,7 +1,7 @@
 ---
 name: gan-style-harness
 description: "受GAN启发的生成器-评估器代理框架，用于自主构建高质量应用。基于Anthropic 2026年3月的框架设计论文。"
-origin: ECC-community
+origin: AIP-community
 tools: Read, Write, Edit, Bash, Grep, Glob, Task
 ---
 

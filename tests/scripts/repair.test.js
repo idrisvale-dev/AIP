@@ -109,7 +109,7 @@ function runTests() {
 
       const normalizedProjectRoot = fs.realpathSync(projectRoot);
       const managedPath = path.join(normalizedProjectRoot, '.cursor', 'hooks', 'session-start.js');
-      const statePath = path.join(normalizedProjectRoot, '.cursor', 'ecc-install-state.json');
+      const statePath = path.join(normalizedProjectRoot, '.cursor', 'aip-install-state.json');
       const expectedContent = fs.readFileSync(
         path.join(REPO_ROOT, '.cursor', 'hooks', 'session-start.js'),
         'utf8'
@@ -153,7 +153,7 @@ function runTests() {
 
       const normalizedProjectRoot = fs.realpathSync(projectRoot);
       const managedPath = path.join(normalizedProjectRoot, '.cursor', 'rules', 'common-coding-style.mdc');
-      const statePath = path.join(normalizedProjectRoot, '.cursor', 'ecc-install-state.json');
+      const statePath = path.join(normalizedProjectRoot, '.cursor', 'aip-install-state.json');
       const hooksConfigPath = path.join(normalizedProjectRoot, '.cursor', 'hooks.json');
       const expectedContent = fs.readFileSync(managedPath, 'utf8');
       fs.rmSync(managedPath, { force: true });
@@ -194,7 +194,7 @@ function runTests() {
       const targetRoot = path.join(projectRoot, '.cursor');
       fs.mkdirSync(targetRoot, { recursive: true });
       const normalizedTargetRoot = fs.realpathSync(targetRoot);
-      const statePath = path.join(normalizedTargetRoot, 'ecc-install-state.json');
+      const statePath = path.join(normalizedTargetRoot, 'aip-install-state.json');
       const jsonPath = path.join(normalizedTargetRoot, 'hooks.json');
       const renderedPath = path.join(normalizedTargetRoot, 'generated.md');
       const removedPath = path.join(normalizedTargetRoot, 'legacy-note.txt');
@@ -314,7 +314,7 @@ function runTests() {
       const targetRoot = path.join(projectRoot, '.cursor');
       fs.mkdirSync(targetRoot, { recursive: true });
       const normalizedTargetRoot = fs.realpathSync(targetRoot);
-      const statePath = path.join(normalizedTargetRoot, 'ecc-install-state.json');
+      const statePath = path.join(normalizedTargetRoot, 'aip-install-state.json');
       const renderedPath = path.join(normalizedTargetRoot, 'generated.md');
       fs.writeFileSync(renderedPath, '# drifted\n');
 

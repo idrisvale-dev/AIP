@@ -43,7 +43,7 @@ function approvedPacketContent(overrides = {}, release = CURRENT_RELEASE) {
   }
 
   return [
-    `# ECC v${release} Owner Approval Packet`,
+    `# AIP v${release} Owner Approval Packet`,
     '',
     '## Decision Register',
     '',
@@ -65,7 +65,7 @@ function approvedPacketContent(overrides = {}, release = CURRENT_RELEASE) {
 
 function finalLedgerContent(extra = '', release = CURRENT_RELEASE) {
   return [
-    `# ECC v${release} Release URL Ledger`,
+    `# AIP v${release} Release URL Ledger`,
     '',
     '## Final Published URLs',
     '',
@@ -87,7 +87,7 @@ function finalLedgerContent(extra = '', release = CURRENT_RELEASE) {
 
 function manifestContent(release = CURRENT_RELEASE) {
   return [
-    `# ECC v${release} Preview Pack Manifest`,
+    `# AIP v${release} Preview Pack Manifest`,
     '',
     '| Artifact | Role | Gate |',
     '| --- | --- | --- |',
@@ -196,7 +196,7 @@ function runTests() {
       seedRepo(rootDir);
       const report = buildReport({ root: rootDir });
 
-      assert.strictEqual(report.schema_version, 'ecc.release-approval-gate.v1');
+      assert.strictEqual(report.schema_version, 'aip.release-approval-gate.v1');
       assert.strictEqual(report.release, CURRENT_RELEASE);
       assert.strictEqual(report.ready, true);
       assert.strictEqual(report.summary.failed, 0);
@@ -257,7 +257,7 @@ function runTests() {
       const releaseDir = releaseDirFor(CURRENT_RELEASE);
       seedRepo(rootDir, {
         [`${releaseDir}/release-url-ledger-2026-05-19.md`]: [
-          `# ECC v${CURRENT_RELEASE} Release URL Ledger`,
+          `# AIP v${CURRENT_RELEASE} Release URL Ledger`,
           '',
           '## Approval-Gated URLs',
           '',

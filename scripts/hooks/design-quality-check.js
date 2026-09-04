@@ -2,9 +2,9 @@
 /**
  * PostToolUse hook: lightweight frontend design-quality reminder.
  *
- * This stays self-contained inside ECC. It does not call remote models or
+ * This stays self-contained inside AIP. It does not call remote models or
  * install packages. The goal is to catch obviously generic UI drift and keep
- * frontend edits aligned with ECC's stronger design standards.
+ * frontend edits aligned with AIP's stronger design standards.
  */
 
 'use strict';

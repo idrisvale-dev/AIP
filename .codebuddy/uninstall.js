@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * ECC CodeBuddy Uninstaller (Cross-platform Node.js version)
- * Uninstalls Everything Claude Code workflows from a CodeBuddy project.
+ * AIP CodeBuddy Uninstaller (Cross-platform Node.js version)
+ * Uninstalls AIP workflows from a CodeBuddy project.
  *
  * Usage:
  *   node uninstall.js              # Uninstall from current directory
@@ -140,7 +140,7 @@ async function doUninstall() {
     codebuddyFullPath = path.join(targetDir, codebuddyDirName);
   }
 
-  console.log('ECC CodeBuddy Uninstaller');
+  console.log('AIP CodeBuddy Uninstaller');
   console.log('==========================');
   console.log('');
   console.log(`Target:  ${codebuddyFullPath}/`);
@@ -153,14 +153,14 @@ async function doUninstall() {
   }
 
   const codebuddyRootResolved = resolvePath(codebuddyFullPath);
-  const manifest = path.join(codebuddyFullPath, '.ecc-manifest');
+  const manifest = path.join(codebuddyFullPath, '.aip-manifest');
 
   // Handle missing manifest
   if (!fs.existsSync(manifest)) {
-    console.log('Warning: No manifest file found (.ecc-manifest)');
+    console.log('Warning: No manifest file found (.aip-manifest)');
     console.log('');
     console.log('This could mean:');
-    console.log('  1. ECC was installed with an older version without manifest support');
+    console.log('  1. AIP was installed with an older version without manifest support');
     console.log('  2. The manifest file was manually deleted');
     console.log('');
 
@@ -182,10 +182,10 @@ async function doUninstall() {
     return;
   }
 
-  console.log('Found manifest file - will only remove files installed by ECC');
+  console.log('Found manifest file - will only remove files installed by AIP');
   console.log('');
 
-  const confirmed = await promptConfirm(`Are you sure you want to uninstall ECC from ${codebuddyDirName}? (y/N) `);
+  const confirmed = await promptConfirm(`Are you sure you want to uninstall AIP from ${codebuddyDirName}? (y/N) `);
   if (!confirmed) {
     console.log('Uninstall cancelled.');
     process.exit(0);

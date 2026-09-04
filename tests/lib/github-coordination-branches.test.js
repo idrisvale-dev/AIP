@@ -78,13 +78,13 @@ section('mergeIssueBody — empty body branch:');
 if (test('returns rendered state when issue body is empty string', () => {
   const state = { status: 'available', schemaVersion: 'v1', kind: 'epic', owner: null, branch: null, validation: 'pending', review: 'not-requested', project: { state: 'backlog', fields: {} }, dependencies: [], tasks: [], labels: [], lastAction: 'sync' };
   const result = mergeIssueBody({ body: '' }, state);
-  assert.ok(result.includes('ecc-coordination:start'));
+  assert.ok(result.includes('aip-coordination:start'));
 })) passed++; else failed++;
 
 if (test('returns rendered state when issue body is null', () => {
   const state = { status: 'available', schemaVersion: 'v1', kind: 'epic', owner: null, branch: null, validation: 'pending', review: 'not-requested', project: { state: 'backlog', fields: {} }, dependencies: [], tasks: [], labels: [], lastAction: 'sync' };
   const result = mergeIssueBody({ body: null }, state);
-  assert.ok(result.includes('ecc-coordination:start'));
+  assert.ok(result.includes('aip-coordination:start'));
 })) passed++; else failed++;
 
 banner('state.js — uncovered branches');

@@ -216,7 +216,7 @@ function hasFileWithExtension(rootDir, relativeDir, extensions) {
 
 function detectTargetMode(rootDir) {
   const packageJson = safeParseJson(safeRead(rootDir, 'package.json'));
-  if (packageJson?.name === 'everything-claude-code') {
+  if (packageJson?.name === 'aip') {
     return 'repo';
   }
 
@@ -232,20 +232,20 @@ function detectTargetMode(rootDir) {
   return 'consumer';
 }
 
-const ECC_PLUGIN_KEY_PATTERNS = [
-  /^ecc@/i,
-  /^everything-claude-code@/i,
+const AIP_PLUGIN_KEY_PATTERNS = [
+  /^aip@/i,
+  /^aip@/i,
 ];
 
-const ECC_LEGACY_PLUGIN_DIRS = [
-  'ecc',
-  'ecc@ecc',
-  'everything-claude-code',
-  'everything-claude-code@everything-claude-code',
+const AIP_LEGACY_PLUGIN_DIRS = [
+  'aip',
+  'aip@aip',
+  'aip',
+  'aip@aip',
 ];
 
-const ECC_CACHE_MARKETPLACES = ['everything-claude-code', 'ecc'];
-const ECC_CACHE_PLUGIN_NAMES = ['ecc', 'everything-claude-code'];
+const AIP_CACHE_MARKETPLACES = ['aip', 'aip'];
+const AIP_CACHE_PLUGIN_NAMES = ['aip', 'aip'];
 
 function uniquePaths(paths) {
   return [...new Set(paths.filter(Boolean))];
@@ -289,7 +289,7 @@ function findPluginInstallFromManifest(installedPluginsPaths) {
     }
 
     for (const [key, value] of Object.entries(manifest.plugins)) {
-      if (!ECC_PLUGIN_KEY_PATTERNS.some(pattern => pattern.test(key))) {
+      if (!AIP_PLUGIN_KEY_PATTERNS.some(pattern => pattern.test(key))) {
         continue;
       }
 
@@ -315,7 +315,7 @@ function findPluginInstallFromManifest(installedPluginsPaths) {
 
 function findPluginInstallFlatLayout(candidateRoots) {
   for (const pluginsDir of candidateRoots) {
-    for (const pluginDir of ECC_LEGACY_PLUGIN_DIRS) {
+    for (const pluginDir of AIP_LEGACY_PLUGIN_DIRS) {
       const hit = findPluginJsonUnder(path.join(pluginsDir, pluginDir));
       if (hit) {
         return hit;
@@ -328,8 +328,8 @@ function findPluginInstallFlatLayout(candidateRoots) {
 
 function findPluginInstallMarketplaceCache(candidateRoots) {
   for (const pluginsDir of candidateRoots) {
-    for (const marketplace of ECC_CACHE_MARKETPLACES) {
-      for (const pluginName of ECC_CACHE_PLUGIN_NAMES) {
+    for (const marketplace of AIP_CACHE_MARKETPLACES) {
+      for (const pluginName of AIP_CACHE_PLUGIN_NAMES) {
         const pluginRoot = path.join(pluginsDir, 'cache', marketplace, pluginName);
         if (!fs.existsSync(pluginRoot)) {
           continue;
@@ -830,10 +830,10 @@ function getConsumerChecks(rootDir) {
       category: 'Tool Coverage',
       points: 4,
       scopes: ['repo'],
-      path: '~/.claude/plugins/ecc/ (legacy everything-claude-code paths also supported)',
-      description: 'Everything Claude Code is installed for the active user or project',
+      path: '~/.claude/plugins/aip/ (legacy aip paths also supported)',
+      description: 'AIP is installed for the active user or project',
       pass: Boolean(pluginInstall),
-      fix: 'Install the ECC plugin for this user or project before auditing project-specific harness quality.',
+      fix: 'Install the AIP plugin for this user or project before auditing project-specific harness quality.',
     },
     {
       id: 'consumer-project-overrides',
@@ -847,7 +847,7 @@ function getConsumerChecks(rootDir) {
         countFiles(rootDir, '.claude/commands', '.md') > 0 ||
         fileExists(rootDir, '.claude/settings.json') ||
         fileExists(rootDir, '.claude/hooks.json'),
-      fix: 'Add project-local .claude hooks, commands, skills, or settings that tailor ECC to this repo.',
+      fix: 'Add project-local .claude hooks, commands, skills, or settings that tailor AIP to this repo.',
     },
     {
       id: 'consumer-instructions',
@@ -1043,7 +1043,7 @@ Usage: node scripts/harness-audit.js [scope] [--scope <repo|hooks|skills|command
        [--root <path>]
 
 Deterministic harness audit based on explicit file/rule checks.
-Audits the current working directory by default and auto-detects ECC repo mode vs consumer-project mode.
+Audits the current working directory by default and auto-detects AIP repo mode vs consumer-project mode.
 `);
   process.exit(exitCode);
 }

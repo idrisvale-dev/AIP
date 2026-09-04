@@ -1,7 +1,7 @@
 ---
 name: golang-patterns
 description: Patrones idiomáticos de Go, buenas prácticas y convenciones para construir aplicaciones Go robustas, eficientes y mantenibles.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Desarrollo Go

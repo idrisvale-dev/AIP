@@ -1,6 +1,6 @@
-# Codex ECC Navigation Map
+# Codex AIP Navigation Map
 
-This guide helps Codex agents navigate ECC without scanning every surface from
+This guide helps Codex agents navigate AIP without scanning every surface from
 scratch. Use it after the root `AGENTS.md` and `.codex/AGENTS.md` when planning
 work, preparing a PR-quality diff, or handing context to a reviewer.
 
@@ -57,7 +57,7 @@ legacy slash-entry compatibility or cross-harness parity.
 
 ## Codex Agent Roles
 
-ECC ships project-local Codex role layers in `.codex/agents/`:
+AIP ships project-local Codex role layers in `.codex/agents/`:
 
 | Role | File | Use |
 |------|------|-----|

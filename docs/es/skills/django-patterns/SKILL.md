@@ -1,7 +1,7 @@
 ---
 name: django-patterns
 description: Patrones de arquitectura Django, diseño de API REST con DRF, buenas prácticas de ORM, caché, señales, middleware y aplicaciones Django de nivel producción.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Desarrollo Django

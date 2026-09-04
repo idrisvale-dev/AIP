@@ -1,7 +1,7 @@
 ---
 name: e2e-testing
 description: Playwright E2E test kalıpları, Page Object Model, yapılandırma, CI/CD entegrasyonu, artifact yönetimi ve kararsız test stratejileri.
-origin: ECC
+origin: AIP
 ---
 
 # E2E Test Kalıpları

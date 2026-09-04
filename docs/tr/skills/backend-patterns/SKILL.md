@@ -1,7 +1,7 @@
 ---
 name: backend-patterns
 description: Node.js, Express ve Next.js API routes için backend mimari kalıpları, API tasarımı, veritabanı optimizasyonu ve sunucu tarafı en iyi uygulamalar.
-origin: ECC
+origin: AIP
 ---
 
 # Backend Geliştirme Kalıpları

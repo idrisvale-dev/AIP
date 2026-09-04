@@ -2,7 +2,7 @@
 name: cpp-testing
 description: Use only when writing/updating/fixing C++ tests, configuring GoogleTest/CTest, diagnosing failing or flaky tests, or adding coverage/sanitizers.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # C++ Testing (Agent Skill)

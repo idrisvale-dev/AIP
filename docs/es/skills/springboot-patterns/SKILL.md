@@ -1,7 +1,7 @@
 ---
 name: springboot-patterns
 description: Patrones de arquitectura Spring Boot, diseño de API REST, servicios en capas, acceso a datos, caché, procesamiento asíncrono y logging. Usar para trabajo de backend en Java con Spring Boot.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Desarrollo Spring Boot

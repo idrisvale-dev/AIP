@@ -1,8 +1,8 @@
 ---
 name: messages-ops
-description: Evidence-first live messaging workflow for ECC. Use when the user wants to read texts or DMs, recover a recent one-time code, inspect a thread before replying, or prove which message source was actually checked.
+description: Evidence-first live messaging workflow for AIP. Use when the user wants to read texts or DMs, recover a recent one-time code, inspect a thread before replying, or prove which message source was actually checked.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Messages Ops
@@ -13,7 +13,7 @@ This is not email work. If the dominant surface is a mailbox, use `email-ops`.
 
 ## Skill Stack
 
-Pull these ECC-native skills into the workflow when relevant:
+Pull these AIP-native skills into the workflow when relevant:
 
 - `email-ops` when the message task is really mailbox work
 - `connections-optimizer` when the DM thread belongs to outbound network work

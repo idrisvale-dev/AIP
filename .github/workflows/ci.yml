@@ -134,12 +134,12 @@ jobs:
         id: pack
         run: |
           npm pack --json > npm-pack.json
-          node -e "const crypto = require('crypto'); const fs = require('fs'); const data = JSON.parse(fs.readFileSync('npm-pack.json', 'utf8')); const file = data[0]?.filename; if (!/^ecc-universal-[0-9A-Za-z.+-]+\.tgz$/.test(file || '')) throw new Error('Unexpected packed filename'); const archives = fs.readdirSync('.').filter(name => name.endsWith('.tgz')); if (archives.length !== 1 || archives[0] !== file) throw new Error('Expected exactly one packed archive'); const digest = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'package_file=' + file + '\npackage_sha256=' + digest + '\n')"
+          node -e "const crypto = require('crypto'); const fs = require('fs'); const data = JSON.parse(fs.readFileSync('npm-pack.json', 'utf8')); const file = data[0]?.filename; if (!/^aip-universal-[0-9A-Za-z.+-]+\.tgz$/.test(file || '')) throw new Error('Unexpected packed filename'); const archives = fs.readdirSync('.').filter(name => name.endsWith('.tgz')); if (archives.length !== 1 || archives[0] !== file) throw new Error('Expected exactly one packed archive'); const digest = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'package_file=' + file + '\npackage_sha256=' + digest + '\n')"
 
       - name: Upload exact installer artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ecc-ci-installer-artifact
+          name: aip-ci-installer-artifact
           path: ${{ steps.pack.outputs.package_file }}
           if-no-files-found: error
 
@@ -167,13 +167,13 @@ jobs:
       - name: Download exact installer artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: ecc-ci-installer-artifact
+          name: aip-ci-installer-artifact
           path: release-artifacts
 
       - name: Verify packed install lifecycle
         env:
-          ECC_RELEASE_PACKAGE: release-artifacts/${{ needs.pack-installer.outputs.package_file }}
-          ECC_RELEASE_SHA256: ${{ needs.pack-installer.outputs.package_sha256 }}
+          AIP_RELEASE_PACKAGE: release-artifacts/${{ needs.pack-installer.outputs.package_file }}
+          AIP_RELEASE_SHA256: ${{ needs.pack-installer.outputs.package_sha256 }}
         run: node tests/ci/packed-artifact-lifecycle.js
 
   validate:

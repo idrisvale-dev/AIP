@@ -5,7 +5,7 @@ const path = require('path');
 // require any non-builtin package (enterprise supply-chain vetting: the vetted
 // bytes must be the installed bytes). install-state is validated by the
 // hand-rolled validator below, which enforces the same constraints as
-// schemas/install-state.schema.json (ecc.install.v1).
+// schemas/install-state.schema.json (aip.install.v1).
 
 let cachedValidator = null;
 
@@ -88,8 +88,8 @@ function createFallbackValidator() {
       ['schemaVersion', 'installedAt', 'lastValidatedAt', 'target', 'request', 'resolution', 'source', 'operations']
     );
 
-    if (state.schemaVersion !== 'ecc.install.v1') {
-      pushError('/schemaVersion', 'must equal ecc.install.v1');
+    if (state.schemaVersion !== 'aip.install.v1') {
+      pushError('/schemaVersion', 'must equal aip.install.v1');
     }
 
     if (!isNonEmptyString(state.installedAt)) {
@@ -244,7 +244,7 @@ function assertValidInstallState(state, label) {
 function createInstallState(options) {
   const installedAt = options.installedAt || new Date().toISOString();
   const state = {
-    schemaVersion: 'ecc.install.v1',
+    schemaVersion: 'aip.install.v1',
     installedAt,
     target: {
       id: options.adapter.id,

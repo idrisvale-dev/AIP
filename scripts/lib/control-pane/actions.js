@@ -7,7 +7,7 @@ const ACTION_DEFINITIONS = new Map([
     'sync-knowledge',
     {
       label: 'Sync Knowledge',
-      description: 'Import all configured ECC2 memory connectors into the context graph.',
+      description: 'Import all configured AIP2 memory connectors into the context graph.',
       args: ({ limit }) => [
         'run',
         '--quiet',
@@ -26,14 +26,14 @@ const ACTION_DEFINITIONS = new Map([
     'recall-knowledge',
     {
       label: 'Recall Knowledge',
-      description: 'Run ECC2 context recall for the current operator query.',
+      description: 'Run AIP2 context recall for the current operator query.',
       args: ({ query, limit }) => [
         'run',
         '--quiet',
         '--',
         'graph',
         'recall',
-        query || 'ECC control pane',
+        query || 'AIP control pane',
         '--json',
         '--limit',
         String(limit),
@@ -45,7 +45,7 @@ const ACTION_DEFINITIONS = new Map([
     'graph-sync',
     {
       label: 'Backfill Graph',
-      description: 'Backfill the ECC2 graph from sessions, decisions, file activity, and messages.',
+      description: 'Backfill the AIP2 graph from sessions, decisions, file activity, and messages.',
       args: ({ limit }) => [
         'run',
         '--quiet',
@@ -64,7 +64,7 @@ const ACTION_DEFINITIONS = new Map([
     'open-dashboard',
     {
       label: 'Open TUI',
-      description: 'Launch the ECC2 terminal dashboard.',
+      description: 'Launch the AIP2 terminal dashboard.',
       args: () => ['run', '--quiet', '--', 'dashboard'],
       executable: false,
     },
@@ -100,7 +100,7 @@ function buildControlPaneAction(actionId, options = {}) {
   }
 
   const repoRoot = path.resolve(options.repoRoot || process.cwd());
-  const cwd = path.join(repoRoot, 'ecc2');
+  const cwd = path.join(repoRoot, 'aip2');
   const limit = normalizeLimit(options.limit);
   const query = String(options.query || '').trim();
   const args = definition.args({ limit, query });

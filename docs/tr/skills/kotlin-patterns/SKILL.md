@@ -1,7 +1,7 @@
 ---
 name: kotlin-patterns
 description: Coroutine'ler, null safety ve DSL builder'lar ile sağlam, verimli ve sürdürülebilir Kotlin uygulamaları oluşturmak için idiomatic Kotlin kalıpları, en iyi uygulamalar ve konvansiyonlar.
-origin: ECC
+origin: AIP
 ---
 
 # Kotlin Geliştirme Kalıpları

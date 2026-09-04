@@ -1,7 +1,7 @@
 ---
 name: database-migrations
 description: PostgreSQL、MySQL、一般的なORM（Prisma、Drizzle、Kysely、Django、TypeORM、golang-migrate）全体のスキーマ変更、データマイグレーション、ロールバック、ゼロダウンタイムデプロイメントのためのデータベースマイグレーションベストプラクティス。
-origin: ECC
+origin: AIP
 ---
 
 # データベースマイグレーションパターン

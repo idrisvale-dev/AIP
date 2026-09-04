@@ -17,7 +17,7 @@ const FEEDBACK_KINDS = new Set(['chat', 'annotation', 'verdict']);
 const VERDICTS = new Set(['approve', 'request-changes']);
 
 function resolveStateDir(env = process.env) {
-  const override = env.ECC_PLAN_CANVAS_STATE_DIR;
+  const override = env.AIP_PLAN_CANVAS_STATE_DIR;
   if (override && String(override).trim()) return path.resolve(String(override).trim());
   return path.join(os.homedir(), '.claude', 'plan-canvas');
 }

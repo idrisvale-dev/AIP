@@ -1,7 +1,7 @@
 ---
 name: deployment-patterns
 description: Kubernetes、Docker、Vercel、クラウドプロバイダーにおけるデプロイメントパターンと戦略。ブルーグリーン、カナリア、ローリングデプロイメント、ゼロダウンタイムアップグレード。
-origin: ECC
+origin: AIP
 ---
 
 # デプロイメント パターン

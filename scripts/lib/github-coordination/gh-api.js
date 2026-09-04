@@ -52,14 +52,14 @@ function runCommand(command, args, options = {}) {
   return result.stdout || '';
 }
 
-// ECC_GH_SHIM creates a trust boundary: when set, shimPath replaces the real
+// AIP_GH_SHIM creates a trust boundary: when set, shimPath replaces the real
 // `gh` binary and command/commandArgs execute an arbitrary script via
 // process.execPath. This variable MUST only be set in trusted, isolated test
-// environments (e.g., a test's own temp directory). Never set ECC_GH_SHIM in
+// environments (e.g., a test's own temp directory). Never set AIP_GH_SHIM in
 // production — doing so allows arbitrary script execution under the caller's
 // privileges.
 function runGh(args, options = {}) {
-  const shimPath = process.env.ECC_GH_SHIM;
+  const shimPath = process.env.AIP_GH_SHIM;
   const command = shimPath ? process.execPath : 'gh';
   const commandArgs = shimPath ? [shimPath, ...args] : args;
   const env = { ...process.env };

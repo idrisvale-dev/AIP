@@ -4,7 +4,7 @@ description: 针对货运异常、货物延误、损坏、丢失和承运商纠�
 license: Apache-2.0
 version: 1.0.0
 homepage: https://github.com/reborncursed/AIP
-origin: ECC
+origin: AIP
 metadata:
   author: evos
   clawdbot:

@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const { version: ECC_VERSION } = require('../../package.json');
+const { version: AIP_VERSION } = require('../../package.json');
 
 const {
   renderTerminalWelcome,
@@ -12,7 +12,7 @@ const OFFICIAL_LINKS = Object.freeze({
   github: 'https://github.com/reborncursed/AIP',
   discord: 'https://discord.gg/36yGMHGFbR',
   documentation: 'https://github.com/reborncursed/AIP#readme',
-  githubApp: 'https://github.com/apps/ecc-tools',
+  githubApp: 'https://github.com/apps/aip-tools',
 });
 
 let passed = 0;
@@ -43,7 +43,7 @@ function createOutput(isTTY = true) {
 
 console.log('\n=== Terminal welcome tests ===\n');
 
-test('renders the cfonts block ECC wordmark with a welcome, version, and boxed links', () => {
+test('renders the cfonts block AIP wordmark with a welcome, version, and boxed links', () => {
   const welcome = renderTerminalWelcome({ color: false });
   const lines = welcome.split('\n');
   const boxTop = lines.findIndex(line => line.startsWith('  ╭'));
@@ -53,8 +53,8 @@ test('renders the cfonts block ECC wordmark with a welcome, version, and boxed l
   assert.match(welcome, /╚══════╝\s+╚═════╝\s+╚═════╝/);
   assert.strictEqual(welcome.includes('◕'), false);
   assert.strictEqual(welcome.includes('ᴗ'), false);
-  assert.match(welcome, /Welcome to ECC!/);
-  assert.ok(welcome.includes(`v${ECC_VERSION}`));
+  assert.match(welcome, /Welcome to AIP!/);
+  assert.ok(welcome.includes(`v${AIP_VERSION}`));
   assert.ok(boxTop > 0);
   assert.ok(boxBottom > boxTop);
   assert.ok(lines.slice(boxTop + 1, boxBottom).every(line => /^ {2}│ .* │$/.test(line)));
@@ -70,21 +70,21 @@ test('renders an explicitly verified installed version when provided', () => {
   const welcome = renderTerminalWelcome({ color: false, version: '2.1.0' });
 
   assert.ok(welcome.includes('v2.1.0'));
-  assert.strictEqual(welcome.includes(`v${ECC_VERSION}`), ECC_VERSION === '2.1.0');
+  assert.strictEqual(welcome.includes(`v${AIP_VERSION}`), AIP_VERSION === '2.1.0');
 });
 
 test('rejects unsafe installed-version text before terminal rendering', () => {
   assert.throws(
     () => renderTerminalWelcome({ color: false, version: '2.1.0\u001b[31m' }),
-    /Invalid ECC version/
+    /Invalid AIP version/
   );
 });
 
-test('colors the ECC wordmark from muted orange to dark baby blue', () => {
+test('colors the AIP wordmark from muted orange to dark baby blue', () => {
   const welcome = renderTerminalWelcome({ color: true });
   const orange = '\x1b[38;2;215;151;107m';
   const blue = '\x1b[38;2;100;131;160m';
-  const dimVersion = `\x1b[2mv${ECC_VERSION}\x1b[0m`;
+  const dimVersion = `\x1b[2mv${AIP_VERSION}\x1b[0m`;
 
   assert.ok(welcome.includes(orange));
   assert.ok(welcome.includes(blue));
@@ -116,11 +116,11 @@ test('uses terminal color only when NO_COLOR is absent', () => {
 
 test('shows accurate copy after each verified interactive outcome', () => {
   const expectedMessages = {
-    installed: 'Welcome to ECC!',
-    updated: 'ECC is updated — thank you for using ECC!',
-    migrated: 'ECC is configured — thank you for using ECC!',
-    resumed: 'ECC is configured — thank you for using ECC!',
-    'already-migrated': 'ECC is configured — thank you for using ECC!',
+    installed: 'Welcome to AIP!',
+    updated: 'AIP is updated — thank you for using AIP!',
+    migrated: 'AIP is configured — thank you for using AIP!',
+    resumed: 'AIP is configured — thank you for using AIP!',
+    'already-migrated': 'AIP is configured — thank you for using AIP!',
   };
   for (const [action, expectedMessage] of Object.entries(expectedMessages)) {
     const output = createOutput();

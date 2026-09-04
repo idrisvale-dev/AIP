@@ -1,12 +1,12 @@
 'use strict';
 /**
- * Tests for the proximity message sink (ecc-tui messages send) and the
+ * Tests for the proximity message sink (aip-tui messages send) and the
  * deduping dispatcher.
  */
 
 const assert = require('assert');
 
-const { KIND_BY_TYPE, buildSendArgs, createEccMessageSink, resolveEccBin } = require('../../scripts/lib/control-pane/message-sink');
+const { KIND_BY_TYPE, buildSendArgs, createAipMessageSink, resolveAipBin } = require('../../scripts/lib/control-pane/message-sink');
 const { createProximityDispatcher } = require('../../scripts/lib/control-pane/proximity');
 
 let passed = 0;
@@ -31,22 +31,22 @@ test('buildSendArgs: maps trigger type to message kind and shapes the CLI argv',
   assert.strictEqual(KIND_BY_TYPE.proximity_transmit, 'query');
 });
 
-test('createEccMessageSink: delivers via the injected runner with the resolved binary', () => {
+test('createAipMessageSink: delivers via the injected runner with the resolved binary', () => {
   const calls = [];
-  const send = createEccMessageSink({
-    binPath: '/fake/ecc-tui',
+  const send = createAipMessageSink({
+    binPath: '/fake/aip-tui',
     runCommand: (bin, args) => calls.push({ bin, args })
   });
   send({ fromSession: 'a', toSession: 'b', content: 'hello', msgType: 'proximity_transmit' });
   assert.strictEqual(calls.length, 1);
-  assert.strictEqual(calls[0].bin, '/fake/ecc-tui');
+  assert.strictEqual(calls[0].bin, '/fake/aip-tui');
   assert.deepStrictEqual(calls[0].args.slice(0, 2), ['messages', 'send']);
   assert.ok(calls[0].args.includes('query'), 'transmit maps to query kind');
 });
 
-test('createEccMessageSink: a failing command propagates (dispatcher will count it skipped)', () => {
-  const send = createEccMessageSink({
-    binPath: 'ecc-tui',
+test('createAipMessageSink: a failing command propagates (dispatcher will count it skipped)', () => {
+  const send = createAipMessageSink({
+    binPath: 'aip-tui',
     runCommand: () => {
       throw new Error('ENOENT');
     }
@@ -54,8 +54,8 @@ test('createEccMessageSink: a failing command propagates (dispatcher will count 
   assert.throws(() => send({ fromSession: 'a', toSession: 'b', content: 'x', msgType: 'proximity_steer' }));
 });
 
-test('resolveEccBin: honors explicit override', () => {
-  assert.strictEqual(resolveEccBin({ binPath: '/x/ecc-tui' }), '/x/ecc-tui');
+test('resolveAipBin: honors explicit override', () => {
+  assert.strictEqual(resolveAipBin({ binPath: '/x/aip-tui' }), '/x/aip-tui');
 });
 
 test('dispatcher: fires once then suppresses the same trigger within cooldown', () => {

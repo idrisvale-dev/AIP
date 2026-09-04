@@ -154,7 +154,7 @@ Eş zamanlı çalıştır:
 
 Ayrı git worktree'leri olan harici tmux-pane worker'ları için, `node scripts/orchestrate-worktrees.js plan.json --execute` kullan. Built-in orkestrasyon pattern'i in-process kalır; helper uzun süren veya cross-harness session'lar için.
 
-Worker'ların ana checkout'tan kirli veya izlenmeyen yerel dosyaları görmesi gerektiğinde, plan dosyasına `seedPaths` ekle. ECC sadece seçilen bu yolları `git worktree add`'den sonra her worker worktree'sine overlay eder; bu branch'ı izole tutarken devam eden yerel script'leri, planları veya dokümanları gösterir.
+Worker'ların ana checkout'tan kirli veya izlenmeyen yerel dosyaları görmesi gerektiğinde, plan dosyasına `seedPaths` ekle. AIP sadece seçilen bu yolları `git worktree add`'den sonra her worker worktree'sine overlay eder; bu branch'ı izole tutarken devam eden yerel script'leri, planları veya dokümanları gösterir.
 
 ```json
 {

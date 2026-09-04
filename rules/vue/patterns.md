@@ -52,5 +52,5 @@ queryClient.invalidateQueries({ queryKey: ['auction', id] })
 
 ## Reference
 
-- ECC skills: `frontend-patterns`, `vite-patterns`.
+- AIP skills: `frontend-patterns`, `vite-patterns`.
 - Docs: <https://pinia.vuejs.org/> · <https://router.vuejs.org/> · <https://tanstack.com/query/latest/docs/framework/vue/overview> · <https://vuejs.org/guide/reusability/composables.html>

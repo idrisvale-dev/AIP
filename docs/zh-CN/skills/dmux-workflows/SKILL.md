@@ -1,7 +1,7 @@
 ---
 name: dmux-workflows
 description: 使用dmux（AI代理的tmux窗格管理器）进行多代理编排。跨Claude Code、Codex、OpenCode及其他工具的并行代理工作流模式。适用于并行运行多个代理会话或协调多代理开发工作流时。
-origin: ECC
+origin: AIP
 ---
 
 # dmux 工作流
@@ -137,9 +137,9 @@ git merge feat/billing
 | **Claude Code Task 工具** | 进程内子代理生成 | 会话内的程序化并行 |
 | **Codex 多代理** | 内置代理角色 | Codex 特定的并行工作 |
 
-## ECC 助手
+## AIP 助手
 
-ECC 现在包含一个助手，用于使用独立的 git worktree 进行外部 tmux 窗格编排：
+AIP 现在包含一个助手，用于使用独立的 git worktree 进行外部 tmux 窗格编排：
 
 ```bash
 node scripts/orchestrate-worktrees.js plan.json --execute

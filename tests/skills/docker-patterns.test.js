@@ -33,7 +33,7 @@ test('triggers for hardened installer and cross-platform harness work', () => {
   assert.match(frontmatter[1], /description:.*macOS.*Windows/i);
 });
 
-test('documents the ECC plugin setup harness and safe operating modes', () => {
+test('documents the AIP plugin setup harness and safe operating modes', () => {
   assert.match(skill, /docker\/plugin-setup\/compose\.yaml/);
   assert.match(skill, /\breal-cli\b/);
   assert.match(skill, /\breal-cli-ubuntu\b/);
@@ -72,7 +72,7 @@ test('provides a repeatable build, run, inspect, and cleanup sequence', () => {
 });
 
 test('documents the private named-container lifecycle and terminal boundary', () => {
-  assert.match(skill, /ECC_TMPFS_SIZE/);
+  assert.match(skill, /AIP_TMPFS_SIZE/);
   assert.match(skill, /\/workspace.*mode=0700/is);
   assert.match(skill, /NPM_CONFIG_CACHE.*\/tmp\/npm-cache/is);
   assert.match(skill, /docker compose.*run.*--detach.*--name/is);
@@ -80,14 +80,14 @@ test('documents the private named-container lifecycle and terminal boundary', ()
   assert.match(skill, /executable.*argv/is);
   assert.match(skill, /docker exec -it/);
   assert.match(skill, /reconnect/i);
-  assert.match(skill, /docker rm.*ecc-plugin-shell/is);
+  assert.match(skill, /docker rm.*aip-plugin-shell/is);
   assert.match(skill, /host credentials.*opt-in/is);
   assert.doesNotMatch(skill, /skills\/docker-patterns\/scripts\/open-interactive\.js/);
 });
 
 test('requires the offline smoke to execute the locally packed public bin', () => {
   assert.match(skill, /npm pack.*--ignore-scripts/is);
-  assert.match(skill, /package\.json.*bin\.ecc/is);
+  assert.match(skill, /package\.json.*bin\.aip/is);
   assert.match(skill, /locally packed/i);
   assert.match(skill, /network_mode:\s*none/);
   assert.match(skill, /does not\s+rely on.*host `node_modules`/is);

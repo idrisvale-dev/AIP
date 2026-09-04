@@ -1,4 +1,4 @@
-# ECC v2.0.0-rc.1 Publication Evidence - 2026-05-15
+# AIP v2.0.0-rc.1 Publication Evidence - 2026-05-15
 
 This is release-readiness evidence only. It does not create a GitHub release,
 npm publication, plugin tag, marketplace submission, or announcement post.
@@ -9,7 +9,7 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 | --- | --- |
 | Upstream main base | `1949d75e18e59a37de269d88b188fc701f5cf122` |
 | Evidence branch | `codex/rc1-agentshield-86-evidence` |
-| Evidence scope | Current `main` after PR #1932, #1933, #1934, #1935, and #1936; AgentShield #86; and ECC-Tools #75 |
+| Evidence scope | Current `main` after PR #1932, #1933, #1934, #1935, and #1936; AgentShield #86; and AIP-Tools #75 |
 | Git remote | `https://github.com/reborncursed/AIP.git` |
 | Local status caveat | Working tree had the unrelated untracked `docs/drafts/` directory before this docs refresh |
 
@@ -23,32 +23,32 @@ final release commit with a clean checkout before publishing.
 | Trunk PRs/issues | `gh pr list` and `gh issue list` for `reborncursed/AIP` | 0 open PRs, 0 open issues |
 | AgentShield PRs/issues | `gh pr list` and `gh issue list` for `reborncursed/agentshield` | 0 open PRs, 0 open issues |
 | JARVIS PRs/issues | `gh pr list` and `gh issue list` for `reborncursed/JARVIS` | 0 open PRs, 0 open issues |
-| ECC Tools PRs/issues | `env -u GITHUB_TOKEN gh pr list` and `env -u GITHUB_TOKEN gh issue list` for `ECC-Tools/ECC-Tools` | 0 open PRs, 0 open issues |
-| ECC website PRs/issues | `env -u GITHUB_TOKEN gh pr list` and `env -u GITHUB_TOKEN gh issue list` for `ECC-Tools/ECC-website` | 0 open PRs, 0 open issues |
+| AIP Tools PRs/issues | `env -u GITHUB_TOKEN gh pr list` and `env -u GITHUB_TOKEN gh issue list` for `AIP-Tools/AIP-Tools` | 0 open PRs, 0 open issues |
+| AIP website PRs/issues | `env -u GITHUB_TOKEN gh pr list` and `env -u GITHUB_TOKEN gh issue list` for `AIP-Tools/AIP-website` | 0 open PRs, 0 open issues |
 | Trunk discussions | GraphQL discussion count and maintainer-touch sweep | 58 total discussions; 0 without maintainer touch after May 15 maintainer comments |
-| Other repo discussions | GraphQL discussion count for AgentShield, JARVIS, ECC Tools, and ECC website | Discussions disabled or 0 total |
+| Other repo discussions | GraphQL discussion count for AgentShield, JARVIS, AIP Tools, and AIP website | Discussions disabled or 0 total |
 | Platform audit | `node scripts/platform-audit.js --json --allow-untracked docs/drafts/` | Ready; open PRs 0/20, open issues 0/20, discussions needing maintainer touch 0, conflicting open PRs 0, blocking dirty files 0 |
 
-The ECC Tools organization is reachable with the configured GitHub host
+The AIP Tools organization is reachable with the configured GitHub host
 credential. In this shell, the exported `GITHUB_TOKEN` overrides that credential
-and causes false 404/403 failures for `ECC-Tools/*`. Use `env -u GITHUB_TOKEN`
-for ECC Tools verification commands until that environment override is cleaned
+and causes false 404/403 failures for `AIP-Tools/*`. Use `env -u GITHUB_TOKEN`
+for AIP Tools verification commands until that environment override is cleaned
 up.
 
 ## Linear Roadmap State
 
 The detailed execution roadmap now lives in Linear project:
 
-<https://linear.app/itomarkets/project/ecc-platform-roadmap-52b328ee03e1>
+<https://linear.app/itomarkets/project/aip-platform-roadmap-52b328ee03e1>
 
 The project contains 16 issue-level lanes and 5 milestones:
 
 | Milestone | Issues |
 | --- | --- |
 | Security and Access Baseline | `ITO-44`, `ITO-57`, `ITO-58` |
-| ECC 2.0 Preview and Publication | `ITO-45`, `ITO-46`, `ITO-47`, `ITO-56` |
+| AIP 2.0 Preview and Publication | `ITO-45`, `ITO-46`, `ITO-47`, `ITO-56` |
 | AgentShield Enterprise Iteration | `ITO-48`, `ITO-49` |
-| ECC Tools Next-Level Platform | `ITO-50`, `ITO-51`, `ITO-52`, `ITO-53`, `ITO-54`, `ITO-59` |
+| AIP Tools Next-Level Platform | `ITO-50`, `ITO-51`, `ITO-52`, `ITO-53`, `ITO-54`, `ITO-59` |
 | Legacy Audit and Salvage | `ITO-55` |
 
 Project documents added in Linear:
@@ -58,7 +58,7 @@ Project documents added in Linear:
 - GitHub Queue Snapshot 2026-05-15
 - Completion Audit Snapshot 2026-05-15
 - Discussion Queue Evidence 2026-05-15
-- ECC-Tools Access Evidence 2026-05-15
+- AIP-Tools Access Evidence 2026-05-15
 
 ## Supply-Chain Evidence
 
@@ -70,23 +70,23 @@ Project documents added in Linear:
 | PR #1932 | Added `scripts/platform-audit.js` JSON/Markdown/file-output modes so queue, discussion, roadmap, and release evidence can be captured as a durable artifact instead of terminal-only output |
 | PR #1933 | Expanded home-scan IOC coverage to Claude `settings.local.json`, `.claude/hooks/hooks.json`, and user-level VS Code / Code Insiders `tasks.json` across macOS, Linux, and Windows |
 | PR #1934 | Switched ordinary CI dependency caches to restore-only `actions/cache/restore` usage so test jobs do not save mutable dependency state back into shared caches |
-| PR #1935 | Stabilized `ecc2` current-directory-mutating tests with a test-only serialized current-dir guard, preserving the Rust release-surface gate under parallel test execution |
+| PR #1935 | Stabilized `aip2` current-directory-mutating tests with a test-only serialized current-dir guard, preserving the Rust release-surface gate under parallel test execution |
 | PR #1940 | Added `.github/workflows/supply-chain-watch.yml`, scheduled every 6 hours, so the TanStack/Mini Shai-Hulud/node-ipc IOC scan and npm signature/audit checks produce a durable `supply-chain-ioc-report.json` artifact |
 | PR #1941 | Removed GitHub Actions dependency cache use from CI test workflows, disabled package-manager lifecycle scripts for npm/pnpm/Yarn/Bun installs, purged existing Actions caches, and added validator tests that reject unsafe install/cache patterns |
 | AgentShield PR #83 | Merged Mini Shai-Hulud IOC coverage for TanStack, Mistral, OpenSearch, Guardrails, UiPath, Squawk, Claude Code / VS Code persistence, and dead-man switch artifacts |
 | AgentShield PR #84 | Merged the broader Mini Shai-Hulud full-campaign affected-package table, including additional `@cap-js`, `@draftlab`, `@tallyui`, `intercom-client`, `lightning`, and related package/version IOCs |
 | AgentShield PR #85 | Added GitHub Action supply-chain verification, gating, and evidence packs so AgentShield's enterprise scanner release path has a verified registry-signature surface |
 | AgentShield PR #86 | Added `ci-context.json` to AgentShield evidence packs with whitelisted GitHub Actions workflow, commit, run, and runtime provenance while keeping arbitrary environment variables and tokens out of the bundle |
-| ECC-Tools PR #75 | Tightened the native GitHub payments announcement gate so public billing claims remain blocked until live Marketplace-managed test-account readback is ready |
+| AIP-Tools PR #75 | Tightened the native GitHub payments announcement gate so public billing claims remain blocked until live Marketplace-managed test-account readback is ready |
 | Trunk merge commits | `f04702bdac132662c8496e817bcd850c86e2b854`, `ee85e1482e3d6322ddb2706392ea0fc97469bd26`, `13585f1092c92fa3f20ffe0d756e40c5720b0de5`, `553d507ea63bc252e815a924c0d2baea961351a1`, `c0bac4d6ced7f78a5464c6e3fd8cfbb43515a9d5`, `c2c54e7c0b84a213848b9ab3dfeb3ae16fb9844d`, `6b8a49a6eed11cc7df19d8b1f2add085b37cf466`, `1949d75e18e59a37de269d88b188fc701f5cf122`, `6951b8d5d29d13cac6b89b461104ad03838553de`, `f7035b5644ffc857879b71c39353b2141f17c3f0` |
 | AgentShield merge commits | `f899b27ba3fa60ec7e0dca41cc2dadcb1a1fb75d`, `d1aa5313afd915d0b7296e57aabaeb979b1ea93b`, `908d8f3a52a6a65b21e737339b56906603eb1345`, `69a5e25b675b77666d0c96abc22639a5ba883403` |
-| ECC-Tools merge commits | `6d00d67043e92cadc80f160bfe947115bfef33b1` |
+| AIP-Tools merge commits | `6d00d67043e92cadc80f160bfe947115bfef33b1` |
 | Local IOC tests | `node tests/ci/scan-supply-chain-iocs.test.js` passed 15/15 |
 | Unicode safety | `node scripts/ci/check-unicode-safety.js` passed |
-| IOC scan | `node scripts/ci/scan-supply-chain-iocs.js --root <ECC-workspace> --home` passed with 229 files inspected after the no-lifecycle install refresh |
+| IOC scan | `node scripts/ci/scan-supply-chain-iocs.js --root <AIP-workspace> --home` passed with 229 files inspected after the no-lifecycle install refresh |
 | npm registry verification | `npm audit signatures` verified 241 registry signatures and 30 attestations; `npm audit --audit-level=high` found 0 vulnerabilities |
 | Actions cache purge | `gh cache delete --all --succeed-on-no-caches` completed and `gh cache list --limit 20` returned no caches |
-| Rust release-surface gate | `cd ecc2 && cargo test` passed 462/462 with the existing 14 dead-code/unused warnings |
+| Rust release-surface gate | `cd aip2 && cargo test` passed 462/462 with the existing 14 dead-code/unused warnings |
 | Root suite | `node tests/run-all.js` passed 2442/2442, 0 failed |
 | Repo sweeps | Targeted persistence path checks found no active `gh-token-monitor`, `pgsql-monitor`, `transformers.pyz`, or `pgmonitor.py` artifacts |
 
@@ -137,7 +137,7 @@ survive package uninstall.
 - X, LinkedIn, article, Telegram, and demo collateral that must receive final
   live URLs after release/package/plugin publication;
 - explicit blockers for GitHub release, npm `next` publish, Claude plugin,
-  Codex plugin, ECC Tools billing/product-readiness, and announcements.
+  Codex plugin, AIP Tools billing/product-readiness, and announcements.
 
 The preview pack is assembled for final clean-checkout gating, but it is still
 not a publication action.
@@ -158,21 +158,21 @@ as coming soon:
 | Surface | Evidence |
 | --- | --- |
 | CLI shape | `codex plugin marketplace add --help` supports GitHub shorthand, Git URLs, SSH URLs, local marketplace roots, `--ref`, and Git-only `--sparse` |
-| Repo marketplace | `.agents/plugins/marketplace.json` exposes `ecc@2.0.0-rc.1` with `source.path: "./"` from the marketplace root |
-| Local add smoke | `HOME="$(mktemp -d)" codex plugin marketplace add <local-checkout>` added marketplace `ecc` and recorded the installed marketplace root as `<local-checkout>` without touching the real Codex config |
+| Repo marketplace | `.agents/plugins/marketplace.json` exposes `aip@2.0.0-rc.1` with `source.path: "./"` from the marketplace root |
+| Local add smoke | `HOME="$(mktemp -d)" codex plugin marketplace add <local-checkout>` added marketplace `aip` and recorded the installed marketplace root as `<local-checkout>` without touching the real Codex config |
 | README alignment | `.codex-plugin/README.md` now uses `codex plugin marketplace add`, not the stale `codex plugin install` command |
 | Public-directory status | The supported Codex distribution path for rc.1 is repo-marketplace/manual install; official Plugin Directory submission remains blocked on OpenAI self-serve publishing availability |
 
 ## Current Publication Blockers
 
 - GitHub prerelease `v2.0.0-rc.1` is still not created in this pass.
-- npm `ecc-universal@2.0.0-rc.1` is still not published to the `next` dist-tag.
+- npm `aip-universal@2.0.0-rc.1` is still not published to the `next` dist-tag.
 - Claude plugin tag and marketplace propagation remain approval-gated.
 - Codex plugin repo-marketplace distribution is verified for rc.1, but official
   Plugin Directory publishing is still blocked on OpenAI's coming-soon
   self-serve publishing surface.
-- ECC Tools PR #73 added a fail-closed `/api/billing/readiness`
-  `announcementGate` for native GitHub payments claims, and ECC Tools PR #74
+- AIP Tools PR #73 added a fail-closed `/api/billing/readiness`
+  `announcementGate` for native GitHub payments claims, and AIP Tools PR #74
   added `npm run billing:announcement-gate` as the operator verifier, but the
   live Marketplace-managed test-account readback still must return
   `announcementGate.ready === true` before any public payment announcement.

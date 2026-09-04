@@ -1,7 +1,7 @@
 ---
 name: fal-ai-media
 description: fal.ai MCPによる統合メディア生成（画像、動画、音声）。テキストから画像（Nano Banana）、テキスト/画像から動画（Seedance、Kling、Veo 3）、テキストから音声（CSM-1B）、動画から音声（ThinkSound）をカバーします。ユーザーがAIで画像、動画、音声を生成したい場合に使用します。
-origin: ECC
+origin: AIP
 ---
 
 # fal.aiメディア生成

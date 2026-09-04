@@ -1,5 +1,5 @@
 name: Quick product feedback
-description: One required choice and an optional sentence. Leaving ECC is valid feedback.
+description: One required choice and an optional sentence. Leaving AIP is valid feedback.
 title: "[Feedback] "
 labels:
   - feedback
@@ -18,11 +18,11 @@ body:
     attributes:
       label: What best describes your feedback?
       options:
-        - I could not install or activate ECC
-        - ECC made the agent slower or the output worse
-        - ECC used too much token or context budget
+        - I could not install or activate AIP
+        - AIP made the agent slower or the output worse
+        - AIP used too much token or context budget
         - Hooks or gates interrupted normal work
-        - ECC was too complicated or required too much configuration
+        - AIP was too complicated or required too much configuration
         - My harness or operating system was missing or unreliable
         - I had a security or trust concern
         - A feature I needed was missing
@@ -35,7 +35,7 @@ body:
   - type: dropdown
     id: harness
     attributes:
-      label: Where did you use ECC?
+      label: Where did you use AIP?
       options:
         - Claude Code
         - Codex
@@ -52,5 +52,5 @@ body:
   - type: textarea
     id: keep
     attributes:
-      label: What should ECC keep?
+      label: What should AIP keep?
       description: Optional. Tell us what was valuable even if the overall experience did not work.

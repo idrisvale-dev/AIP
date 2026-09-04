@@ -33,7 +33,7 @@ function test(name, fn) { tests.push([name, fn]); }
 
 test("has valid discoverable frontmatter and consolidated trigger phrases", () => {
   const skill = fs.readFileSync(SKILL_PATH, "utf8");
-  assert.match(skill, /^---\nname: ito-baskets\ndescription: [^\n]+\nmetadata:\n {2}origin: ECC\n/);
+  assert.match(skill, /^---\nname: ito-baskets\ndescription: [^\n]+\nmetadata:\n {2}origin: AIP\n/);
   assert.match(skill, /aliases: ito-basket-compare, ito-market-intelligence, ito-data-atlas-agent, ito-trade-planner/);
   const lower = skill.toLowerCase();
   for (const phrase of [
@@ -69,11 +69,11 @@ test("preserves the non-advisory, non-executing boundary from all four predecess
   assert.match(skill, /never advise the user to buy, sell, hold, hedge, lever, allocate, or size/i);
   assert.match(skill, /never place, cancel, route, sign, simulate, or submit/i);
   assert.match(skill, /no execution path and no\s+confirmation can give it one/i);
-  assert.match(skill, /`ecc ito find` submits an\s+authenticated RFQ/);
-  assert.match(skill, /`ecc ito status` reads RFQ\/procurement status, not\s+basket data/);
+  assert.match(skill, /`aip ito find` submits an\s+authenticated RFQ/);
+  assert.match(skill, /`aip ito status` reads RFQ\/procurement status, not\s+basket data/);
   assert.match(skill, /UNSUPPORTED_OPERATION/);
   assert.match(skill, /prediction-market-risk-review/);
-  assert.doesNotMatch(skill, /(?:run|invoke|call) `?ecc ito (?:find|status)/i);
+  assert.doesNotMatch(skill, /(?:run|invoke|call) `?aip ito (?:find|status)/i);
   assert.match(skill, /never call a trade good, bad, best, optimal,\s+guaranteed, or risk-free/i);
   for (const advisory of [/\byou should buy\b/i, /\byou should sell\b/i, /\bbest trade\b/i, /\boptimal size\b/i]) {
     assert.doesNotMatch(skill, advisory);
@@ -93,7 +93,7 @@ test("documents anonymous, keyed, and SDK surfaces with scope and credential sep
   assert.match(skill, /bkt_\*/);
   assert.match(skill, /ito-markets/);
   assert.match(skill, /compute device credential[\s\S]*never a\s+substitute|never a\s+substitute[\s\S]*compute device credential/i);
-  assert.match(skill, /never uses device authorization or `ecc ito login`/i);
+  assert.match(skill, /never uses device authorization or `aip ito login`/i);
   assert.match(skill, /x-ito-edge-cache/);
   assert.match(skill, /never send credentials to these routes/i);
 });

@@ -231,7 +231,7 @@ function requestUrl(url, options) {
       method: options.method || 'HEAD',
       timeout: options.timeoutMs || DEFAULT_TIMEOUT_MS,
       headers: {
-        'User-Agent': 'ecc-supply-chain-watch/2.0',
+        'User-Agent': 'aip-supply-chain-watch/2.0',
         Accept: 'text/html,application/json;q=0.9,*/*;q=0.8',
       },
     }, response => {
@@ -347,7 +347,7 @@ async function buildAdvisorySourceReport(options = {}) {
 
   const ready = checks.every(check => check.status !== 'fail');
   const report = {
-    schema_version: 'ecc.supply-chain-advisory-sources.v1',
+    schema_version: 'aip.supply-chain-advisory-sources.v1',
     generatedAt,
     ready,
     refresh: {

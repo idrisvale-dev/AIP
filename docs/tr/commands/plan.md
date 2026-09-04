@@ -109,7 +109,7 @@ Planlamadan sonra:
 
 ## İlgili Agent'lar
 
-Bu komut, ECC tarafından sağlanan `planner` agent'ını çağırır.
+Bu komut, AIP tarafından sağlanan `planner` agent'ını çağırır.
 
 Manuel kurulumlar için, kaynak dosya şurada bulunur:
 `agents/planner.md`

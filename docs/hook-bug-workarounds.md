@@ -1,8 +1,8 @@
 # Hook Bug Workarounds
 
-Community-tested workarounds for current Claude Code bugs that can affect ECC hook-heavy setups.
+Community-tested workarounds for current Claude Code bugs that can affect AIP hook-heavy setups.
 
-This page is intentionally narrow: it collects the highest-signal operational fixes from the longer troubleshooting surface without repeating speculative or unsupported configuration advice. These are upstream Claude Code behaviors, not ECC bugs.
+This page is intentionally narrow: it collects the highest-signal operational fixes from the longer troubleshooting surface without repeating speculative or unsupported configuration advice. These are upstream Claude Code behaviors, not AIP bugs.
 
 ## When To Use This Page
 
@@ -14,7 +14,7 @@ Use this page when you are specifically debugging:
 - hook edits that do not hot-reload
 - repeated `529 Overloaded` responses under heavy hook/tool pressure
 
-For the fuller ECC troubleshooting surface, use [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
+For the fuller AIP troubleshooting surface, use [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 
 ## High-Signal Workarounds
 
@@ -39,7 +39,7 @@ What helps:
 
 - Remove `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` if lowering it causes earlier compaction in your build.
 - Prefer manual `/compact` at natural task boundaries.
-- Use ECC's `strategic-compact` guidance instead of forcing a lower threshold.
+- Use AIP's `strategic-compact` guidance instead of forcing a lower threshold.
 
 ### MCP auth looks live but fails after compaction
 
@@ -54,7 +54,7 @@ What helps:
 What helps:
 
 - Restart the Claude Code session after changing hooks.
-- Advanced users sometimes use shell-local reload helpers, but ECC does not ship one because those approaches are shell- and platform-dependent.
+- Advanced users sometimes use shell-local reload helpers, but AIP does not ship one because those approaches are shell- and platform-dependent.
 
 ### Repeated `529 Overloaded`
 
@@ -66,7 +66,7 @@ What helps:
 - Disable unused MCP servers per project.
 - Compact manually at natural breakpoints instead of waiting for auto-compaction.
 
-## Related ECC Docs
+## Related AIP Docs
 
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 - [token-optimization.md](./token-optimization.md)

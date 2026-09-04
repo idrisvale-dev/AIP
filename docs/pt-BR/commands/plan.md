@@ -107,7 +107,7 @@ Após planejar:
 
 ## Agentes Relacionados
 
-Este comando invoca o agente `planner` fornecido pelo ECC.
+Este comando invoca o agente `planner` fornecido pelo AIP.
 
 Para instalações manuais, o arquivo fonte fica em:
 `agents/planner.md`

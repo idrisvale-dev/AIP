@@ -1,13 +1,13 @@
 **Idioma:** [English](../../README.md) | [简体中文](../../README.zh-CN.md) | [繁體中文](../zh-TW/README.md) | [日本語](../ja-JP/README.md) | [한국어](../ko-KR/README.md) | Português (Brasil) | [Türkçe](../tr/README.md) | [Русский](../ru/README.md) | [Tiếng Việt](../vi-VN/README.md) | [ไทย](../th/README.md) | [Deutsch](../de-DE/README.md) | [Українська](../uk-UA/README.md)
 
-# Everything Claude Code
+# AIP
 
 [![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
 [![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
 [![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
-[![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-universal)
-[![npm ecc-agentshield](https://img.shields.io/npm/dw/ecc-agentshield?label=ecc-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-agentshield)
-[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/ecc-tools)
+[![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-universal)
+[![npm aip-agentshield](https://img.shields.io/npm/dw/aip-agentshield?label=aip-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-agentshield)
+[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/aip-tools)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 ![Shell](https://img.shields.io/badge/-Shell-4EAA25?logo=gnu-bash&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -45,12 +45,12 @@ Este repositório contém apenas o código. Os guias explicam tudo.
 <tr>
 <td width="33%">
 <a href="https://bytecore.org/status/2012378465664745795">
-<img src="../../assets/images/guides/shorthand-guide.png" alt="The Shorthand Guide to Everything Claude Code" />
+<img src="../../assets/images/guides/shorthand-guide.png" alt="The Shorthand Guide to AIP" />
 </a>
 </td>
 <td width="33%">
 <a href="https://bytecore.org/status/2014040193557471352">
-<img src="../../assets/images/guides/longform-guide.png" alt="The Longform Guide to Everything Claude Code" />
+<img src="../../assets/images/guides/longform-guide.png" alt="The Longform Guide to AIP" />
 </a>
 </td>
 <td width="33%">
@@ -87,14 +87,14 @@ Adiciona uma instalação revisável para Claude Code, Codex e Kimi Code, com um
 
 Graduação estável da linha 2.0: 261 skills, substrato de control-pane, inventário MCP, serviço de ciclo de vida de worktrees e a comunidade no [Discord](https://discord.gg/36yGMHGFbR).
 
-### v2.0.0-rc.1 — Sincronização de Superfície, Fluxos Operacionais e ECC 2.0 Alpha (Abr 2026)
+### v2.0.0-rc.1 — Sincronização de Superfície, Fluxos Operacionais e AIP 2.0 Alpha (Abr 2026)
 
 - **Superfície pública sincronizada com o repositório real** — metadados, contagens de catálogo, manifests de plugin e documentação de instalação agora refletem a superfície OSS que realmente é entregue.
 - **Expansão dos fluxos operacionais e externos** — `brand-voice`, `social-graph-ranker`, `customer-billing-ops`, `google-workspace-ops` e skills relacionadas fortalecem a trilha operacional dentro do mesmo sistema.
 - **Ferramentas de mídia e lançamento** — `manim-video`, `remotion-video-creation` e os fluxos de publicação social colocam explicadores técnicos e lançamento no mesmo repositório.
 - **Crescimento de framework e superfície de produto** — `nestjs-patterns`, superfícies de instalação mais ricas para Codex/OpenCode e melhorias de empacotamento cross-harness ampliam o uso além do Claude Code.
-- **ECC 2.0 alpha já está no repositório** — o plano de controle em Rust dentro de `ecc2/` já compila localmente e expõe `dashboard`, `start`, `sessions`, `status`, `stop`, `resume` e `daemon`.
-- **Fortalecimento do ecossistema** — AgentShield, controles de custo do ECC Tools, trabalho no portal de billing e a renovação do site continuam sendo entregues ao redor do plugin principal.
+- **AIP 2.0 alpha já está no repositório** — o plano de controle em Rust dentro de `aip2/` já compila localmente e expõe `dashboard`, `start`, `sessions`, `status`, `stop`, `resume` e `daemon`.
+- **Fortalecimento do ecossistema** — AgentShield, controles de custo do AIP Tools, trabalho no portal de billing e a renovação do site continuam sendo entregues ao redor do plugin principal.
 
 ### v1.9.0 — Instalação Seletiva e Expansão de Idiomas (Mar 2026)
 
@@ -110,9 +110,9 @@ Graduação estável da linha 2.0: 261 skills, substrato de control-pane, invent
 
 ### v1.8.0 — Sistema de Desempenho de Harness (Mar 2026)
 
-- **Lançamento focado em harness** — O ECC agora é explicitamente enquadrado como um sistema de desempenho de harness de agentes, não apenas um pacote de configurações.
+- **Lançamento focado em harness** — O AIP agora é explicitamente enquadrado como um sistema de desempenho de harness de agentes, não apenas um pacote de configurações.
 - **Revisão de confiabilidade de hooks** — Fallback de raiz SessionStart, resumos de sessão na fase Stop e hooks baseados em scripts substituindo frágeis one-liners inline.
-- **Controles de runtime de hooks** — `ECC_HOOK_PROFILE=minimal|standard|strict` e `ECC_DISABLED_HOOKS=...` para controle em tempo de execução sem editar arquivos de hook.
+- **Controles de runtime de hooks** — `AIP_HOOK_PROFILE=minimal|standard|strict` e `AIP_DISABLED_HOOKS=...` para controle em tempo de execução sem editar arquivos de hook.
 - **Novos comandos de harness** — `/harness-audit`, `/loop-start`, `/loop-status`, `/quality-gate`, `/model-route`.
 - **NanoClaw v2** — roteamento de modelo, carregamento a quente de skill, ramificação/busca/exportação/compactação/métricas de sessão.
 - **Paridade entre harnesses** — comportamento unificado em Claude Code, Cursor, OpenCode e Codex app/CLI.
@@ -131,7 +131,7 @@ Comece em menos de 2 minutos:
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # Instalar plugin
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 ### Passo 2: Instalar as Regras (Obrigatório)
@@ -141,7 +141,7 @@ Comece em menos de 2 minutos:
 ```bash
 # Clone o repositório primeiro
 git clone https://github.com/reborncursed/AIP.git
-cd everything-claude-code
+cd aip
 
 # Instalar dependências (escolha seu gerenciador de pacotes)
 npm install        # ou: pnpm install | yarn install | bun install
@@ -161,20 +161,20 @@ npm install        # ou: pnpm install | yarn install | bun install
 # .\install.ps1 --target antigravity typescript
 
 # O ponto de entrada do pacote npm publicado também funciona multiplataforma
-npx ecc-universal install typescript
+npx aip-universal install typescript
 ```
 
 ### Passo 3: Começar a Usar
 
 ```bash
 # Experimente um comando (a instalação do plugin usa forma com namespace)
-/ecc:plan "Adicionar autenticação de usuário"
+/aip:plan "Adicionar autenticação de usuário"
 
 # Instalação manual (Opção 2) usa a forma mais curta:
 # /plan "Adicionar autenticação de usuário"
 
 # Verificar comandos disponíveis
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
 **Pronto!** Você agora tem acesso a 28 agentes, 116 skills e 59 comandos.
@@ -220,10 +220,10 @@ Use flags de runtime para ajustar rigor ou desabilitar hooks específicos tempor
 
 ```bash
 # Perfil de rigor de hooks (padrão: standard)
-export ECC_HOOK_PROFILE=standard
+export AIP_HOOK_PROFILE=standard
 
 # IDs de hooks separados por vírgula para desabilitar
-export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
+export AIP_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 ```
 
 ---
@@ -231,7 +231,7 @@ export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 ## O Que Está Incluído
 
 ```
-everything-claude-code/
+aip/
 |-- agents/           # 28 subagentes especializados para delegação
 |-- skills/           # Definições de fluxo de trabalho e conhecimento de domínio
 |-- commands/         # Comandos slash para execução rápida
@@ -273,16 +273,16 @@ Para recursos avançados (10k+ commits, PRs automáticos, compartilhamento em eq
 
 ```bash
 # Verificação rápida (sem instalação necessária)
-npx ecc-agentshield scan
+npx aip-agentshield scan
 
 # Corrigir automaticamente problemas seguros
-npx ecc-agentshield scan --fix
+npx aip-agentshield scan --fix
 
 # Análise profunda com três agentes Opus 4.6
-npx ecc-agentshield scan --opus --stream
+npx aip-agentshield scan --opus --stream
 
 # Gerar configuração segura do zero
-npx ecc-agentshield init
+npx aip-agentshield init
 ```
 
 ### Aprendizado Contínuo v2
@@ -320,7 +320,7 @@ claude --version
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # Instalar o plugin
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 Ou adicione diretamente ao seu `~/.claude/settings.json`:
@@ -328,7 +328,7 @@ Ou adicione diretamente ao seu `~/.claude/settings.json`:
 ```json
 {
   "extraKnownMarketplaces": {
-    "ecc": {
+    "aip": {
       "source": {
         "source": "github",
         "repo": "reborncursed/AIP"
@@ -336,7 +336,7 @@ Ou adicione diretamente ao seu `~/.claude/settings.json`:
     }
   },
   "enabledPlugins": {
-    "ecc@ecc": true
+    "aip@aip": true
   }
 }
 ```
@@ -349,12 +349,12 @@ Ou adicione diretamente ao seu `~/.claude/settings.json`:
 >
 > # Opção A: Regras no nível do usuário (aplica a todos os projetos)
 > mkdir -p ~/.claude/rules
-> cp -r everything-claude-code/rules/common ~/.claude/rules/common
-> cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript   # escolha sua stack
+> cp -r aip/rules/common ~/.claude/rules/common
+> cp -r aip/rules/typescript ~/.claude/rules/typescript   # escolha sua stack
 >
 > # Opção B: Regras no nível do projeto (aplica apenas ao projeto atual)
 > mkdir -p .claude/rules
-> cp -r everything-claude-code/rules/common .claude/rules/common
+> cp -r aip/rules/common .claude/rules/common
 > ```
 
 ---
@@ -366,17 +366,17 @@ Ou adicione diretamente ao seu `~/.claude/settings.json`:
 git clone https://github.com/reborncursed/AIP.git
 
 # Copiar agentes para sua config Claude
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp aip/agents/*.md ~/.claude/agents/
 
 # Copiar regras (comuns + específicas da linguagem)
-cp -r everything-claude-code/rules/common ~/.claude/rules/common
-cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript
+cp -r aip/rules/common ~/.claude/rules/common
+cp -r aip/rules/typescript ~/.claude/rules/typescript
 
 # Copiar comandos
-cp everything-claude-code/commands/*.md ~/.claude/commands/
+cp aip/commands/*.md ~/.claude/commands/
 
 # Copiar skills (core vs nicho)
-cp -r everything-claude-code/.agents/skills/* ~/.claude/skills/
+cp -r aip/.agents/skills/* ~/.claude/skills/
 ```
 
 ---
@@ -415,8 +415,8 @@ Regras são diretrizes sempre seguidas, organizadas em `common/` (agnóstico à 
 
 | Quero... | Use este comando | Agente usado |
 |----------|-----------------|--------------|
-| Planejar um novo recurso | `/ecc:plan "Adicionar auth"` | planner |
-| Projetar arquitetura de sistema | `/ecc:plan` + agente architect | architect |
+| Planejar um novo recurso | `/aip:plan "Adicionar auth"` | planner |
+| Projetar arquitetura de sistema | `/aip:plan` + agente architect | architect |
 | Escrever código com testes primeiro | `/tdd` | tdd-guide |
 | Revisar código que acabei de escrever | `/code-review` | code-reviewer |
 | Corrigir build com falha | `/build-fix` | build-error-resolver |
@@ -431,7 +431,7 @@ Regras são diretrizes sempre seguidas, organizadas em `common/` (agnóstico à 
 
 **Começando um novo recurso:**
 ```
-/ecc:plan "Adicionar autenticação de usuário com OAuth"
+/aip:plan "Adicionar autenticação de usuário com OAuth"
                                               → planner cria blueprint de implementação
 /tdd                                          → tdd-guide aplica escrita de testes primeiro
 /code-review                                  → code-reviewer verifica seu trabalho
@@ -459,7 +459,7 @@ Regras são diretrizes sempre seguidas, organizadas em `common/` (agnóstico à 
 <summary><b>Como verificar quais agentes/comandos estão instalados?</b></summary>
 
 ```bash
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 </details>
 
@@ -470,9 +470,9 @@ Este é o problema mais comum. **NÃO adicione um campo `"hooks"` ao `.claude-pl
 </details>
 
 <details>
-<summary><b>Posso usar o ECC com Cursor / OpenCode / Codex / Antigravity?</b></summary>
+<summary><b>Posso usar o AIP com Cursor / OpenCode / Codex / Antigravity?</b></summary>
 
-Sim. O ECC é multiplataforma:
+Sim. O AIP é multiplataforma:
 - **Cursor**: Configs pré-traduzidas em `.cursor/`
 - **OpenCode**: Suporte completo a plugins em `.opencode/`
 - **Codex**: Suporte de primeira classe para app macOS e CLI

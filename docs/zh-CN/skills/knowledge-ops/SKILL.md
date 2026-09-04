@@ -1,7 +1,7 @@
 ---
 name: knowledge-ops
 description: 知识库管理、摄取、同步和跨多个存储层（本地文件、MCP内存、向量存储、Git仓库）的检索。当用户想要保存、组织、同步、去重或搜索其知识系统时使用。
-origin: ECC
+origin: AIP
 ---
 
 # 知识操作

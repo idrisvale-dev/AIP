@@ -11,7 +11,7 @@ module.exports = createInstallTargetAdapter({
   target: 'joycode',
   kind: 'project',
   rootSegments: ['.joycode'],
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   nativeRootRelativePath: '.joycode',
   planOperations(input, adapter) {
     const modules = Array.isArray(input.modules)

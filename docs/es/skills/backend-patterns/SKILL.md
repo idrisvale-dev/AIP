@@ -1,7 +1,7 @@
 ---
 name: backend-patterns
 description: Patrones de arquitectura backend, diseño de API, optimización de base de datos y buenas prácticas del lado del servidor para Node.js, Express y rutas API de Next.js.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Desarrollo Backend

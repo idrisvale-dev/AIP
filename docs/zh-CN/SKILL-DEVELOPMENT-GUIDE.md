@@ -1,6 +1,6 @@
 # Skill 开发指南
 
-一份为 Everything Claude Code (ECC) 创建有效 Skill 的全面指南。
+一份为 AIP (AIP) 创建有效 Skill 的全面指南。
 
 ## 目录
 
@@ -69,7 +69,7 @@ skills/
 ---
 name: skill-name
 description: 在 Skill 列表中显示的简要描述，用于自动激活匹配
-origin: ECC
+origin: AIP
 ---
 
 # Skill 标题
@@ -110,7 +110,7 @@ origin: ECC
 |-------|----------|-------------|
 | `name` | 是 | 小写、连字符连接的标识符（如 `react-patterns`） |
 | `description` | 是 | 单行描述，用于 Skill 列表和自动激活 |
-| `origin` | 否 | 来源标识符（如 `ECC`、`community`、项目名） |
+| `origin` | 否 | 来源标识符（如 `AIP`、`community`、项目名） |
 | `tags` | 否 | 分类标签数组 |
 | `version` | 否 | Skill 版本号，用于跟踪更新 |
 
@@ -633,7 +633,7 @@ go build ./examples/...
 
 ```bash
 gh repo fork reborncursed/AIP --clone
-cd everything-claude-code
+cd aip
 ```
 
 ### 2. 创建分支
@@ -712,7 +712,7 @@ git push -u origin feat/skill-your-skill-name
 ---
 name: rust-patterns
 description: Rust 习惯用法、所有权模式和最佳实践，用于编写安全、地道的代码。
-origin: ECC
+origin: AIP
 ---
 
 # Rust 模式
@@ -773,7 +773,7 @@ pub type AppResult<T> = Result<T, AppError>;
 ---
 name: fastapi-patterns
 description: FastAPI 路由、依赖注入、验证和异步操作的模式。
-origin: ECC
+origin: AIP
 ---
 
 # FastAPI 模式
@@ -834,7 +834,7 @@ async def get_user(
 ---
 name: refactoring-workflow
 description: 在不改变行为的前提下改善代码质量的系统化重构工作流。
-origin: ECC
+origin: AIP
 ---
 
 # 重构工作流

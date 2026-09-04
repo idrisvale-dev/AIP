@@ -1,7 +1,7 @@
 ---
 name: rust-patterns
 description: Patrones idiomáticos de Rust, ownership, manejo de errores, traits, concurrencia y buenas prácticas para construir aplicaciones seguras y eficientes.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Desarrollo Rust

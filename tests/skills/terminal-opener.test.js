@@ -34,7 +34,7 @@ function test(name, fn) {
 function runCli(args, env = {}) {
   return spawnSync(process.execPath, [SCRIPT, ...args], {
     encoding: 'utf8',
-    env: { ...process.env, ECC_TERMINAL: '', ...env },
+    env: { ...process.env, AIP_TERMINAL: '', ...env },
   });
 }
 

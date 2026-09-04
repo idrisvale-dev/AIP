@@ -1,5 +1,5 @@
 {
-  "description": "Reference lifecycle hook definitions for ECC memory persistence. The production hook graph is hooks/hooks.json.",
+  "description": "Reference lifecycle hook definitions for AIP memory persistence. The production hook graph is hooks/hooks.json.",
   "events": [
     {
       "event": "SessionStart",
@@ -33,7 +33,7 @@
       "event": "PostToolUse",
       "id": "post:session-activity-tracker",
       "script": "scripts/hooks/session-activity-tracker.js",
-      "purpose": "Record per-session tool calls and file activity for ECC2 metrics.",
+      "purpose": "Record per-session tool calls and file activity for AIP2 metrics.",
       "blocking": false
     },
     {

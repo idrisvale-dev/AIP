@@ -3,11 +3,11 @@
 const path = require('path');
 
 function toCursorAgentFileName(fileName) {
-  if (!fileName || fileName.startsWith('ecc-')) {
+  if (!fileName || fileName.startsWith('aip-')) {
     return fileName;
   }
 
-  return `ecc-${fileName}`;
+  return `aip-${fileName}`;
 }
 
 function toCursorAgentRelativePath(relativePath) {

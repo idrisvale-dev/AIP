@@ -1,16 +1,16 @@
 /**
- * ECC adapter for the Pi coding agent.
+ * AIP adapter for the Pi coding agent.
  *
- * This is the ONLY adapter logic ECC ships for Pi. ECC's canonical assets stay
+ * This is the ONLY adapter logic AIP ships for Pi. AIP's canonical assets stay
  * the single source of truth: `skills/` and `commands/` are mounted directly by
  * the `pi` manifest in the repo's root `package.json`. Nothing is copied or
  * generated under `.pi/`.
  *
  * What this file adapts:
- *   - Pi lifecycle events -> ECC's existing hook runner (`run-with-flags.js`),
- *     so ECC hook profiles and disable flags keep working under Pi.
- *   - ECC's SessionStart `additionalContext` payload -> Pi's system prompt.
- *   - A `/ecc-doctor` command for install diagnostics.
+ *   - Pi lifecycle events -> AIP's existing hook runner (`run-with-flags.js`),
+ *     so AIP hook profiles and disable flags keep working under Pi.
+ *   - AIP's SessionStart `additionalContext` payload -> Pi's system prompt.
+ *   - A `/aip-doctor` command for install diagnostics.
  *
  * Design constraints (see .pi/README.md):
  *   - Hooks resolve relative to THIS file, never `process.cwd()`, so a global
@@ -96,21 +96,21 @@ interface ExtensionAPI {
 }
 
 /**
- * ECC package root. This file lives at `<root>/.pi/extensions/index.ts`, so the
+ * AIP package root. This file lives at `<root>/.pi/extensions/index.ts`, so the
  * root is two levels up. Pi loads extensions via jiti in CommonJS mode, which
  * is why `__dirname` is the correct primitive here rather than
  * `import.meta.url` (verified against Pi 0.84.1).
  */
-const ECC_ROOT = path.resolve(__dirname, "..", "..")
+const AIP_ROOT = path.resolve(__dirname, "..", "..")
 
-/** ECC's universal hook runner. It applies hook-profile and disable flags. */
-const HOOK_RUNNER = path.join(ECC_ROOT, "scripts", "hooks", "run-with-flags.js")
+/** AIP's universal hook runner. It applies hook-profile and disable flags. */
+const HOOK_RUNNER = path.join(AIP_ROOT, "scripts", "hooks", "run-with-flags.js")
 
 const HOOK_TIMEOUT_MS = 30_000
 const MAX_HOOK_OUTPUT_BYTES = 1024 * 1024
 
 /**
- * ECC rules injected into Pi's system prompt, read from the canonical
+ * AIP rules injected into Pi's system prompt, read from the canonical
  * `rules/common/` directory at runtime. Nothing is copied or generated.
  *
  * Excluded on purpose: `agents.md`, `hooks.md`, and `performance.md`. Those
@@ -131,12 +131,12 @@ const PORTABLE_RULE_FILES = [
 /** Upper bound on injected rule text, so a large edit cannot flood the prompt. */
 const MAX_RULES_BYTES = 32 * 1024
 
-/** Values ECC treats as "off" across its existing environment switches. */
+/** Values AIP treats as "off" across its existing environment switches. */
 const DISABLED_VALUES = new Set(["0", "false", "off", "none", "disabled"])
 
 /**
- * Optional Pi companion packages. ECC works without every one of these; they
- * are reported by `/ecc-doctor` so users can see which extras are available.
+ * Optional Pi companion packages. AIP works without every one of these; they
+ * are reported by `/aip-doctor` so users can see which extras are available.
  */
 const COMPANION_PACKAGES = [
   "pi-subagents",
@@ -145,9 +145,9 @@ const COMPANION_PACKAGES = [
 ] as const
 
 interface HookSpec {
-  /** ECC hook id, used for profile gating and disable flags. */
+  /** AIP hook id, used for profile gating and disable flags. */
   id: string
-  /** Hook script path relative to the ECC package root. */
+  /** Hook script path relative to the AIP package root. */
   script: string
   /** Hook profiles the hook participates in. */
   profiles: string
@@ -173,12 +173,12 @@ interface HookResult {
 }
 
 /**
- * Run an ECC hook through ECC's own runner.
+ * Run an AIP hook through AIP's own runner.
  *
  * Never rejects: a missing runner, a non-zero exit, a timeout, or a spawn error
  * all resolve to a `failure` string that the caller surfaces as a warning.
  */
-function runEccHook(
+function runAipHook(
   spec: HookSpec,
   payload: unknown,
   env: NodeJS.ProcessEnv,
@@ -239,7 +239,7 @@ function runEccHook(
 
 /**
  * Working directory for hook execution: the user's project. Falls back to the
- * ECC package root if Pi reports a directory that no longer exists, so a stale
+ * AIP package root if Pi reports a directory that no longer exists, so a stale
  * cwd degrades to a working hook rather than a spawn failure.
  */
 function resolveHookCwd(ctx: ExtensionContext): string {
@@ -250,7 +250,7 @@ function resolveHookCwd(ctx: ExtensionContext): string {
   } catch {
     // Fall through to the package root.
   }
-  return ECC_ROOT
+  return AIP_ROOT
 }
 
 function readSessionId(ctx: ExtensionContext): string | undefined {
@@ -262,18 +262,18 @@ function readSessionId(ctx: ExtensionContext): string | undefined {
 }
 
 /**
- * Build the environment ECC hooks expect.
+ * Build the environment AIP hooks expect.
  *
- * `CLAUDE_PLUGIN_ROOT` / `ECC_PLUGIN_ROOT` are how every ECC hook locates the
- * package; setting them from `ECC_ROOT` is what makes a global install resolve
+ * `CLAUDE_PLUGIN_ROOT` / `AIP_PLUGIN_ROOT` are how every AIP hook locates the
+ * package; setting them from `AIP_ROOT` is what makes a global install resolve
  * correctly instead of probing the user's project. The `CLAUDE_*` session vars
- * are the names ECC's shared hook scripts already read across harnesses.
+ * are the names AIP's shared hook scripts already read across harnesses.
  */
 function buildHookEnv(ctx: ExtensionContext): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
-    CLAUDE_PLUGIN_ROOT: ECC_ROOT,
-    ECC_PLUGIN_ROOT: ECC_ROOT,
+    CLAUDE_PLUGIN_ROOT: AIP_ROOT,
+    AIP_PLUGIN_ROOT: AIP_ROOT,
     CLAUDE_PROJECT_DIR: ctx.cwd,
   }
 
@@ -286,7 +286,7 @@ function buildHookEnv(ctx: ExtensionContext): NodeJS.ProcessEnv {
 }
 
 /**
- * Map Pi's session reason onto the `source` values ECC's SessionStart hook
+ * Map Pi's session reason onto the `source` values AIP's SessionStart hook
  * understands. Pi's `new` and `reload` have no Claude Code equivalent, so they
  * report as a fresh startup.
  */
@@ -303,7 +303,7 @@ function mapSessionSource(reason: SessionStartEvent["reason"]): string {
 /**
  * Extract `hookSpecificOutput.additionalContext` from a hook's stdout.
  *
- * ECC hooks emit a JSON envelope, but the runner passes stdin straight through
+ * AIP hooks emit a JSON envelope, but the runner passes stdin straight through
  * when a hook is disabled by profile, so non-JSON stdout is expected and must
  * not be treated as an error.
  */
@@ -336,16 +336,16 @@ let cachedRules: string | null | undefined
  *
  * Kept alongside the cache because `loadPortableRules` silently drops files it
  * cannot read, files that are empty, and every file past the size cap — so the
- * allowlist length would overstate a partial install in `/ecc-doctor`, which is
+ * allowlist length would overstate a partial install in `/aip-doctor`, which is
  * the one place a user looks to find exactly that.
  */
 let cachedRuleFileCount = 0
 
 /**
- * ECC's portable engineering rules, concatenated from the canonical
+ * AIP's portable engineering rules, concatenated from the canonical
  * `rules/common/` directory of the installed package.
  *
- * Returns null when disabled via `ECC_PI_RULES` or when no rule file could be
+ * Returns null when disabled via `AIP_PI_RULES` or when no rule file could be
  * read, so a partial install degrades to "no rules" instead of failing.
  */
 function loadPortableRules(): string | null {
@@ -353,7 +353,7 @@ function loadPortableRules(): string | null {
     return cachedRules
   }
 
-  if (isDisabledByEnv(process.env.ECC_PI_RULES)) {
+  if (isDisabledByEnv(process.env.AIP_PI_RULES)) {
     cachedRules = null
     cachedRuleFileCount = 0
     return cachedRules
@@ -365,7 +365,7 @@ function loadPortableRules(): string | null {
   for (const file of PORTABLE_RULE_FILES) {
     let text: string
     try {
-      text = fs.readFileSync(path.join(ECC_ROOT, "rules", "common", file), "utf8").trim()
+      text = fs.readFileSync(path.join(AIP_ROOT, "rules", "common", file), "utf8").trim()
     } catch {
       continue
     }
@@ -476,9 +476,9 @@ function countMarkdownFiles(dir: string): number {
   }
 }
 
-function readEccVersion(): string {
+function readAipVersion(): string {
   try {
-    const manifest = JSON.parse(fs.readFileSync(path.join(ECC_ROOT, "package.json"), "utf8")) as {
+    const manifest = JSON.parse(fs.readFileSync(path.join(AIP_ROOT, "package.json"), "utf8")) as {
       version?: string
     }
     return manifest.version || "unknown"
@@ -488,13 +488,13 @@ function readEccVersion(): string {
 }
 
 function describeRulesStatus(): string {
-  if (isDisabledByEnv(process.env.ECC_PI_RULES)) {
-    return "disabled via ECC_PI_RULES"
+  if (isDisabledByEnv(process.env.AIP_PI_RULES)) {
+    return "disabled via AIP_PI_RULES"
   }
 
   const rules = loadPortableRules()
   if (!rules) {
-    return `NOT FOUND (${path.join(ECC_ROOT, "rules", "common")})`
+    return `NOT FOUND (${path.join(AIP_ROOT, "rules", "common")})`
   }
 
   const skipped = PORTABLE_RULE_FILES.length - cachedRuleFileCount
@@ -503,16 +503,16 @@ function describeRulesStatus(): string {
 }
 
 function buildDoctorReport(ctx: ExtensionContext): string {
-  const skillsDir = path.join(ECC_ROOT, "skills")
-  const commandsDir = path.join(ECC_ROOT, "commands")
+  const skillsDir = path.join(AIP_ROOT, "skills")
+  const commandsDir = path.join(AIP_ROOT, "commands")
   const skillCount = countDirectories(skillsDir)
   const commandCount = countMarkdownFiles(commandsDir)
 
   const lines = [
-    "ECC adapter for Pi",
+    "AIP adapter for Pi",
     "",
-    `  ECC version:   ${readEccVersion()}`,
-    `  Package root:  ${ECC_ROOT}`,
+    `  AIP version:   ${readAipVersion()}`,
+    `  Package root:  ${AIP_ROOT}`,
     `  Project cwd:   ${ctx.cwd}`,
     "",
     "Canonical resources",
@@ -524,8 +524,8 @@ function buildDoctorReport(ctx: ExtensionContext): string {
     "",
     "Hook runner",
     `  ${fs.existsSync(HOOK_RUNNER) ? "found" : "NOT FOUND"} (${HOOK_RUNNER})`,
-    `  profile:       ${process.env.ECC_HOOK_PROFILE || "standard (default)"}`,
-    `  disabled:      ${process.env.ECC_DISABLED_HOOKS || "none"}`,
+    `  profile:       ${process.env.AIP_HOOK_PROFILE || "standard (default)"}`,
+    `  disabled:      ${process.env.AIP_DISABLED_HOOKS || "none"}`,
     "",
     "Optional companion packages (from Pi's installed package list)",
   ]
@@ -541,7 +541,7 @@ function buildDoctorReport(ctx: ExtensionContext): string {
 
   lines.push(
     "",
-    "Companion packages are optional; ECC skills, commands, and session hooks",
+    "Companion packages are optional; AIP skills, commands, and session hooks",
     "work without them. See .pi/README.md for what each one unlocks.",
     "Detection reads Pi's `packages` list, so a companion vendored some other",
     "way may work while reporting as not installed."
@@ -552,7 +552,7 @@ function buildDoctorReport(ctx: ExtensionContext): string {
 
 export default function (pi: ExtensionAPI): void {
   /**
-   * ECC's SessionStart hook returns context for the model, but Pi has no
+   * AIP's SessionStart hook returns context for the model, but Pi has no
    * equivalent of Claude Code's `additionalContext` field. It is held here and
    * folded into the system prompt on the next agent start, which is the
    * documented Pi injection point that does not fabricate a user turn.
@@ -573,7 +573,7 @@ export default function (pi: ExtensionAPI): void {
     // built for a different session would describe the wrong project state.
     pendingContext = undefined
 
-    const result = await runEccHook(
+    const result = await runAipHook(
       SESSION_START_HOOK,
       payload,
       buildHookEnv(ctx),
@@ -581,7 +581,7 @@ export default function (pi: ExtensionAPI): void {
     )
 
     if (result.failure) {
-      ctx.ui.notify(`ECC session-start hook skipped (${result.failure})`, "warning")
+      ctx.ui.notify(`AIP session-start hook skipped (${result.failure})`, "warning")
       return
     }
 
@@ -595,11 +595,11 @@ export default function (pi: ExtensionAPI): void {
     // every turn. The session context is a one-shot handoff and is consumed.
     const rules = loadPortableRules()
     if (rules) {
-      additions.push(`<ecc-engineering-rules>\n${rules}\n</ecc-engineering-rules>`)
+      additions.push(`<aip-engineering-rules>\n${rules}\n</aip-engineering-rules>`)
     }
 
     if (pendingContext) {
-      additions.push(`<ecc-session-context>\n${pendingContext}\n</ecc-session-context>`)
+      additions.push(`<aip-session-context>\n${pendingContext}\n</aip-session-context>`)
       pendingContext = undefined
     }
 
@@ -618,7 +618,7 @@ export default function (pi: ExtensionAPI): void {
       session_id: readSessionId(ctx),
     }
 
-    const result = await runEccHook(
+    const result = await runAipHook(
       SESSION_END_HOOK,
       payload,
       buildHookEnv(ctx),
@@ -626,16 +626,16 @@ export default function (pi: ExtensionAPI): void {
     )
 
     if (result.failure) {
-      ctx.ui.notify(`ECC session-end hook skipped (${result.failure})`, "warning")
+      ctx.ui.notify(`AIP session-end hook skipped (${result.failure})`, "warning")
     }
   })
 
-  pi.registerCommand("ecc-doctor", {
-    description: "Report ECC adapter status: package root, canonical resources, hooks, companions",
+  pi.registerCommand("aip-doctor", {
+    description: "Report AIP adapter status: package root, canonical resources, hooks, companions",
     handler: async (_args, ctx) => {
       pi.sendMessage(
         {
-          customType: "ecc-doctor",
+          customType: "aip-doctor",
           content: buildDoctorReport(ctx),
           display: true,
         },

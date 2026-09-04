@@ -1,7 +1,7 @@
 export const meta = {
   name: 'orch-review',
   description:
-    'ECC Review phase as a native Claude Code workflow: multi-dimension review (quality + language + conditional security) then adversarial verification of every CRITICAL/HIGH finding. Returns blocking + advisory findings for Gate 2.',
+    'AIP Review phase as a native Claude Code workflow: multi-dimension review (quality + language + conditional security) then adversarial verification of every CRITICAL/HIGH finding. Returns blocking + advisory findings for Gate 2.',
   phases: [
     { title: 'Review', detail: 'one reviewer agent per dimension, in parallel' },
     { title: 'Verify', detail: 'adversarially refute each CRITICAL/HIGH finding' }
@@ -31,26 +31,26 @@ export const meta = {
 //     stats: { dimensions, failed, raw, unique, confirmed, unverified, uncertain, refuted } }
 // ---------------------------------------------------------------------------
 
-// Language → ECC reviewer agent. Mirrors the agents present in agents/.
+// Language → AIP reviewer agent. Mirrors the agents present in agents/.
 const LANGUAGE_REVIEWER = {
-  typescript: 'ecc:typescript-reviewer',
-  javascript: 'ecc:typescript-reviewer',
-  python: 'ecc:python-reviewer',
-  go: 'ecc:go-reviewer',
-  rust: 'ecc:rust-reviewer',
-  java: 'ecc:java-reviewer',
-  kotlin: 'ecc:kotlin-reviewer',
-  swift: 'ecc:swift-reviewer',
-  php: 'ecc:php-reviewer',
-  csharp: 'ecc:csharp-reviewer',
-  fsharp: 'ecc:fsharp-reviewer',
-  react: 'ecc:react-reviewer',
-  vue: 'ecc:vue-reviewer',
-  flutter: 'ecc:flutter-reviewer',
-  dart: 'ecc:flutter-reviewer',
-  django: 'ecc:django-reviewer',
-  fastapi: 'ecc:fastapi-reviewer',
-  cpp: 'ecc:cpp-reviewer'
+  typescript: 'aip:typescript-reviewer',
+  javascript: 'aip:typescript-reviewer',
+  python: 'aip:python-reviewer',
+  go: 'aip:go-reviewer',
+  rust: 'aip:rust-reviewer',
+  java: 'aip:java-reviewer',
+  kotlin: 'aip:kotlin-reviewer',
+  swift: 'aip:swift-reviewer',
+  php: 'aip:php-reviewer',
+  csharp: 'aip:csharp-reviewer',
+  fsharp: 'aip:fsharp-reviewer',
+  react: 'aip:react-reviewer',
+  vue: 'aip:vue-reviewer',
+  flutter: 'aip:flutter-reviewer',
+  dart: 'aip:flutter-reviewer',
+  django: 'aip:django-reviewer',
+  fastapi: 'aip:fastapi-reviewer',
+  cpp: 'aip:cpp-reviewer'
 };
 
 // orch-pipeline security trigger: auth/authz, user input, db queries, fs paths,
@@ -179,9 +179,9 @@ const haystack = `${diff}\n${(input.changedFiles || []).join('\n')}`;
 const langReviewer = input.language && LANGUAGE_REVIEWER[String(input.language).toLowerCase()];
 const securityNeeded = SECURITY_TRIGGER.test(haystack);
 const dimensions = [
-  { key: 'quality', label: 'correctness & quality', agentType: 'ecc:code-reviewer' },
+  { key: 'quality', label: 'correctness & quality', agentType: 'aip:code-reviewer' },
   ...(langReviewer ? [{ key: `lang:${input.language}`, label: `${input.language} idioms & pitfalls`, agentType: langReviewer }] : []),
-  ...(securityNeeded ? [{ key: 'security', label: 'security (OWASP, secrets, injection)', agentType: 'ecc:security-reviewer' }] : [])
+  ...(securityNeeded ? [{ key: 'security', label: 'security (OWASP, secrets, injection)', agentType: 'aip:security-reviewer' }] : [])
 ];
 if (securityNeeded) {
   log('Security trigger matched — adding security-reviewer dimension.');

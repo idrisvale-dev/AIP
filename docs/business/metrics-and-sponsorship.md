@@ -17,12 +17,12 @@ Use four categories in every update:
 
 ```bash
 # Weekly downloads
-curl -s https://api.npmjs.org/downloads/point/last-week/ecc-universal
-curl -s https://api.npmjs.org/downloads/point/last-week/ecc-agentshield
+curl -s https://api.npmjs.org/downloads/point/last-week/aip-universal
+curl -s https://api.npmjs.org/downloads/point/last-week/aip-agentshield
 
 # Last 30 days
-curl -s https://api.npmjs.org/downloads/point/last-month/ecc-universal
-curl -s https://api.npmjs.org/downloads/point/last-month/ecc-agentshield
+curl -s https://api.npmjs.org/downloads/point/last-month/aip-universal
+curl -s https://api.npmjs.org/downloads/point/last-month/aip-agentshield
 ```
 
 ### GitHub repository adoption
@@ -44,7 +44,7 @@ gh api repos/reborncursed/AIP/traffic/clones
 GitHub App install count is currently most reliable in the Marketplace/App dashboard.
 Use the latest value from:
 
-- [ECC Tools Marketplace](https://github.com/marketplace/ecc-tools)
+- [AIP Tools Marketplace](https://github.com/marketplace/aip-tools)
 
 ## What Cannot Be Measured Publicly (Yet)
 
@@ -66,7 +66,7 @@ Use these as starting points in negotiation:
 
 Use this on calls:
 
-> ECC is now positioned as an agent harness performance system, not a config repo.
+> AIP is now positioned as an agent harness performance system, not a config repo.
 > We track adoption through npm distribution, GitHub App installs, and repository growth.
 > Claude plugin installs are structurally undercounted publicly, so we use a blended metrics model.
 > The project supports Claude Code, Cursor, OpenCode, and Codex app/CLI with production-grade hook reliability and a large passing test suite.

@@ -1,5 +1,5 @@
 /**
- * Tests for allowlisted ECC2 control-pane actions.
+ * Tests for allowlisted AIP2 control-pane actions.
  */
 
 const assert = require('assert');
@@ -29,7 +29,7 @@ function runTests() {
   let passed = 0;
   let failed = 0;
 
-  if (test('builds copyable and executable allowlisted ECC2 actions', () => {
+  if (test('builds copyable and executable allowlisted AIP2 actions', () => {
     const repoRoot = path.join(__dirname, '..', '..');
     const actions = buildControlPaneActions({
       repoRoot,
@@ -55,13 +55,13 @@ function runTests() {
       '--limit',
       '25',
     ]);
-    assert.strictEqual(sync.cwd, path.join(repoRoot, 'ecc2'));
+    assert.strictEqual(sync.cwd, path.join(repoRoot, 'aip2'));
     assert.ok(sync.commandLine.includes('connector-sync'));
   })) passed++; else failed++;
 
   if (test('preserves recall query as a single argument instead of shell text', () => {
     const action = buildControlPaneAction('recall-knowledge', {
-      repoRoot: '/repo/ecc',
+      repoRoot: '/repo/aip',
       query: 'Hermes "Desktop"; rm -rf ~',
       limit: 7,
     });
@@ -82,7 +82,7 @@ function runTests() {
 
   if (test('rejects unknown action identifiers', () => {
     assert.throws(
-      () => buildControlPaneAction('rm -rf', { repoRoot: '/repo/ecc' }),
+      () => buildControlPaneAction('rm -rf', { repoRoot: '/repo/aip' }),
       /Unknown control-pane action/
     );
   })) passed++; else failed++;

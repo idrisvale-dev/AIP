@@ -1,7 +1,7 @@
 ---
 name: coding-standards
 description: Convenciones de codificación base entre proyectos para nomenclatura, legibilidad, inmutabilidad y revisión de calidad de código. Usar skills de frontend o backend para patrones específicos de frameworks.
-origin: ECC
+origin: AIP
 ---
 
 # Estándares de Codificación y Buenas Prácticas
@@ -34,7 +34,7 @@ Activar este skill para:
 No usar este skill como fuente principal para:
 - Composición, hooks o patrones de renderizado de React
 - Arquitectura backend, diseño de API o capas de base de datos
-- Orientación específica de frameworks cuando ya existe un skill ECC más específico
+- Orientación específica de frameworks cuando ya existe un skill AIP más específico
 
 ## Principios de Calidad de Código
 

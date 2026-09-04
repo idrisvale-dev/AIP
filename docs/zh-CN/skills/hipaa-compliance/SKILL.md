@@ -1,7 +1,7 @@
 ---
 name: hipaa-compliance
 description: 针对医疗隐私和安全工作的HIPAA特定入口点。当任务明确围绕HIPAA、PHI处理、受保实体、BAA、违规态势或美国医疗合规要求时使用。
-origin: ECC direct-port adaptation
+origin: AIP direct-port adaptation
 version: "1.0.0"
 ---
 

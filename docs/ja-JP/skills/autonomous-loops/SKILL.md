@@ -1,7 +1,7 @@
 ---
 name: autonomous-loops
 description: "自動Claude Codeループのパターンとアーキテクチャ — シンプルな順序パイプラインからRFC駆動マルチエージェントDAGシステムまで。"
-origin: ECC
+origin: AIP
 ---
 
 # 自動ループスキル

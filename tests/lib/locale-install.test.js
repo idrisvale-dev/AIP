@@ -259,11 +259,11 @@ function runTests() {
         'Should install Japanese README under docs/ja-JP'
       );
       assert.ok(
-        !fs.existsSync(path.join(claudeRoot, 'skills', 'configure-ecc', 'SKILL.md')),
+        !fs.existsSync(path.join(claudeRoot, 'skills', 'configure-aip', 'SKILL.md')),
         'Locale-only install should not install English skills'
       );
 
-      const statePath = path.join(claudeRoot, 'ecc', 'install-state.json');
+      const statePath = path.join(claudeRoot, 'aip', 'install-state.json');
       const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
       assert.deepStrictEqual(state.request.includeComponents, ['locale:ja']);
       assert.deepStrictEqual(state.resolution.selectedModules, ['docs-ja-jp']);
@@ -291,11 +291,11 @@ function runTests() {
         'Should install Ukrainian README under docs/uk-UA'
       );
       assert.ok(
-        !fs.existsSync(path.join(claudeRoot, 'skills', 'configure-ecc', 'SKILL.md')),
+        !fs.existsSync(path.join(claudeRoot, 'skills', 'configure-aip', 'SKILL.md')),
         'Locale-only install should not install English skills'
       );
 
-      const statePath = path.join(claudeRoot, 'ecc', 'install-state.json');
+      const statePath = path.join(claudeRoot, 'aip', 'install-state.json');
       const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
       assert.deepStrictEqual(state.request.includeComponents, ['locale:uk-ua']);
       assert.deepStrictEqual(state.resolution.selectedModules, ['docs-uk-ua']);

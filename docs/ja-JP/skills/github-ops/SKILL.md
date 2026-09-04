@@ -1,7 +1,7 @@
 ---
 name: github-ops
 description: GitHub操作、自動化、APIインテグレーション、およびCI/CDワークフロー。
-origin: ECC
+origin: AIP
 ---
 
 # GitHub Operations

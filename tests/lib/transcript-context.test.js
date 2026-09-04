@@ -140,22 +140,22 @@ console.log('\nresolveContextWindowTokens:');
 // Isolation: an env-set window override (either knob) otherwise leaks into the
 // default-window assertions below and fails them (#2290).
 const originalContextWindowEnv = {
-  ECC_CONTEXT_WINDOW_TOKENS: process.env.ECC_CONTEXT_WINDOW_TOKENS,
+  AIP_CONTEXT_WINDOW_TOKENS: process.env.AIP_CONTEXT_WINDOW_TOKENS,
   CLAUDE_CODE_AUTO_COMPACT_WINDOW: process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW,
 };
-delete process.env.ECC_CONTEXT_WINDOW_TOKENS;
+delete process.env.AIP_CONTEXT_WINDOW_TOKENS;
 delete process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW;
 
 test('defaults to the standard 200k window', () => {
   assert.strictEqual(resolveContextWindowTokens(50000, 'claude-sonnet-4-6'), STANDARD_CONTEXT_WINDOW_TOKENS);
 });
 
-test('honors an explicit ECC_CONTEXT_WINDOW_TOKENS override (e.g. 400k models, #2290)', () => {
-  process.env.ECC_CONTEXT_WINDOW_TOKENS = '400000';
+test('honors an explicit AIP_CONTEXT_WINDOW_TOKENS override (e.g. 400k models, #2290)', () => {
+  process.env.AIP_CONTEXT_WINDOW_TOKENS = '400000';
   try {
     assert.strictEqual(resolveContextWindowTokens(50000, 'claude-opus-4-x'), 400000);
   } finally {
-    delete process.env.ECC_CONTEXT_WINDOW_TOKENS;
+    delete process.env.AIP_CONTEXT_WINDOW_TOKENS;
   }
 });
 
@@ -169,11 +169,11 @@ test('honors Claude Code native CLAUDE_CODE_AUTO_COMPACT_WINDOW override', () =>
 });
 
 test('ignores a non-positive / invalid window override', () => {
-  process.env.ECC_CONTEXT_WINDOW_TOKENS = 'not-a-number';
+  process.env.AIP_CONTEXT_WINDOW_TOKENS = 'not-a-number';
   try {
     assert.strictEqual(resolveContextWindowTokens(50000, 'claude-sonnet-4-6'), STANDARD_CONTEXT_WINDOW_TOKENS);
   } finally {
-    delete process.env.ECC_CONTEXT_WINDOW_TOKENS;
+    delete process.env.AIP_CONTEXT_WINDOW_TOKENS;
   }
 });
 
@@ -202,11 +202,11 @@ test('recognizes dated/prefixed variants of known large-window model ids (#2461)
 });
 
 test('env window override still wins over the known-model table (#2461)', () => {
-  process.env.ECC_CONTEXT_WINDOW_TOKENS = '400000';
+  process.env.AIP_CONTEXT_WINDOW_TOKENS = '400000';
   try {
     assert.strictEqual(resolveContextWindowTokens(50000, 'claude-fable-5'), 400000);
   } finally {
-    delete process.env.ECC_CONTEXT_WINDOW_TOKENS;
+    delete process.env.AIP_CONTEXT_WINDOW_TOKENS;
   }
 });
 
@@ -231,11 +231,11 @@ test('flags the assumed 200k default as inferred', () => {
 });
 
 test('an env override is a detected window, not inferred', () => {
-  process.env.ECC_CONTEXT_WINDOW_TOKENS = '1000000';
+  process.env.AIP_CONTEXT_WINDOW_TOKENS = '1000000';
   try {
     assert.strictEqual(isContextWindowInferred(187000, 'claude-opus-9'), false);
   } finally {
-    delete process.env.ECC_CONTEXT_WINDOW_TOKENS;
+    delete process.env.AIP_CONTEXT_WINDOW_TOKENS;
   }
 });
 

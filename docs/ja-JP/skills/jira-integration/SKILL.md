@@ -1,7 +1,7 @@
 ---
 name: jira-integration
 description: Jira チケットの取得、要件分析、チケットステータスの更新、コメントの追加、またはイシューのトランジションを行う際に使用します。MCP または直接 REST 呼び出しによる Jira API パターンを提供します。
-origin: ECC
+origin: AIP
 ---
 
 # Jira インテグレーションスキル

@@ -79,7 +79,7 @@ else failed++;
 
 if (
   test('oversized payload never echoes truncated stdin for a disabled hook', () => {
-    const result = runRunner(['pre:write:doc-file-warning', 'scripts/hooks/doc-file-warning.js', 'standard,strict'], oversizedPayload(), { ECC_DISABLED_HOOKS: 'pre:write:doc-file-warning' });
+    const result = runRunner(['pre:write:doc-file-warning', 'scripts/hooks/doc-file-warning.js', 'standard,strict'], oversizedPayload(), { AIP_DISABLED_HOOKS: 'pre:write:doc-file-warning' });
     assert.strictEqual(result.status, 0);
     assert.strictEqual(result.stdout, '', 'disabled-hook path must not echo truncated stdin');
   })
@@ -141,7 +141,7 @@ if (
       tool_name: 'Write',
       tool_input: { file_path: '/tmp/medium.md', content: 'z'.repeat(256 * 1024) }
     });
-    const result = runRunner(['pre:write:doc-file-warning', 'scripts/hooks/doc-file-warning.js', 'standard,strict'], payload, { ECC_DISABLED_HOOKS: 'pre:write:doc-file-warning' });
+    const result = runRunner(['pre:write:doc-file-warning', 'scripts/hooks/doc-file-warning.js', 'standard,strict'], payload, { AIP_DISABLED_HOOKS: 'pre:write:doc-file-warning' });
     assert.strictEqual(result.status, 0);
     assert.strictEqual(result.stdout, payload);
     JSON.parse(result.stdout);

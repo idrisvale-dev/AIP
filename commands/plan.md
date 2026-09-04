@@ -198,7 +198,7 @@ After planning:
 
 ## Optional Planner Agent
 
-ECC also provides a `planner` agent for manual installs that include agent files. Use it only when the local runtime already exposes that subagent and the user explicitly asks you to delegate planning.
+AIP also provides a `planner` agent for manual installs that include agent files. Use it only when the local runtime already exposes that subagent and the user explicitly asks you to delegate planning.
 
 If the `planner` subagent is unavailable, continue planning inline instead of surfacing an "Agent type 'planner' not found" error.
 

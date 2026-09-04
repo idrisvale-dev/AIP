@@ -7,7 +7,7 @@ const path = require('path');
 
 const RELEASE = '2.0.0-rc.1';
 const RELEASE_DIR = `docs/releases/${RELEASE}`;
-const SCHEMA_VERSION = 'ecc.preview-pack-smoke.v1';
+const SCHEMA_VERSION = 'aip.preview-pack-smoke.v1';
 
 const REQUIRED_ARTIFACTS = [
   'README.md',
@@ -57,22 +57,22 @@ const REQUIRED_VERIFICATION_COMMANDS = [
   'npm run security:ioc-scan',
   'npm audit --audit-level=moderate',
   'npm audit signatures',
-  'node tests/docs/ecc2-release-surface.test.js',
+  'node tests/docs/aip2-release-surface.test.js',
   'node tests/run-all.js',
-  'cd ecc2 && cargo test',
+  'cd aip2 && cargo test',
 ];
 
 const REQUIRED_PUBLICATION_BLOCKERS = [
   'GitHub prerelease `v2.0.0-rc.1`',
-  'npm `ecc-universal@2.0.0-rc.1`',
+  'npm `aip-universal@2.0.0-rc.1`',
   'Claude plugin tag',
   'Codex repo-marketplace distribution evidence',
-  'ECC Tools billing/product readiness',
+  'AIP Tools billing/product readiness',
 ];
 
 const HERMES_BOUNDARY_MARKERS = [
   'Public Release Candidate Scope',
-  'ECC v2.0.0-rc.1 documents the Hermes surface',
+  'AIP v2.0.0-rc.1 documents the Hermes surface',
   'Sanitization Checklist',
   'Do not ship raw workspace exports',
   'Output Contract',
@@ -82,7 +82,7 @@ function usage() {
   console.log([
     'Usage: node scripts/preview-pack-smoke.js [--format <text|json>] [--root <dir>]',
     '',
-    'Deterministic smoke gate for the ECC 2.0 rc.1 preview pack.',
+    'Deterministic smoke gate for the AIP 2.0 rc.1 preview pack.',
     '',
     'Options:',
     '  --format <text|json>  Output format (default: text)',
@@ -298,7 +298,7 @@ function buildReport(options = {}) {
 
 function renderText(report) {
   const lines = [
-    'ECC preview pack smoke',
+    'AIP preview pack smoke',
     `Release: ${report.release}`,
     `Ready: ${report.ready ? 'yes' : 'no'}`,
     `Digest: ${report.digest}`,

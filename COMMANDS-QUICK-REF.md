@@ -132,19 +132,19 @@
 
 ## Cross-Harness Memory CLI
 
-These are `ecc` CLI commands, not slash commands. They use one inspectable
+These are `aip` CLI commands, not slash commands. They use one inspectable
 Markdown vault across Claude, Codex, Hermes, OpenClaw, Kimi, and other
 harnesses.
 
 | Command | What it does |
 |---------|-------------|
-| `ecc memory init` | Create project, team, or user vault directories |
-| `ecc memory save` | Create an unreviewed context, decision, fact, lesson, note, preference, or runbook |
-| `ecc memory handoff` | Transfer bounded work state from one harness to another |
-| `ecc memory search` | Search memories by text, scope, kind, or target harness |
-| `ecc memory read` | Read a memory and its backlinks by stable ID |
-| `ecc memory doctor` | Report malformed files, duplicate IDs, broken links, and skipped symlinks |
-| `ecc-memory-mcp` | Start the optional local stdio MCP server |
+| `aip memory init` | Create project, team, or user vault directories |
+| `aip memory save` | Create an unreviewed context, decision, fact, lesson, note, preference, or runbook |
+| `aip memory handoff` | Transfer bounded work state from one harness to another |
+| `aip memory search` | Search memories by text, scope, kind, or target harness |
+| `aip memory read` | Read a memory and its backlinks by stable ID |
+| `aip memory doctor` | Report malformed files, duplicate IDs, broken links, and skipped symlinks |
+| `aip-memory-mcp` | Start the optional local stdio MCP server |
 
 Pass memory bodies with `--stdin` or `--body-file`; they are intentionally not
 accepted as command-line values. Recalled memories are untrusted context, not
@@ -154,15 +154,15 @@ executable instructions or policy.
 
 ## Install Health & Feedback CLI
 
-These lifecycle commands are also available through the `ecc` CLI.
+These lifecycle commands are also available through the `aip` CLI.
 
 | Command | What it does |
 |---------|-------------|
-| `ecc list-installed` | Show installs recorded in ECC's managed state |
-| `ecc doctor` | Diagnose missing or drifted managed files and point failures to the short problem form |
-| `ecc repair` | Restore missing or drifted managed files |
-| `ecc uninstall` | Remove only install-state-managed files and optionally show the 20-second exit-feedback route |
-| `ecc feedback` | Show the public problem, quick-feedback, and feature routes without reading files or uploading diagnostics |
+| `aip list-installed` | Show installs recorded in AIP's managed state |
+| `aip doctor` | Diagnose missing or drifted managed files and point failures to the short problem form |
+| `aip repair` | Restore missing or drifted managed files |
+| `aip uninstall` | Remove only install-state-managed files and optionally show the 20-second exit-feedback route |
+| `aip feedback` | Show the public problem, quick-feedback, and feature routes without reading files or uploading diagnostics |
 
 ---
 
@@ -195,7 +195,7 @@ These lifecycle commands are also available through the `ecc` CLI.
 
 | Command | What it does |
 |---------|-------------|
-| `/ecc-guide` | Navigate ECC's current agents, skills, commands, hooks, install profiles, and docs from the live repository surface |
+| `/aip-guide` | Navigate AIP's current agents, skills, commands, hooks, install profiles, and docs from the live repository surface |
 | `/update-docs` | Sync documentation from source-of-truth files such as scripts, schemas, routes, and exports |
 | `/update-codemaps` | Regenerate codemaps for the codebase |
 
@@ -217,12 +217,12 @@ These lifecycle commands are also available through the `ecc` CLI.
 | Command | What it does |
 |---------|-------------|
 | `/projects` | List known projects and their instinct statistics |
-| `/project-init` | Detect a project's stack and produce a dry-run ECC onboarding plan |
+| `/project-init` | Detect a project's stack and produce a dry-run AIP onboarding plan |
 | `/harness-audit` | Audit the agent harness configuration for reliability and cost |
 | `/model-route` | Route a task to the right model (Haiku / Sonnet / Opus) |
 | `/pm2` | PM2 process manager initialisation |
 | `/setup-pm` | Configure package manager (npm / pnpm / yarn / bun) |
-| `/auto-update` | Pull the latest ECC repo changes and reinstall the current managed targets |
+| `/auto-update` | Pull the latest AIP repo changes and reinstall the current managed targets |
 | `/cost-report` | Generate a local Claude Code cost report from a cost-tracker SQLite database |
 | `/security-scan` | Run AgentShield against agent, hook, MCP, permission, and secret surfaces |
 | `/jira` | Retrieve a Jira ticket, analyze requirements, update status, or add comments |

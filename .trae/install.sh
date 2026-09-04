@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# ECC Trae Installer
-# Installs Everything Claude Code workflows into a Trae project.
+# AIP Trae Installer
+# Installs AIP workflows into a Trae project.
 #
 # Usage:
 #   ./install.sh              # Install to current directory
@@ -97,7 +97,7 @@ do_install() {
         trae_full_path="$target_dir/$trae_dir"
     fi
 
-    echo "ECC Trae Installer"
+    echo "AIP Trae Installer"
     echo "=================="
     echo ""
     echo "Source:  $REPO_ROOT"
@@ -113,7 +113,7 @@ do_install() {
     done
 
     # Manifest file to track installed files
-    MANIFEST="$trae_full_path/.ecc-manifest"
+    MANIFEST="$trae_full_path/.aip-manifest"
     touch "$MANIFEST"
 
     # Counters for summary
@@ -211,7 +211,7 @@ do_install() {
     done
 
     # Add manifest file itself to manifest
-    ensure_manifest_entry "$MANIFEST" ".ecc-manifest"
+    ensure_manifest_entry "$MANIFEST" ".aip-manifest"
 
     # Installation summary
     echo "Installation complete!"
@@ -227,7 +227,7 @@ do_install() {
     echo "Next steps:"
     echo "  1. Open your project in Trae"
     echo "  2. Type / to see available commands"
-    echo "  3. Enjoy the ECC workflows!"
+    echo "  3. Enjoy the AIP workflows!"
     echo ""
     echo "To uninstall later:"
     echo "  cd $trae_full_path"

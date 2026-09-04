@@ -1,7 +1,7 @@
 ---
 name: documentation-lookup
 description: 訓練データの代わりにContext7 MCP経由で最新のライブラリとフレームワークドキュメント使用。セットアップの質問、APIリファレンス、コード例、またはユーザーがフレームワーク（例：React、Next.js、Prisma）に名前を付けるときにアクティベーション。
-origin: ECC
+origin: AIP
 ---
 
 # ドキュメント ルックアップ（Context7）

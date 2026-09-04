@@ -2,7 +2,7 @@
 name: project-guidelines-example
 description: Project-specific skill template covering architecture, patterns, testing, and deployment guidance.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # 專案指南技能（範例）

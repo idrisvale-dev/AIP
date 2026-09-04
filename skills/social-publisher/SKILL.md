@@ -75,7 +75,7 @@ For OpenClaw users who have already approved TweetClaw in their dependency polic
 openclaw plugins install npm:@xquik/tweetclaw@1.6.31
 ```
 
-Use it for public tweet search, reply search, follower export, user lookup, media review, monitors, or giveaway evidence. Keep the output as research input for `schedule.json`; SocialClaw remains responsible for validation, scheduling, publishing, and delivery status. Store TweetClaw credentials in its plugin config, not in `SC_API_KEY`, schedule files, or campaign assets. Do not install it as a default ECC or SocialClaw dependency.
+Use it for public tweet search, reply search, follower export, user lookup, media review, monitors, or giveaway evidence. Keep the output as research input for `schedule.json`; SocialClaw remains responsible for validation, scheduling, publishing, and delivery status. Store TweetClaw credentials in its plugin config, not in `SC_API_KEY`, schedule files, or campaign assets. Do not install it as a default AIP or SocialClaw dependency.
 
 ### 4. Validate before publishing
 ```bash

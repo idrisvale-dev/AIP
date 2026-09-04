@@ -42,9 +42,9 @@ function writeFile(rootDir, relativePath, content = 'fixture') {
 
 function videoManifestContent(extra = '') {
   return [
-    '# ECC 2.0 Video Suite Production Manifest',
-    'ECC_VIDEO_SOURCE_ROOT',
-    'ECC_VIDEO_RELEASE_SUITE_ROOT',
+    '# AIP 2.0 Video Suite Production Manifest',
+    'AIP_VIDEO_SOURCE_ROOT',
+    'AIP_VIDEO_RELEASE_SUITE_ROOT',
     'Primary launch video',
     'video-use compatible workflow',
     'Self-Eval Gate',
@@ -59,7 +59,7 @@ function seedRepo(rootDir, overrides = {}, options = {}) {
   const releaseDir = releaseDirFor(release);
   const files = {
     'package.json': JSON.stringify({
-      name: 'ecc-universal',
+      name: 'aip-universal',
       version: release,
       files: ['scripts/release-video-suite.js'],
       scripts: {
@@ -67,7 +67,7 @@ function seedRepo(rootDir, overrides = {}, options = {}) {
       },
     }, null, 2),
     [`${releaseDir}/video-suite-production.md`]: videoManifestContent(),
-    'docs/releases/2.0.0/ecc-2-hypergrowth-release-command-center.md': [
+    'docs/releases/2.0.0/aip-2-hypergrowth-release-command-center.md': [
       'Keep raw absolute paths out of public docs',
       'Pick final video cuts, upload after approval, and attach public URLs',
     ].join('\n'),
@@ -185,7 +185,7 @@ function runTests() {
         generatedAt: '2026-05-19T00:00:00.000Z',
       });
 
-      assert.strictEqual(report.schema_version, 'ecc.release-video-suite.v1');
+      assert.strictEqual(report.schema_version, 'aip.release-video-suite.v1');
       assert.strictEqual(report.release, CURRENT_RELEASE);
       assert.strictEqual(report.ready, true);
       assert.strictEqual(report.mediaPathsRedacted, true);
@@ -257,8 +257,8 @@ function runTests() {
       });
 
       assert.strictEqual(report.ready, false);
-      assert.ok(report.top_actions.some(action => action.includes('ECC_VIDEO_SOURCE_ROOT')));
-      assert.ok(report.top_actions.some(action => action.includes('ECC_VIDEO_RELEASE_SUITE_ROOT')));
+      assert.ok(report.top_actions.some(action => action.includes('AIP_VIDEO_SOURCE_ROOT')));
+      assert.ok(report.top_actions.some(action => action.includes('AIP_VIDEO_RELEASE_SUITE_ROOT')));
       assert.ok(report.checks.some(check => check.id === 'video-source-assets-present' && check.status === 'fail'));
       assert.ok(report.checks.some(check => check.id === 'video-release-artifacts-present' && check.status === 'fail'));
       assert.ok(report.checks.some(check => check.id === 'video-primary-render-self-eval' && check.status === 'fail'));

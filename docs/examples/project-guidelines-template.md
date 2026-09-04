@@ -1,6 +1,6 @@
 # Project Guidelines Template
 
-This is a project-specific skill template that was previously shipped as a live ECC skill.
+This is a project-specific skill template that was previously shipped as a live AIP skill.
 
 It now lives in `docs/examples/` because it is reference material, not a reusable cross-project skill.
 

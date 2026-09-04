@@ -2,7 +2,7 @@
  * Regression tests for plugin-hook-bootstrap.js raw-echo bloat.
  *
  * Before the fix, every fallthrough path in plugin-hook-bootstrap.js
- * (the actual entry point used by ECC plugin hooks, NOT run-with-flags.js)
+ * (the actual entry point used by AIP plugin hooks, NOT run-with-flags.js)
  * echoed the full raw hook input JSON to stdout. For a typical
  * PostToolUse:Edit payload this is 10-130 KB of tool_input + tool_response
  * per tool call. The harness then wrote that stdout into the session
@@ -41,7 +41,7 @@ const { spawnSync } = require('child_process');
 const repoRoot = path.join(__dirname, '..', '..');
 const bootstrap = path.join(repoRoot, 'scripts', 'hooks', 'plugin-hook-bootstrap.js');
 const { isRawPassthrough } = require(bootstrap);
-const FIXTURE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-pr2380-fixtures-'));
+const FIXTURE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-pr2380-fixtures-'));
 const SUBPROCESS_TIMEOUT_MS = process.platform === 'darwin' && process.env.CI === 'true'
   ? 120_000
   : 30_000;
@@ -180,7 +180,7 @@ function assertNestedChildCleanup(label, childSource, options) {
   const result = runSupervised(
     [process.execPath, '-e', childSource],
     '',
-    { ECC_TEST_CHILD_PID_FILE: pidPath },
+    { AIP_TEST_CHILD_PID_FILE: pidPath },
     options
   );
   assert.ok(result.error, `${label}: supervisor limit must terminate the outer process`);
@@ -242,7 +242,7 @@ if (process.platform !== 'win32') {
 
 const persistentChildSource = `
   const fs = require('fs');
-  fs.writeFileSync(process.env.ECC_TEST_CHILD_PID_FILE, String(process.pid));
+  fs.writeFileSync(process.env.AIP_TEST_CHILD_PID_FILE, String(process.pid));
   setInterval(() => {}, 1000);
 `;
 
@@ -258,7 +258,7 @@ if (
   test('supervisor maxBuffer termination kills the nested child', () => {
     const noisyChildSource = `
       const fs = require('fs');
-      fs.writeFileSync(process.env.ECC_TEST_CHILD_PID_FILE, String(process.pid));
+      fs.writeFileSync(process.env.AIP_TEST_CHILD_PID_FILE, String(process.pid));
       process.stdout.write('x'.repeat(1024 * 1024));
       setInterval(() => {}, 1000);
     `;
@@ -374,14 +374,14 @@ if (
   passed++;
 else failed++;
 
-// --- THE CORE ECC PATTERN: most ECC hooks do `process.stdout.write(run(data))`
+// --- THE CORE AIP PATTERN: most AIP hooks do `process.stdout.write(run(data))`
 //     where run(data) returns the raw input unchanged. Bootstrap must detect
 //     this and emit empty stdout instead of writing raw back. ---
 if (
-  test('CORE ECC PATTERN: hook returning raw input as stdout is suppressed', () => {
+  test('CORE AIP PATTERN: hook returning raw input as stdout is suppressed', () => {
     // Simulate the post-edit-accumulator pattern: read stdin, return it
     // unchanged via process.stdout.write. This is THE dominant source of
-    // transcript bloat — 12+ ECC hook scripts use this exact pattern.
+    // transcript bloat — 12+ AIP hook scripts use this exact pattern.
     const fixturePath = path.join(FIXTURE_DIR, 'passthrough-fixture.js');
     fs.writeFileSync(
       fixturePath,

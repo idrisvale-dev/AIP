@@ -1,7 +1,7 @@
 ---
 name: python-testing
 description: pytest, TDD metodolojisi, fixture'lar, mocking, parametrizasyon ve coverage gereksinimleri kullanarak Python test stratejileri.
-origin: ECC
+origin: AIP
 ---
 
 # Python Test Desenleri

@@ -1,7 +1,7 @@
 ---
 name: rules-distill
 description: "扫描技能以提取跨领域原则并将其提炼为规则——追加、修订或创建新的规则文件"
-origin: ECC
+origin: AIP
 ---
 
 # 规则提炼

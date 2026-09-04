@@ -146,9 +146,9 @@ Use the tdd-workflow skill
 
 ## Compatibility
 
-This pattern adds ECC-native staging-file commands alongside the existing `prp-*` command set. The legacy PRP commands remain available for deeper PRP workflows and for users who already have `.claude/PRPs/` artifacts.
+This pattern adds AIP-native staging-file commands alongside the existing `prp-*` command set. The legacy PRP commands remain available for deeper PRP workflows and for users who already have `.claude/PRPs/` artifacts.
 
 - `/plan-prd` is the lean requirements entry point for `.claude/prds/`.
 - `/plan` can consume `.prd.md` files and produce `.claude/plans/` artifacts without requiring the legacy PRP directory layout.
-- `/pr` is the ECC-native PR creation command and can reference `.claude/prds/` and `.claude/plans/`.
+- `/pr` is the AIP-native PR creation command and can reference `.claude/prds/` and `.claude/plans/`.
 - `/prp-prd`, `/prp-plan`, `/prp-implement`, `/prp-commit`, and `/prp-pr` remain valid legacy/deep workflow commands.

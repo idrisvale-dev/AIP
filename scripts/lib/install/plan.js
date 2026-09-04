@@ -8,7 +8,7 @@ const { resolveInstallPlan } = require('../install-manifests');
 const { getInstallTargetAdapter } = require('../install-targets/registry');
 const { resolveInvocationEnvironment } = require('../invocation-environment');
 
-const EXCLUDED_GENERATED_SOURCE_SUFFIXES = ['/ecc-install-state.json', '/ecc/install-state.json'];
+const EXCLUDED_GENERATED_SOURCE_SUFFIXES = ['/aip-install-state.json', '/aip/install-state.json'];
 const IGNORED_DIRECTORY_NAMES = new Set([
   'node_modules',
   '.git',

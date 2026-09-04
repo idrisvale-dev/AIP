@@ -22,7 +22,7 @@ function stripTrailingSlash(value) {
 // `fileMappings` is a list of { sourceRel, destRel } where both are paths
 // relative to the repo root and the install root respectively. The directory
 // map is derived by walking shared ancestors of each source/dest pair, which is
-// exact for prefix-insertion namespacing (e.g. `rules/x` -> `rules/ecc/x`):
+// exact for prefix-insertion namespacing (e.g. `rules/x` -> `rules/aip/x`):
 // the path suffix below the inserted segment is preserved, so ancestor `k`
 // of the source maps to the dest with the matching number of trailing
 // segments removed.
@@ -96,7 +96,7 @@ function resolveInstalledTarget(target, sourceDir, index) {
 
 // Rewrite relative links in a markdown file so they resolve to installed target
 // locations. The source file may itself install at the same relative path; links
-// can still need changes when their targets move, such as rules -> rules/ecc.
+// can still need changes when their targets move, such as rules -> rules/aip.
 // Pure: no IO.
 function rewriteRelativeLinks(content, options) {
   const { sourceRel, index } = options || {};

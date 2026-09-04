@@ -60,17 +60,17 @@ function runTests() {
     const statePath = adapter.getInstallStatePath({ projectRoot });
 
     assert.strictEqual(root, path.join(projectRoot, '.cursor'));
-    assert.strictEqual(statePath, path.join(projectRoot, '.cursor', 'ecc-install-state.json'));
+    assert.strictEqual(statePath, path.join(projectRoot, '.cursor', 'aip-install-state.json'));
   })) passed++; else failed++;
 
   if (test('resolves claude adapter root and install-state path from home dir', () => {
     const adapter = getInstallTargetAdapter('claude');
     const homeDir = '/Users/example';
-    const root = adapter.resolveRoot({ homeDir, repoRoot: '/repo/ecc' });
-    const statePath = adapter.getInstallStatePath({ homeDir, repoRoot: '/repo/ecc' });
+    const root = adapter.resolveRoot({ homeDir, repoRoot: '/repo/aip' });
+    const statePath = adapter.getInstallStatePath({ homeDir, repoRoot: '/repo/aip' });
 
     assert.strictEqual(root, path.join(homeDir, '.claude'));
-    assert.strictEqual(statePath, path.join(homeDir, '.claude', 'ecc', 'install-state.json'));
+    assert.strictEqual(statePath, path.join(homeDir, '.claude', 'aip', 'install-state.json'));
   })) passed++; else failed++;
 
   if (test('plans current Kimi Code project instructions, skills, and MCP config under .kimi-code', () => {
@@ -101,7 +101,7 @@ function runTests() {
     assert.strictEqual(plan.targetRoot, path.join(projectRoot, '.kimi-code'));
     assert.strictEqual(
       plan.installStatePath,
-      path.join(projectRoot, '.kimi-code', 'ecc-install-state.json')
+      path.join(projectRoot, '.kimi-code', 'aip-install-state.json')
     );
     assert.ok(
       plan.operations.some(operation => (
@@ -130,7 +130,7 @@ function runTests() {
         normalizedRelativePath(operation.sourceRelativePath) === '.agents/skills'
         && operation.destinationPath === path.join(projectRoot, '.kimi-code', 'skills')
       )),
-      'Should remap ECC Agent Skills into Kimi\'s native skill directory'
+      'Should remap AIP Agent Skills into Kimi\'s native skill directory'
     );
     assert.ok(
       plan.operations.some(operation => (
@@ -149,7 +149,7 @@ function runTests() {
     );
   })) passed++; else failed++;
 
-  if (test('Kimi MCP planning requires an explicit ECC source root', () => {
+  if (test('Kimi MCP planning requires an explicit AIP source root', () => {
     assert.throws(
       () => planInstallTargetScaffold({
         target: 'kimi',
@@ -183,9 +183,9 @@ function runTests() {
     assert.ok(
       plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === 'rules'
-        && operation.destinationPath === path.join(homeDir, '.claude', 'rules', 'ecc')
+        && operation.destinationPath === path.join(homeDir, '.claude', 'rules', 'aip')
       )),
-      'Should install bundled Claude rules under rules/ecc'
+      'Should install bundled Claude rules under rules/aip'
     );
     assert.ok(
       plan.operations.some(operation => (
@@ -219,7 +219,7 @@ function runTests() {
 
     assert.strictEqual(plan.adapter.id, 'cursor-project');
     assert.strictEqual(plan.targetRoot, path.join(projectRoot, '.cursor'));
-    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.cursor', 'ecc-install-state.json'));
+    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.cursor', 'aip-install-state.json'));
 
     const hooksJson = plan.operations.find(operation => (
       normalizedRelativePath(operation.sourceRelativePath) === '.cursor/hooks.json'
@@ -317,7 +317,7 @@ function runTests() {
       !plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === 'AGENTS.md'
       )),
-      'Cursor installs should not copy ECC root AGENTS.md into host project context'
+      'Cursor installs should not copy AIP root AGENTS.md into host project context'
     );
     assert.ok(
       !plan.operations.some(operation => (
@@ -327,7 +327,7 @@ function runTests() {
     );
   })) passed++; else failed++;
 
-  if (test('plans cursor agents with ecc-prefixed filenames to avoid agent collisions', () => {
+  if (test('plans cursor agents with aip-prefixed filenames to avoid agent collisions', () => {
     const repoRoot = path.join(__dirname, '..', '..');
     const projectRoot = '/workspace/app';
 
@@ -346,9 +346,9 @@ function runTests() {
     assert.ok(
       plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === 'agents/architect.md'
-        && operation.destinationPath === path.join(projectRoot, '.cursor', 'agents', 'ecc-architect.md')
+        && operation.destinationPath === path.join(projectRoot, '.cursor', 'agents', 'aip-architect.md')
       )),
-      'Should prefix Cursor agent files with ecc-'
+      'Should prefix Cursor agent files with aip-'
     );
     assert.ok(
       !plan.operations.some(operation => (
@@ -550,14 +550,14 @@ function runTests() {
     assert.strictEqual(typeof claudeAdapter.planOperations, 'function');
     assert.strictEqual(typeof claudeAdapter.validate, 'function');
     assert.deepStrictEqual(
-      claudeAdapter.validate({ homeDir: '/Users/example', repoRoot: '/repo/ecc' }),
+      claudeAdapter.validate({ homeDir: '/Users/example', repoRoot: '/repo/aip' }),
       []
     );
 
     assert.strictEqual(typeof cursorAdapter.planOperations, 'function');
     assert.strictEqual(typeof cursorAdapter.validate, 'function');
     assert.deepStrictEqual(
-      cursorAdapter.validate({ projectRoot: '/workspace/app', repoRoot: '/repo/ecc' }),
+      cursorAdapter.validate({ projectRoot: '/workspace/app', repoRoot: '/repo/aip' }),
       []
     );
   })) passed++; else failed++;
@@ -579,7 +579,7 @@ function runTests() {
     assert.strictEqual(adapter.target, 'codebuddy');
     assert.strictEqual(adapter.kind, 'project');
     assert.strictEqual(root, path.join(projectRoot, '.codebuddy'));
-    assert.strictEqual(statePath, path.join(projectRoot, '.codebuddy', 'ecc-install-state.json'));
+    assert.strictEqual(statePath, path.join(projectRoot, '.codebuddy', 'aip-install-state.json'));
   })) passed++; else failed++;
 
   if (test('resolves gemini adapter root and install-state path from project root', () => {
@@ -592,7 +592,7 @@ function runTests() {
     assert.strictEqual(adapter.target, 'gemini');
     assert.strictEqual(adapter.kind, 'project');
     assert.strictEqual(root, path.join(projectRoot, '.gemini'));
-    assert.strictEqual(statePath, path.join(projectRoot, '.gemini', 'ecc-install-state.json'));
+    assert.strictEqual(statePath, path.join(projectRoot, '.gemini', 'aip-install-state.json'));
   })) passed++; else failed++;
 
   if (test('codebuddy adapter supports lookup by target and adapter id', () => {
@@ -615,7 +615,7 @@ function runTests() {
     assert.strictEqual(adapter.target, 'joycode');
     assert.strictEqual(adapter.kind, 'project');
     assert.strictEqual(root, path.join(projectRoot, '.joycode'));
-    assert.strictEqual(statePath, path.join(projectRoot, '.joycode', 'ecc-install-state.json'));
+    assert.strictEqual(statePath, path.join(projectRoot, '.joycode', 'aip-install-state.json'));
   })) passed++; else failed++;
 
   if (test('joycode adapter supports lookup by target and adapter id', () => {
@@ -638,7 +638,7 @@ function runTests() {
     assert.strictEqual(adapter.target, 'qwen');
     assert.strictEqual(adapter.kind, 'home');
     assert.strictEqual(root, path.join(homeDir, '.qwen'));
-    assert.strictEqual(statePath, path.join(homeDir, '.qwen', 'ecc-install-state.json'));
+    assert.strictEqual(statePath, path.join(homeDir, '.qwen', 'aip-install-state.json'));
   })) passed++; else failed++;
 
   if (test('opencode adapter honors config overrides in priority order', () => {
@@ -666,7 +666,7 @@ function runTests() {
         homeDir,
         env: { OPENCODE_CONFIG_DIR: explicitRoot },
       }),
-      path.join(path.resolve(explicitRoot), 'ecc-install-state.json')
+      path.join(path.resolve(explicitRoot), 'aip-install-state.json')
     );
   })) passed++; else failed++;
 
@@ -674,15 +674,15 @@ function runTests() {
     const homeDir = '/Users/isolated';
     const registryPath = path.join(__dirname, '..', '..', 'scripts', 'lib', 'install-targets', 'registry.js');
     const child = spawnSync(process.execPath, ['-e', [
-      'const { getInstallTargetAdapter } = require(process.env.ECC_TEST_REGISTRY);',
-      'const root = getInstallTargetAdapter(\'opencode\').resolveRoot({ homeDir: process.env.ECC_TEST_HOME });',
+      'const { getInstallTargetAdapter } = require(process.env.AIP_TEST_REGISTRY);',
+      'const root = getInstallTargetAdapter(\'opencode\').resolveRoot({ homeDir: process.env.AIP_TEST_HOME });',
       'process.stdout.write(JSON.stringify(root));',
     ].join('\n')], {
       encoding: 'utf8',
       env: {
         ...process.env,
-        ECC_TEST_REGISTRY: registryPath,
-        ECC_TEST_HOME: homeDir,
+        AIP_TEST_REGISTRY: registryPath,
+        AIP_TEST_HOME: homeDir,
         OPENCODE_CONFIG_DIR: '/runner/global/opencode',
         XDG_CONFIG_HOME: '/runner/global/xdg',
       },
@@ -725,7 +725,7 @@ function runTests() {
     assert.strictEqual(adapter.target, 'zed');
     assert.strictEqual(adapter.kind, 'project');
     assert.strictEqual(root, path.join(projectRoot, '.zed'));
-    assert.strictEqual(statePath, path.join(projectRoot, '.zed', 'ecc-install-state.json'));
+    assert.strictEqual(statePath, path.join(projectRoot, '.zed', 'aip-install-state.json'));
   })) passed++; else failed++;
 
   if (test('zed adapter supports lookup by target and adapter id', () => {
@@ -756,7 +756,7 @@ function runTests() {
 
     assert.strictEqual(plan.adapter.id, 'codebuddy-project');
     assert.strictEqual(plan.targetRoot, path.join(projectRoot, '.codebuddy'));
-    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.codebuddy', 'ecc-install-state.json'));
+    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.codebuddy', 'aip-install-state.json'));
 
     assert.ok(
       plan.operations.some(operation => (
@@ -803,7 +803,7 @@ function runTests() {
 
     assert.strictEqual(plan.adapter.id, 'joycode-project');
     assert.strictEqual(plan.targetRoot, path.join(projectRoot, '.joycode'));
-    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.joycode', 'ecc-install-state.json'));
+    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.joycode', 'aip-install-state.json'));
 
     assert.ok(
       plan.operations.some(operation => (
@@ -869,7 +869,7 @@ function runTests() {
 
     assert.strictEqual(plan.adapter.id, 'qwen-home');
     assert.strictEqual(plan.targetRoot, path.join(homeDir, '.qwen'));
-    assert.strictEqual(plan.installStatePath, path.join(homeDir, '.qwen', 'ecc-install-state.json'));
+    assert.strictEqual(plan.installStatePath, path.join(homeDir, '.qwen', 'aip-install-state.json'));
     assert.ok(
       plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === 'rules'
@@ -932,7 +932,7 @@ function runTests() {
 
     assert.strictEqual(plan.adapter.id, 'zed-project');
     assert.strictEqual(plan.targetRoot, path.join(projectRoot, '.zed'));
-    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.zed', 'ecc-install-state.json'));
+    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.zed', 'aip-install-state.json'));
     assert.ok(
       plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === '.zed'
@@ -985,7 +985,7 @@ function runTests() {
     assert.strictEqual(adapter.target, 'adal');
     assert.strictEqual(adapter.kind, 'project');
     assert.strictEqual(root, path.join(projectRoot, '.adal'));
-    assert.strictEqual(statePath, path.join(projectRoot, '.adal', 'ecc-install-state.json'));
+    assert.strictEqual(statePath, path.join(projectRoot, '.adal', 'aip-install-state.json'));
   })) passed++; else failed++;
 
   if (test('adal adapter supports lookup by target and adapter id', () => {
@@ -1024,7 +1024,7 @@ function runTests() {
 
     assert.strictEqual(plan.adapter.id, 'adal-project');
     assert.strictEqual(plan.targetRoot, path.join(projectRoot, '.adal'));
-    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.adal', 'ecc-install-state.json'));
+    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.adal', 'aip-install-state.json'));
     assert.ok(
       plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === 'rules'
@@ -1094,13 +1094,13 @@ function runTests() {
     assert.strictEqual(typeof codebuddyAdapter.planOperations, 'function');
     assert.strictEqual(typeof codebuddyAdapter.validate, 'function');
     assert.deepStrictEqual(
-      codebuddyAdapter.validate({ projectRoot: '/workspace/app', repoRoot: '/repo/ecc' }),
+      codebuddyAdapter.validate({ projectRoot: '/workspace/app', repoRoot: '/repo/aip' }),
       []
     );
   })) passed++; else failed++;
 
   if (test('every schema target enum value has a matching adapter (regression guard)', () => {
-    const schemaPath = path.join(__dirname, '..', '..', 'schemas', 'ecc-install-config.schema.json');
+    const schemaPath = path.join(__dirname, '..', '..', 'schemas', 'aip-install-config.schema.json');
     const schema = JSON.parse(require('fs').readFileSync(schemaPath, 'utf8'));
     const schemaTargets = schema.properties.target.enum;
     const adapters = listInstallTargetAdapters();
@@ -1116,7 +1116,7 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('every adapter target is listed in the schema enum (regression guard)', () => {
-    const schemaPath = path.join(__dirname, '..', '..', 'schemas', 'ecc-install-config.schema.json');
+    const schemaPath = path.join(__dirname, '..', '..', 'schemas', 'aip-install-config.schema.json');
     const schema = JSON.parse(require('fs').readFileSync(schemaPath, 'utf8'));
     const schemaTargets = schema.properties.target.enum;
     const adapters = listInstallTargetAdapters();
@@ -1153,7 +1153,7 @@ function runTests() {
     assert.strictEqual(adapter.target, 'claude-project');
     assert.strictEqual(adapter.kind, 'project');
     assert.strictEqual(root, path.join(projectRoot, '.claude'));
-    assert.strictEqual(statePath, path.join(projectRoot, '.claude', 'ecc', 'install-state.json'));
+    assert.strictEqual(statePath, path.join(projectRoot, '.claude', 'aip', 'install-state.json'));
   })) passed++; else failed++;
 
   if (test('claude-project adapter supports lookup by target and adapter id', () => {
@@ -1187,13 +1187,13 @@ function runTests() {
 
     assert.strictEqual(plan.adapter.id, 'claude-project');
     assert.strictEqual(plan.targetRoot, path.join(projectRoot, '.claude'));
-    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.claude', 'ecc', 'install-state.json'));
+    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.claude', 'aip', 'install-state.json'));
     assert.ok(
       plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === 'rules'
-        && operation.destinationPath === path.join(projectRoot, '.claude', 'rules', 'ecc')
+        && operation.destinationPath === path.join(projectRoot, '.claude', 'rules', 'aip')
       )),
-      'Should install bundled rules under project-scope rules/ecc'
+      'Should install bundled rules under project-scope rules/aip'
     );
     assert.ok(
       plan.operations.some(operation => (
@@ -1223,7 +1223,7 @@ function runTests() {
     assert.ok(
       plan.operations.some(operation => (
         normalizedRelativePath(operation.sourceRelativePath) === 'rules'
-        && operation.destinationPath === path.join(projectRoot, '.claude', 'rules', 'ecc')
+        && operation.destinationPath === path.join(projectRoot, '.claude', 'rules', 'aip')
       )),
       'Should still include non-foreign rules path (guards against empty-plan regression)'
     );
@@ -1255,7 +1255,7 @@ function runTests() {
     assert.strictEqual(root, path.join(path.resolve(homeDir), '.config', 'opencode'));
     assert.strictEqual(
       statePath,
-      path.join(path.resolve(homeDir), '.config', 'opencode', 'ecc-install-state.json')
+      path.join(path.resolve(homeDir), '.config', 'opencode', 'aip-install-state.json')
     );
   })) passed++; else failed++;
 
@@ -1392,7 +1392,7 @@ function runTests() {
           kind: 'home',
           supports: target => target === 'opencode',
           resolveRoot: input => path.join((input.homeDir || '/Users/example'), '.opencode'),
-          getInstallStatePath: input => path.join((input.homeDir || '/Users/example'), '.opencode', 'ecc-install-state.json'),
+          getInstallStatePath: input => path.join((input.homeDir || '/Users/example'), '.opencode', 'aip-install-state.json'),
           validate: () => ([
             { severity: 'error', code: 'opencode-plugin-not-built', message: 'missing payload' },
             { severity: 'error', code: 'opencode-other-blocker', message: 'still blocked' },

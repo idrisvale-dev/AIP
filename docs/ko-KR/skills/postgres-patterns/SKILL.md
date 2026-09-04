@@ -1,7 +1,7 @@
 ---
 name: postgres-patterns
 description: 쿼리 최적화, 스키마 설계, 인덱싱, 보안을 위한 PostgreSQL 데이터베이스 패턴. Supabase 모범 사례 기반.
-origin: ECC
+origin: AIP
 ---
 
 # PostgreSQL 패턴
