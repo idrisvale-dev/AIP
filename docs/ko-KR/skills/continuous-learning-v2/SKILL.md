@@ -339,7 +339,7 @@ v2.1은 v2.0 및 v1과 완전히 호환됩니다:
 
 - [Skill Creator](https://skill-creator.app) - 저장소 히스토리에서 본능 생성
 - Homunculus - v2 본능 기반 아키텍처에 영감을 준 커뮤니티 프로젝트 (원자적 관찰, 신뢰도 점수, 본능 진화 파이프라인)
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - 지속적 학습 섹션
+- [The Longform Guide](https://bytecore.org/status/2014040193557471352) - 지속적 학습 섹션
 
 ---
 

@@ -51,7 +51,7 @@ Comandos slash que invocam fluxos de trabalho úteis:
 
 ```bash
 # 1. Fork e clone
-gh repo fork affaan-m/everything-claude-code --clone
+gh repo fork reborncursed/AIP --clone
 cd everything-claude-code
 
 # 2. Criar uma branch
@@ -418,8 +418,8 @@ Como você testou isso.
 
 ## Dúvidas?
 
-- **Issues:** [github.com/affaan-m/everything-claude-code/issues](https://github.com/affaan-m/everything-claude-code/issues)
-- **X/Twitter:** [@affaanmustafa](https://x.com/affaanmustafa)
+- **Issues:** [github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
+- **X/Twitter:** [@bytecore](https://bytecore.org)
 
 ---
 

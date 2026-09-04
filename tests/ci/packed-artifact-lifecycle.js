@@ -234,7 +234,7 @@ function fakeClaudeProviderMain() {
       ...state,
       marketplaces: [{
         name: 'ecc',
-        repo: 'affaan-m/ECC',
+        repo: 'reborncursed/AIP',
         scope: 'user',
         source: 'github',
       }],
@@ -557,7 +557,7 @@ function runLifecycle(options) {
       { enabled: true, id: 'ecc@ecc', scope: 'user', version: '2.2.0' },
     ]);
     assert.deepStrictEqual(fakeClaudeState.marketplaces, [
-      { name: 'ecc', repo: 'affaan-m/ECC', scope: 'user', source: 'github' },
+      { name: 'ecc', repo: 'reborncursed/AIP', scope: 'user', source: 'github' },
     ]);
     const fakeClaudeCalls = readJsonLines(fakeClaudeCallsPath).map(args => args.join(' '));
     assert.ok(

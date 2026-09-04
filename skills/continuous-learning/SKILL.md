@@ -98,7 +98,7 @@ Add to your `~/.claude/settings.json`:
 
 ## Related
 
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - Section on continuous learning
+- [The Longform Guide](https://bytecore.org/status/2014040193557471352) - Section on continuous learning
 - `/learn` command - Manual pattern extraction mid-session
 
 ---

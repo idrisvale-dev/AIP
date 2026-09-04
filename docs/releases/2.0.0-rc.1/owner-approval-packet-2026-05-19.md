@@ -17,7 +17,7 @@ Source commit for the clean evidence baseline this packet extends:
 | Platform audit | ready true, 0 open PRs, 0 open issues, 0 discussion gaps, 0 dirty files | yes |
 | Preview pack smoke | ready true, digest `531328aaaa53`, 5/5 checks | yes |
 | Release approval gate | ready false, digest `ef8f49f727b7`, 4/6 checks pass; owner decisions and live URL readbacks pending | yes |
-| GitHub prerelease | live at <https://github.com/affaan-m/ECC/releases/tag/v2.0.0-rc.1>; prerelease true, draft false, published `2026-05-25T18:29:31Z` | yes |
+| GitHub prerelease | live at <https://github.com/reborncursed/AIP/releases/tag/v2.0.0-rc.1>; prerelease true, draft false, published `2026-05-25T18:29:31Z` | yes |
 | npm `next` publish | live at <https://www.npmjs.com/package/ecc-universal/v/2.0.0-rc.1>; `next` points to `2.0.0-rc.1`, `latest` remains `1.10.0` | yes |
 | Video suite | ready true, 15/15 source assets, 13/13 suite artifacts, 12/12 publish candidates | yes |
 | Release surface tests | 28/28 passed after the May 26 URL/package refresh | yes |
@@ -28,7 +28,7 @@ Source commit for the clean evidence baseline this packet extends:
 
 | Decision | Approve / defer / block | Evidence required first | Notes |
 | --- | --- | --- | --- |
-| GitHub prerelease | approve | live prerelease readback | Live at <https://github.com/affaan-m/ECC/releases/tag/v2.0.0-rc.1>. Remaining plugin/video/billing URLs stay approval-gated. |
+| GitHub prerelease | approve | live prerelease readback | Live at <https://github.com/reborncursed/AIP/releases/tag/v2.0.0-rc.1>. Remaining plugin/video/billing URLs stay approval-gated. |
 | npm `next` publish | approve | `npm pack --dry-run`, `npm publish --tag next`, registry dist-tag readback | `ecc-universal@2.0.0-rc.1` is published on `next`; `latest` remains `1.10.0` during rc.1. |
 | Claude plugin tag | defer | `claude plugin validate .claude-plugin/plugin.json`, `claude plugin tag .claude-plugin --dry-run` | Create and push the real tag only after release approval. |
 | Codex repo marketplace | defer | temp-home marketplace add smoke and current official Plugin Directory status | Claim repo-marketplace distribution only; do not claim official Plugin Directory listing without listing evidence. |
@@ -43,7 +43,7 @@ Update these surfaces after the approved publication actions finish:
 
 | Surface | Final value source | Update targets |
 | --- | --- | --- |
-| GitHub prerelease URL | `gh release view v2.0.0-rc.1 --repo affaan-m/ECC --json url` | release notes, URL ledger, social copy |
+| GitHub prerelease URL | `gh release view v2.0.0-rc.1 --repo reborncursed/AIP --json url` | release notes, URL ledger, social copy |
 | npm rc package URL | `npm view ecc-universal@2.0.0-rc.1 name version dist.tarball dist.integrity time --json` | URL ledger, quickstart, release notes |
 | Claude plugin tag URL | pushed `ecc--v2.0.0-rc.1` tag or marketplace readback | URL ledger, plugin docs, release notes |
 | Codex repo-marketplace evidence | temp-home `codex plugin marketplace add <local-checkout>` readback | URL ledger, publication readiness |

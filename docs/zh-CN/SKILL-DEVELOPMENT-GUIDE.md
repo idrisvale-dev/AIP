@@ -632,7 +632,7 @@ go build ./examples/...
 ### 1. Fork 并 Clone
 
 ```bash
-gh repo fork affaan-m/everything-claude-code --clone
+gh repo fork reborncursed/AIP --clone
 cd everything-claude-code
 ```
 

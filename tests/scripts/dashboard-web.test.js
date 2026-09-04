@@ -838,7 +838,7 @@ test('renderHTML includes the dashboard title and footer', () => {
   const data = { agents: [], skills: [], commands: [], rules: [], mcps: [], hooks: [] };
   const html = renderHTML(data);
   assert.ok(html.includes('ECC Capabilities'));
-  assert.ok(html.includes('github.com/affaan-m/ECC'));
+  assert.ok(html.includes('github.com/reborncursed/AIP'));
 });
 
 // ===================== Server / HTTP =====================

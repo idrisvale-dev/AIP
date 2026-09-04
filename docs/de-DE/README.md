@@ -4,12 +4,12 @@
 
 ![ECC - das Harness-native Operator-System für agentische Arbeit](../../assets/hero.png)
 
-[![Stars](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Fstars&style=flat)](https://github.com/affaan-m/ECC/stargazers)
-[![Forks](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Fforks&style=flat)](https://github.com/affaan-m/ECC/network/members)
-[![Contributors](https://img.shields.io/github/contributors/affaan-m/ECC?style=flat)](https://github.com/affaan-m/ECC/graphs/contributors)
+[![Stars](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fstars&style=flat)](https://github.com/reborncursed/AIP/stargazers)
+[![Forks](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fforks&style=flat)](https://github.com/reborncursed/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
 [![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-universal)
 [![npm ecc-agentshield](https://img.shields.io/npm/dw/ecc-agentshield?label=ecc-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-agentshield)
-[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/ecc-tools)
+[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/ecc-tools)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 ![Shell](https://img.shields.io/badge/-Shell-4EAA25?logo=gnu-bash&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -47,19 +47,19 @@ ECC v2.0.0-rc.1 ergänzt diese wiederverwendbare Schicht um die öffentliche Her
 <table>
 <tr>
 <td width="25%" align="center">
-  <a href="https://ecc.tools/pricing">
+  <a href="https://bytecore.org/pricing">
     <strong> ECC Pro</strong><br />
     <sub>Private Repos · GitHub App · 19 $/Platz/Monat</sub>
   </a>
 </td>
 <td width="25%" align="center">
-  <a href="https://github.com/sponsors/affaan-m">
+  <a href="https://github.com/sponsors/reborncursed">
     <strong> Sponsor</strong><br />
     <sub>Finanziere das OSS · Ab 5 $/Monat</sub>
   </a>
 </td>
 <td width="25%" align="center">
-  <a href="https://github.com/affaan-m/ECC/discussions">
+  <a href="https://github.com/reborncursed/AIP/discussions">
     <strong>Community</strong>
     <br />
     <sub>Discussions · Q&amp;A · Show & Tell</sub>
@@ -74,7 +74,7 @@ ECC v2.0.0-rc.1 ergänzt diese wiederverwendbare Schicht um die öffentliche Her
 </tr>
 </table>
 
-<sub>**OSS bleibt kostenlos.** Dieses Repo ist für immer MIT-lizenziert. ECC Pro ist die gehostete GitHub App für private Repos. <a href="https://github.com/sponsors/affaan-m">Sponsoren</a> und <a href="https://ecc.tools/pricing">Pro-Abonnenten</a> finanzieren die Arbeit — deshalb liefert ein einzelner Maintainer wöchentlich über 7 Harnesses hinweg aus.</sub>
+<sub>**OSS bleibt kostenlos.** Dieses Repo ist für immer MIT-lizenziert. ECC Pro ist die gehostete GitHub App für private Repos. <a href="https://github.com/sponsors/reborncursed">Sponsoren</a> und <a href="https://bytecore.org/pricing">Pro-Abonnenten</a> finanzieren die Arbeit — deshalb liefert ein einzelner Maintainer wöchentlich über 7 Harnesses hinweg aus.</sub>
 
 ---
 
@@ -85,17 +85,17 @@ Dieses Repo enthält ausschließlich den rohen Code. Die Leitfäden erklären al
 <table>
 <tr>
 <td width="33%">
-<a href="https://x.com/affaanmustafa/status/2012378465664745795">
+<a href="https://bytecore.org/status/2012378465664745795">
 <img src="../../assets/images/guides/shorthand-guide.png" alt="The Shorthand Guide to Everything Claude Code" />
 </a>
 </td>
 <td width="33%">
-<a href="https://x.com/affaanmustafa/status/2014040193557471352">
+<a href="https://bytecore.org/status/2014040193557471352">
 <img src="../../assets/images/guides/longform-guide.png" alt="The Longform Guide to Everything Claude Code" />
 </a>
 </td>
 <td width="33%">
-<a href="https://x.com/affaanmustafa/status/2033263813387223421">
+<a href="https://bytecore.org/status/2033263813387223421">
 <img src="../../assets/images/security/security-guide-header.png" alt="The Shorthand Guide to Everything Agentic Security" />
 </a>
 </td>
@@ -172,7 +172,7 @@ Dieses Repo enthält ausschließlich den rohen Code. Die Leitfäden erklären al
 
 ### v1.4.1 — Bugfix (Februar 2026)
 
-- **Inhaltsverlust beim Instinct-Import behoben** — `parse_instinct_file()` verwarf während `/instinct-import` stillschweigend sämtlichen Inhalt nach dem Frontmatter (Abschnitte Action, Evidence, Examples). ([#148](https://github.com/affaan-m/ECC/issues/148), [#161](https://github.com/affaan-m/ECC/pull/161))
+- **Inhaltsverlust beim Instinct-Import behoben** — `parse_instinct_file()` verwarf während `/instinct-import` stillschweigend sämtlichen Inhalt nach dem Frontmatter (Abschnitte Action, Evidence, Examples). ([#148](https://github.com/reborncursed/AIP/issues/148), [#161](https://github.com/reborncursed/AIP/pull/161))
 
 ### v1.4.0 — Mehrsprachige Rules, Installationsassistent & PM2 (Februar 2026)
 
@@ -196,7 +196,7 @@ Dieses Repo enthält ausschließlich den rohen Code. Die Leitfäden erklären al
 - **Session-Verwaltung** — `/sessions`-Befehl für den Session-Verlauf
 - **Continuous Learning v2** — Instinct-basiertes Lernen mit Konfidenz-Scoring, Import/Export, Evolution
 
-Den vollständigen Changelog findest du unter [Releases](https://github.com/affaan-m/ECC/releases).
+Den vollständigen Changelog findest du unter [Releases](https://github.com/reborncursed/AIP/releases).
 
 ---
 
@@ -265,7 +265,7 @@ npx ecc-universal install --profile minimal --target claude --with capability:ma
 
 ```bash
 # Marketplace hinzufügen
-/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin marketplace add https://github.com/reborncursed/AIP
 
 # Plugin installieren
 /plugin install ecc@ecc
@@ -275,7 +275,7 @@ npx ecc-universal install --profile minimal --target claude --with capability:ma
 
 ECC hat jetzt drei öffentliche Bezeichner, und sie sind nicht austauschbar:
 
-- GitHub-Quell-Repo: `affaan-m/ECC`
+- GitHub-Quell-Repo: `reborncursed/AIP`
 - Claude-Marketplace-/Plugin-Bezeichner: `ecc@ecc`
 - npm-Paket: `ecc-universal`
 
@@ -295,7 +295,7 @@ Das ist beabsichtigt. Anthropic-Marketplace-/Plugin-Installationen werden über 
 
 ```bash
 # Zuerst das Repo klonen
-git clone https://github.com/affaan-m/ECC.git
+git clone https://github.com/reborncursed/AIP.git
 cd ECC
 
 # Abhängigkeiten installieren (wähle deinen Paketmanager)
@@ -729,7 +729,7 @@ Dies analysiert deine Git-Historie lokal und generiert SKILL.md-Dateien.
 
 Für fortgeschrittene Funktionen (10k+ Commits, Auto-PRs, Team-Sharing):
 
-[GitHub App installieren](https://github.com/apps/skill-creator) | [ecc.tools](https://ecc.tools)
+[GitHub App installieren](https://github.com/apps/skill-creator) | [bytecore.org](https://bytecore.org)
 
 ```bash
 # Kommentiere auf einem beliebigen Issue:
@@ -769,9 +769,9 @@ npx ecc-agentshield init
 
 **Ausgabeformate:** Terminal (farblich nach A-F abgestuft), JSON (CI-Pipelines), Markdown, HTML. Exit-Code 2 bei kritischen Befunden für Build-Gates.
 
-Verwende `/security-scan` in Claude Code, um es auszuführen, oder füge es per [GitHub Action](https://github.com/affaan-m/agentshield) zur CI hinzu.
+Verwende `/security-scan` in Claude Code, um es auszuführen, oder füge es per [GitHub Action](https://github.com/reborncursed/agentshield) zur CI hinzu.
 
-[GitHub](https://github.com/affaan-m/agentshield) | [npm](https://www.npmjs.com/package/ecc-agentshield)
+[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/ecc-agentshield)
 
 ### Continuous Learning v2
 
@@ -812,7 +812,7 @@ Claude Code v2.1+ **lädt automatisch** `hooks/hooks.json` aus jedem installiert
 Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded file
 ```
 
-**Historie:** Dies hat in diesem Repo wiederholte Fix-/Revert-Zyklen verursacht ([#29](https://github.com/affaan-m/ECC/issues/29), [#52](https://github.com/affaan-m/ECC/issues/52), [#103](https://github.com/affaan-m/ECC/issues/103)). Das Verhalten änderte sich zwischen Claude-Code-Versionen, was zu Verwirrung führte. Wir haben jetzt einen Regressionstest, der verhindert, dass dies erneut eingeführt wird.
+**Historie:** Dies hat in diesem Repo wiederholte Fix-/Revert-Zyklen verursacht ([#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103)). Das Verhalten änderte sich zwischen Claude-Code-Versionen, was zu Verwirrung führte. Wir haben jetzt einen Regressionstest, der verhindert, dass dies erneut eingeführt wird.
 
 ---
 
@@ -824,7 +824,7 @@ Der einfachste Weg, dieses Repo zu nutzen - als Claude-Code-Plugin installieren:
 
 ```bash
 # Dieses Repo als Marketplace hinzufügen
-/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin marketplace add https://github.com/reborncursed/AIP
 
 # Das Plugin installieren
 /plugin install ecc@ecc
@@ -838,7 +838,7 @@ Oder füge es direkt zu deiner `~/.claude/settings.json` hinzu:
     "ecc": {
       "source": {
         "source": "github",
-        "repo": "affaan-m/ECC"
+        "repo": "reborncursed/AIP"
       }
     }
   },
@@ -854,7 +854,7 @@ Dies gibt dir sofortigen Zugriff auf alle Commands, Agents, Skills und Hooks.
 >
 > ```bash
 > # Zuerst das Repo klonen
-> git clone https://github.com/affaan-m/ECC.git
+> git clone https://github.com/reborncursed/AIP.git
 > cd ECC
 >
 > # Option A: Rules auf Benutzerebene (gilt für alle Projekte)
@@ -879,7 +879,7 @@ Falls du manuelle Kontrolle darüber bevorzugst, was installiert wird:
 
 ```bash
 # Das Repo klonen
-git clone https://github.com/affaan-m/ECC.git
+git clone https://github.com/reborncursed/AIP.git
 cd ECC
 
 # Agents in deine Claude-Konfiguration kopieren
@@ -1087,7 +1087,7 @@ Dies zeigt alle verfügbaren Agents, Commands und Skills aus dem Plugin.
 <details>
 <summary><b>Meine Hooks funktionieren nicht / ich sehe den Fehler "Duplicate hooks file"</b></summary>
 
-Das ist das häufigste Problem. **Füge KEIN `"hooks"`-Feld zu `.claude-plugin/plugin.json` hinzu.** Claude Code v2.1+ lädt `hooks/hooks.json` aus installierten Plugins automatisch. Es explizit zu deklarieren, verursacht Fehler durch Duplikaterkennung. Siehe [#29](https://github.com/affaan-m/ECC/issues/29), [#52](https://github.com/affaan-m/ECC/issues/52), [#103](https://github.com/affaan-m/ECC/issues/103).
+Das ist das häufigste Problem. **Füge KEIN `"hooks"`-Feld zu `.claude-plugin/plugin.json` hinzu.** Claude Code v2.1+ lädt `hooks/hooks.json` aus installierten Plugins automatisch. Es explizit zu deklarieren, verursacht Fehler durch Duplikaterkennung. Siehe [#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103).
 </details>
 
 <details>
@@ -1149,7 +1149,7 @@ Ja. ECC ist Cross-Platform:
 - **Cursor**: Vorübersetzte Konfigurationen in `.cursor/`. Siehe [Cursor-IDE-Unterstützung](#cursor-ide-unterstützung).
 - **Gemini CLI**: Experimentelle projektlokale Unterstützung über `.gemini/GEMINI.md` und gemeinsam genutzte Installer-Verdrahtung.
 - **OpenCode**: Vollständige Plugin-Unterstützung in `.opencode/`. Siehe [OpenCode-Unterstützung](#opencode-unterstützung).
-- **Codex**: Erstklassige Unterstützung sowohl für die macOS-App als auch die CLI, mit Adapter-Drift-Guards und SessionStart-Fallback. Siehe PR [#257](https://github.com/affaan-m/ECC/pull/257).
+- **Codex**: Erstklassige Unterstützung sowohl für die macOS-App als auch die CLI, mit Adapter-Drift-Guards und SessionStart-Fallback. Siehe PR [#257](https://github.com/reborncursed/AIP/pull/257).
 - **GitHub Copilot (VS Code)**: Instruction- und Prompt-Schicht über `.github/copilot-instructions.md`, `.vscode/settings.json` und `.github/prompts/`. Siehe [GitHub-Copilot-Unterstützung](#github-copilot-unterstützung).
 - **Antigravity**: Eng integriertes Setup für Workflows, Skills und abgeflachte Rules in `.agents/`. Siehe [Antigravity-Leitfaden](../../docs/ANTIGRAVITY-GUIDE.md).
 - **JoyCode / CodeBuddy**: Projektlokale Adapter für selektive Installation von Commands, Agents, Skills und abgeflachten Rules. Siehe [JoyCode-Adapter-Leitfaden](../../docs/JOYCODE-GUIDE.md).
@@ -1610,7 +1610,7 @@ ECC ist das **erste Plugin, das jedes große KI-Coding-Tool ausreizt**. So vergl
 
 ## Hintergrund
 
-Ich nutze Claude Code seit dem experimentellen Rollout. Habe im September 2025 den Anthropic-x-Forum-Ventures-Hackathon mit [@DRodriguezFX](https://x.com/DRodriguezFX) gewonnen — [zenith.chat](https://zenith.chat) wurde vollständig mit Claude Code gebaut.
+Ich nutze Claude Code seit dem experimentellen Rollout. Habe im September 2025 den Anthropic-x-Forum-Ventures-Hackathon mit [@DRodriguezFX](https://x.com/DRodriguezFX) gewonnen — [bytecore.org](https://bytecore.org) wurde vollständig mit Claude Code gebaut.
 
 Diese Konfigurationen sind über mehrere produktive Anwendungen hinweg im Praxiseinsatz erprobt.
 
@@ -1735,22 +1735,22 @@ Etwas mit ECC gebaut? Öffne einen PR, um es hier hinzuzufügen.
 
 Dieses Projekt ist kostenlos und Open Source. Sponsoren helfen, es gepflegt und wachsend zu halten.
 
-[**Sponsor werden**](https://github.com/sponsors/affaan-m) | [Sponsor-Stufen](../../SPONSORS.md) | [Sponsoring-Programm](../../SPONSORING.md)
+[**Sponsor werden**](https://github.com/sponsors/reborncursed) | [Sponsor-Stufen](../../SPONSORS.md) | [Sponsoring-Programm](../../SPONSORING.md)
 
 ---
 
 ## Star-Verlauf
 
-[![Star History Chart](https://api.star-history.com/svg?repos=affaan-m/ECC&type=Date)](https://star-history.com/#affaan-m/ECC&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=reborncursed/AIP&type=Date)](https://star-history.com/#reborncursed/AIP&Date)
 
 ---
 
 ## Links
 
-- **Kurzleitfaden (Hier starten):** [The Shorthand Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2012378465664745795)
-- **Langleitfaden (fortgeschritten):** [The Longform Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2014040193557471352)
-- **Security-Leitfaden:** [Security-Leitfaden](../../the-security-guide.md) | [Thread](https://x.com/affaanmustafa/status/2033263813387223421)
-- **Folgen:** [@affaanmustafa](https://x.com/affaanmustafa)
+- **Kurzleitfaden (Hier starten):** [The Shorthand Guide to Everything Claude Code](https://bytecore.org/status/2012378465664745795)
+- **Langleitfaden (fortgeschritten):** [The Longform Guide to Everything Claude Code](https://bytecore.org/status/2014040193557471352)
+- **Security-Leitfaden:** [Security-Leitfaden](../../the-security-guide.md) | [Thread](https://bytecore.org/status/2033263813387223421)
+- **Folgen:** [@bytecore](https://bytecore.org)
 
 ---
 

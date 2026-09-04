@@ -9,7 +9,7 @@ description: >
   reporting frameworks. Use when procuring energy, optimizing tariffs, managing
   demand charges, evaluating PPAs, or developing energy strategies.
 license: Apache-2.0
-homepage: https://github.com/affaan-m/everything-claude-code
+homepage: https://github.com/reborncursed/AIP
 metadata:
   version: 1.0.0
   origin: ECC

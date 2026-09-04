@@ -15,7 +15,7 @@ The native Claude marketplace install remains an independent install path
 throughout the npm rollout:
 
 ```text
-/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin marketplace add https://github.com/reborncursed/AIP
 /plugin install ecc@ecc
 ```
 
@@ -79,7 +79,7 @@ After the workflow succeeds:
 ```bash
 npm view ecc-universal dist-tags --json
 npm view ecc-universal@2.2.1 version dist.integrity
-gh release view v2.2.1 --repo affaan-m/ECC
+gh release view v2.2.1 --repo reborncursed/AIP
 npx --yes ecc-universal@2.2.1 setup --help
 npx --yes ecc-universal@latest setup --help
 ```
@@ -106,7 +106,7 @@ npm view ecc-universal dist-tags --json
 ECC_ROLLBACK_ROOT=$(mktemp -d)
 npm install --ignore-scripts --prefix "$ECC_ROLLBACK_ROOT" ecc-universal@2.2.0
 node "$ECC_ROLLBACK_ROOT/node_modules/ecc-universal/scripts/ecc.js" --help
-gh release edit v2.2.0 --repo affaan-m/ECC --latest
+gh release edit v2.2.0 --repo reborncursed/AIP --latest
 ```
 
 Then open a release incident, state that `2.2.1` remains available only by

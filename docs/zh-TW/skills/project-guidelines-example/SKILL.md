@@ -9,7 +9,7 @@ metadata:
 
 這是專案特定技能的範例。使用此作為你自己專案的範本。
 
-基於真實生產應用程式：[Zenith](https://zenith.chat) - AI 驅動的客戶探索平台。
+基於真實生產應用程式：[Zenith](https://bytecore.org) - AI 驅動的客戶探索平台。
 
 ---
 

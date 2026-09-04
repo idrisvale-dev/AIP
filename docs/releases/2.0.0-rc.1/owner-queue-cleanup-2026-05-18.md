@@ -6,8 +6,8 @@ repos tracked by `scripts/platform-audit.js`.
 ## Commands
 
 ```bash
-gh search prs --owner affaan-m --state open --json repository,number,title,url,author,updatedAt --limit 100
-gh search issues --owner affaan-m --state open --json repository,number,title,url,updatedAt --limit 100
+gh search prs --owner reborncursed --state open --json repository,number,title,url,author,updatedAt --limit 100
+gh search issues --owner reborncursed --state open --json repository,number,title,url,updatedAt --limit 100
 ```
 
 ## Result
@@ -20,40 +20,40 @@ gh search issues --owner affaan-m --state open --json repository,number,title,ur
 - Final legacy/outreach/placeholder issues closed: 5.
 - Archived repos temporarily unarchived for stale dependency PR closure and
   restored to archived state:
-  `affaan-m/stoictradingAI`, `affaan-m/dprc-autotrader-v2`,
-  `affaan-m/polycule-secure`, and `affaan-m/pragmAItism_defAInce`.
+  `reborncursed/stoictradingAI`, `reborncursed/dprc-autotrader-v2`,
+  `reborncursed/polycule-secure`, and `reborncursed/pragmAItism_defAInce`.
 - The final archived-repo sweep temporarily unarchived and restored
-  `affaan-m/dprc-autotrader-v2` and `affaan-m/stoictradingAI`.
+  `reborncursed/dprc-autotrader-v2` and `reborncursed/stoictradingAI`.
 
 ## Final PR Disposition
 
-- `affaan-m/dprc-autotrader-v2#5`: closed stale generated ECC bundle with
+- `reborncursed/dprc-autotrader-v2#5`: closed stale generated ECC bundle with
   failing checks and dependency-update base.
-- `affaan-m/x-algorithm-score#2`: closed stale/conflicting external feature
+- `reborncursed/x-algorithm-score#2`: closed stale/conflicting external feature
   PR with accidental local AI-tool directories noted in the PR body.
-- `affaan-m/dexploy#28`: closed stale generated ECC skill PR with requested
+- `reborncursed/dexploy#28`: closed stale generated ECC skill PR with requested
   changes.
-- `affaan-m/zenith#5`: closed stale generated ECC skill PR.
-- `affaan-m/zenith#4`: closed test/noise PR whose diff only added a
+- `reborncursed/zenith#5`: closed stale generated ECC skill PR.
+- `reborncursed/zenith#4`: closed test/noise PR whose diff only added a
   non-actionable script comment.
-- `affaan-m/affaan-m#1`: closed stale/conflicting third-party README-card PR.
-- `affaan-m/affaanmustafa.com#1`: closed stale Cloudflare Worker-name PR with
+- `reborncursed/reborncursed#1`: closed stale/conflicting third-party README-card PR.
+- `reborncursed/bytecore.com#1`: closed stale Cloudflare Worker-name PR with
   requested changes.
-- `affaan-m/0em-payments-dashboard#11`: closed stale/conflicting Cloudflare
+- `reborncursed/0em-payments-dashboard#11`: closed stale/conflicting Cloudflare
   Worker-name PR.
-- `affaan-m/0em-payments-dashboard#3`: closed stale/conflicting Cloudflare
+- `reborncursed/0em-payments-dashboard#3`: closed stale/conflicting Cloudflare
   Worker-name PR.
 
 ## Final Issue Disposition
 
-- `affaan-m/dprc-autotrader-v2#3`: closed public integration pitch as not
+- `reborncursed/dprc-autotrader-v2#3`: closed public integration pitch as not
   planned for the archived repo.
-- `affaan-m/stoictradingAI#20`: closed public outreach question as not planned
+- `reborncursed/stoictradingAI#20`: closed public outreach question as not planned
   for the archived repo.
-- `affaan-m/dexploy#27`: closed stale internal skill-creator test issue.
-- `affaan-m/dexploy#25`: preserved useful deployment/localStorage and
+- `reborncursed/dexploy#27`: closed stale internal skill-creator test issue.
+- `reborncursed/dexploy#25`: preserved useful deployment/localStorage and
   Cloudflare findings in Linear `ITO-62`, then closed the stale GitHub issue.
-- `affaan-m/telegram-mcp-ts#1`: closed stale empty placeholder issue.
+- `reborncursed/telegram-mcp-ts#1`: closed stale empty placeholder issue.
 
 ## Disposition
 

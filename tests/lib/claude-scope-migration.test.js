@@ -43,7 +43,7 @@ function marketplace(scope = 'user') {
   return {
     name: 'ecc',
     source: 'github',
-    repo: 'affaan-m/ECC',
+    repo: 'reborncursed/AIP',
     scope,
   };
 }

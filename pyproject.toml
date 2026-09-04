@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "Affaan Mustafa", email = "affaan@example.com"}
+    {name = "ByteCore.org", email = "bytecore@example.com"}
 ]
 keywords = ["llm", "openai", "anthropic", "ollama", "ai"]
 classifiers = [
@@ -35,8 +35,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/affaan-m/ECC"
-Repository = "https://github.com/affaan-m/ECC"
+Homepage = "https://github.com/reborncursed/AIP"
+Repository = "https://github.com/reborncursed/AIP"
 
 [project.scripts]
 llm-select = "llm.cli.selector:main"

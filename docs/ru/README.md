@@ -4,12 +4,12 @@
 
 ![Everything Claude Code — система повышения эффективности сред агентного ИИ](../../assets/hero.png)
 
-[![Stars](https://img.shields.io/github/stars/affaan-m/everything-claude-code?style=flat)](https://github.com/affaan-m/everything-claude-code/stargazers)
-[![Forks](https://img.shields.io/github/forks/affaan-m/everything-claude-code?style=flat)](https://github.com/affaan-m/everything-claude-code/network/members)
-[![Contributors](https://img.shields.io/github/contributors/affaan-m/everything-claude-code?style=flat)](https://github.com/affaan-m/everything-claude-code/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
+[![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
 [![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-universal)
 [![npm ecc-agentshield](https://img.shields.io/npm/dw/ecc-agentshield?label=ecc-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-agentshield)
-[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.ecc.tools%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/ecc-tools)
+[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/ecc-tools)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 ![Shell](https://img.shields.io/badge/-Shell-4EAA25?logo=gnu-bash&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -50,17 +50,17 @@ ECC v2.0.0-rc.1 добавляет публичную историю опера�
 <table>
 <tr>
 <td width="33%">
-<a href="https://x.com/affaanmustafa/status/2012378465664745795">
+<a href="https://bytecore.org/status/2012378465664745795">
 <img src="../../assets/images/guides/shorthand-guide.png" alt="Краткое руководство по Everything Claude Code" />
 </a>
 </td>
 <td width="33%">
-<a href="https://x.com/affaanmustafa/status/2014040193557471352">
+<a href="https://bytecore.org/status/2014040193557471352">
 <img src="../../assets/images/guides/longform-guide.png" alt="Подробное руководство по Everything Claude Code" />
 </a>
 </td>
 <td width="33%">
-<a href="https://x.com/affaanmustafa/status/2033263813387223421">
+<a href="https://bytecore.org/status/2033263813387223421">
 <img src="../../assets/images/security/security-guide-header.png" alt="Краткое руководство по безопасности агентных систем" />
 </a>
 </td>
@@ -136,7 +136,7 @@ ECC v2.0.0-rc.1 добавляет публичную историю опера�
 
 ### v1.4.1 — Исправление ошибки (февраль 2026)
 
-- **Исправлена потеря содержимого при импорте инстинктов** — `parse_instinct_file()` незаметно отбрасывал всё содержимое после frontmatter (разделы Action, Evidence, Examples) во время `/instinct-import`. ([#148](https://github.com/affaan-m/everything-claude-code/issues/148), [#161](https://github.com/affaan-m/everything-claude-code/pull/161))
+- **Исправлена потеря содержимого при импорте инстинктов** — `parse_instinct_file()` незаметно отбрасывал всё содержимое после frontmatter (разделы Action, Evidence, Examples) во время `/instinct-import`. ([#148](https://github.com/reborncursed/AIP/issues/148), [#161](https://github.com/reborncursed/AIP/pull/161))
 
 ### v1.4.0 — Многоязычные правила, мастер установки и PM2 (февраль 2026)
 
@@ -160,7 +160,7 @@ ECC v2.0.0-rc.1 добавляет публичную историю опера�
 - **Управление сессиями** — команда `/sessions` для истории сессий
 - **Непрерывное обучение v2** — обучение на основе инстинктов с оценкой уверенности, импортом/экспортом и эволюцией
 
-Полный журнал изменений смотрите в [Releases](https://github.com/affaan-m/everything-claude-code/releases).
+Полный журнал изменений смотрите в [Releases](https://github.com/reborncursed/AIP/releases).
 
 ---
 
@@ -222,7 +222,7 @@ npx ecc-universal consult "security reviews" --target claude
 
 ```bash
 # Добавьте marketplace
-/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin marketplace add https://github.com/reborncursed/AIP
 
 # Установите плагин
 /plugin install ecc@ecc
@@ -232,7 +232,7 @@ npx ecc-universal consult "security reviews" --target claude
 
 У ECC теперь три публичных идентификатора, и они не взаимозаменяемы:
 
-- исходный репозиторий GitHub: `affaan-m/everything-claude-code`
+- исходный репозиторий GitHub: `reborncursed/AIP`
 - идентификатор Claude marketplace/plugin: `ecc@ecc`
 - npm-пакет: `ecc-universal`
 
@@ -252,7 +252,7 @@ npx ecc-universal consult "security reviews" --target claude
 
 ```bash
 # Сначала клонируйте репозиторий
-git clone https://github.com/affaan-m/everything-claude-code.git
+git clone https://github.com/reborncursed/AIP.git
 cd everything-claude-code
 
 # Установите зависимости (выберите пакетный менеджер)
@@ -668,7 +668,7 @@ everything-claude-code/
 
 Для продвинутых возможностей (10k+ коммитов, auto-PR, командный обмен):
 
-[Установить GitHub App](https://github.com/apps/skill-creator) | [ecc.tools](https://ecc.tools)
+[Установить GitHub App](https://github.com/apps/skill-creator) | [bytecore.org](https://bytecore.org)
 
 ```bash
 # Оставьте комментарий в любом issue:
@@ -708,9 +708,9 @@ npx ecc-agentshield init
 
 **Форматы вывода:** терминал (цветовая оценка A-F), JSON (CI pipelines), Markdown, HTML. Exit code 2 при критических находках для build gates.
 
-Используйте `/security-scan` в Claude Code, чтобы запустить его, или добавьте в CI через [GitHub Action](https://github.com/affaan-m/agentshield).
+Используйте `/security-scan` в Claude Code, чтобы запустить его, или добавьте в CI через [GitHub Action](https://github.com/reborncursed/agentshield).
 
-[GitHub](https://github.com/affaan-m/agentshield) | [npm](https://www.npmjs.com/package/ecc-agentshield)
+[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/ecc-agentshield)
 
 ### Непрерывное обучение v2
 
@@ -751,7 +751,7 @@ Claude Code v2.1+ **автоматически загружает** `hooks/hooks
 Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded file
 ```
 
-**История:** это уже приводило к повторяющимся циклам fix/revert в репозитории ([#29](https://github.com/affaan-m/everything-claude-code/issues/29), [#52](https://github.com/affaan-m/everything-claude-code/issues/52), [#103](https://github.com/affaan-m/everything-claude-code/issues/103)). Поведение менялось между версиями Claude Code, что вызывало путаницу. Теперь есть регрессионный тест, который не даёт вернуть эту ошибку.
+**История:** это уже приводило к повторяющимся циклам fix/revert в репозитории ([#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103)). Поведение менялось между версиями Claude Code, что вызывало путаницу. Теперь есть регрессионный тест, который не даёт вернуть эту ошибку.
 
 ---
 
@@ -763,7 +763,7 @@ Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded fil
 
 ```bash
 # Добавить этот репозиторий как marketplace
-/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin marketplace add https://github.com/reborncursed/AIP
 
 # Установить плагин
 /plugin install ecc@ecc
@@ -777,7 +777,7 @@ Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded fil
     "ecc": {
       "source": {
         "source": "github",
-        "repo": "affaan-m/everything-claude-code"
+        "repo": "reborncursed/AIP"
       }
     }
   },
@@ -793,7 +793,7 @@ Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded fil
 >
 > ```bash
 > # Сначала клонируйте репозиторий
-> git clone https://github.com/affaan-m/everything-claude-code.git
+> git clone https://github.com/reborncursed/AIP.git
 >
 > # Вариант A: правила user-level (применяются ко всем проектам)
 > mkdir -p ~/.claude/rules/ecc
@@ -817,7 +817,7 @@ Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded fil
 
 ```bash
 # Клонировать репозиторий
-git clone https://github.com/affaan-m/everything-claude-code.git
+git clone https://github.com/reborncursed/AIP.git
 
 # Скопировать агентов в ваш конфиг Claude
 cp everything-claude-code/agents/*.md ~/.claude/agents/
@@ -1019,7 +1019,7 @@ e2e-testing skill                             → e2e-runner: тесты кри�
 <details>
 <summary><b>Хуки не работают / я вижу ошибки "Duplicate hooks file"</b></summary>
 
-Это самая частая проблема. **НЕ добавляйте поле `"hooks"` в `.claude-plugin/plugin.json`.** Claude Code v2.1+ автоматически загружает `hooks/hooks.json` из установленных плагинов. Явное объявление вызывает ошибки обнаружения дубликатов. См. [#29](https://github.com/affaan-m/everything-claude-code/issues/29), [#52](https://github.com/affaan-m/everything-claude-code/issues/52), [#103](https://github.com/affaan-m/everything-claude-code/issues/103).
+Это самая частая проблема. **НЕ добавляйте поле `"hooks"` в `.claude-plugin/plugin.json`.** Claude Code v2.1+ автоматически загружает `hooks/hooks.json` из установленных плагинов. Явное объявление вызывает ошибки обнаружения дубликатов. См. [#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103).
 </details>
 
 <details>
@@ -1081,7 +1081,7 @@ cp -r everything-claude-code/rules/common ~/.claude/rules/ecc/
 - **Cursor**: предварительно адаптированные конфиги в `.cursor/`. См. [Поддержка Cursor IDE](#поддержка-cursor-ide).
 - **Gemini CLI**: экспериментальная project-local поддержка через `.gemini/GEMINI.md` и общий plumbing установщика.
 - **OpenCode**: полная поддержка плагина в `.opencode/`. См. [Поддержка OpenCode](#поддержка-opencode).
-- **Codex**: первоклассная поддержка macOS app и CLI, с guards против adapter drift и SessionStart fallback. См. PR [#257](https://github.com/affaan-m/everything-claude-code/pull/257).
+- **Codex**: первоклассная поддержка macOS app и CLI, с guards против adapter drift и SessionStart fallback. См. PR [#257](https://github.com/reborncursed/AIP/pull/257).
 - **Antigravity**: плотная настройка для workflows, skills, agents и flattened rules в `.agents/`. См. [Antigravity Guide](../ANTIGRAVITY-GUIDE.md).
 - **Ненативные среды**: ручной fallback path для Grok и похожих интерфейсов. См. [Manual Adaptation Guide](../MANUAL-ADAPTATION-GUIDE.md).
 - **Claude Code**: нативно — это основная цель.
@@ -1466,7 +1466,7 @@ ECC — **первый плагин, который помогает макси�
 
 ## Предыстория
 
-Я использую Claude Code с экспериментального rollout. В сентябре 2025 выиграл Anthropic x Forum Ventures hackathon вместе с [@DRodriguezFX](https://x.com/DRodriguezFX) — мы построили [zenith.chat](https://zenith.chat) полностью с помощью Claude Code.
+Я использую Claude Code с экспериментального rollout. В сентябре 2025 выиграл Anthropic x Forum Ventures hackathon вместе с [@DRodriguezFX](https://x.com/DRodriguezFX) — мы построили [bytecore.org](https://bytecore.org) полностью с помощью Claude Code.
 
 Эти конфиги проверены в бою на нескольких production-приложениях.
 
@@ -1587,22 +1587,22 @@ Agent Teams создаёт несколько context windows. Каждый уч
 
 Этот проект бесплатный и open source. Спонсоры помогают поддерживать и развивать его.
 
-[**Стать спонсором**](https://github.com/sponsors/affaan-m) | [Уровни спонсорства](../../SPONSORS.md) | [Программа спонсорства](../../SPONSORING.md)
+[**Стать спонсором**](https://github.com/sponsors/reborncursed) | [Уровни спонсорства](../../SPONSORS.md) | [Программа спонсорства](../../SPONSORING.md)
 
 ---
 
 ## История звёзд
 
-[![Star History Chart](https://api.star-history.com/svg?repos=affaan-m/everything-claude-code&type=Date)](https://star-history.com/#affaan-m/everything-claude-code&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=reborncursed/AIP&type=Date)](https://star-history.com/#reborncursed/AIP&Date)
 
 ---
 
 ## Ссылки
 
-- **Краткое руководство (начните здесь):** [The Shorthand Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2012378465664745795)
-- **Подробное руководство (продвинутый уровень):** [The Longform Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2014040193557471352)
-- **Руководство по безопасности:** [Security Guide](../../the-security-guide.md) | [Тред](https://x.com/affaanmustafa/status/2033263813387223421)
-- **Подписаться:** [@affaanmustafa](https://x.com/affaanmustafa)
+- **Краткое руководство (начните здесь):** [The Shorthand Guide to Everything Claude Code](https://bytecore.org/status/2012378465664745795)
+- **Подробное руководство (продвинутый уровень):** [The Longform Guide to Everything Claude Code](https://bytecore.org/status/2014040193557471352)
+- **Руководство по безопасности:** [Security Guide](../../the-security-guide.md) | [Тред](https://bytecore.org/status/2033263813387223421)
+- **Подписаться:** [@bytecore](https://bytecore.org)
 
 ---
 

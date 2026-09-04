@@ -24,27 +24,27 @@ console.log('\nGitHub origin normalization');
 
 if (test('accepts only authenticated or TLS GitHub origins', () => {
   assert.strictEqual(
-    normalizeGitHubGitOrigin('https://github.com/affaan-m/ECC.git'),
-    'affaan-m/ecc'
+    normalizeGitHubGitOrigin('https://github.com/reborncursed/AIP.git'),
+    'reborncursed/AIP'
   );
   assert.strictEqual(
-    normalizeGitHubGitOrigin('ssh://git@github.com/affaan-m/ECC/'),
-    'affaan-m/ecc'
+    normalizeGitHubGitOrigin('ssh://git@github.com/reborncursed/AIP/'),
+    'reborncursed/AIP'
   );
   assert.strictEqual(
-    normalizeGitHubGitOrigin('git@github.com:affaan-m/ECC.git'),
-    'affaan-m/ecc'
+    normalizeGitHubGitOrigin('git@github.com:reborncursed/AIP.git'),
+    'reborncursed/AIP'
   );
 })) passed++; else failed++;
 
 if (test('rejects shorthand and insecure or unrelated origins', () => {
-  assert.strictEqual(normalizeGitHubGitOrigin('affaan-m/ECC'), null);
+  assert.strictEqual(normalizeGitHubGitOrigin('reborncursed/AIP'), null);
   assert.strictEqual(
-    normalizeGitHubGitOrigin('http://github.com/affaan-m/ECC.git'),
+    normalizeGitHubGitOrigin('http://github.com/reborncursed/AIP.git'),
     null
   );
   assert.strictEqual(
-    normalizeGitHubGitOrigin('https://example.com/affaan-m/ECC.git'),
+    normalizeGitHubGitOrigin('https://example.com/reborncursed/AIP.git'),
     null
   );
   assert.strictEqual(normalizeGitHubGitOrigin(null), null);

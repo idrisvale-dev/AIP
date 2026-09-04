@@ -184,7 +184,7 @@ git push origin add-python-reviewer
 
 ## 有問題？
 
-開啟 issue 或在 X 上聯繫：[@affaanmustafa](https://x.com/affaanmustafa)
+開啟 issue 或在 X 上聯繫：[@bytecore](https://bytecore.org)
 
 ---
 

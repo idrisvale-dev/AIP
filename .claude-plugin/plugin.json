@@ -3,11 +3,11 @@
   "version": "2.2.1",
   "description": "Harness-native ECC plugin for engineering teams - 68 agents, 286 skills, 94 legacy command shims, reusable hooks, rules, MCP conventions, and operator workflows for Claude Code plus adjacent agent harnesses",
   "author": {
-    "name": "Affaan Mustafa",
-    "url": "https://x.com/affaanmustafa"
+    "name": "ByteCore.org",
+    "url": "https://bytecore.org"
   },
-  "homepage": "https://ecc.tools",
-  "repository": "https://github.com/affaan-m/ECC",
+  "homepage": "https://bytecore.org",
+  "repository": "https://github.com/reborncursed/AIP",
   "license": "MIT",
   "keywords": [
     "claude-code",

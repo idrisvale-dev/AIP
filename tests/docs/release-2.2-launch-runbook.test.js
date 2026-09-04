@@ -9,7 +9,7 @@ const runbook = fs.readFileSync(
   'utf8'
 );
 
-assert.match(runbook, /Affaan.*only release operator/i);
+assert.match(runbook, /ByteCore.*only release operator/i);
 assert.match(runbook, /npm view ecc-universal dist-tags --json/);
 assert.match(runbook, /ecc-universal@2\.1\.0/);
 assert.match(runbook, /git tag -s v2\.2\.0/);

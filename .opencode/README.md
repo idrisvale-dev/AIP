@@ -52,7 +52,7 @@ npx ecc-universal install typescript
 Clone and run OpenCode in the repository:
 
 ```bash
-git clone https://github.com/affaan-m/ECC
+git clone https://github.com/reborncursed/AIP
 cd ECC
 opencode
 ```

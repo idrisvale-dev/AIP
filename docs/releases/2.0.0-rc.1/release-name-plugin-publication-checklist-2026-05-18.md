@@ -1,7 +1,7 @@
 # ECC v2.0.0-rc.1 Release Name And Plugin Publication Checklist
 
 Snapshot date: 2026-05-18. Canonical repo decision refreshed 2026-05-19
-after the public repo rename to `affaan-m/ECC`; release/package state refreshed
+after the public repo rename to `reborncursed/AIP`; release/package state refreshed
 2026-05-26 after the GitHub prerelease and npm `next` readbacks succeeded.
 
 This checklist is the operator gate for release naming, package publication,
@@ -13,20 +13,20 @@ submitting marketplace forms, or posting announcements.
 
 Ship `v2.0.0-rc.1` as **ECC**.
 
-- Keep the GitHub repo at `affaan-m/ECC`.
+- Keep the GitHub repo at `reborncursed/AIP`.
 - Keep the npm package as `ecc-universal`.
 - Keep Claude and Codex plugin slugs as `ecc`.
 - Publish the npm prerelease on the `next` dist-tag, not `latest`.
-- Do not rename the npm package to `ecc` or `@affaan-m/ecc` before rc.1.
-- Treat `affaan-m/ECC` as the canonical public repo for rc.1 and GA release
+- Do not rename the npm package to `ecc` or `@reborncursed/AIP` before rc.1.
+- Treat `reborncursed/AIP` as the canonical public repo for rc.1 and GA release
   copy.
 
 Reasons:
 
 - `ecc-universal` is the current working install and package surface.
 - `ecc` on npm is occupied by an unrelated elliptic-curve package.
-- `@affaan-m/ecc` is unclaimed on npm, but would require a migration plan.
-- `affaan-m/ECC` is now the live public GitHub repo.
+- `@reborncursed/AIP` is unclaimed on npm, but would require a migration plan.
+- `reborncursed/AIP` is now the live public GitHub repo.
 - Claude and Codex already expose the desired short namespace as `ecc`.
 
 ## Current Surface Evidence
@@ -34,10 +34,10 @@ Reasons:
 | Surface | Current value | Evidence command | Current result | Release action |
 | --- | --- | --- | --- | --- |
 | Git commit | `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b` | `git rev-parse HEAD` | Recorded from clean `main` before this ITO-46 evidence refresh | Re-run from final release commit |
-| GitHub repo | `affaan-m/ECC` | `git remote get-url origin` | `https://github.com/affaan-m/ECC.git` | Keep for rc.1 and GA |
+| GitHub repo | `reborncursed/AIP` | `git remote get-url origin` | `https://github.com/reborncursed/AIP.git` | Keep for rc.1 and GA |
 | npm package | `ecc-universal@2.0.0-rc.1` local and registry next, `1.10.0` registry latest | `node -p "require('./package.json').name + '@' + require('./package.json').version"` and `npm view ecc-universal name version dist-tags --json` | Local rc.1 ready; registry `next` points to `2.0.0-rc.1`; `latest` remains `1.10.0` | Keep rc.1 on `next`; do not move to `latest` before GA approval |
 | Exact npm short name | `ecc` | `npm view ecc name version description repository.url --json` | Occupied by unrelated `ecc@0.0.2` | Do not use |
-| Scoped npm short name | `@affaan-m/ecc` | `npm view @affaan-m/ecc name version --json` | 404 | Candidate only after migration plan |
+| Scoped npm short name | `@reborncursed/AIP` | `npm view @reborncursed/AIP name version --json` | 404 | Candidate only after migration plan |
 | Claude plugin | `ecc@2.0.0-rc.1` | `claude plugin validate .claude-plugin/plugin.json`; `claude plugin validate .`; `claude plugin tag .claude-plugin --dry-run` | Validation passed on Claude Code `2.1.143`; full plugin validation has one expected root `CLAUDE.md` context warning; dry run would create `ecc--v2.0.0-rc.1` | Run dry-run tag again from the final commit, then tag/push only after approval |
 | Claude marketplace | `.claude-plugin/marketplace.json` | `claude plugin marketplace add --help`; Anthropic plugin marketplace docs | GitHub repo, git URL, remote marketplace JSON, and local path marketplace sources are supported | Verify post-tag marketplace install/update path after final evidence |
 | Codex plugin | `ecc@2.0.0-rc.1` | `node tests/plugin-manifest.test.js`; `codex plugin marketplace add --help`; OpenAI Codex plugin docs | Plugin manifest passed 54/54; local and GitHub-ref repo marketplace smokes passed on Codex CLI `0.131.0` | Use repo marketplace for rc.1; do not claim official directory listing until OpenAI publishing path is available |
@@ -54,7 +54,7 @@ git status --short --branch
 git rev-parse HEAD
 git remote get-url origin
 npm view ecc name version description repository.url --json
-npm view @affaan-m/ecc name version --json
+npm view @reborncursed/AIP name version --json
 npm view ecc-universal name version dist-tags --json
 node tests/plugin-manifest.test.js
 node tests/docs/ecc2-release-surface.test.js
@@ -62,7 +62,7 @@ claude plugin validate .claude-plugin/plugin.json
 claude plugin tag .claude-plugin --dry-run
 codex plugin marketplace add --help
 HOME="$(mktemp -d)" codex plugin marketplace add ./
-HOME="$(mktemp -d)" codex plugin marketplace add affaan-m/ECC --ref "$(git rev-parse HEAD)"
+HOME="$(mktemp -d)" codex plugin marketplace add reborncursed/AIP --ref "$(git rev-parse HEAD)"
 npm pack --dry-run --json
 npm publish --tag next --dry-run
 npm run build:opencode

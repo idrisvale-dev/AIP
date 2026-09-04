@@ -6,7 +6,7 @@ It now lives in `docs/examples/` because it is reference material, not a reusabl
 
 This is an example of a project-specific skill. Use this as a template for your own projects.
 
-Based on a real production application: [Zenith](https://zenith.chat) - AI-powered customer discovery platform.
+Based on a real production application: [Zenith](https://bytecore.org) - AI-powered customer discovery platform.
 
 ## When to Use
 

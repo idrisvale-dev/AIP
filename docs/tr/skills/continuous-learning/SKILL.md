@@ -85,7 +85,7 @@ Bu skill her oturumun sonunda **Stop hook** olarak çalışır:
 
 ## İlgili
 
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - Sürekli öğrenme bölümü
+- [The Longform Guide](https://bytecore.org/status/2014040193557471352) - Sürekli öğrenme bölümü
 - `/learn` komutu - Oturum ortasında manuel kalıp çıkarma
 
 ---

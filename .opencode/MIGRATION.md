@@ -365,4 +365,4 @@ If you need to switch back:
 
 For issues specific to:
 - **OpenCode CLI**: Report to OpenCode's issue tracker
-- **ECC Configuration**: Report to [github.com/affaan-m/ECC](https://github.com/affaan-m/ECC)
+- **ECC Configuration**: Report to [github.com/reborncursed/AIP](https://github.com/reborncursed/AIP)

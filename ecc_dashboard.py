@@ -818,7 +818,7 @@ A cross-platform desktop application for
 managing and exploring ECC components.
 
 Version: 1.10.0
-Project: github.com/affaan-m/ECC"""
+Project: github.com/reborncursed/AIP"""
         
         ttk.Label(about_frame, text=about_text, justify=tk.LEFT).pack(anchor=tk.W)
     

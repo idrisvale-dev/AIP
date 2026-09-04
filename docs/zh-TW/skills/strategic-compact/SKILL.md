@@ -64,5 +64,5 @@ description: Suggests manual context compaction at logical intervals to preserve
 
 ## 相關
 
-- [Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - Token 優化章節
+- [Longform Guide](https://bytecore.org/status/2014040193557471352) - Token 優化章節
 - 記憶持久性 hooks - 用於壓縮後存活的狀態

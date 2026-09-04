@@ -392,7 +392,7 @@ if (
 
       assert.strictEqual(result.status, 1, `${result.stdout}\n${result.stderr}`);
       assert.match(result.stdout, /Cached plugin manifest missing/);
-      assert.match(result.stdout, /codex plugin marketplace add affaan-m\/ECC/);
+      assert.match(result.stdout, /codex plugin marketplace add reborncursed\/ECC/);
     } finally {
       cleanup(homeDir);
     }

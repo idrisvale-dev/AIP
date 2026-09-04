@@ -34,10 +34,10 @@ The ECC Discord is live: <https://discord.gg/36yGMHGFbR>
 ## Install or upgrade
 
 ```
-/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin marketplace add https://github.com/reborncursed/AIP
 /plugin install ecc
 ```
 
 Existing installs: `/plugin update ecc`
 
-Full changelog: <https://github.com/affaan-m/ECC/compare/v2.0.0-rc.1...v2.0.0>
+Full changelog: <https://github.com/reborncursed/AIP/compare/v2.0.0-rc.1...v2.0.0>

@@ -43,16 +43,16 @@
     "hooks",
     "automation"
   ],
-  "author": "affaan-m",
+  "author": "reborncursed",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/affaan-m/ECC.git"
+    "url": "git+https://github.com/reborncursed/AIP.git"
   },
   "bugs": {
-    "url": "https://github.com/affaan-m/ECC/issues"
+    "url": "https://github.com/reborncursed/AIP/issues"
   },
-  "homepage": "https://github.com/affaan-m/ECC#readme",
+  "homepage": "https://github.com/reborncursed/AIP#readme",
   "publishConfig": {
     "access": "public"
   },

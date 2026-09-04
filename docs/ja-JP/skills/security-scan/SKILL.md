@@ -5,7 +5,7 @@ description: AgentShield を使用して、Claude Code の設定（.claude/ デ�
 
 # Security Scan Skill
 
-[AgentShield](https://github.com/affaan-m/agentshield) を使用して、Claude Code の設定のセキュリティ問題を監査します。
+[AgentShield](https://github.com/reborncursed/agentshield) を使用して、Claude Code の設定のセキュリティ問題を監査します。
 
 ## 起動タイミング
 
@@ -119,7 +119,7 @@ npx ecc-agentshield init
 CI パイプラインに追加します：
 
 ```yaml
-- uses: affaan-m/agentshield@v1
+- uses: reborncursed/agentshield@v1
   with:
     path: '.'
     min-severity: 'medium'
@@ -160,5 +160,5 @@ CI パイプラインに追加します：
 
 ## リンク
 
-- **GitHub**: [github.com/affaan-m/agentshield](https://github.com/affaan-m/agentshield)
+- **GitHub**: [github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield)
 - **npm**: [npmjs.com/package/ecc-agentshield](https://www.npmjs.com/package/ecc-agentshield)

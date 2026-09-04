@@ -26,7 +26,7 @@
  *
  * Option 2: Clone and use directly
  * ```bash
- * git clone https://github.com/affaan-m/ECC
+ * git clone https://github.com/reborncursed/AIP
  * cd ECC
  * opencode
  * ```

@@ -8,7 +8,7 @@ description: >
   and compliance vetting. Use when managing carriers, negotiating rates, evaluating
   carrier performance, or building freight strategies.
 license: Apache-2.0
-homepage: https://github.com/affaan-m/everything-claude-code
+homepage: https://github.com/reborncursed/AIP
 metadata:
   version: 1.0.0
   origin: ECC

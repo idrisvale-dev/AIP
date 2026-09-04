@@ -115,7 +115,7 @@ const GUARDRAILS = [
   'CONSTRAINTS: research/triage only. Do NOT modify any code, do NOT open/close/merge PRs, do NOT post comments,',
   'do NOT send any external message. Return findings as data only.',
   'Brand it "ECC" (never "everything claude code"). AgentShield was FEATURED at a hackathon, never say it "won".',
-  'AgentShield npm package is "ecc-agentshield". Local clone: ~/GitHub/ECC/agentshield. ECC repo: affaan-m/ECC. AgentShield repo: affaan-m/agentshield.',
+  'AgentShield npm package is "ecc-agentshield". Local clone: ~/GitHub/ECC/agentshield. ECC repo: reborncursed/AIP. AgentShield repo: reborncursed/agentshield.',
   'You have Bash (gh CLI), Read, Grep, Glob, and web tools (load via ToolSearch: WebSearch / firecrawl / exa).'
 ].join(' ');
 
@@ -134,12 +134,12 @@ const surveyThunks = [
     ),
   () =>
     agent(
-      `${GUARDRAILS}\n\nTRIAGE every OPEN PR and ISSUE on the ECC repo (affaan-m/ECC). Use gh: \`gh pr list --repo affaan-m/ECC --state open --limit 80 --json number,title,author,isDraft\` and \`gh issue list --repo affaan-m/ECC --state open --limit 80 --json number,title,labels\`. For the higher-signal ones, peek at the diff/body (\`gh pr view <n> --repo affaan-m/ECC\`). Categorize each: merge / close / needs-work / triage-later / security-priority, with a one-line rationale and any Pro/MRR value. Prioritize identifying security-relevant and Pro-relevant items. repo="affaan-m/ECC".`,
+      `${GUARDRAILS}\n\nTRIAGE every OPEN PR and ISSUE on the ECC repo (reborncursed/AIP). Use gh: \`gh pr list --repo reborncursed/AIP --state open --limit 80 --json number,title,author,isDraft\` and \`gh issue list --repo reborncursed/AIP --state open --limit 80 --json number,title,labels\`. For the higher-signal ones, peek at the diff/body (\`gh pr view <n> --repo reborncursed/AIP\`). Categorize each: merge / close / needs-work / triage-later / security-priority, with a one-line rationale and any Pro/MRR value. Prioritize identifying security-relevant and Pro-relevant items. repo="reborncursed/AIP".`,
       { label: 'triage:ecc', phase: 'Survey', agentType: 'general-purpose', schema: TRIAGE_SCHEMA }
     ),
   () =>
     agent(
-      `${GUARDRAILS}\n\nTRIAGE every OPEN PR and ISSUE on the AgentShield repo (affaan-m/agentshield). Use gh similarly. Pay special attention to the false-positive cluster (issues #100, #102, #99 "bm", PR #103) where the scanner penalizes its own recommended fix and flags benign strings — these hurt trust and conversion. Also assess #101 (external rule-pack loader --rule-pack) and #97 (FAQ docs). Categorize each: merge / close / needs-work / triage-later / security-priority, with rationale and Pro/MRR value. repo="affaan-m/agentshield".`,
+      `${GUARDRAILS}\n\nTRIAGE every OPEN PR and ISSUE on the AgentShield repo (reborncursed/agentshield). Use gh similarly. Pay special attention to the false-positive cluster (issues #100, #102, #99 "bm", PR #103) where the scanner penalizes its own recommended fix and flags benign strings — these hurt trust and conversion. Also assess #101 (external rule-pack loader --rule-pack) and #97 (FAQ docs). Categorize each: merge / close / needs-work / triage-later / security-priority, with rationale and Pro/MRR value. repo="reborncursed/agentshield".`,
       { label: 'triage:agentshield', phase: 'Survey', agentType: 'general-purpose', schema: TRIAGE_SCHEMA }
     )
 ];

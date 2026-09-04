@@ -33,7 +33,7 @@ This release is focused on install correctness, cross-surface naming clarity, Wi
 ## Important naming clarification
 - Claude marketplace/plugin identifier: `everything-claude-code@everything-claude-code`
 - npm package: `ecc-universal`
-- GitHub repo: `affaan-m/everything-claude-code`
+- GitHub repo: `reborncursed/AIP`
 
 Those are intentionally different surfaces. The plugin identifier follows Anthropic marketplace rules; the npm package remains `ecc-universal`.
 

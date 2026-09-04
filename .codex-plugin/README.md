@@ -25,7 +25,7 @@ Codex 0.146.0 and newer use `plugin add`, not `plugin install`. Add ECC's
 repository marketplace, install the native plugin, and verify the registration:
 
 ```bash
-codex plugin marketplace add affaan-m/ECC
+codex plugin marketplace add reborncursed/AIP
 codex plugin add ecc@ecc
 codex plugin list --json
 ```

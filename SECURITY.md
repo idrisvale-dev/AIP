@@ -15,9 +15,9 @@ Security fixes land on `main` first. Backports are best-effort and only for curr
 
 Use GitHub private vulnerability reporting whenever possible — it reaches the maintainer directly:
 
-- <https://github.com/affaan-m/ECC/security/advisories/new>
+- <https://github.com/reborncursed/AIP/security/advisories/new>
 
-You can also email **<affaan@ecc.tools>** (the `security@ecc.tools` alias is not monitored — use `affaan@ecc.tools`).
+You can also email **<security@bytecore.org>** (the `security@bytecore.org` alias is not monitored — use `security@bytecore.org`).
 
 Do **not** open a public GitHub issue for security vulnerabilities.
 
@@ -42,27 +42,27 @@ If a report is declined, we will explain whether it is not reproducible, out of 
 
 This policy covers:
 
-- the `affaan-m/ECC` repository
+- the `reborncursed/AIP` repository
 - the `ecc-universal` npm package
 - ECC plugin, install, repair, dashboard, hook, rule, skill, MCP, and command surfaces shipped from this repository
 - GitHub Actions workflows and release automation in this repository
 - the ECC Tools GitHub App integration points documented by this repository
-- AgentShield usage docs when they are embedded here. AgentShield code issues belong in <https://github.com/affaan-m/agentshield>
+- AgentShield usage docs when they are embedded here. AgentShield code issues belong in <https://github.com/reborncursed/agentshield>
 
 ## Official Distribution Surfaces
 
 Official ECC surfaces are:
 
-- GitHub repo: <https://github.com/affaan-m/ECC>
+- GitHub repo: <https://github.com/reborncursed/AIP>
 - npm package: `ecc-universal`
 - GitHub App: <https://github.com/apps/ecc-tools>
 - marketplace/plugin slug: `ecc@ecc`
-- website: <https://ecc.tools>
+- website: <https://bytecore.org>
 
 Official AgentShield surface:
 
 - npm package: `ecc-agentshield`
-- GitHub repo: <https://github.com/affaan-m/agentshield>
+- GitHub repo: <https://github.com/reborncursed/agentshield>
 
 The following packages have been observed using ECC repository metadata but are **not maintained by ECC**:
 
@@ -71,14 +71,14 @@ The following packages have been observed using ECC repository metadata but are 
 
 Treat any package not listed under official surfaces as unofficial until verified. Do not install packages named `opencode-ecc`, `everything-claude-code`, or other ECC-like aliases unless this repository explicitly documents them as official.
 
-GitHub dependency graph may also show Go module aliases such as `github.com/affaan-m/ecc` or historical repository paths. ECC is not currently distributed as a supported Go module.
+GitHub dependency graph may also show Go module aliases such as `github.com/reborncursed/AIP` or historical repository paths. ECC is not currently distributed as a supported Go module.
 
 ## Out of Scope
 
 Reports are usually out of scope when they only show:
 
 - local command execution where the user already controls the local shell and no higher-privilege trust boundary is crossed
-- screenshots, stale line numbers, or reports against `affaan-m/everything-claude-code` that do not reproduce on current `affaan-m/ECC`
+- screenshots, stale line numbers, or reports against `reborncursed/AIP` that do not reproduce on current `reborncursed/AIP`
 - self-XSS or social engineering with no repository-controlled exploit path
 - dependency graph/package metadata confusion without an install path to an official ECC package
 - vulnerabilities in third-party packages unless ECC pins, installs, or executes them in a way that creates extra impact
@@ -92,7 +92,7 @@ ECC treats supply-chain exposure as a first-class security surface.
 - GitHub Actions must use pinned commit SHAs for third-party actions.
 - Workflows must avoid shelling untrusted GitHub context directly into `run:` blocks.
 - Release and install docs must point only to official packages.
-- Package metadata should point at `affaan-m/ECC`, not historical repo paths.
+- Package metadata should point at `reborncursed/AIP`, not historical repo paths.
 - Private vulnerability reports are triaged privately before public disclosure.
 - Security advisories are published only when a supported release is affected and coordinated disclosure is appropriate.
 
@@ -150,7 +150,6 @@ Escalate upstream only when the block is present inside a tool result or reposit
 ## Security Resources
 
 - **AgentShield:** `npx ecc-agentshield scan`
-- **Security Guide:** [The Shorthand Guide to Everything Agentic Security](./the-security-guide.md)
 - **Supply-chain incident response:** [npm/GitHub Actions package-registry playbook](./docs/security/supply-chain-incident-response.md)
 - **OWASP MCP Top 10:** <https://owasp.org/www-project-mcp-top-10/>
 - **OWASP Agentic Applications Top 10:** <https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/>

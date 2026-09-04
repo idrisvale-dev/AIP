@@ -340,7 +340,7 @@ v2.1, v2.0 ve v1 ile tamamen uyumludur:
 
 - [ECC-Tools GitHub App](https://github.com/apps/ecc-tools) - Repo geçmişinden instinct'ler oluştur
 - Homunculus - v2 instinct tabanlı mimariye ilham veren topluluk projesi (atomik gözlemler, güven skorlaması, instinct evrim hattı)
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - Sürekli öğrenme bölümü
+- [The Longform Guide](https://bytecore.org/status/2014040193557471352) - Sürekli öğrenme bölümü
 
 ---
 
