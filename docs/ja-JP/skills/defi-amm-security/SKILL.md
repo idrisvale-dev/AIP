@@ -1,7 +1,7 @@
 ---
 name: defi-amm-security
 description: DeFi自動マーケットメーカー（AMM）スマートコントラクトセキュリティ監査パターン。フラッシュローン、スリッページ、サンドイッチング攻撃、価格操作、再入攻撃、不正確な整数演算をカバー。
-origin: ECC
+origin: AIP
 ---
 
 # DeFi AMM セキュリティ

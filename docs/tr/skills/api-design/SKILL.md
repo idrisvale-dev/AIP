@@ -1,7 +1,7 @@
 ---
 name: api-design
 description: REST API tasarım kalıpları; kaynak isimlendirme, durum kodları, sayfalama, filtreleme, hata yanıtları, versiyonlama ve üretim API'leri için hız sınırlama içerir.
-origin: ECC
+origin: AIP
 ---
 
 # API Tasarım Kalıpları

@@ -58,7 +58,7 @@ module.exports = createInstallTargetAdapter({
   target: 'cursor',
   kind: 'project',
   rootSegments: ['.cursor'],
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   nativeRootRelativePath: '.cursor',
   planOperations(input, adapter) {
     const modules = Array.isArray(input.modules)
@@ -137,7 +137,7 @@ module.exports = createInstallTargetAdapter({
 
       if (sourceRelativePath === 'AGENTS.md') {
         // Cursor treats nested AGENTS.md files as directory context; do not
-        // install ECC's root project identity into a host project's .cursor/.
+        // install AIP's root project identity into a host project's .cursor/.
         return [];
       }
 

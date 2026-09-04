@@ -5,6 +5,6 @@ module.exports = createInstallTargetAdapter({
   target: 'qwen',
   kind: 'home',
   rootSegments: ['.qwen'],
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   nativeRootRelativePath: '.qwen',
 });

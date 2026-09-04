@@ -2,7 +2,7 @@
 name: config-gc
 description: Garbage collection for your Claude Code configuration. Periodically scans ~/.claude (skills, memory, hooks, permissions, MCP servers, caches) for redundant, stale, orphaned, or low-value items, then walks the user through a confirm-each-deletion cleanup. Use when the user says "clean up my config", "config GC", "too many skills", "audit my setup", "my .claude is bloated", or asks for a periodic config review.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Config GC — Garbage Collection for Claude Code Setups
@@ -115,6 +115,6 @@ jq '.permissions.allow -= ["Bash(git push)"]' ~/.claude/settings.local.json.bak 
 
 - `skill-stocktake` — audits skill *quality*; config-gc audits skill *existence*. Run stocktake on what survives GC.
 - `workspace-surface-audit` — the additive counterpart: recommends what to install. config-gc is the subtractive half of the same lifecycle.
-- `configure-ecc` — after installing skills with it, run config-gc to reconcile overlaps with your pre-existing setup.
+- `configure-aip` — after installing skills with it, run config-gc to reconcile overlaps with your pre-existing setup.
 - `continuous-learning` — produces the memory files this skill later audits.
 - `security-review` — pairs well with the permissions channel.

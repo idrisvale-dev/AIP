@@ -435,7 +435,7 @@ argument-hint: "[feature/product idea] (blank = start with questions)"
 
 ***
 
-## 与 ECC 的集成
+## 与 AIP 的集成
 
 在 PRD 生成之后：
 

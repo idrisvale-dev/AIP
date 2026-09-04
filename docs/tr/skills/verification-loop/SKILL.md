@@ -1,7 +1,7 @@
 ---
 name: verification-loop
 description: "Claude Code oturumları için kapsamlı doğrulama sistemi."
-origin: ECC
+origin: AIP
 ---
 
 # Verification Loop Skill

@@ -24,7 +24,7 @@ const FAMILY_ALIASES = Object.freeze({
 
 function showHelp(exitCode = 0) {
   console.log(`
-Discover ECC install components and profiles
+Discover AIP install components and profiles
 
 Usage:
   node scripts/catalog.js profiles [--json]

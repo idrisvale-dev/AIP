@@ -1,6 +1,6 @@
-# X Thread Draft — ECC v1.10.0
+# X Thread Draft — AIP v1.10.0
 
-ECC crossed 140K stars and the public surface had drifted too far from the actual repo.
+AIP crossed 140K stars and the public surface had drifted too far from the actual repo.
 
 so v1.10.0 is the sync release.
 
@@ -26,9 +26,9 @@ also shipped the operator / media lane that grew out of real usage:
 
 and most importantly:
 
-ECC 2.0 is no longer just roadmap talk.
+AIP 2.0 is no longer just roadmap talk.
 
-the `ecc2/` control-plane alpha is in-tree, builds today, and already exposes:
+the `aip2/` control-plane alpha is in-tree, builds today, and already exposes:
 
 - dashboard
 - start

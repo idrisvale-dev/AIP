@@ -2,7 +2,7 @@
 name: browser-qa
 description: Automate visual testing and UI interaction verification using browser automation after deployment.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Browser QA — 自动化视觉测试与交互验证

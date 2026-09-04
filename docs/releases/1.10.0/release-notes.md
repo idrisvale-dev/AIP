@@ -1,8 +1,8 @@
-# ECC v1.10.0 Release Notes
+# AIP v1.10.0 Release Notes
 
 ## Positioning
 
-ECC v1.10.0 is a surface-sync and operator-lane release.
+AIP v1.10.0 is a surface-sync and operator-lane release.
 
 The goal was to make the public repo, plugin metadata, install paths, and ecosystem story reflect the actual live state of the project again, while continuing to ship the operator workflows and media tooling that grew around the core harness layer.
 
@@ -24,15 +24,15 @@ The goal was to make the public repo, plugin metadata, install paths, and ecosys
   - `remotion-video-creation`
 - Added and stabilized more framework/domain coverage, including `nestjs-patterns`.
 
-## ECC 2.0 Status
+## AIP 2.0 Status
 
-ECC 2.0 is **real and usable as an alpha**, but it is **not general-availability complete**.
+AIP 2.0 is **real and usable as an alpha**, but it is **not general-availability complete**.
 
 What exists today:
 
-- `ecc2/` Rust control-plane codebase in the main repo
-- `cargo build --manifest-path ecc2/Cargo.toml` passes
-- `ecc-tui` commands currently available:
+- `aip2/` Rust control-plane codebase in the main repo
+- `cargo build --manifest-path aip2/Cargo.toml` passes
+- `aip-tui` commands currently available:
   - `dashboard`
   - `start`
   - `sessions`
@@ -44,15 +44,15 @@ What exists today:
 What this means:
 
 - You can experiment with the control-plane surface now.
-- You should not describe the full ECC 2.0 roadmap as finished.
-- The right framing today is **ECC 2.0 alpha / control-plane preview**, not GA.
+- You should not describe the full AIP 2.0 roadmap as finished.
+- The right framing today is **AIP 2.0 alpha / control-plane preview**, not GA.
 
 ## Install Guidance
 
 Current install surfaces:
 
 - Claude Code plugin
-- `ecc-universal` on npm
+- `aip-universal` on npm
 - Codex plugin manifest
 - OpenCode package/plugin surface
 - AgentShield CLI + npm + GitHub Marketplace action
@@ -60,11 +60,11 @@ Current install surfaces:
 Important nuance:
 
 - The Claude plugin remains constrained by platform-level `rules` distribution limits.
-- The selective install / OSS path is still the most reliable full install for teams that want the complete ECC surface.
+- The selective install / OSS path is still the most reliable full install for teams that want the complete AIP surface.
 
 ## Recommended Upgrade Path
 
 1. Refresh to the latest plugin/install metadata.
 2. Prefer the selective install / OSS path when you need full rules coverage.
 3. Use AgentShield for guardrails and repo scanning.
-4. Treat ECC 2.0 as an alpha control-plane surface until the open P0/P1 roadmap is materially burned down.
+4. Treat AIP 2.0 as an alpha control-plane surface until the open P0/P1 roadmap is materially burned down.

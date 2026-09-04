@@ -1,7 +1,7 @@
 ---
 name: rust-testing
 description: Rust测试模式，包括单元测试、集成测试、异步测试、基于属性的测试、模拟和覆盖率。遵循TDD方法学。
-origin: ECC
+origin: AIP
 ---
 
 # Rust 测试模式

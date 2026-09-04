@@ -173,9 +173,9 @@ function readLatestContextTokens(transcriptPath, options = {}) {
 function resolveContextWindow(tokens, model) {
   // Explicit window override wins: 400k models (e.g. Opus 4.x) match neither the
   // 200k default nor the 1M marker and would otherwise report ~double usage (#2290).
-  // Honor ECC's own knob and Claude Code's native CLAUDE_CODE_AUTO_COMPACT_WINDOW.
+  // Honor AIP's own knob and Claude Code's native CLAUDE_CODE_AUTO_COMPACT_WINDOW.
   const env = (typeof process !== 'undefined' && process.env) || {};
-  const envWindow = Number.parseInt(env.ECC_CONTEXT_WINDOW_TOKENS || env.CLAUDE_CODE_AUTO_COMPACT_WINDOW || '', 10);
+  const envWindow = Number.parseInt(env.AIP_CONTEXT_WINDOW_TOKENS || env.CLAUDE_CODE_AUTO_COMPACT_WINDOW || '', 10);
   if (Number.isInteger(envWindow) && envWindow > 0) {
     return { windowTokens: envWindow, inferred: false };
   }

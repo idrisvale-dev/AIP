@@ -2,7 +2,7 @@
 
 Use this as the routing guide when deciding whether a capability belongs in a rule, a skill, an MCP server, or a plain CLI/API workflow.
 
-ECC does not treat these surfaces as interchangeable. The goal is to put each capability in the narrowest surface that preserves correctness, keeps token cost under control, and does not create unnecessary runtime or supply-chain drag.
+AIP does not treat these surfaces as interchangeable. The goal is to put each capability in the narrowest surface that preserves correctness, keeps token cost under control, and does not create unnecessary runtime or supply-chain drag.
 
 ## The Short Version
 
@@ -104,17 +104,17 @@ When two options are both viable:
 - prefer the smaller runtime surface
 - prefer the lower token overhead
 - prefer the path with fewer external moving parts
-- prefer ECC-native packaging over introducing another third-party dependency
+- prefer AIP-native packaging over introducing another third-party dependency
 
-Do not normalize external plugin or package dependencies as first-class ECC surfaces unless the capability is clearly worth the maintenance, security, and install burden.
+Do not normalize external plugin or package dependencies as first-class AIP surfaces unless the capability is clearly worth the maintenance, security, and install burden.
 
 ## Repo Policy
 
 When bringing in ideas from external repos:
 
 - copy the underlying idea, not the external dependency
-- repackage it as an ECC-native rule, skill, script, or MCP surface
-- rename it if the functionality has been materially expanded or reshaped for ECC
+- repackage it as an AIP-native rule, skill, script, or MCP surface
+- rename it if the functionality has been materially expanded or reshaped for AIP
 - avoid shipping instructions that require users to install unrelated third-party packages unless that dependency is intentional, audited, and central to the workflow
 
 ## Examples

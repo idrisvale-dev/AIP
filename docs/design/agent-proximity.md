@@ -1,7 +1,7 @@
 # Agent-space distance metric & collision avoidance (Layer 4)
 
 > Status: v0 implemented in `scripts/lib/agent-proximity/`. This is the moat
-> layer of ECC 2.0 — *spatial deconfliction for multiple agents (and humans)
+> layer of AIP 2.0 — *spatial deconfliction for multiple agents (and humans)
 > working the same codebase*, modeled on aircraft collision avoidance (TCAS).
 
 ## The analogy
@@ -128,7 +128,7 @@ each other, see the advisory line light up, and watch one steer away.
 (what the trigger layer acts on), the 3D `positions` and `fileCoordinates` (what
 the renderer draws), and pairwise `links` with risk (the edges to color).
 
-## 5. How it wires into ECC
+## 5. How it wires into AIP
 
 - **Inputs** come from the session/work state: each running session's worktree
   diff gives its working set *W_a*; the dependency graph is built from the repo

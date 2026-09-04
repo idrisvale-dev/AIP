@@ -6,7 +6,7 @@ description: >
   Drizzle, Django, TypeORM, golang-migrate). Use when planning or implementing
   database schema changes.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Database Migration Patterns

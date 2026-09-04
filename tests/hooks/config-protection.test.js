@@ -29,7 +29,7 @@ function runHook(input, env = {}) {
     encoding: 'utf8',
     env: {
       ...process.env,
-      ECC_HOOK_PROFILE: 'standard',
+      AIP_HOOK_PROFILE: 'standard',
       ...env
     },
     timeout: 15000,
@@ -51,7 +51,7 @@ function runCustomHook(pluginRoot, hookId, relScriptPath, input, env = {}) {
     env: {
       ...process.env,
       CLAUDE_PLUGIN_ROOT: pluginRoot,
-      ECC_HOOK_PROFILE: 'standard',
+      AIP_HOOK_PROFILE: 'standard',
       ...env
     },
     timeout: 15000,
@@ -73,7 +73,7 @@ function runTests() {
 
   if (
     test('blocks protected config file edits through run-with-flags', () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-config-protect-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-config-protect-'));
       try {
         const absPath = path.join(tmpDir, '.eslintrc.js');
         fs.writeFileSync(absPath, 'module.exports = {};');
@@ -144,7 +144,7 @@ function runTests() {
 
   if (
     test('allows first-time creation of a protected config file', () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-config-protect-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-config-protect-'));
       try {
         const absPath = path.join(tmpDir, 'eslint.config.mjs');
         const input = {
@@ -174,7 +174,7 @@ function runTests() {
 
   if (
     test('allows first-time creation when the parent directory does not exist yet', () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-config-protect-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-config-protect-'));
       try {
         // Path under a non-existent subdirectory — statSync returns ENOENT
         // on the final segment, which should be treated as "does not exist"
@@ -207,7 +207,7 @@ function runTests() {
 
   if (
     test('blocks protected paths that exist as a dangling symlink', () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-config-protect-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-config-protect-'));
       try {
         const missingTarget = path.join(tmpDir, 'nowhere.js');
         const linkPath = path.join(tmpDir, '.eslintrc.js');
@@ -249,7 +249,7 @@ function runTests() {
 
   if (
     test('blocks case-variant writes that resolve to an existing protected config', () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-config-protect-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-config-protect-'));
       try {
         const realPath = path.join(tmpDir, '.eslintrc.js');
         const variantPath = path.join(tmpDir, '.ESLINTRC.JS');
@@ -294,7 +294,7 @@ function runTests() {
 
   if (
     test('still blocks writes to an existing protected config file', () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-config-protect-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-config-protect-'));
       try {
         const absPath = path.join(tmpDir, '.eslintrc.js');
         fs.writeFileSync(absPath, 'module.exports = { rules: {} };');

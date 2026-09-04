@@ -16,24 +16,24 @@ export const isLinux: boolean;
 export function getHomeDir(): string;
 
 /**
- * ECC agent data root for memory persistence and related state.
- * Defaults to ~/.claude; override with ECC_AGENT_DATA_HOME (e.g. ~/.cursor/ecc).
+ * AIP agent data root for memory persistence and related state.
+ * Defaults to ~/.claude; override with AIP_AGENT_DATA_HOME (e.g. ~/.cursor/aip).
  */
 export function getAgentDataHome(): string;
 
 /** Get the agent data directory (alias of getAgentDataHome) */
 export function getClaudeDir(): string;
 
-/** Get the canonical ECC sessions directory ($ECC_AGENT_DATA_HOME/session-data) */
+/** Get the canonical AIP sessions directory ($AIP_AGENT_DATA_HOME/session-data) */
 export function getSessionsDir(): string;
 
-/** Get the legacy sessions directory ($ECC_AGENT_DATA_HOME/sessions) */
+/** Get the legacy sessions directory ($AIP_AGENT_DATA_HOME/sessions) */
 export function getLegacySessionsDir(): string;
 
 /** Get session directories to search, with canonical storage first and legacy fallback second */
 export function getSessionSearchDirs(): string[];
 
-/** Get the learned skills directory ($ECC_AGENT_DATA_HOME/skills/learned) */
+/** Get the learned skills directory ($AIP_AGENT_DATA_HOME/skills/learned) */
 export function getLearnedSkillsDir(): string;
 
 /** Get the temp directory (cross-platform) */

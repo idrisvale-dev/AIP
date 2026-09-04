@@ -6,7 +6,7 @@ const { spawnSync } = require('child_process');
 const { version } = require('../../package.json');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const eccScript = path.join(repoRoot, 'scripts', 'ecc.js');
+const aipScript = path.join(repoRoot, 'scripts', 'aip.js');
 
 let passed = 0;
 let failed = 0;
@@ -23,8 +23,8 @@ function test(name, fn) {
   }
 }
 
-function runEcc(args, env = {}) {
-  return spawnSync(process.execPath, [eccScript, ...args], {
+function runAip(args, env = {}) {
+  return spawnSync(process.execPath, [aipScript, ...args], {
     cwd: repoRoot,
     encoding: 'utf8',
     env: { ...process.env, NO_COLOR: '1', ...env },
@@ -38,23 +38,23 @@ function containsTerminalControlBytes(value) {
   });
 }
 
-console.log('\n=== ECC welcome command tests ===\n');
+console.log('\n=== AIP welcome command tests ===\n');
 
-test('ecc welcome renders the install artwork for captured agent output', () => {
-  const result = runEcc(['welcome']);
+test('aip welcome renders the install artwork for captured agent output', () => {
+  const result = runAip(['welcome']);
 
   assert.strictEqual(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Welcome to ECC!/);
+  assert.match(result.stdout, /Welcome to AIP!/);
   assert.ok(result.stdout.includes(`v${version}`));
-  assert.match(result.stdout, /GitHub:\s+https:\/\/github\.com\/reborncursed\/ECC/);
+  assert.match(result.stdout, /GitHub:\s+https:\/\/github\.com\/reborncursed\/AIP/);
   assert.match(result.stdout, /Discord:\s+https:\/\/discord\.gg\/36yGMHGFbR/);
   assert.strictEqual(result.stderr, '');
 });
 
-test('ecc welcome disables ANSI color when stdout is redirected', () => {
+test('aip welcome disables ANSI color when stdout is redirected', () => {
   const env = { ...process.env, TERM: 'xterm-256color' };
   delete env.NO_COLOR;
-  const result = spawnSync(process.execPath, [eccScript, 'welcome'], {
+  const result = spawnSync(process.execPath, [aipScript, 'welcome'], {
     cwd: repoRoot,
     encoding: 'utf8',
     env,
@@ -64,31 +64,31 @@ test('ecc welcome disables ANSI color when stdout is redirected', () => {
   assert.strictEqual(result.stdout.includes('\u001b['), false);
 });
 
-test('ecc welcome supports explicit update and configured outcomes', () => {
+test('aip welcome supports explicit update and configured outcomes', () => {
   const cases = [
-    ['updated', /ECC is updated/],
-    ['configured', /ECC is configured/],
-    ['migrated', /ECC is configured/],
-    ['resumed', /ECC is configured/],
-    ['already-migrated', /ECC is configured/],
+    ['updated', /AIP is updated/],
+    ['configured', /AIP is configured/],
+    ['migrated', /AIP is configured/],
+    ['resumed', /AIP is configured/],
+    ['already-migrated', /AIP is configured/],
   ];
 
   for (const [action, expected] of cases) {
-    const result = runEcc(['welcome', '--action', action]);
+    const result = runAip(['welcome', '--action', action]);
     assert.strictEqual(result.status, 0, result.stderr);
     assert.match(result.stdout, expected);
   }
 });
 
-test('ecc welcome renders a provider-verified installed version', () => {
-  const result = runEcc(['welcome', '--version', '2.1.0']);
+test('aip welcome renders a provider-verified installed version', () => {
+  const result = runAip(['welcome', '--version', '2.1.0']);
 
   assert.strictEqual(result.status, 0, result.stderr);
   assert.match(result.stdout, /v2\.1\.0/);
 });
 
-test('ecc welcome rejects unsafe version text', () => {
-  const result = runEcc(['welcome', '--version', '2.1.0\u001b[31m']);
+test('aip welcome rejects unsafe version text', () => {
+  const result = runAip(['welcome', '--version', '2.1.0\u001b[31m']);
 
   assert.strictEqual(result.status, 1);
   assert.match(result.stderr, /Invalid --version value/);
@@ -96,9 +96,9 @@ test('ecc welcome rejects unsafe version text', () => {
   assert.strictEqual(result.stdout, '');
 });
 
-test('ecc welcome keeps parser error output free of terminal control bytes', () => {
-  const actionResult = runEcc(['welcome', '--action', 'broken\u001b[31m']);
-  const argumentResult = runEcc(['welcome', '--bad\u001b[31m']);
+test('aip welcome keeps parser error output free of terminal control bytes', () => {
+  const actionResult = runAip(['welcome', '--action', 'broken\u001b[31m']);
+  const argumentResult = runAip(['welcome', '--bad\u001b[31m']);
 
   for (const result of [actionResult, argumentResult]) {
     assert.strictEqual(result.status, 1);
@@ -107,8 +107,8 @@ test('ecc welcome keeps parser error output free of terminal control bytes', () 
   }
 });
 
-test('ecc welcome rejects unknown actions before rendering', () => {
-  const result = runEcc(['welcome', '--action', 'broken']);
+test('aip welcome rejects unknown actions before rendering', () => {
+  const result = runAip(['welcome', '--action', 'broken']);
 
   assert.strictEqual(result.status, 1);
   assert.match(result.stderr, /Invalid --action value/);

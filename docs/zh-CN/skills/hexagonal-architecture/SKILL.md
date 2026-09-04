@@ -1,7 +1,7 @@
 ---
 name: hexagonal-architecture
 description: 设计、实现并重构端口与适配器系统，具有清晰的领域边界、依赖反转以及跨 TypeScript、Java、Kotlin 和 Go 服务的可测试用例编排。
-origin: ECC
+origin: AIP
 ---
 
 # 六边形架构

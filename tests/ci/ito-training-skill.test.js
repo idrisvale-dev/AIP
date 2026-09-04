@@ -26,10 +26,10 @@ function test(name, fn) { tests.push([name, fn]); }
 
 test("has valid discoverable frontmatter and trigger phrases", () => {
   const skill = read("skills/ito-training/SKILL.md");
-  assert.match(skill, /^---\nname: ito-training\ndescription: [^\n]+\nmetadata:\n {2}origin: ECC\n {2}status: scaffold\n---\n/);
+  assert.match(skill, /^---\nname: ito-training\ndescription: [^\n]+\nmetadata:\n {2}origin: AIP\n {2}status: scaffold\n---\n/);
   assert.match(skill, /completed Itô compute booking/i);
   assert.match(skill, /pre-training, fine-tuning, or RL/i);
-  assert.match(skill, /ECC implements no training stack of its own/i);
+  assert.match(skill, /AIP implements no training stack of its own/i);
 });
 
 test("is fail-closed today and forbids substitutes", () => {
@@ -72,7 +72,7 @@ test("specifies the future manifest, confirmation, and idempotency contract with
 
 test("labels backend stages as future and keeps eval gates human-honest", () => {
   const skill = read("skills/ito-training/SKILL.md");
-  assert.match(skill, /describe the future backend \(Layer 0\.3\), not code that exists in\s+ECC/i);
+  assert.match(skill, /describe the future backend \(Layer 0\.3\), not code that exists in\s+AIP/i);
   assert.match(skill, /never override a failed eval gate/i);
   assert.match(skill, /Loss-spike restart is a proposed, human-gated action/i);
 });
@@ -83,7 +83,7 @@ test("keeps unsupported training outside the executable bridge", () => {
   assert.doesNotMatch(bridge, /SUPPORTED_COMMANDS[^\n]+train/);
   assert.match(bridge, /Unsupported Itô command/);
 
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ecc-ito-train-reject-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "aip-ito-train-reject-"));
   try {
     const canonicalDir = path.join(fixtureRoot, "cli", "ito-compute-cli", "dist", "bin");
     fs.mkdirSync(canonicalDir, { recursive: true });
@@ -91,11 +91,11 @@ test("keeps unsupported training outside the executable bridge", () => {
     const executable = path.join(canonicalDir, "ito.js");
     fs.writeFileSync(executable, `require("fs").writeFileSync(${JSON.stringify(marker)}, "spawned");\n`);
     const result = spawnSync(process.execPath, [
-      path.join(REPO_ROOT, "scripts", "ecc.js"), "ito", "train",
+      path.join(REPO_ROOT, "scripts", "aip.js"), "ito", "train",
       "--booking", "booking_test", "--model-size", "8B",
     ], {
       encoding: "utf8",
-      env: { ...process.env, ECC_ITO_CLI_EXECUTABLE: executable },
+      env: { ...process.env, AIP_ITO_CLI_EXECUTABLE: executable },
     });
     assert.notStrictEqual(result.status, 0);
     assert.match(result.stderr, /Unsupported Itô command "train"/);

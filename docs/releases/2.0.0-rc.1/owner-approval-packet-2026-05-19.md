@@ -1,4 +1,4 @@
-# ECC v2.0.0-rc.1 Owner Approval Packet
+# AIP v2.0.0-rc.1 Owner Approval Packet
 
 Snapshot date: 2026-05-19.
 
@@ -18,7 +18,7 @@ Source commit for the clean evidence baseline this packet extends:
 | Preview pack smoke | ready true, digest `531328aaaa53`, 5/5 checks | yes |
 | Release approval gate | ready false, digest `ef8f49f727b7`, 4/6 checks pass; owner decisions and live URL readbacks pending | yes |
 | GitHub prerelease | live at <https://github.com/reborncursed/AIP/releases/tag/v2.0.0-rc.1>; prerelease true, draft false, published `2026-05-25T18:29:31Z` | yes |
-| npm `next` publish | live at <https://www.npmjs.com/package/ecc-universal/v/2.0.0-rc.1>; `next` points to `2.0.0-rc.1`, `latest` remains `1.10.0` | yes |
+| npm `next` publish | live at <https://www.npmjs.com/package/aip-universal/v/2.0.0-rc.1>; `next` points to `2.0.0-rc.1`, `latest` remains `1.10.0` | yes |
 | Video suite | ready true, 15/15 source assets, 13/13 suite artifacts, 12/12 publish candidates | yes |
 | Release surface tests | 28/28 passed after the May 26 URL/package refresh | yes |
 | Full local suite | 2568/2568 passed before PR #2013 merged; focused GateGuard regression passed 91/91 again before PR #2011 merged | yes |
@@ -29,10 +29,10 @@ Source commit for the clean evidence baseline this packet extends:
 | Decision | Approve / defer / block | Evidence required first | Notes |
 | --- | --- | --- | --- |
 | GitHub prerelease | approve | live prerelease readback | Live at <https://github.com/reborncursed/AIP/releases/tag/v2.0.0-rc.1>. Remaining plugin/video/billing URLs stay approval-gated. |
-| npm `next` publish | approve | `npm pack --dry-run`, `npm publish --tag next`, registry dist-tag readback | `ecc-universal@2.0.0-rc.1` is published on `next`; `latest` remains `1.10.0` during rc.1. |
+| npm `next` publish | approve | `npm pack --dry-run`, `npm publish --tag next`, registry dist-tag readback | `aip-universal@2.0.0-rc.1` is published on `next`; `latest` remains `1.10.0` during rc.1. |
 | Claude plugin tag | defer | `claude plugin validate .claude-plugin/plugin.json`, `claude plugin tag .claude-plugin --dry-run` | Create and push the real tag only after release approval. |
 | Codex repo marketplace | defer | temp-home marketplace add smoke and current official Plugin Directory status | Claim repo-marketplace distribution only; do not claim official Plugin Directory listing without listing evidence. |
-| ECC Tools billing language | defer | live readiness readback for the target account and billing/product state | Do not announce native payments or Marketplace-managed Pro until the gate is live. |
+| AIP Tools billing language | defer | live readiness readback for the target account and billing/product state | Do not announce native payments or Marketplace-managed Pro until the gate is live. |
 | Video upload | defer | owner selects primary launch cut plus short clips, self-eval stays clean | Upload only approved cuts; keep editable timeline/project output preserved. |
 | X, LinkedIn, GitHub Discussion, longform | defer | live release, npm, plugin, video, and billing URL ledger updates | Personal-account posts and outbound copy need explicit approval. |
 | Sponsor, partner, consulting, conference, podcast outreach | defer | final public URLs plus owner-approved outbound copy | Do not send drafts until the owner approves the exact batch. |
@@ -44,12 +44,12 @@ Update these surfaces after the approved publication actions finish:
 | Surface | Final value source | Update targets |
 | --- | --- | --- |
 | GitHub prerelease URL | `gh release view v2.0.0-rc.1 --repo reborncursed/AIP --json url` | release notes, URL ledger, social copy |
-| npm rc package URL | `npm view ecc-universal@2.0.0-rc.1 name version dist.tarball dist.integrity time --json` | URL ledger, quickstart, release notes |
-| Claude plugin tag URL | pushed `ecc--v2.0.0-rc.1` tag or marketplace readback | URL ledger, plugin docs, release notes |
+| npm rc package URL | `npm view aip-universal@2.0.0-rc.1 name version dist.tarball dist.integrity time --json` | URL ledger, quickstart, release notes |
+| Claude plugin tag URL | pushed `aip--v2.0.0-rc.1` tag or marketplace readback | URL ledger, plugin docs, release notes |
 | Codex repo-marketplace evidence | temp-home `codex plugin marketplace add <local-checkout>` readback | URL ledger, publication readiness |
 | Primary launch video URL | uploaded owner-approved primary launch video | GitHub release, X, LinkedIn, longform |
 | Short clip URLs | uploaded approved clips | X thread, LinkedIn, partner/sponsor/talk pack |
-| ECC Tools billing/readiness URL | live readiness readback or explicit blocked status | sponsor copy, Pro copy, release notes |
+| AIP Tools billing/readiness URL | live readiness readback or explicit blocked status | sponsor copy, Pro copy, release notes |
 
 ## Final Evidence Commands
 
@@ -67,10 +67,10 @@ npm run observability:ready
 npm run security:ioc-scan
 npm audit --audit-level=moderate
 npm audit signatures
-node tests/docs/ecc2-release-surface.test.js
+node tests/docs/aip2-release-surface.test.js
 node tests/hooks/gateguard-fact-force.test.js
 node tests/run-all.js
-cd ecc2 && cargo test
+cd aip2 && cargo test
 ```
 
 ## Approval Text

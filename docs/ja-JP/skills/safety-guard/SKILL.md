@@ -1,7 +1,7 @@
 ---
 name: safety-guard
 description: 本番システムでの作業時や、エージェントを自律的に実行する際に破壊的な操作を防ぐためにこのスキルを使用してください。
-origin: ECC
+origin: AIP
 ---
 
 # Safety Guard — 破壊的な操作の防止
@@ -71,5 +71,5 @@ PreToolUse フックを使用して Bash、Write、Edit、MultiEdit ツールの
 ## 統合
 
 - `codex -a never` セッションでデフォルトで有効化する
-- ECC 2.0 の可観測性リスクスコアリングと組み合わせる
+- AIP 2.0 の可観測性リスクスコアリングと組み合わせる
 - ブロックされた全アクションを `~/.claude/safety-guard.log` に記録する

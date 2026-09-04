@@ -3,7 +3,7 @@ name: benchmark
 description: Use this skill to measure performance baselines, detect regressions before/after PRs, and compare stack alternatives.
 license: MIT
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Benchmark — Performance Baseline & Regression Detection
@@ -86,7 +86,7 @@ Output:
 
 ## Output
 
-Stores baselines in `.ecc/benchmarks/` as JSON. Git-tracked so the team shares baselines.
+Stores baselines in `.aip/benchmarks/` as JSON. Git-tracked so the team shares baselines.
 
 ## Integration
 

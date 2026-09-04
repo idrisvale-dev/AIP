@@ -1,7 +1,7 @@
 ---
 name: frontend-patterns
 description: React, Next.js, state yönetimi, performans optimizasyonu ve UI en iyi uygulamaları için frontend geliştirme kalıpları.
-origin: ECC
+origin: AIP
 ---
 
 # Frontend Geliştirme Kalıpları

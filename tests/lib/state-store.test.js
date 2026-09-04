@@ -1,5 +1,5 @@
 /**
- * Tests for the SQLite-backed ECC state store and CLI commands.
+ * Tests for the SQLite-backed AIP state store and CLI commands.
  */
 
 const assert = require('assert');
@@ -13,7 +13,7 @@ const {
   resolveStateStorePath,
 } = require('../../scripts/lib/state-store');
 
-const ECC_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'ecc.js');
+const AIP_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'aip.js');
 const STATUS_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'status.js');
 const SESSIONS_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'sessions-cli.js');
 const WORK_ITEMS_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'work-items.js');
@@ -53,7 +53,7 @@ function createGhShim(binDir) {
   fs.mkdirSync(binDir, { recursive: true });
   const shimJs = path.join(binDir, 'gh.js');
   fs.writeFileSync(shimJs, `
-const mode = process.env.ECC_FAKE_GH_MODE || 'open';
+const mode = process.env.AIP_FAKE_GH_MODE || 'open';
 const args = process.argv.slice(2);
 function write(payload) {
   process.stdout.write(JSON.stringify(payload));
@@ -114,17 +114,17 @@ async function seedStore(dbPath) {
     adapterId: 'dmux-tmux',
     harness: 'claude',
     state: 'active',
-    repoRoot: '/tmp/ecc-repo',
+    repoRoot: '/tmp/aip-repo',
     startedAt: '2026-03-15T08:00:00.000Z',
     endedAt: null,
     snapshot: {
-      schemaVersion: 'ecc.session.v1',
+      schemaVersion: 'aip.session.v1',
       adapterId: 'dmux-tmux',
       session: {
         id: 'session-active',
         kind: 'orchestrated',
         state: 'active',
-        repoRoot: '/tmp/ecc-repo',
+        repoRoot: '/tmp/aip-repo',
       },
       workers: [
         {
@@ -132,14 +132,14 @@ async function seedStore(dbPath) {
           label: 'Worker 1',
           state: 'active',
           branch: 'feat/state-store',
-          worktree: '/tmp/ecc-repo/.worktrees/worker-1',
+          worktree: '/tmp/aip-repo/.worktrees/worker-1',
         },
         {
           id: 'worker-2',
           label: 'Worker 2',
           state: 'idle',
           branch: 'feat/state-store',
-          worktree: '/tmp/ecc-repo/.worktrees/worker-2',
+          worktree: '/tmp/aip-repo/.worktrees/worker-2',
         },
       ],
       aggregates: {
@@ -157,17 +157,17 @@ async function seedStore(dbPath) {
     adapterId: 'claude-history',
     harness: 'claude',
     state: 'recorded',
-    repoRoot: '/tmp/ecc-repo',
+    repoRoot: '/tmp/aip-repo',
     startedAt: '2026-03-14T18:00:00.000Z',
     endedAt: '2026-03-14T19:00:00.000Z',
     snapshot: {
-      schemaVersion: 'ecc.session.v1',
+      schemaVersion: 'aip.session.v1',
       adapterId: 'claude-history',
       session: {
         id: 'session-recorded',
         kind: 'history',
         state: 'recorded',
-        repoRoot: '/tmp/ecc-repo',
+        repoRoot: '/tmp/aip-repo',
       },
       workers: [
         {
@@ -175,7 +175,7 @@ async function seedStore(dbPath) {
           label: 'History Worker',
           state: 'recorded',
           branch: 'main',
-          worktree: '/tmp/ecc-repo',
+          worktree: '/tmp/aip-repo',
         },
       ],
       aggregates: {
@@ -234,7 +234,7 @@ async function seedStore(dbPath) {
     skillId: 'planner',
     skillVersion: '1.0.0',
     sessionId: 'session-recorded',
-    taskDescription: 'Outline ECC 2.0 work',
+    taskDescription: 'Outline AIP 2.0 work',
     outcome: 'unknown',
     failureReason: null,
     tokensUsed: 300,
@@ -256,7 +256,7 @@ async function seedStore(dbPath) {
     id: 'decision-1',
     sessionId: 'session-active',
     title: 'Use SQLite for durable state',
-    rationale: 'Need queryable local state for ECC control plane',
+    rationale: 'Need queryable local state for AIP control plane',
     alternatives: ['json-files', 'memory-only'],
     supersedes: null,
     status: 'active',
@@ -313,10 +313,10 @@ async function runTests() {
   let failed = 0;
 
   if (await test('creates the default state.db path and applies migrations idempotently', async () => {
-    const homeDir = createTempDir('ecc-state-home-');
+    const homeDir = createTempDir('aip-state-home-');
 
     try {
-      const expectedPath = path.join(homeDir, '.claude', 'ecc', 'state.db');
+      const expectedPath = path.join(homeDir, '.claude', 'aip', 'state.db');
       assert.strictEqual(resolveStateStorePath({ homeDir }), expectedPath);
 
       const firstStore = await createStateStore({ homeDir });
@@ -340,7 +340,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('preserves SQLite special database names like :memory:', async () => {
-    const tempDir = createTempDir('ecc-state-memory-');
+    const tempDir = createTempDir('aip-state-memory-');
     const previousCwd = process.cwd();
 
     try {
@@ -360,8 +360,8 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('creates private state-store directories and atomically persists a private database file', async () => {
-    const testDir = createTempDir('ecc-state-private-');
-    const privateParent = path.join(testDir, 'new-parent', 'ecc');
+    const testDir = createTempDir('aip-state-private-');
+    const privateParent = path.join(testDir, 'new-parent', 'aip');
     const dbPath = path.join(privateParent, 'state.db');
 
     try {
@@ -383,7 +383,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('refuses a final state database symlink without changing its target', async () => {
-    const testDir = createTempDir('ecc-state-final-link-');
+    const testDir = createTempDir('aip-state-final-link-');
     const targetPath = path.join(testDir, 'outside.db');
     const dbPath = path.join(testDir, 'state.db');
 
@@ -402,10 +402,10 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('refuses an intermediate state database symlink without writing outside the requested tree', async () => {
-    const testDir = createTempDir('ecc-state-parent-link-');
+    const testDir = createTempDir('aip-state-parent-link-');
     const outsideDir = path.join(testDir, 'outside');
     const linkedParent = path.join(testDir, 'linked-parent');
-    const dbPath = path.join(linkedParent, 'ecc', 'state.db');
+    const dbPath = path.join(linkedParent, 'aip', 'state.db');
 
     try {
       fs.mkdirSync(outsideDir);
@@ -415,14 +415,14 @@ async function runTests() {
         () => createStateStore({ dbPath }),
         /symlink/i
       );
-      assert.strictEqual(fs.existsSync(path.join(outsideDir, 'ecc', 'state.db')), false);
+      assert.strictEqual(fs.existsSync(path.join(outsideDir, 'aip', 'state.db')), false);
     } finally {
       cleanupTempDir(testDir);
     }
   })) passed += 1; else failed += 1;
 
   if (await test('stores sessions and returns detailed session views with workers, skill runs, and decisions', async () => {
-    const testDir = createTempDir('ecc-state-db-');
+    const testDir = createTempDir('aip-state-db-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
@@ -446,7 +446,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('builds a status snapshot with active sessions, skill rates, install health, and pending governance', async () => {
-    const testDir = createTempDir('ecc-state-db-');
+    const testDir = createTempDir('aip-state-db-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
@@ -480,7 +480,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('builds an empty status snapshot with null rates and missing install health', async () => {
-    const testDir = createTempDir('ecc-state-empty-');
+    const testDir = createTempDir('aip-state-empty-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
@@ -512,7 +512,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('tracks linked work items for Linear, GitHub, and handoff progress', async () => {
-    const testDir = createTempDir('ecc-state-work-items-');
+    const testDir = createTempDir('aip-state-work-items-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
@@ -520,18 +520,18 @@ async function runTests() {
 
       const store = await createStateStore({ dbPath });
       const linearItem = store.upsertWorkItem({
-        id: 'linear-ecc-20-control-plane',
+        id: 'linear-aip-20-control-plane',
         source: 'linear',
-        sourceId: 'ECC-20',
+        sourceId: 'AIP-20',
         title: 'Define harness-neutral session/worktree contract',
         status: 'in-progress',
         priority: 'high',
-        url: 'https://linear.app/ecctools/issue/ECC-20',
+        url: 'https://linear.app/aiptools/issue/AIP-20',
         owner: 'control-plane',
-        repoRoot: '/tmp/ecc-repo',
+        repoRoot: '/tmp/aip-repo',
         sessionId: 'session-active',
         metadata: {
-          project: 'ECC 2.0: Control Plane',
+          project: 'AIP 2.0: Control Plane',
         },
         createdAt: '2026-03-15T08:12:00.000Z',
         updatedAt: '2026-03-15T08:15:00.000Z',
@@ -540,12 +540,12 @@ async function runTests() {
       store.upsertWorkItem({
         id: 'handoff-release-gate',
         source: 'handoff',
-        sourceId: 'ecc-rc1-release-decision-20260511.md',
+        sourceId: 'aip-rc1-release-decision-20260511.md',
         title: 'Rerun rc.1 release gate before tag',
         status: 'blocked',
         priority: 'high',
         owner: 'release',
-        repoRoot: '/tmp/ecc-repo',
+        repoRoot: '/tmp/aip-repo',
         metadata: {
           blocker: 'tag decision pending',
         },
@@ -569,8 +569,8 @@ async function runTests() {
       const status = store.getStatus();
       store.close();
 
-      assert.strictEqual(linearItem.id, 'linear-ecc-20-control-plane');
-      assert.strictEqual(linearItem.metadata.project, 'ECC 2.0: Control Plane');
+      assert.strictEqual(linearItem.id, 'linear-aip-20-control-plane');
+      assert.strictEqual(linearItem.metadata.project, 'AIP 2.0: Control Plane');
       assert.strictEqual(status.workItems.totalCount, 3);
       assert.strictEqual(status.workItems.openCount, 2);
       assert.strictEqual(status.workItems.blockedCount, 1);
@@ -584,7 +584,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('normalizes default optional fields and reports warning install health', async () => {
-    const testDir = createTempDir('ecc-state-defaults-');
+    const testDir = createTempDir('aip-state-defaults-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
@@ -671,7 +671,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('validates entity payloads before writing to the database', async () => {
-    const testDir = createTempDir('ecc-state-db-');
+    const testDir = createTempDir('aip-state-db-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
@@ -752,7 +752,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('rejects invalid limits and unserializable JSON payloads', async () => {
-    const testDir = createTempDir('ecc-state-errors-');
+    const testDir = createTempDir('aip-state-errors-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
@@ -786,7 +786,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('status CLI supports human-readable and --json output', async () => {
-    const testDir = createTempDir('ecc-state-cli-');
+    const testDir = createTempDir('aip-state-cli-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
@@ -814,8 +814,8 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('status CLI --exit-code reports attention without suppressing output', async () => {
-    const attentionDir = createTempDir('ecc-state-attention-');
-    const okDir = createTempDir('ecc-state-ok-');
+    const attentionDir = createTempDir('aip-state-attention-');
+    const okDir = createTempDir('aip-state-ok-');
     const attentionDbPath = path.join(attentionDir, 'state.db');
     const okDbPath = path.join(okDir, 'state.db');
 
@@ -842,7 +842,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('status CLI can emit and write markdown operator snapshots', async () => {
-    const testDir = createTempDir('ecc-state-cli-');
+    const testDir = createTempDir('aip-state-cli-');
     const dbPath = path.join(testDir, 'state.db');
     const outputPath = path.join(testDir, 'status.md');
 
@@ -855,7 +855,7 @@ async function runTests() {
 
       const written = fs.readFileSync(outputPath, 'utf8');
       assert.strictEqual(result.stdout, written);
-      assert.match(written, /^# ECC Status/m);
+      assert.match(written, /^# AIP Status/m);
       assert.match(written, /Database: `[^`]+state\.db`/);
       assert.match(written, /## Readiness/);
       assert.match(written, /Status: attention/);
@@ -873,19 +873,19 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('work-items CLI supports upsert, list, show, and close', async () => {
-    const testDir = createTempDir('ecc-work-items-cli-');
+    const testDir = createTempDir('aip-work-items-cli-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
       const upsertResult = runNode(WORK_ITEMS_SCRIPT, [
         'upsert',
-        'linear-ecc-99',
+        'linear-aip-99',
         '--db',
         dbPath,
         '--source',
         'linear',
         '--source-id',
-        'ECC-99',
+        'AIP-99',
         '--title',
         'Ship work item CLI',
         '--status',
@@ -893,23 +893,23 @@ async function runTests() {
         '--priority',
         'high',
         '--url',
-        'https://linear.app/example/issue/ECC-99',
+        'https://linear.app/example/issue/AIP-99',
         '--owner',
         'control-plane',
         '--metadata-json',
-        '{"project":"ECC 2.0"}',
+        '{"project":"AIP 2.0"}',
         '--json',
       ], { cwd: testDir });
       assert.strictEqual(upsertResult.status, 0, upsertResult.stderr);
       const upsertPayload = parseJson(upsertResult.stdout);
-      assert.strictEqual(upsertPayload.id, 'linear-ecc-99');
+      assert.strictEqual(upsertPayload.id, 'linear-aip-99');
       assert.strictEqual(upsertPayload.status, 'blocked');
       assert.strictEqual(upsertPayload.repoRoot, fs.realpathSync(testDir));
-      assert.strictEqual(upsertPayload.metadata.project, 'ECC 2.0');
+      assert.strictEqual(upsertPayload.metadata.project, 'AIP 2.0');
 
       const updateResult = runNode(WORK_ITEMS_SCRIPT, [
         'upsert',
-        'linear-ecc-99',
+        'linear-aip-99',
         '--db',
         dbPath,
         '--status',
@@ -926,13 +926,13 @@ async function runTests() {
       assert.strictEqual(listResult.status, 0, listResult.stderr);
       const listPayload = parseJson(listResult.stdout);
       assert.strictEqual(listPayload.totalCount, 1);
-      assert.strictEqual(listPayload.items[0].id, 'linear-ecc-99');
+      assert.strictEqual(listPayload.items[0].id, 'linear-aip-99');
 
-      const showResult = runNode(WORK_ITEMS_SCRIPT, ['show', 'linear-ecc-99', '--db', dbPath]);
+      const showResult = runNode(WORK_ITEMS_SCRIPT, ['show', 'linear-aip-99', '--db', dbPath]);
       assert.strictEqual(showResult.status, 0, showResult.stderr);
-      assert.match(showResult.stdout, /linear\/#ECC-99 in-progress: Ship work item CLI/);
+      assert.match(showResult.stdout, /linear\/#AIP-99 in-progress: Ship work item CLI/);
 
-      const closeResult = runNode(WORK_ITEMS_SCRIPT, ['close', 'linear-ecc-99', '--db', dbPath, '--json']);
+      const closeResult = runNode(WORK_ITEMS_SCRIPT, ['close', 'linear-aip-99', '--db', dbPath, '--json']);
       assert.strictEqual(closeResult.status, 0, closeResult.stderr);
       const closePayload = parseJson(closeResult.stdout);
       assert.strictEqual(closePayload.status, 'done');
@@ -943,14 +943,14 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('work-items CLI syncs GitHub PRs and issues into readiness', async () => {
-    const testDir = createTempDir('ecc-work-items-github-');
+    const testDir = createTempDir('aip-work-items-github-');
     const dbPath = path.join(testDir, 'state.db');
     const binDir = path.join(testDir, 'bin');
     const repo = 'reborncursed/AIP';
 
     try {
       const env = {
-        ECC_GH_SHIM: createGhShim(binDir),
+        AIP_GH_SHIM: createGhShim(binDir),
       };
 
       const syncResult = runNode(WORK_ITEMS_SCRIPT, [
@@ -970,7 +970,7 @@ async function runTests() {
       assert.strictEqual(syncPayload.issueCount, 1);
       assert.strictEqual(syncPayload.closedCount, 0);
       assert.strictEqual(syncPayload.items.length, 3);
-      assert.strictEqual(syncPayload.items[0].id, 'github-reborncursed-everything-claude-code-pr-3');
+      assert.strictEqual(syncPayload.items[0].id, 'github-reborncursed-aip-pr-3');
       assert.strictEqual(syncPayload.items[0].status, 'blocked');
       assert.strictEqual(syncPayload.items[1].status, 'needs-review');
       assert.strictEqual(syncPayload.items[2].metadata.labels[0], 'release');
@@ -991,7 +991,7 @@ async function runTests() {
         cwd: testDir,
         env: {
           ...env,
-          ECC_FAKE_GH_MODE: 'empty',
+          AIP_FAKE_GH_MODE: 'empty',
         },
       });
       assert.strictEqual(closeResult.status, 0, closeResult.stderr);
@@ -1012,7 +1012,7 @@ async function runTests() {
   })) passed += 1; else failed += 1;
 
   if (await test('sessions CLI supports list and detail views in human-readable and --json output', async () => {
-    const testDir = createTempDir('ecc-state-cli-');
+    const testDir = createTempDir('aip-state-cli-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
@@ -1043,25 +1043,25 @@ async function runTests() {
     }
   })) passed += 1; else failed += 1;
 
-  if (await test('ecc CLI delegates the new status, sessions, and work-items subcommands', async () => {
-    const testDir = createTempDir('ecc-state-cli-');
+  if (await test('aip CLI delegates the new status, sessions, and work-items subcommands', async () => {
+    const testDir = createTempDir('aip-state-cli-');
     const dbPath = path.join(testDir, 'state.db');
 
     try {
       await seedStore(dbPath);
 
-      const statusResult = runNode(ECC_SCRIPT, ['status', '--db', dbPath, '--json']);
+      const statusResult = runNode(AIP_SCRIPT, ['status', '--db', dbPath, '--json']);
       assert.strictEqual(statusResult.status, 0, statusResult.stderr);
       const statusPayload = parseJson(statusResult.stdout);
       assert.strictEqual(statusPayload.activeSessions.activeCount, 1);
 
-      const sessionsResult = runNode(ECC_SCRIPT, ['sessions', 'session-active', '--db', dbPath, '--json']);
+      const sessionsResult = runNode(AIP_SCRIPT, ['sessions', 'session-active', '--db', dbPath, '--json']);
       assert.strictEqual(sessionsResult.status, 0, sessionsResult.stderr);
       const sessionsPayload = parseJson(sessionsResult.stdout);
       assert.strictEqual(sessionsPayload.session.id, 'session-active');
       assert.strictEqual(sessionsPayload.skillRuns.length, 2);
 
-      const workItemResult = runNode(ECC_SCRIPT, [
+      const workItemResult = runNode(AIP_SCRIPT, [
         'work-items',
         'upsert',
         'handoff-roadmap',
@@ -1079,7 +1079,7 @@ async function runTests() {
       const workItemPayload = parseJson(workItemResult.stdout);
       assert.strictEqual(workItemPayload.id, 'handoff-roadmap');
 
-      const delegatedStatusResult = runNode(ECC_SCRIPT, ['status', '--db', dbPath, '--json']);
+      const delegatedStatusResult = runNode(AIP_SCRIPT, ['status', '--db', dbPath, '--json']);
       assert.strictEqual(delegatedStatusResult.status, 0, delegatedStatusResult.stderr);
       const delegatedStatusPayload = parseJson(delegatedStatusResult.stdout);
       assert.strictEqual(delegatedStatusPayload.readiness.blockedWorkItems, 1);

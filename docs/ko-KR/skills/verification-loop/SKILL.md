@@ -1,7 +1,7 @@
 ---
 name: verification-loop
 description: "Claude Code 세션을 위한 포괄적인 검증 시스템."
-origin: ECC
+origin: AIP
 ---
 
 # 검증 루프 스킬

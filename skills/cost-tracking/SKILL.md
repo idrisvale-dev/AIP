@@ -1,6 +1,6 @@
 ---
 name: cost-tracking
-description: Track and report Claude Code token usage, spending, and budgets from the local ECC cost-tracker metrics log. Use when the user asks about costs, spending, usage, tokens, budgets, or cost breakdowns by model, session, or date.
+description: Track and report Claude Code token usage, spending, and budgets from the local AIP cost-tracker metrics log. Use when the user asks about costs, spending, usage, tokens, budgets, or cost breakdowns by model, session, or date.
 metadata:
   origin: community
 ---
@@ -8,7 +8,7 @@ metadata:
 # Cost Tracking
 
 Use this skill to analyze Claude Code cost and usage history from the metrics log
-that ECC's `stop:cost-tracker` hook writes.
+that AIP's `stop:cost-tracker` hook writes.
 
 ## Where the data lives
 

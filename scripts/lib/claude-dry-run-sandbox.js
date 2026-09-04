@@ -90,7 +90,7 @@ function createSnapshotMappings(entries) {
 }
 
 function createDryRunSandbox(paths, options, baseEnv) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-claude-dry-run-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-claude-dry-run-'));
   const homeDir = path.join(root, 'home');
   const configDir = path.join(root, 'config');
   const projectRoot = path.join(root, 'project');

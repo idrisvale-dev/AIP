@@ -1,7 +1,7 @@
 ---
 name: laravel-verification
 description: "Bucle de verificación para proyectos Laravel: verificaciones de entorno, linting, análisis estático, pruebas con cobertura, escaneos de seguridad y preparación para despliegue."
-origin: ECC
+origin: AIP
 ---
 
 # Bucle de Verificación Laravel

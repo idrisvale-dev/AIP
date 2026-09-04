@@ -1,4 +1,4 @@
-# 为 Everything Claude Code 做贡献
+# 为 AIP 做贡献
 
 感谢您想要贡献！这个仓库是 Claude Code 用户的社区资源。
 
@@ -60,7 +60,7 @@
 ```bash
 # 1. Fork and clone
 gh repo fork reborncursed/AIP --clone
-cd everything-claude-code
+cd aip
 
 # 2. Create a branch
 git checkout -b feat/my-contribution
@@ -95,7 +95,7 @@ skills/
 ---
 name: your-skill-name
 description: Brief description shown in skill list
-origin: ECC
+origin: AIP
 ---
 
 # 你的技能标题
@@ -366,7 +366,7 @@ description: 在 /help 中显示的简要描述
 
 ### 技能子集 (Codex 和 Cursor)
 
-ECC 为其他平台提供了技能子集：
+AIP 为其他平台提供了技能子集：
 
 * **Codex:** `.agents/skills/` — `agents/openai.yaml` 中列出的技能会被 Codex 加载。
 * **Cursor:** `.cursor/skills/` — 为 Cursor 打包了一个技能子集。

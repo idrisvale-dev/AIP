@@ -559,7 +559,7 @@ function buildStatus(options = {}) {
   return {
     generatedAt: nowDate.toISOString(),
     errors,
-    schemaVersion: 'ecc.loop-status.v1',
+    schemaVersion: 'aip.loop-status.v1',
     sessions,
     source: {
       bashTimeoutSeconds: normalizedOptions.bashTimeoutSeconds,
@@ -584,7 +584,7 @@ function formatText(payload) {
 
   if (payload.sessions.length === 0) {
     const lines = [
-      `ECC loop status (${payload.generatedAt})`,
+      `AIP loop status (${payload.generatedAt})`,
       skippedLines.length > 0
         ? 'No readable Claude transcript JSONL files were found.'
         : `No Claude transcript JSONL files found under ${payload.source.transcriptRoot}.`,
@@ -596,7 +596,7 @@ function formatText(payload) {
     return lines.join('\n');
   }
 
-  const lines = [`ECC loop status (${payload.generatedAt})`];
+  const lines = [`AIP loop status (${payload.generatedAt})`];
   for (const session of payload.sessions) {
     lines.push(`- ${session.sessionId} [${session.state}] ${session.transcriptPath}`);
     lines.push(`  last event: ${session.lastEventAt || 'unknown'}; events: ${session.eventCount}`);
@@ -687,7 +687,7 @@ function writeStatusSnapshots(payload, writeDir) {
     const snapshotPath = getSnapshotPath(outputDir, session, usedNames);
     atomicWriteJson(snapshotPath, {
       generatedAt: payload.generatedAt,
-      schemaVersion: 'ecc.loop-status.session.v1',
+      schemaVersion: 'aip.loop-status.session.v1',
       session,
     });
 
@@ -705,7 +705,7 @@ function writeStatusSnapshots(payload, writeDir) {
   atomicWriteJson(indexPath, {
     errors: payload.errors,
     generatedAt: payload.generatedAt,
-    schemaVersion: 'ecc.loop-status.index.v1',
+    schemaVersion: 'aip.loop-status.index.v1',
     sessionCount: payload.sessions.length,
     sessions,
     source: payload.source,

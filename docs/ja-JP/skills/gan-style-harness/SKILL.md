@@ -1,7 +1,7 @@
 ---
 name: gan-style-harness
 description: GAN（生成的敵対ネットワーク）スタイルの評価ハーネス、画像生成パターン、および品質メトリクス。
-origin: ECC-community
+origin: AIP-community
 tools: Read, Write, Edit, Bash, Grep, Glob, Task
 ---
 

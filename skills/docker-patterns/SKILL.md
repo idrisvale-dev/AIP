@@ -295,7 +295,7 @@ Do not claim that a Linux container validates macOS or Windows behavior.
   container user can inspect project data.
 - Keep npm and npx's executable cache at `NPM_CONFIG_CACHE=/tmp/npm-cache` on
   the executable `/tmp` mount. Its default size is 2 GiB and can be adjusted
-  with `ECC_TMPFS_SIZE`; `ECC_WORKSPACE_SIZE` separately controls the private
+  with `AIP_TMPFS_SIZE`; `AIP_WORKSPACE_SIZE` separately controls the private
   workspace mount.
 - Set `read_only: true`, `no-new-privileges:true`, `cap_drop: [ALL]`, and a finite `pids_limit`.
 - Keep the default real-CLI services on `network_mode: none`. Add network access
@@ -307,7 +307,7 @@ Do not claim that a Linux container validates macOS or Windows behavior.
   `plugin`, and `shell` modes.
 - Use argument arrays or `spawnSync(..., { shell: false })` for cross-platform runners. Never interpolate project paths into a shell command.
 
-### Exercise the ECC Plugin Setup Harness
+### Exercise the AIP Plugin Setup Harness
 
 Use `docker/plugin-setup/compose.yaml` as the reference implementation. It provides:
 
@@ -331,11 +331,11 @@ docker compose -f docker/plugin-setup/compose.yaml \
 Run the safe default flow in each image:
 
 ```bash
-docker compose -p ecc-plugin-debian-test \
+docker compose -p aip-plugin-debian-test \
   -f docker/plugin-setup/compose.yaml \
   run --rm -T real-cli dry-run
 
-docker compose -p ecc-plugin-ubuntu-test \
+docker compose -p aip-plugin-ubuntu-test \
   -f docker/plugin-setup/compose.yaml \
   run --rm -T real-cli-ubuntu dry-run
 ```
@@ -343,14 +343,14 @@ docker compose -p ecc-plugin-ubuntu-test \
 The dry run executes the current public command contract:
 
 ```bash
-ecc install --profile core --target claude-project --dry-run --json
+aip install --profile core --target claude-project --dry-run --json
 ```
 
 Before that command runs, the container creates a locally packed npm artifact
 from the read-only checkout with `npm pack --ignore-scripts`. It extracts the
-self-created tarball under `/tmp`, validates the `ecc-universal` package name,
-required install manifests, and the confined `package.json` `bin.ecc` mapping,
-then invokes the extracted `ecc` executable. The runtime stays on
+self-created tarball under `/tmp`, validates the `aip-universal` package name,
+required install manifests, and the confined `package.json` `bin.aip` mapping,
+then invokes the extracted `aip` executable. The runtime stays on
 `network_mode: none`, does not execute package lifecycle scripts, and does not
 rely on host `node_modules`; its exact pinned production dependencies are
 already present in the image.
@@ -366,9 +366,9 @@ Start a detached container without `--rm` so leaving a terminal does not remove
 the session:
 
 ```bash
-docker compose -p ecc-plugin-session \
+docker compose -p aip-plugin-session \
   -f docker/plugin-setup/compose.yaml \
-  run --detach --name ecc-plugin-shell real-cli shell
+  run --detach --name aip-plugin-shell real-cli shell
 ```
 
 The container copies the read-only fixture to the stable private directory
@@ -376,9 +376,9 @@ The container copies the read-only fixture to the stable private directory
 terminal-opener v1 data contract:
 
 ```bash
-docker inspect --format '{{.State.Running}}' ecc-plugin-shell
+docker inspect --format '{{.State.Running}}' aip-plugin-shell
 node docker/plugin-setup/interactive-plan.js \
-  --container ecc-plugin-shell \
+  --container aip-plugin-shell \
   --workdir /workspace/project \
   --json \
   -- bash
@@ -392,7 +392,7 @@ terminal adapter, interpolate a shell command, or manage a host GUI process.
 Until then, open the same PTY in the current host terminal directly:
 
 ```bash
-docker exec -it -w /workspace/project ecc-plugin-shell bash
+docker exec -it -w /workspace/project aip-plugin-shell bash
 ```
 
 Exit the shell without stopping the detached container. Reconnect with the
@@ -400,8 +400,8 @@ same `docker exec -it` command. When finished, remove the exact named container
 and its Compose project resources:
 
 ```bash
-docker rm --force ecc-plugin-shell
-docker compose -p ecc-plugin-session \
+docker rm --force aip-plugin-shell
+docker compose -p aip-plugin-session \
   -f docker/plugin-setup/compose.yaml \
   down --remove-orphans
 ```
@@ -425,15 +425,15 @@ npm run test:plugin-setup-platform
 Inspect the produced identity and environment before trusting the image:
 
 ```bash
-docker image inspect ecc-plugin-setup:debian ecc-plugin-setup:ubuntu
+docker image inspect aip-plugin-setup:debian aip-plugin-setup:ubuntu
 ```
 
 Clean each named test project without deleting unrelated volumes or images:
 
 ```bash
-docker compose -p ecc-plugin-debian-test \
+docker compose -p aip-plugin-debian-test \
   -f docker/plugin-setup/compose.yaml down --remove-orphans
-docker compose -p ecc-plugin-ubuntu-test \
+docker compose -p aip-plugin-ubuntu-test \
   -f docker/plugin-setup/compose.yaml down --remove-orphans
 ```
 

@@ -6,7 +6,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { buildReport: buildPlatformReport } = require('./platform-audit');
 
-const SCHEMA_VERSION = 'ecc.operator-readiness-dashboard.v1';
+const SCHEMA_VERSION = 'aip.operator-readiness-dashboard.v1';
 const DEFAULT_THRESHOLDS = Object.freeze({
   maxOpenPrs: 20,
   maxOpenIssues: 20,
@@ -17,7 +17,7 @@ function usage() {
   console.log([
     'Usage: node scripts/operator-readiness-dashboard.js [options]',
     '',
-    'Generate the ECC operator readiness dashboard and prompt-to-artifact audit.',
+    'Generate the AIP operator readiness dashboard and prompt-to-artifact audit.',
     '',
     'Options:',
     '  --format <text|json|markdown>',
@@ -335,17 +335,17 @@ function agentShieldEnterpriseGap(roadmap) {
 function agentShieldEnterpriseEvidence(roadmap) {
   if (roadmap.includes('hosted promotion judge audit traces')
     || roadmap.includes('operator-visible promotion output values')) {
-    return 'AgentShield policy promotion `reviewItems` landed in `87aec47`; package-manager hardening drift detection landed in `28d08c7`; workflow action runtime pins were refreshed in `659f569`; npm age-gate guidance was corrected in `ee585cd`; package-manager hardening Action outputs landed in `1124535`; policy-promotion Action outputs and runtime-smoke job-summary evidence landed in `1593925`; fleet review ticket payloads and current Mini Shai-Hulud IOC breadcrumbs landed in `840952a`; ECC-Tools consumes those outputs in `8658951`, surfaces operator-readable status/pack/count/digest telemetry in `16c537f`, and renders hosted promotion judge audit traces in `05d4e82`; all are mirrored in the GA roadmap';
+    return 'AgentShield policy promotion `reviewItems` landed in `87aec47`; package-manager hardening drift detection landed in `28d08c7`; workflow action runtime pins were refreshed in `659f569`; npm age-gate guidance was corrected in `ee585cd`; package-manager hardening Action outputs landed in `1124535`; policy-promotion Action outputs and runtime-smoke job-summary evidence landed in `1593925`; fleet review ticket payloads and current Mini Shai-Hulud IOC breadcrumbs landed in `840952a`; AIP-Tools consumes those outputs in `8658951`, surfaces operator-readable status/pack/count/digest telemetry in `16c537f`, and renders hosted promotion judge audit traces in `05d4e82`; all are mirrored in the GA roadmap';
   }
 
   return 'AgentShield enterprise PR evidence is mirrored in the GA roadmap';
 }
 
-function eccToolsNextLevelEvidence(roadmap) {
+function aipToolsNextLevelEvidence(roadmap) {
   if (roadmap.includes('announcementGateReady` is `true')
     || roadmap.includes('Native GitHub payments announcement gate is ready')
     || roadmap.includes('d3d62df83fa075660fa4530c3e0edc311a4355fe')) {
-    return 'billing announcement gate, selected-target announcement gate, billing gate env-file operator path, non-breaking operator bearer path, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, aggregate production billing KV readback, Wrangler selected-target readback, target-account billing readback, provenance-aware Marketplace billing-state gates, sanitized Marketplace plan/action provenance counts, ready Marketplace Pro target selection, hosted team-learning feedback controls, and ECC-Tools Dependabot alert remediation are mirrored in the GA roadmap';
+    return 'billing announcement gate, selected-target announcement gate, billing gate env-file operator path, non-breaking operator bearer path, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, aggregate production billing KV readback, Wrangler selected-target readback, target-account billing readback, provenance-aware Marketplace billing-state gates, sanitized Marketplace plan/action provenance counts, ready Marketplace Pro target selection, hosted team-learning feedback controls, and AIP-Tools Dependabot alert remediation are mirrored in the GA roadmap';
   }
 
   if (roadmap.includes('selected-target official announcement gate')
@@ -354,13 +354,13 @@ function eccToolsNextLevelEvidence(roadmap) {
     || roadmap.includes('16a5bb3')
     || roadmap.includes('select-ready-target')
     || roadmap.includes('f14ed2fe-a219-470c-8119-63429e197027')) {
-    return 'billing announcement gate, selected-target announcement gate, billing gate env-file operator path, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, aggregate production billing KV readback, Wrangler OAuth readback, target-account billing readback, provenance-aware Marketplace billing-state gates, sanitized Marketplace plan/action provenance counts, ready Marketplace Pro target selection, hosted team-learning feedback controls, and ECC-Tools Dependabot alert remediation are mirrored in the GA roadmap';
+    return 'billing announcement gate, selected-target announcement gate, billing gate env-file operator path, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, aggregate production billing KV readback, Wrangler OAuth readback, target-account billing readback, provenance-aware Marketplace billing-state gates, sanitized Marketplace plan/action provenance counts, ready Marketplace Pro target selection, hosted team-learning feedback controls, and AIP-Tools Dependabot alert remediation are mirrored in the GA roadmap';
   }
 
   if (roadmap.includes('69ca535')
     || roadmap.includes('team feedback controls')
     || roadmap.includes('e56fc1a')) {
-    return 'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, aggregate production billing KV readback, Wrangler OAuth readback, target-account billing readback, provenance-aware Marketplace billing-state gates, sanitized Marketplace plan/action provenance counts, hosted team-learning feedback controls, and ECC-Tools Dependabot alert remediation are mirrored in the GA roadmap';
+    return 'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, harness-route policy linking, policy-promotion Action-output telemetry, operator-visible promotion output details, hosted promotion judge audit traces, billing announcement preflight, aggregate production billing KV readback, Wrangler OAuth readback, target-account billing readback, provenance-aware Marketplace billing-state gates, sanitized Marketplace plan/action provenance counts, hosted team-learning feedback controls, and AIP-Tools Dependabot alert remediation are mirrored in the GA roadmap';
   }
 
   if (roadmap.includes('d5f60db')
@@ -401,7 +401,7 @@ function eccToolsNextLevelEvidence(roadmap) {
   return 'billing announcement gate, hosted analysis lanes, AgentShield fleet-summary consumption, hosted finding evidence paths, and harness-route policy linking are mirrored in the GA roadmap';
 }
 
-function eccToolsNextLevelGap(roadmap) {
+function aipToolsNextLevelGap(roadmap) {
   if (roadmap.includes('announcementGateReady` is `true')
     || roadmap.includes('Native GitHub payments announcement gate is ready')
     || roadmap.includes('d3d62df83fa075660fa4530c3e0edc311a4355fe')) {
@@ -469,7 +469,7 @@ function eccToolsNextLevelGap(roadmap) {
 function supplyChainLocalProtectionEvidence({ roadmap, scripts }) {
   if (scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
     && roadmap.includes('package-manager hardening Action outputs')) {
-    return 'scheduled supply-chain watch emits IOC/advisory-source refresh artifacts; ECC scanner covers gh-token-monitor token-store persistence; AgentShield now detects known AI-tool persistence IOCs, npm lifecycle/token drift, unsupported npm age-key drift, and pnpm/Yarn cooldown drift; current-head watch evidence and ITO-57 May 18 Linear evidence updates are current';
+    return 'scheduled supply-chain watch emits IOC/advisory-source refresh artifacts; AIP scanner covers gh-token-monitor token-store persistence; AgentShield now detects known AI-tool persistence IOCs, npm lifecycle/token drift, unsupported npm age-key drift, and pnpm/Yarn cooldown drift; current-head watch evidence and ITO-57 May 18 Linear evidence updates are current';
   }
 
   return scripts['security:advisory-sources'] === 'node scripts/ci/supply-chain-advisory-sources.js'
@@ -489,7 +489,7 @@ function supplyChainLocalProtectionGap({ roadmap, scripts }) {
 function hasCurrentLinearProgressSync({ roadmap, progressSync }) {
   const hasOperatorProgressSurface = roadmap.includes('operator progress snapshot')
     || roadmap.includes('operator progress comment');
-  const hasMay19ProgressSurface = roadmap.includes('ecc-may-19-post-pr-2002-sync-64cef8f668e0')
+  const hasMay19ProgressSurface = roadmap.includes('aip-may-19-post-pr-2002-sync-64cef8f668e0')
     && roadmap.includes('a6411e3a-8c8e-4a58-adba-687e77d4c543')
     && roadmap.includes('ITO-56');
   const hasMay20ReleaseGateSurface = roadmap.includes('467d148a-712a-4777-aad9-95593e9f1739')
@@ -523,10 +523,10 @@ function linearProgressEvidence(context) {
   if (hasCurrentLinearProgressSync(context)) {
     if (context.roadmap.includes('467d148a-712a-4777-aad9-95593e9f1739')
       && context.roadmap.includes('7642ee9c-3107-400c-a229-53e2895a8914')) {
-      return 'Linear live sync is current with the May 20 Marketplace Pro release-gate comments on ITO-61 and the ECC platform roadmap; progress-sync contract defines the file-backed work-items/status path';
+      return 'Linear live sync is current with the May 20 Marketplace Pro release-gate comments on ITO-61 and the AIP platform roadmap; progress-sync contract defines the file-backed work-items/status path';
     }
 
-    if (context.roadmap.includes('ecc-may-19-post-pr-2002-sync-64cef8f668e0')) {
+    if (context.roadmap.includes('aip-may-19-post-pr-2002-sync-64cef8f668e0')) {
       return 'Linear live sync is current with the May 19 post-PR #2002 sync document, project comment, and active issue-lane updates; progress-sync contract defines the file-backed work-items/status path';
     }
 
@@ -609,7 +609,7 @@ function extractGrowthBaseline(hypergrowth) {
 }
 
 function buildGrowthSummary(rootDir) {
-  const hypergrowth = readText(rootDir, 'docs/releases/2.0.0/ecc-2-hypergrowth-release-command-center.md');
+  const hypergrowth = readText(rootDir, 'docs/releases/2.0.0/aip-2-hypergrowth-release-command-center.md');
   const partnerPack = readText(rootDir, 'docs/releases/2.0.0-rc.1/partner-sponsor-talks-pack.md');
   const baseline = extractGrowthBaseline(hypergrowth || partnerPack);
 
@@ -617,7 +617,7 @@ function buildGrowthSummary(rootDir) {
     ...baseline,
     lanes: [
       'GitHub Sponsors and OSS partner sponsors',
-      'ECC Tools Pro subscriptions',
+      'AIP Tools Pro subscriptions',
       'consulting and implementation contracts',
       'talks, podcasts, conference demos, and partner webinars',
     ],
@@ -625,13 +625,13 @@ function buildGrowthSummary(rootDir) {
 }
 
 function buildRequirements(rootDir, platformReport) {
-  const roadmap = readText(rootDir, 'docs/ECC-2.0-GA-ROADMAP.md');
+  const roadmap = readText(rootDir, 'docs/AIP-2.0-GA-ROADMAP.md');
   const publicationReadiness = readText(rootDir, 'docs/releases/2.0.0-rc.1/publication-readiness.md');
   const namingMatrix = readText(rootDir, 'docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md');
   const releasePublicationChecklist = readText(rootDir, 'docs/releases/2.0.0-rc.1/release-name-plugin-publication-checklist-2026-05-18.md');
   const releaseUrlLedger = readText(rootDir, 'docs/releases/2.0.0-rc.1/release-url-ledger-2026-05-19.md');
   const publicationEvidenceMay19 = readText(rootDir, 'docs/releases/2.0.0-rc.1/publication-evidence-2026-05-19.md');
-  const hypergrowthCommandCenter = readText(rootDir, 'docs/releases/2.0.0/ecc-2-hypergrowth-release-command-center.md');
+  const hypergrowthCommandCenter = readText(rootDir, 'docs/releases/2.0.0/aip-2-hypergrowth-release-command-center.md');
   const partnerSponsorTalksPack = readText(rootDir, 'docs/releases/2.0.0-rc.1/partner-sponsor-talks-pack.md');
   const releaseVideoProduction = readText(rootDir, 'docs/releases/2.0.0-rc.1/video-suite-production.md');
   const ownerQueueCleanup = readText(rootDir, 'docs/releases/2.0.0-rc.1/owner-queue-cleanup-2026-05-18.md');
@@ -657,7 +657,7 @@ function buildRequirements(rootDir, platformReport) {
     && fileExists(rootDir, 'scripts/preview-pack-smoke.js')
     && includesAll(previewManifest, ['scripts/preview-pack-smoke.js', 'npm run preview-pack:smoke'])
     && includesAll(previewPackSmoke, [
-      'ecc.preview-pack-smoke.v1',
+      'aip.preview-pack-smoke.v1',
       'preview-pack-artifacts-present',
       'hermes-boundary-sanitized',
       'publication-blockers-preserved'
@@ -679,13 +679,13 @@ function buildRequirements(rootDir, platformReport) {
   const releaseVideoSuiteReady = scripts['release:video-suite'] === 'node scripts/release-video-suite.js'
     && fileExists(rootDir, 'scripts/release-video-suite.js')
     && includesAll(releaseVideoProduction, [
-      'ECC 2.0 Video Suite Production Manifest',
+      'AIP 2.0 Video Suite Production Manifest',
       'Primary launch video',
       'Self-Eval Gate',
       'timeline',
     ])
     && includesAll(releaseVideoSuite, [
-      'ecc.release-video-suite.v1',
+      'aip.release-video-suite.v1',
       'video-source-assets-present',
       'video-release-artifacts-present',
     ]);
@@ -792,8 +792,8 @@ function buildRequirements(rootDir, platformReport) {
       'keep generated dashboard attached to publication evidence'
     ),
     buildRequirement(
-      'ecc-preview-pack',
-      'ECC 2.0 preview pack ready',
+      'aip-preview-pack',
+      'AIP 2.0 preview pack ready',
       'docs/releases/2.0.0-rc.1/preview-pack-manifest.md',
       previewPackManifestReady && previewPackSmokeReady ? 'current' : previewPackManifestReady ? 'in_progress' : 'not_complete',
       previewPackManifestReady && previewPackSmokeReady
@@ -825,9 +825,9 @@ function buildRequirements(rootDir, platformReport) {
       'naming-and-publication-matrix plus release-name-plugin-publication checklist plus publication-readiness',
       includesAll(namingMatrix, ['Claude plugin', 'Codex plugin', 'npm package', 'Publication Paths'])
         && includesAll(releasePublicationChecklist, [
-          'Ship `v2.0.0-rc.1` as **ECC**',
+          'Ship `v2.0.0-rc.1` as **AIP**',
           'reborncursed/AIP',
-          'ecc-universal',
+          'aip-universal',
           'claude plugin tag .claude-plugin --dry-run',
           'codex plugin marketplace add',
           'Do not rename the npm package until rc.1 is published'
@@ -869,7 +869,7 @@ function buildRequirements(rootDir, platformReport) {
     buildRequirement(
       'hypergrowth-command-center',
       'Create a second-phase hypergrowth release command center',
-      'docs/releases/2.0.0/ecc-2-hypergrowth-release-command-center.md plus May 19 evidence',
+      'docs/releases/2.0.0/aip-2-hypergrowth-release-command-center.md plus May 19 evidence',
       hypergrowthCommandCenterReady ? 'current' : 'in_progress',
       hypergrowthCommandCenterReady
         ? 'current MRR, target MRR, gap, release claim, video lane, distribution plan, and approval boundaries are in-tree'
@@ -880,7 +880,7 @@ function buildRequirements(rootDir, platformReport) {
     ),
     buildRequirement(
       'release-video-suite',
-      'Produce the ECC 2.0 release video suite',
+      'Produce the AIP 2.0 release video suite',
       'docs/releases/2.0.0-rc.1/video-suite-production.md and npm run release:video-suite',
       releaseVideoPublishCandidatesReady ? 'current' : releaseVideoSuiteReady ? 'in_progress' : 'not_complete',
       releaseVideoPublishCandidatesReady
@@ -917,14 +917,14 @@ function buildRequirements(rootDir, platformReport) {
       agentShieldEnterpriseGap(roadmap)
     ),
     buildRequirement(
-      'ecc-tools-next-level',
-      'Advance ECC Tools native payments and AI-native harness-agnostic app',
-      'ECC Tools PR evidence, billing gate, hosted analysis lanes',
-      includesAll(roadmap, ['ECC-Tools PR #78', 'hosted promotion', 'announcementGate'])
+      'aip-tools-next-level',
+      'Advance AIP Tools native payments and AI-native harness-agnostic app',
+      'AIP Tools PR evidence, billing gate, hosted analysis lanes',
+      includesAll(roadmap, ['AIP-Tools PR #78', 'hosted promotion', 'announcementGate'])
         ? 'in_progress'
         : 'not_complete',
-      eccToolsNextLevelEvidence(roadmap),
-      eccToolsNextLevelGap(roadmap)
+      aipToolsNextLevelEvidence(roadmap),
+      aipToolsNextLevelGap(roadmap)
     ),
     buildRequirement(
       'legacy-salvage',
@@ -944,7 +944,7 @@ function buildRequirements(rootDir, platformReport) {
     ),
     buildRequirement(
       'observability-for-self-use',
-      'Provide ECC 2.0 observability for self-use',
+      'Provide AIP 2.0 observability for self-use',
       'observability readiness gate',
       scripts['observability:ready'] === 'node scripts/observability-readiness.js'
         && includesAll(observabilityReadiness, ['observability-readiness.js'])
@@ -1042,7 +1042,7 @@ function markdownEscape(value) {
 
 function renderText(report) {
   const lines = [
-    `ECC Operator Readiness Dashboard: ${report.ready ? 'objective ready' : 'work remaining'}`,
+    `AIP Operator Readiness Dashboard: ${report.ready ? 'objective ready' : 'work remaining'}`,
     `Generated: ${report.generatedAt}`,
     `Commit: ${report.head || 'unknown'}`,
     `Dashboard ready: ${report.dashboardReady}`,
@@ -1079,7 +1079,7 @@ function renderText(report) {
 
 function renderMarkdown(report) {
   const lines = [
-    '# ECC Operator Readiness Dashboard',
+    '# AIP Operator Readiness Dashboard',
     '',
     'This dashboard is generated by `npm run operator:dashboard`. It is an operator snapshot, not release approval.',
     '',
@@ -1104,7 +1104,7 @@ function renderMarkdown(report) {
     '| --- | ---: | ---: | ---: |',
     `| MRR | ${markdownEscape(report.growth ? report.growth.currentMrr : 'unknown')} | ${markdownEscape(report.growth ? report.growth.targetMrr : 'unknown')} | ${markdownEscape(report.growth ? report.growth.gapMrr : 'unknown')} |`,
     '',
-    'Growth lanes: GitHub Sponsors and OSS partner sponsors; ECC Tools Pro subscriptions; consulting and implementation contracts; talks, podcasts, conference demos, and partner webinars.',
+    'Growth lanes: GitHub Sponsors and OSS partner sponsors; AIP Tools Pro subscriptions; consulting and implementation contracts; talks, podcasts, conference demos, and partner webinars.',
     '',
     '## Prompt-To-Artifact Checklist',
     '',

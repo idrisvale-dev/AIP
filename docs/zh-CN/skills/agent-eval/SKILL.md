@@ -1,7 +1,7 @@
 ---
 name: agent-eval
 description: 编码代理（Claude Code、Aider、Codex等）在自定义任务上的直接比较，包含通过率、成本、时间和一致性指标
-origin: ECC
+origin: AIP
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

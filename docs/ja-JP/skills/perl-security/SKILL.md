@@ -1,7 +1,7 @@
 ---
 name: perl-security
 description: テイントモード、入力バリデーション、安全なプロセス実行、DBIパラメータ化クエリ、Webセキュリティ（XSS/SQLi/CSRF）、perlcriticセキュリティポリシーを網羅する包括的なPerlセキュリティ。
-origin: ECC
+origin: AIP
 ---
 
 # Perlセキュリティパターン

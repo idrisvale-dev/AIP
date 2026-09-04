@@ -1,7 +1,7 @@
 ---
 name: hipaa-compliance
 description: HIPAA準拠実装、セキュリティ対策、監査ログ、およびデータ保護戦略。
-origin: ECC direct-port adaptation
+origin: AIP direct-port adaptation
 version: "1.0.0"
 ---
 

@@ -7,7 +7,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const repoRoot = path.join(__dirname, '..', '..');
 const setupScript = path.join(repoRoot, 'scripts', 'setup.js');
-const eccScript = path.join(repoRoot, 'scripts', 'ecc.js');
+const aipScript = path.join(repoRoot, 'scripts', 'aip.js');
 const fakeClaudeScript = path.join(repoRoot, 'tests', 'fixtures', 'fake-claude-plugin.js');
 let passed = 0;
 let failed = 0;
@@ -24,7 +24,7 @@ function test(name, fn) {
   }
 }
 function createFixture(state = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc setup cli '));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip setup cli '));
   const homeDir = path.join(root, 'home');
   const configDir = path.join(root, 'config');
   const projectRoot = path.join(root, 'project');
@@ -63,8 +63,8 @@ function runSetup(fixture, args, options = {}) {
     USERPROFILE: fixture.homeDir,
     CLAUDE_CONFIG_DIR: fixture.configDir,
     PATH: options.path || `${fixture.binDir}${path.delimiter}${process.env.PATH || ''}`,
-    ECC_TEST_CLAUDE_STATE: fixture.statePath,
-    ECC_TEST_CLAUDE_CALLS: fixture.callsPath,
+    AIP_TEST_CLAUDE_STATE: fixture.statePath,
+    AIP_TEST_CLAUDE_CALLS: fixture.callsPath,
     ...options.env,
   };
   if (options.defaultClaudeConfig) delete env.CLAUDE_CONFIG_DIR;
@@ -78,7 +78,7 @@ function runSetup(fixture, args, options = {}) {
 function quoteShellArgument(value) {
   return `'${String(value).replace(/'/g, `'\\''`)}'`;
 }
-function runInteractiveEccSetup(fixture, options = {}) {
+function runInteractiveAipSetup(fixture, options = {}) {
   if (process.platform === 'win32') {
     return null;
   }
@@ -87,7 +87,7 @@ function runInteractiveEccSetup(fixture, options = {}) {
   const answers = options.answers || ['3', '3'];
   const command = [
     process.execPath,
-    eccScript,
+    aipScript,
     'setup',
     ...args,
   ];
@@ -118,8 +118,8 @@ function runInteractiveEccSetup(fixture, options = {}) {
       USERPROFILE: fixture.homeDir,
       CLAUDE_CONFIG_DIR: fixture.configDir,
       PATH: `${fixture.binDir}${path.delimiter}${process.env.PATH || ''}`,
-      ECC_TEST_CLAUDE_STATE: fixture.statePath,
-      ECC_TEST_CLAUDE_CALLS: fixture.callsPath,
+      AIP_TEST_CLAUDE_STATE: fixture.statePath,
+      AIP_TEST_CLAUDE_CALLS: fixture.callsPath,
     },
     encoding: 'utf8',
     timeout: 15000,
@@ -140,7 +140,7 @@ function hasMutation(fixture) {
   ));
 }
 
-const SETUP_SPINNER_PATTERN = /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s+Applying ECC setup/;
+const SETUP_SPINNER_PATTERN = /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s+Applying AIP setup/;
 
 function assertNoSetupSpinner(output) {
   assert.doesNotMatch(output, SETUP_SPINNER_PATTERN);
@@ -160,7 +160,7 @@ function assertSetupSpinnerLifecycle(output, outcomePattern) {
     .replace(/\r/g, '');
   assert.match(
     visibleOutput,
-    /\[y\/N\] (?:y|yes)\n[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s+Applying ECC setup/,
+    /\[y\/N\] (?:y|yes)\n[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s+Applying AIP setup/,
     'setup spinner should be the first visible status after confirmation'
   );
 
@@ -176,7 +176,7 @@ function withFixture(state, fn) {
   }
 }
 
-console.log('\n=== ECC setup CLI tests ===\n');
+console.log('\n=== AIP setup CLI tests ===\n');
 
 test('fresh non-interactive plugin setup requires an explicit scope', () => {
   withFixture({}, fixture => {
@@ -193,9 +193,9 @@ test('fresh non-interactive plugin setup requires an explicit scope', () => {
 
 test('an existing install without --scope updates its detected scope', () => {
   withFixture({
-    plugins: [{ id: 'ecc@ecc', scope: 'project', enabled: true, version: '1.9.0' }],
+    plugins: [{ id: 'aip@aip', scope: 'project', enabled: true, version: '1.9.0' }],
     marketplaces: [{
-      name: 'ecc',
+      name: 'aip',
       source: 'github',
       repo: 'reborncursed/AIP',
       scope: 'project',
@@ -214,7 +214,7 @@ test('an existing install without --scope updates its detected scope', () => {
     assertNoSetupSpinner(`${result.stdout}${result.stderr}`);
     assert.ok(readCalls(fixture).some(argv => (
       JSON.stringify(argv) === JSON.stringify([
-        'plugin', 'update', 'ecc@ecc', '--scope', 'project',
+        'plugin', 'update', 'aip@aip', '--scope', 'project',
       ])
     )));
   });
@@ -282,7 +282,7 @@ test('dry-run leaves a pristine HOME unchanged when Claude inventory creates bac
       '--json',
     ], {
       defaultClaudeConfig: true,
-      env: { ECC_TEST_CLAUDE_CREATE_READ_ARTIFACTS: '1' },
+      env: { AIP_TEST_CLAUDE_CREATE_READ_ARTIFACTS: '1' },
     });
     assert.strictEqual(result.status, 0, result.stderr);
     assert.deepStrictEqual(fs.readdirSync(fixture.homeDir), []);
@@ -306,7 +306,7 @@ test('dry-run isolates pre-existing Claude backups and symlinked project setting
     fs.mkdirSync(projectConfigDir, { recursive: true });
     fs.writeFileSync(backupPath, 'original-backup\n');
     fs.writeFileSync(statePath, '{"original":true}\n');
-    fs.writeFileSync(settingsTarget, '{"enabledPlugins":{"ecc@ecc":true}}\n');
+    fs.writeFileSync(settingsTarget, '{"enabledPlugins":{"aip@aip":true}}\n');
     fs.symlinkSync(settingsTarget, settingsPath, 'file');
 
     const result = runSetup(fixture, [
@@ -318,9 +318,9 @@ test('dry-run isolates pre-existing Claude backups and symlinked project setting
     ], {
       defaultClaudeConfig: true,
       env: {
-        ECC_TEST_CLAUDE_CREATE_READ_ARTIFACTS: '1',
-        ECC_TEST_CLAUDE_OVERWRITE_READ_ARTIFACTS: '1',
-        ECC_TEST_CLAUDE_WRITE_XDG_DATA: '1',
+        AIP_TEST_CLAUDE_CREATE_READ_ARTIFACTS: '1',
+        AIP_TEST_CLAUDE_OVERWRITE_READ_ARTIFACTS: '1',
+        AIP_TEST_CLAUDE_WRITE_XDG_DATA: '1',
         XDG_DATA_HOME: xdgDataHome,
       },
     });
@@ -329,7 +329,7 @@ test('dry-run isolates pre-existing Claude backups and symlinked project setting
     assert.strictEqual(fs.readFileSync(statePath, 'utf8'), '{"original":true}\n');
     assert.strictEqual(
       fs.readFileSync(settingsTarget, 'utf8'),
-      '{"enabledPlugins":{"ecc@ecc":true}}\n'
+      '{"enabledPlugins":{"aip@aip":true}}\n'
     );
     assert.strictEqual(fs.lstatSync(settingsPath).isSymbolicLink(), true);
     assert.strictEqual(
@@ -362,9 +362,9 @@ test('missing Git fails with an actionable prerequisite during dry-run', () => {
 
 test('setup automatically migrates an existing install to the selected scope and hooks', () => {
   withFixture({
-    plugins: [{ id: 'ecc@ecc', scope: 'local', enabled: true, version: '1.9.0' }],
+    plugins: [{ id: 'aip@aip', scope: 'local', enabled: true, version: '1.9.0' }],
     marketplaces: [{
-      name: 'ecc',
+      name: 'aip',
       source: 'github',
       repo: 'reborncursed/AIP',
       scope: 'local',
@@ -385,16 +385,16 @@ test('setup automatically migrates an existing install to the selected scope and
     assert.strictEqual(payload.hooks, 'minimal');
     const calls = readCalls(fixture);
     assert.ok(calls.some(argv => (
-      argv.join(' ') === 'plugin install ecc@ecc --scope user'
+      argv.join(' ') === 'plugin install aip@aip --scope user'
         + ' --config hooks_enabled=true --config hook_profile=minimal'
     )));
     assert.ok(calls.some(argv => (
-      argv.join(' ') === 'plugin uninstall ecc@ecc --scope local --keep-data'
+      argv.join(' ') === 'plugin uninstall aip@aip --scope local --keep-data'
     )));
     assert.ok(!calls.flat().includes('--prune'));
     const state = JSON.parse(fs.readFileSync(fixture.statePath, 'utf8'));
     assert.deepStrictEqual(state.plugins, [{
-      id: 'ecc@ecc',
+      id: 'aip@aip',
       scope: 'user',
       enabled: true,
       version: '2.0.0',
@@ -402,19 +402,19 @@ test('setup automatically migrates an existing install to the selected scope and
     const settings = JSON.parse(
       fs.readFileSync(path.join(fixture.configDir, 'settings.json'), 'utf8')
     );
-    assert.strictEqual(settings.pluginConfigs['ecc@ecc'].options.hooks_enabled, true);
-    assert.strictEqual(settings.pluginConfigs['ecc@ecc'].options.hook_profile, 'minimal');
+    assert.strictEqual(settings.pluginConfigs['aip@aip'].options.hooks_enabled, true);
+    assert.strictEqual(settings.pluginConfigs['aip@aip'].options.hook_profile, 'minimal');
   });
 });
 
 test('setup resumes a safe two-scope migration without requiring --move-scope', () => {
   withFixture({
     plugins: [
-      { id: 'ecc@ecc', scope: 'local', enabled: true, version: '1.9.0' },
-      { id: 'ecc@ecc', scope: 'user', enabled: true, version: '2.0.0' },
+      { id: 'aip@aip', scope: 'local', enabled: true, version: '1.9.0' },
+      { id: 'aip@aip', scope: 'user', enabled: true, version: '2.0.0' },
     ],
     marketplaces: [{
-      name: 'ecc',
+      name: 'aip',
       source: 'github',
       repo: 'reborncursed/AIP',
       scope: 'user',
@@ -433,7 +433,7 @@ test('setup resumes a safe two-scope migration without requiring --move-scope', 
     assert.strictEqual(payload.sourceScope, 'local');
     assert.strictEqual(payload.scope, 'user');
     assert.ok(readCalls(fixture).some(argv => (
-      argv.join(' ') === 'plugin uninstall ecc@ecc --scope local --keep-data'
+      argv.join(' ') === 'plugin uninstall aip@aip --scope local --keep-data'
     )));
   });
 });
@@ -446,11 +446,11 @@ test('all interrupted migration and hook combinations resume without reinstallin
       for (const hookMode of hooks) {
         withFixture({
           plugins: [
-            { id: 'ecc@ecc', scope: sourceScope, enabled: true, version: '1.9.0' },
-            { id: 'ecc@ecc', scope: destinationScope, enabled: true, version: '2.0.0' },
+            { id: 'aip@aip', scope: sourceScope, enabled: true, version: '1.9.0' },
+            { id: 'aip@aip', scope: destinationScope, enabled: true, version: '2.0.0' },
           ],
           marketplaces: [{
-            name: 'ecc',
+            name: 'aip',
             source: 'github',
             repo: 'reborncursed/AIP',
             scope: destinationScope,
@@ -473,11 +473,11 @@ test('all interrupted migration and hook combinations resume without reinstallin
           const calls = readCalls(fixture);
           assert.ok(!calls.some(argv => argv[1] === 'install'));
           assert.ok(calls.some(argv => (
-            argv.join(' ') === `plugin uninstall ecc@ecc --scope ${sourceScope} --keep-data`
+            argv.join(' ') === `plugin uninstall aip@aip --scope ${sourceScope} --keep-data`
           )));
           const state = JSON.parse(fs.readFileSync(fixture.statePath, 'utf8'));
           assert.deepStrictEqual(state.plugins, [{
-            id: 'ecc@ecc',
+            id: 'aip@aip',
             scope: destinationScope,
             enabled: true,
             version: '2.0.0',
@@ -485,7 +485,7 @@ test('all interrupted migration and hook combinations resume without reinstallin
           const settings = JSON.parse(
             fs.readFileSync(path.join(fixture.configDir, 'settings.json'), 'utf8')
           );
-          const stored = settings.pluginConfigs['ecc@ecc'].options;
+          const stored = settings.pluginConfigs['aip@aip'].options;
           assert.strictEqual(stored.hooks_enabled, hookMode !== 'off');
           assert.strictEqual(
             stored.hook_profile,
@@ -499,7 +499,7 @@ test('all interrupted migration and hook combinations resume without reinstallin
 
 test('--move-scope remains explicit about its destination', () => {
   withFixture({
-    plugins: [{ id: 'ecc@ecc', scope: 'user', enabled: true, version: '1.9.0' }],
+    plugins: [{ id: 'aip@aip', scope: 'user', enabled: true, version: '1.9.0' }],
   }, fixture => {
     const result = runSetup(fixture, [
       '--mode', 'claude-plugin',
@@ -515,7 +515,7 @@ test('--move-scope remains explicit about its destination', () => {
 
 test('destination-only --move-scope is an idempotent first call', () => {
   withFixture({
-    plugins: [{ id: 'ecc@ecc', scope: 'local', enabled: true, version: '2.0.0' }],
+    plugins: [{ id: 'aip@aip', scope: 'local', enabled: true, version: '2.0.0' }],
   }, fixture => {
     const result = runSetup(fixture, [
       '--mode', 'claude-plugin',
@@ -534,7 +534,7 @@ test('destination-only --move-scope is an idempotent first call', () => {
 
 test('destination-only --move-scope applies explicit hook preferences', () => {
   withFixture({
-    plugins: [{ id: 'ecc@ecc', scope: 'local', enabled: true, version: '2.0.0' }],
+    plugins: [{ id: 'aip@aip', scope: 'local', enabled: true, version: '2.0.0' }],
   }, fixture => {
     const result = runSetup(fixture, [
       '--mode', 'claude-plugin',
@@ -551,16 +551,16 @@ test('destination-only --move-scope applies explicit hook preferences', () => {
     const settings = JSON.parse(
       fs.readFileSync(path.join(fixture.configDir, 'settings.json'), 'utf8')
     );
-    assert.strictEqual(settings.pluginConfigs['ecc@ecc'].options.hooks_enabled, true);
-    assert.strictEqual(settings.pluginConfigs['ecc@ecc'].options.hook_profile, 'strict');
+    assert.strictEqual(settings.pluginConfigs['aip@aip'].options.hooks_enabled, true);
+    assert.strictEqual(settings.pluginConfigs['aip@aip'].options.hook_profile, 'strict');
   });
 });
 
 test('migration dry-run JSON exposes ordered actions without mutation', () => {
   withFixture({
-    plugins: [{ id: 'ecc@ecc', scope: 'user', enabled: true, version: '1.9.0' }],
+    plugins: [{ id: 'aip@aip', scope: 'user', enabled: true, version: '1.9.0' }],
     marketplaces: [{
-      name: 'ecc',
+      name: 'aip',
       source: 'github',
       repo: 'reborncursed/AIP',
       scope: 'user',
@@ -579,7 +579,7 @@ test('migration dry-run JSON exposes ordered actions without mutation', () => {
     assert.deepStrictEqual(payload.plannedActions.slice(-4), [
       ['plugin', 'list', '--json'],
       ['plugin', 'list', '--json'],
-      ['plugin', 'uninstall', 'ecc@ecc', '--scope', 'user', '--keep-data'],
+      ['plugin', 'uninstall', 'aip@aip', '--scope', 'user', '--keep-data'],
       ['plugin', 'list', '--json'],
     ]);
     assert.strictEqual(hasMutation(fixture), false);
@@ -588,15 +588,15 @@ test('migration dry-run JSON exposes ordered actions without mutation', () => {
 
 test('migration JSON failures retain phase, scopes, and exact recovery', () => {
   withFixture({
-    plugins: [{ id: 'ecc@ecc', scope: 'user', enabled: true, version: '1.9.0' }],
+    plugins: [{ id: 'aip@aip', scope: 'user', enabled: true, version: '1.9.0' }],
     marketplaces: [{
-      name: 'ecc',
+      name: 'aip',
       source: 'github',
       repo: 'reborncursed/AIP',
       scope: 'user',
     }],
     failures: [{
-      argv: ['plugin', 'uninstall', 'ecc@ecc', '--scope', 'user', '--keep-data'],
+      argv: ['plugin', 'uninstall', 'aip@aip', '--scope', 'user', '--keep-data'],
       status: 9,
       stderr: 'uninstall failed',
       times: 1,
@@ -615,8 +615,8 @@ test('migration JSON failures retain phase, scopes, and exact recovery', () => {
     assert.strictEqual(payload.error.phase, 'source-uninstall');
     assert.deepStrictEqual([...payload.error.observedScopes].sort(), ['project', 'user']);
     assert.deepStrictEqual(payload.error.recovery, [
-      'claude plugin uninstall ecc@ecc --scope user --keep-data',
-      'ecc setup --mode claude-plugin --scope project --move-scope --yes',
+      'claude plugin uninstall aip@aip --scope user --keep-data',
+      'aip setup --mode claude-plugin --scope project --move-scope --yes',
     ]);
   });
 });
@@ -634,26 +634,26 @@ test('help explains native scope names in user-facing language', () => {
   assert.match(result.stdout, /--move-scope/);
 });
 
-test('ecc setup delegates to the focused setup command', () => {
-  const result = spawnSync(process.execPath, [eccScript, 'setup', '--help'], {
+test('aip setup delegates to the focused setup command', () => {
+  const result = spawnSync(process.execPath, [aipScript, 'setup', '--help'], {
     cwd: repoRoot,
     encoding: 'utf8',
     timeout: 15000,
   });
   assert.strictEqual(result.status, 0, result.stderr);
-  assert.match(result.stdout, /ECC (guided )?setup/i);
+  assert.match(result.stdout, /AIP (guided )?setup/i);
   assert.match(result.stdout, /claude-plugin/);
 });
 
-test('ecc setup preserves a real terminal for the interactive wizard', () => {
+test('aip setup preserves a real terminal for the interactive wizard', () => {
   if (process.platform === 'win32') return;
 
   withFixture({}, fixture => {
-    const result = runInteractiveEccSetup(fixture);
+    const result = runInteractiveAipSetup(fixture);
     assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
     assert.ifError(result.error);
-    assert.match(result.stdout, /Where should Claude enable ecc@ecc\?/);
-    assert.match(result.stdout, /How should ECC hooks run\?/);
+    assert.match(result.stdout, /Where should Claude enable aip@aip\?/);
+    assert.match(result.stdout, /How should AIP hooks run\?/);
     assert.doesNotMatch(result.stdout, /Interactive setup requires a terminal/);
     assertNoSetupSpinner(`${result.stdout}${result.stderr}`);
   });
@@ -663,7 +663,7 @@ test('confirmed interactive apply starts immediately and clears the spinner on s
   if (process.platform === 'win32') return;
 
   withFixture({}, fixture => {
-    const result = runInteractiveEccSetup(fixture, {
+    const result = runInteractiveAipSetup(fixture, {
       args: [],
       answers: ['2', '2', 'y'],
     });
@@ -671,7 +671,7 @@ test('confirmed interactive apply starts immediately and clears the spinner on s
     assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
     assertSetupSpinnerLifecycle(
       `${result.stdout}${result.stderr}`,
-      /ECC installed ecc@ecc at project scope/
+      /AIP installed aip@aip at project scope/
     );
   });
 });
@@ -691,7 +691,7 @@ test('confirmed interactive apply clears and stops the spinner when apply throws
       times: 1,
     }],
   }, fixture => {
-    const result = runInteractiveEccSetup(fixture, {
+    const result = runInteractiveAipSetup(fixture, {
       args: [],
       answers: ['1', '3', 'yes'],
     });
@@ -712,18 +712,18 @@ test('all interactive scope and hook choices install and persist the selected co
   for (const [scopeIndex, scope] of scopes.entries()) {
     for (const [hookIndex, hookMode] of hooks.entries()) {
       withFixture({}, fixture => {
-        const result = runInteractiveEccSetup(fixture, {
+        const result = runInteractiveAipSetup(fixture, {
           args: [],
           answers: [String(scopeIndex + 1), String(hookIndex + 1), 'y'],
         });
         assert.ifError(result.error);
         assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
-        assert.match(result.stdout, new RegExp(`ECC installed ecc@ecc at ${scope} scope`));
+        assert.match(result.stdout, new RegExp(`AIP installed aip@aip at ${scope} scope`));
         assert.match(result.stdout, new RegExp(`Hook preference: ${hookMode}`));
 
         const state = JSON.parse(fs.readFileSync(fixture.statePath, 'utf8'));
         assert.deepStrictEqual(state.plugins, [{
-          id: 'ecc@ecc',
+          id: 'aip@aip',
           scope,
           enabled: true,
           version: '2.0.0',
@@ -731,7 +731,7 @@ test('all interactive scope and hook choices install and persist the selected co
         const settings = JSON.parse(
           fs.readFileSync(path.join(fixture.configDir, 'settings.json'), 'utf8')
         );
-        const stored = settings.pluginConfigs['ecc@ecc'].options;
+        const stored = settings.pluginConfigs['aip@aip'].options;
         assert.strictEqual(stored.hooks_enabled, hookMode !== 'off');
         assert.strictEqual(stored.hook_profile, hookMode === 'off' ? 'standard' : hookMode);
       });
@@ -748,15 +748,15 @@ test('all interactive choices from an existing install update or migrate to the 
     for (const [selectedIndex, selectedScope] of scopes.entries()) {
       for (const [hookIndex, hookMode] of hooks.entries()) {
         withFixture({
-          plugins: [{ id: 'ecc@ecc', scope: sourceScope, enabled: true, version: '1.9.0' }],
+          plugins: [{ id: 'aip@aip', scope: sourceScope, enabled: true, version: '1.9.0' }],
           marketplaces: [{
-            name: 'ecc',
+            name: 'aip',
             source: 'github',
             repo: 'reborncursed/AIP',
             scope: sourceScope,
           }],
         }, fixture => {
-          const result = runInteractiveEccSetup(fixture, {
+          const result = runInteractiveAipSetup(fixture, {
             args: [],
             answers: [String(selectedIndex + 1), String(hookIndex + 1), 'y'],
           });
@@ -771,13 +771,13 @@ test('all interactive choices from an existing install update or migrate to the 
           );
           assert.match(
             result.stdout,
-            new RegExp(`ECC ${expectedAction} ecc@ecc at ${selectedScope} scope`)
+            new RegExp(`AIP ${expectedAction} aip@aip at ${selectedScope} scope`)
           );
           assert.match(result.stdout, new RegExp(`Hook preference: ${hookMode}`));
 
           const state = JSON.parse(fs.readFileSync(fixture.statePath, 'utf8'));
           assert.deepStrictEqual(state.plugins, [{
-            id: 'ecc@ecc',
+            id: 'aip@aip',
             scope: selectedScope,
             enabled: true,
             version: '2.0.0',
@@ -785,7 +785,7 @@ test('all interactive choices from an existing install update or migrate to the 
           const settings = JSON.parse(
             fs.readFileSync(path.join(fixture.configDir, 'settings.json'), 'utf8')
           );
-          const stored = settings.pluginConfigs['ecc@ecc'].options;
+          const stored = settings.pluginConfigs['aip@aip'].options;
           assert.strictEqual(stored.hooks_enabled, hookMode !== 'off');
           assert.strictEqual(stored.hook_profile, hookMode === 'off' ? 'standard' : hookMode);
         });
@@ -798,18 +798,18 @@ test('interactive named choices install and persist the selected configuration',
   if (process.platform === 'win32') return;
 
   withFixture({}, fixture => {
-    const result = runInteractiveEccSetup(fixture, {
+    const result = runInteractiveAipSetup(fixture, {
       args: [],
       answers: ['project', 'strict', 'yes'],
     });
     assert.ifError(result.error);
     assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
-    assert.match(result.stdout, /ECC installed ecc@ecc at project scope/);
+    assert.match(result.stdout, /AIP installed aip@aip at project scope/);
     assert.match(result.stdout, /Hook preference: strict/);
 
     const state = JSON.parse(fs.readFileSync(fixture.statePath, 'utf8'));
     assert.deepStrictEqual(state.plugins, [{
-      id: 'ecc@ecc',
+      id: 'aip@aip',
       scope: 'project',
       enabled: true,
       version: '2.0.0',
@@ -817,7 +817,7 @@ test('interactive named choices install and persist the selected configuration',
     const settings = JSON.parse(
       fs.readFileSync(path.join(fixture.configDir, 'settings.json'), 'utf8')
     );
-    const stored = settings.pluginConfigs['ecc@ecc'].options;
+    const stored = settings.pluginConfigs['aip@aip'].options;
     assert.strictEqual(stored.hooks_enabled, true);
     assert.strictEqual(stored.hook_profile, 'strict');
   });
@@ -827,7 +827,7 @@ test('invalid interactive choices explain the problem and allow a retry', () => 
   if (process.platform === 'win32') return;
 
   withFixture({}, fixture => {
-    const result = runInteractiveEccSetup(fixture, {
+    const result = runInteractiveAipSetup(fixture, {
       args: ['--dry-run'],
       answers: ['1.5', 'not-a-scope', '2', '2junk', '9', '2'],
     });
@@ -835,7 +835,7 @@ test('invalid interactive choices explain the problem and allow a retry', () => 
     assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
     assert.match(result.stdout, /Please choose 1, 2, or 3/);
     assert.match(result.stdout, /Please choose 1, 2, 3, or 4/);
-    assert.match(result.stdout, /ECC would-install ecc@ecc at project scope/);
+    assert.match(result.stdout, /AIP would-install aip@aip at project scope/);
     assert.match(result.stdout, /Hook preference: minimal/);
     assert.strictEqual(hasMutation(fixture), false);
   });
@@ -845,13 +845,13 @@ test('interactive cancellation after non-default choices performs no mutation', 
   if (process.platform === 'win32') return;
 
   withFixture({}, fixture => {
-    const result = runInteractiveEccSetup(fixture, {
+    const result = runInteractiveAipSetup(fixture, {
       args: [],
       answers: ['2', '2', 'n'],
     });
     assert.ifError(result.error);
     assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
-    assert.match(result.stdout, /ECC cancelled ecc@ecc at project scope/);
+    assert.match(result.stdout, /AIP cancelled aip@aip at project scope/);
     assertNoSetupSpinner(`${result.stdout}${result.stderr}`);
     assert.strictEqual(hasMutation(fixture), false);
     assert.ok(!fs.existsSync(path.join(fixture.configDir, 'settings.json')));
@@ -862,7 +862,7 @@ test('closing interactive input cancels cleanly without mutation', () => {
   if (process.platform === 'win32') return;
 
   withFixture({}, fixture => {
-    const result = runInteractiveEccSetup(fixture, {
+    const result = runInteractiveAipSetup(fixture, {
       args: [],
       answers: ['2', '\u0004'],
     });
@@ -879,15 +879,15 @@ test('interactive mode flag still prompts for missing scope and hook choices', (
   if (process.platform === 'win32') return;
 
   withFixture({}, fixture => {
-    const result = runInteractiveEccSetup(fixture, {
+    const result = runInteractiveAipSetup(fixture, {
       args: ['--mode', 'claude-plugin', '--dry-run'],
       answers: ['3', '4'],
     });
     assert.ifError(result.error);
     assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
-    assert.match(result.stdout, /Where should Claude enable ecc@ecc\?/);
-    assert.match(result.stdout, /How should ECC hooks run\?/);
-    assert.match(result.stdout, /ECC would-install ecc@ecc at local scope/);
+    assert.match(result.stdout, /Where should Claude enable aip@aip\?/);
+    assert.match(result.stdout, /How should AIP hooks run\?/);
+    assert.match(result.stdout, /AIP would-install aip@aip at local scope/);
     assert.match(result.stdout, /Hook preference: strict/);
   });
 });
@@ -896,9 +896,9 @@ test('interactive defaults preserve an existing install scope and hook preferenc
   if (process.platform === 'win32') return;
 
   withFixture({
-    plugins: [{ id: 'ecc@ecc', scope: 'local', enabled: true, version: '1.9.0' }],
+    plugins: [{ id: 'aip@aip', scope: 'local', enabled: true, version: '1.9.0' }],
     marketplaces: [{
-      name: 'ecc',
+      name: 'aip',
       source: 'github',
       repo: 'reborncursed/AIP',
       scope: 'local',
@@ -906,12 +906,12 @@ test('interactive defaults preserve an existing install scope and hook preferenc
   }, fixture => {
     fs.writeFileSync(path.join(fixture.configDir, 'settings.json'), JSON.stringify({
       pluginConfigs: {
-        'ecc@ecc': {
+        'aip@aip': {
           options: { hooks_enabled: true, hook_profile: 'minimal' },
         },
       },
     }));
-    const result = runInteractiveEccSetup(fixture, {
+    const result = runInteractiveAipSetup(fixture, {
       args: ['--dry-run'],
       answers: ['', ''],
     });
@@ -919,7 +919,7 @@ test('interactive defaults preserve an existing install scope and hook preferenc
     assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
     assert.match(result.stdout, /Choose \[3\]:/);
     assert.match(result.stdout, /Choose \[2\]:/);
-    assert.match(result.stdout, /ECC would-update ecc@ecc at local scope/);
+    assert.match(result.stdout, /AIP would-update aip@aip at local scope/);
     assert.match(result.stdout, /Hook preference: minimal/);
     assert.strictEqual(hasMutation(fixture), false);
   });
@@ -930,11 +930,11 @@ test('partial migration requires an explicit destination and preserves stored ho
 
   withFixture({
     plugins: [
-      { id: 'ecc@ecc', scope: 'user', enabled: true, version: '1.9.0' },
-      { id: 'ecc@ecc', scope: 'project', enabled: true, version: '2.0.0' },
+      { id: 'aip@aip', scope: 'user', enabled: true, version: '1.9.0' },
+      { id: 'aip@aip', scope: 'project', enabled: true, version: '2.0.0' },
     ],
     marketplaces: [{
-      name: 'ecc',
+      name: 'aip',
       source: 'github',
       repo: 'reborncursed/AIP',
       scope: 'user',
@@ -942,12 +942,12 @@ test('partial migration requires an explicit destination and preserves stored ho
   }, fixture => {
     fs.writeFileSync(path.join(fixture.configDir, 'settings.json'), JSON.stringify({
       pluginConfigs: {
-        'ecc@ecc': {
+        'aip@aip': {
           options: { hooks_enabled: true, hook_profile: 'minimal' },
         },
       },
     }));
-    const result = runInteractiveEccSetup(fixture, {
+    const result = runInteractiveAipSetup(fixture, {
       args: ['--dry-run'],
       answers: ['', 'project', ''],
     });
@@ -956,7 +956,7 @@ test('partial migration requires an explicit destination and preserves stored ho
     assert.match(result.stdout, /Choose: /);
     assert.match(result.stdout, /Please choose 1, 2, or 3/);
     assert.match(result.stdout, /Choose \[2\]:/);
-    assert.match(result.stdout, /ECC would-resume ecc@ecc at project scope/);
+    assert.match(result.stdout, /AIP would-resume aip@aip at project scope/);
     assert.match(result.stdout, /Previous scope: user/);
     assert.match(result.stdout, /Hook preference: minimal/);
     assert.strictEqual(hasMutation(fixture), false);

@@ -43,35 +43,35 @@ If a report is declined, we will explain whether it is not reproducible, out of 
 This policy covers:
 
 - the `reborncursed/AIP` repository
-- the `ecc-universal` npm package
-- ECC plugin, install, repair, dashboard, hook, rule, skill, MCP, and command surfaces shipped from this repository
+- the `aip-universal` npm package
+- AIP plugin, install, repair, dashboard, hook, rule, skill, MCP, and command surfaces shipped from this repository
 - GitHub Actions workflows and release automation in this repository
-- the ECC Tools GitHub App integration points documented by this repository
+- the AIP Tools GitHub App integration points documented by this repository
 - AgentShield usage docs when they are embedded here. AgentShield code issues belong in <https://github.com/reborncursed/agentshield>
 
 ## Official Distribution Surfaces
 
-Official ECC surfaces are:
+Official AIP surfaces are:
 
 - GitHub repo: <https://github.com/reborncursed/AIP>
-- npm package: `ecc-universal`
-- GitHub App: <https://github.com/apps/ecc-tools>
-- marketplace/plugin slug: `ecc@ecc`
+- npm package: `aip-universal`
+- GitHub App: <https://github.com/apps/aip-tools>
+- marketplace/plugin slug: `aip@aip`
 - website: <https://bytecore.org>
 
 Official AgentShield surface:
 
-- npm package: `ecc-agentshield`
+- npm package: `aip-agentshield`
 - GitHub repo: <https://github.com/reborncursed/agentshield>
 
-The following packages have been observed using ECC repository metadata but are **not maintained by ECC**:
+The following packages have been observed using AIP repository metadata but are **not maintained by AIP**:
 
-- `@chil_ntl/ecc-cli`
-- `ecc-100xprompt-plugin`
+- `@chil_ntl/aip-cli`
+- `aip-100xprompt-plugin`
 
-Treat any package not listed under official surfaces as unofficial until verified. Do not install packages named `opencode-ecc`, `everything-claude-code`, or other ECC-like aliases unless this repository explicitly documents them as official.
+Treat any package not listed under official surfaces as unofficial until verified. Do not install packages named `opencode-aip`, `aip`, or other AIP-like aliases unless this repository explicitly documents them as official.
 
-GitHub dependency graph may also show Go module aliases such as `github.com/reborncursed/AIP` or historical repository paths. ECC is not currently distributed as a supported Go module.
+GitHub dependency graph may also show Go module aliases such as `github.com/reborncursed/AIP` or historical repository paths. AIP is not currently distributed as a supported Go module.
 
 ## Out of Scope
 
@@ -80,14 +80,14 @@ Reports are usually out of scope when they only show:
 - local command execution where the user already controls the local shell and no higher-privilege trust boundary is crossed
 - screenshots, stale line numbers, or reports against `reborncursed/AIP` that do not reproduce on current `reborncursed/AIP`
 - self-XSS or social engineering with no repository-controlled exploit path
-- dependency graph/package metadata confusion without an install path to an official ECC package
-- vulnerabilities in third-party packages unless ECC pins, installs, or executes them in a way that creates extra impact
+- dependency graph/package metadata confusion without an install path to an official AIP package
+- vulnerabilities in third-party packages unless AIP pins, installs, or executes them in a way that creates extra impact
 
 Local developer tools can still be valid security issues when untrusted repository content, package installation, generated hooks, or CI automation can trigger execution without clear user intent. Show that trust boundary in the report.
 
 ## Supply-Chain Rules
 
-ECC treats supply-chain exposure as a first-class security surface.
+AIP treats supply-chain exposure as a first-class security surface.
 
 - GitHub Actions must use pinned commit SHAs for third-party actions.
 - Workflows must avoid shelling untrusted GitHub context directly into `run:` blocks.
@@ -132,7 +132,7 @@ Compare the PID against the expected binary. Any other process on that port can 
 
 ## Triage: suspicious `<system-reminder>` blocks
 
-ECC runs inside agent harnesses that may inject ephemeral client-side system reminders into the model input on every turn. These blocks are not automatically repository-carried payloads.
+AIP runs inside agent harnesses that may inject ephemeral client-side system reminders into the model input on every turn. These blocks are not automatically repository-carried payloads.
 
 Before treating one as an attack, verify:
 
@@ -149,7 +149,7 @@ Escalate upstream only when the block is present inside a tool result or reposit
 
 ## Security Resources
 
-- **AgentShield:** `npx ecc-agentshield scan`
+- **AgentShield:** `npx aip-agentshield scan`
 - **Supply-chain incident response:** [npm/GitHub Actions package-registry playbook](./docs/security/supply-chain-incident-response.md)
 - **OWASP MCP Top 10:** <https://owasp.org/www-project-mcp-top-10/>
 - **OWASP Agentic Applications Top 10:** <https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/>

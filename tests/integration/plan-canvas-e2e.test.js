@@ -113,7 +113,7 @@ async function main() {
 
   // Unique port so the test never collides with a user's real canvas server.
   const port = 20000 + Math.floor(Math.random() * 20000);
-  const env = { ECC_PLAN_CANVAS_STATE_DIR: stateDir, ECC_PLAN_CANVAS_PORT: String(port) };
+  const env = { AIP_PLAN_CANVAS_STATE_DIR: stateDir, AIP_PLAN_CANVAS_PORT: String(port) };
   let key = null;
 
   try {

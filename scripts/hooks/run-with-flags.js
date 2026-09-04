@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Executes a hook script only when enabled by ECC hook profile flags.
+ * Executes a hook script only when enabled by AIP hook profile flags.
  *
  * Usage:
  *   node run-with-flags.js <hookId> <scriptRelativePath> [profilesCsv]
@@ -158,7 +158,7 @@ async function main() {
   // cut mid-stream is treated by the harness as a hook failure, blocking the
   // tool call (#2222). Empty stdout + exit 0 means "no opinion", so
   // pass-through paths fail open. The hook itself still runs and receives
-  // the truncated flag (run() context / ECC_HOOK_INPUT_TRUNCATED), so
+  // the truncated flag (run() context / AIP_HOOK_INPUT_TRUNCATED), so
   // security hooks like config-protection can still choose to block.
   const sanitizeEcho = text => (truncated && text === raw ? '' : text);
   if (truncated) {
@@ -247,10 +247,10 @@ async function main() {
     env: {
       ...process.env,
       CLAUDE_PLUGIN_ROOT: pluginRoot,
-      ECC_PLUGIN_ROOT: pluginRoot,
-      ECC_HOOK_ID: hookId,
-      ECC_HOOK_INPUT_TRUNCATED: truncated ? '1' : '0',
-      ECC_HOOK_INPUT_MAX_BYTES: String(MAX_STDIN)
+      AIP_PLUGIN_ROOT: pluginRoot,
+      AIP_HOOK_ID: hookId,
+      AIP_HOOK_INPUT_TRUNCATED: truncated ? '1' : '0',
+      AIP_HOOK_INPUT_MAX_BYTES: String(MAX_STDIN)
     },
     cwd: process.cwd(),
     timeout: 30000

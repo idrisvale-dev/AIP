@@ -700,7 +700,7 @@ function runTests() {
     try {
       const result = runCompactWithInput(
         { session_id: ctx.sessionId, transcript_path: transcript },
-        { ECC_CONTEXT_WINDOW_TOKENS: '', CLAUDE_CODE_AUTO_COMPACT_WINDOW: '' },
+        { AIP_CONTEXT_WINDOW_TOKENS: '', CLAUDE_CODE_AUTO_COMPACT_WINDOW: '' },
       );
       assert.strictEqual(result.code, 0, 'Should exit 0');
       assert.ok(result.stdout.trim().length > 0, `Expected stdout payload. Got: "${result.stdout}"`);

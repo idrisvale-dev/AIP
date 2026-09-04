@@ -357,7 +357,7 @@ function renderDashboard(options = {}) {
   const textParts = [];
 
   const header = [
-    'ECC Skill Health Dashboard',
+    'AIP Skill Health Dashboard',
     `Generated: ${now}`,
     `Skills: ${summary.total_skills} total, ${summary.healthy_skills} healthy, ${summary.declining_skills} declining`,
     '',

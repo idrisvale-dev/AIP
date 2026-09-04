@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.trace.v1",
+  "schema_version": "aip.evaluator-rag.trace.v1",
   "scenario_id": "ci-failure-diagnosis",
   "run_id": "2026-05-12-ci-failure-diagnosis-prototype",
   "read_only": true,
@@ -17,7 +17,7 @@
       "summary": "Retrieved failed-job logs, changed-file context, current roadmap CI failure-mode requirements, and existing local regression commands.",
       "evidence": [
         "gh run view <run-id> --log-failed",
-        "docs/ECC-2.0-GA-ROADMAP.md",
+        "docs/AIP-2.0-GA-ROADMAP.md",
         "tests/run-all.js"
       ]
     },

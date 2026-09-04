@@ -1,7 +1,7 @@
 ---
 name: postgres-patterns
 description: Patrones de base de datos PostgreSQL para optimización de consultas, diseño de esquemas, indexación y seguridad. Basado en las buenas prácticas de Supabase.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones PostgreSQL

@@ -1,7 +1,7 @@
 {
-  "name": "ecc",
+  "name": "aip",
   "version": "2.2.1",
-  "description": "Harness-native ECC workflows for Codex: shared skills, production-ready MCP configs, and selective-install-aligned conventions for TDD, security scanning, code review, and autonomous development.",
+  "description": "Harness-native AIP workflows for Codex: shared skills, production-ready MCP configs, and selective-install-aligned conventions for TDD, security scanning, code review, and autonomous development.",
   "author": {
     "name": "ByteCore.org",
     "email": "hello@bytecore.org",
@@ -24,9 +24,9 @@
   "mcpServers": "./.mcp.json",
   "hooks": "./hooks/codex-hooks.json",
   "interface": {
-    "displayName": "ECC",
-    "shortDescription": "281 ECC skills plus MCP configs for TDD, security, code review, and autonomous development.",
-    "longDescription": "ECC is a harness-native operator system for Codex and adjacent agent harnesses. It packages reusable skills, MCP configs, TDD workflows, security scanning, code review, architecture decisions, operator workflows, and release gates in one installable plugin.",
+    "displayName": "AIP",
+    "shortDescription": "281 AIP skills plus MCP configs for TDD, security, code review, and autonomous development.",
+    "longDescription": "AIP is a harness-native operator system for Codex and adjacent agent harnesses. It packages reusable skills, MCP configs, TDD workflows, security scanning, code review, architecture decisions, operator workflows, and release gates in one installable plugin.",
     "developerName": "ByteCore.org",
     "category": "Coding",
     "capabilities": [
@@ -38,7 +38,7 @@
     "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
     "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
     "brandColor": "#E07856",
-    "composerIcon": "./assets/ecc-icon.svg",
+    "composerIcon": "./assets/aip-icon.svg",
     "logo": "./assets/hero.png",
     "screenshots": [],
     "defaultPrompt": [

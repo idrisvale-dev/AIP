@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Maps project indicator files to ECC skills, rules, hooks, and default commands. Used by /project-init to auto-configure projects.",
+  "description": "Maps project indicator files to AIP skills, rules, hooks, and default commands. Used by /project-init to auto-configure projects.",
   "stacks": [
     {
       "id": "typescript",

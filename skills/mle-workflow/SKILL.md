@@ -3,7 +3,7 @@ name: mle-workflow
 description: Production machine-learning engineering workflow for data contracts, reproducible training, model evaluation, deployment, monitoring, and rollback. Use when building, reviewing, or hardening ML systems beyond one-off notebooks.
 license: MIT
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Machine Learning Engineering Workflow
@@ -37,7 +37,7 @@ Use only the lanes that fit the system in front of you. This skill is useful for
 
 ## Reuse the SWE Surface
 
-Do not treat MLE as separate from software engineering. Most ECC SWE workflows apply directly to ML systems, often with stricter failure modes:
+Do not treat MLE as separate from software engineering. Most AIP SWE workflows apply directly to ML systems, often with stricter failure modes:
 
 The recommended `minimal --with capability:machine-learning` install keeps the core agent surface available alongside this skill. For skill-only or agent-limited harnesses, pair `skill:mle-workflow` with `agent:mle-reviewer` where the target supports agents.
 
@@ -68,7 +68,7 @@ The recommended `minimal --with capability:machine-learning` install keeps the c
 
 Use these simulations as coverage checks when planning or reviewing MLE work. A strong MLE workflow should reduce each task to explicit contracts, reusable SWE surfaces, automated evidence, and a reviewable artifact.
 
-| ID | Common MLE task | Streamlined ECC path | Required output | Pipeline lanes covered |
+| ID | Common MLE task | Streamlined AIP path | Required output | Pipeline lanes covered |
 |----|-----------------|----------------------|-----------------|------------------------|
 | MLE-01 | Frame an ambiguous prediction, ranking, recommender, classifier, embedding, or forecast capability | `product-capability`, `plan`, `architecture-decision-records`, `mle-workflow` | Iteration Compact naming who cares, decision owner, success metric, unacceptable mistakes, assumptions, constraints, and first experiment | product contract, stakeholder loss, risk, rollout |
 | MLE-02 | Define metric goals, labels, data sources, and the mistake budget | `repo-scan`, `database-reviewer`, `database-migrations`, `postgres-patterns`, `clickhouse-io` | Data and metric contract with entity grain, label timing, label confidence, feature timing, point-in-time joins, split policy, and dataset snapshot | data contract, metric design, leakage, reproducibility |

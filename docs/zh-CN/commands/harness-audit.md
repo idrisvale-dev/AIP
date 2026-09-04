@@ -41,7 +41,7 @@ node scripts/harness-audit.js <scope> --format <text|json>
 2. 类别分数及具体发现项
 3. 失败的检查及其确切的文件路径
 4. 确定性输出的前 3 项行动（`top_actions`）
-5. 建议接下来应用的 ECC 技能
+5. 建议接下来应用的 AIP 技能
 
 ## 检查清单
 

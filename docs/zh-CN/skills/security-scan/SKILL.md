@@ -1,7 +1,7 @@
 ---
 name: security-scan
 description: 使用AgentShield扫描您的Claude代码配置（.claude/目录），以发现安全漏洞、配置错误和注入风险。检查CLAUDE.md、settings.json、MCP服务器、钩子和代理定义。
-origin: ECC
+origin: AIP
 ---
 
 # 安全扫描技能
@@ -32,13 +32,13 @@ origin: ECC
 
 ```bash
 # Check if installed
-npx ecc-agentshield --version
+npx aip-agentshield --version
 
 # Install globally (recommended)
-npm install -g ecc-agentshield
+npm install -g aip-agentshield
 
 # Or run directly via npx (no install needed)
-npx ecc-agentshield scan .
+npx aip-agentshield scan .
 ```
 
 ## 使用方法
@@ -49,29 +49,29 @@ npx ecc-agentshield scan .
 
 ```bash
 # Scan current project
-npx ecc-agentshield scan
+npx aip-agentshield scan
 
 # Scan a specific path
-npx ecc-agentshield scan --path /path/to/.claude
+npx aip-agentshield scan --path /path/to/.claude
 
 # Scan with minimum severity filter
-npx ecc-agentshield scan --min-severity medium
+npx aip-agentshield scan --min-severity medium
 ```
 
 ### 输出格式
 
 ```bash
 # Terminal output (default) — colored report with grade
-npx ecc-agentshield scan
+npx aip-agentshield scan
 
 # JSON — for CI/CD integration
-npx ecc-agentshield scan --format json
+npx aip-agentshield scan --format json
 
 # Markdown — for documentation
-npx ecc-agentshield scan --format markdown
+npx aip-agentshield scan --format markdown
 
 # HTML — self-contained dark-theme report
-npx ecc-agentshield scan --format html > security-report.html
+npx aip-agentshield scan --format html > security-report.html
 ```
 
 ### 自动修复
@@ -79,7 +79,7 @@ npx ecc-agentshield scan --format html > security-report.html
 自动应用安全的修复（仅修复标记为可自动修复的问题）：
 
 ```bash
-npx ecc-agentshield scan --fix
+npx aip-agentshield scan --fix
 ```
 
 这将：
@@ -95,7 +95,7 @@ npx ecc-agentshield scan --fix
 ```bash
 # Requires ANTHROPIC_API_KEY
 export ANTHROPIC_API_KEY=your-key
-npx ecc-agentshield scan --opus --stream
+npx aip-agentshield scan --opus --stream
 ```
 
 这将运行：
@@ -109,7 +109,7 @@ npx ecc-agentshield scan --opus --stream
 从头开始搭建一个新的安全 `.claude/` 配置：
 
 ```bash
-npx ecc-agentshield init
+npx aip-agentshield init
 ```
 
 创建：
@@ -169,4 +169,4 @@ npx ecc-agentshield init
 ## 链接
 
 * **GitHub**: [github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield)
-* **npm**: [npmjs.com/package/ecc-agentshield](https://www.npmjs.com/package/ecc-agentshield)
+* **npm**: [npmjs.com/package/aip-agentshield](https://www.npmjs.com/package/aip-agentshield)

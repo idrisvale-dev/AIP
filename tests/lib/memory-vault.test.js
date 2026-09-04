@@ -41,7 +41,7 @@ function test(name, fn) {
 }
 
 function createFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-vault-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-vault-'));
   const projectRoot = path.join(root, 'project');
   const nested = path.join(projectRoot, 'packages', 'app');
   const homeDir = path.join(root, 'home');
@@ -80,22 +80,22 @@ function baseMemory(overrides = {}) {
   };
 }
 
-console.log('\n=== Testing ECC memory vault core ===\n');
+console.log('\n=== Testing AIP memory vault core ===\n');
 
 test('resolves project, team, and user roots from the nearest project boundary', () => {
   const fixture = createFixture();
   try {
     assert.strictEqual(
       fixture.roots.project,
-      path.join(fixture.projectRoot, '.ecc', 'memory', 'project')
+      path.join(fixture.projectRoot, '.aip', 'memory', 'project')
     );
     assert.strictEqual(
       fixture.roots.team,
-      path.join(fixture.projectRoot, '.ecc', 'memory', 'team')
+      path.join(fixture.projectRoot, '.aip', 'memory', 'team')
     );
     assert.strictEqual(
       fixture.roots.user,
-      path.join(fixture.homeDir, '.ecc', 'memory')
+      path.join(fixture.homeDir, '.aip', 'memory')
     );
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
@@ -103,13 +103,13 @@ test('resolves project, team, and user roots from the nearest project boundary',
 });
 
 test('uses the working directory for non-git projects instead of a global bucket', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-no-git-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-no-git-'));
   const homeDir = path.join(root, 'home');
   fs.mkdirSync(homeDir);
   try {
     const roots = resolveVaultRoots({ cwd: root, homeDir, env: {} });
-    assert.strictEqual(roots.project, path.join(root, '.ecc', 'memory', 'project'));
-    assert.strictEqual(roots.team, path.join(root, '.ecc', 'memory', 'team'));
+    assert.strictEqual(roots.project, path.join(root, '.aip', 'memory', 'project'));
+    assert.strictEqual(roots.team, path.join(root, '.aip', 'memory', 'team'));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -124,8 +124,8 @@ test('honors explicit project and user vault root overrides', () => {
       cwd: fixture.nested,
       homeDir: fixture.homeDir,
       env: {
-        ECC_MEMORY_PROJECT_ROOT: projectVault,
-        ECC_MEMORY_USER_ROOT: userVault,
+        AIP_MEMORY_PROJECT_ROOT: projectVault,
+        AIP_MEMORY_USER_ROOT: userVault,
       },
     });
     assert.strictEqual(roots.project, path.join(projectVault, 'project'));
@@ -164,10 +164,10 @@ test('initializes every memory kind without creating opaque database files', () 
   }
 });
 
-test('round-trips the strict ecc.memory.v1 Markdown frontmatter contract', () => {
+test('round-trips the strict aip.memory.v1 Markdown frontmatter contract', () => {
   const original = baseMemory();
   const serialized = serializeMemoryDocument(original);
-  assert.ok(serialized.startsWith('---\nschema: "ecc.memory.v1"\n'));
+  assert.ok(serialized.startsWith('---\nschema: "aip.memory.v1"\n'));
   assert.ok(serialized.includes('target_harnesses: ["claude"]'));
   assert.ok(serialized.endsWith('Tests pass. Continue with token rotation.\n'));
   assert.deepStrictEqual(parseMemoryDocument(serialized, 'handoff.md'), original);
@@ -192,7 +192,7 @@ test('rejects malformed, unknown-schema, and invalid metadata documents', () => 
   assert.throws(() => parseMemoryDocument('not frontmatter', 'bad.md'), /frontmatter/i);
   assert.throws(
     () => parseMemoryDocument(
-      serializeMemoryDocument(baseMemory()).replace('ecc.memory.v1', 'ecc.memory.v999'),
+      serializeMemoryDocument(baseMemory()).replace('aip.memory.v1', 'aip.memory.v999'),
       'bad.md'
     ),
     /Unsupported memory schema/
@@ -318,7 +318,7 @@ test('fails closed when the project memory gitignore is preseeded with unsafe ru
 });
 
 test('the canonical project guard is honored by git status and check-ignore', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-git-ignore-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-git-ignore-'));
   const projectRoot = path.join(root, 'project');
   const homeDir = path.join(root, 'home');
   fs.mkdirSync(projectRoot);
@@ -355,7 +355,7 @@ test('rejects a vault path that traverses a symlink before creating directories'
   const fixture = createFixture();
   const outside = path.join(fixture.root, 'outside');
   fs.mkdirSync(outside);
-  fs.symlinkSync(outside, path.join(fixture.projectRoot, '.ecc'));
+  fs.symlinkSync(outside, path.join(fixture.projectRoot, '.aip'));
   try {
     assert.throws(
       () => saveMemory(
@@ -376,8 +376,8 @@ test('rejects a symlinked ancestor when roots come back from initializeVault', (
   fs.mkdirSync(outside);
   try {
     const initialized = initializeVault({ roots: fixture.roots, scopes: ['project'] });
-    fs.rmSync(path.join(fixture.projectRoot, '.ecc'), { recursive: true, force: true });
-    fs.symlinkSync(outside, path.join(fixture.projectRoot, '.ecc'));
+    fs.rmSync(path.join(fixture.projectRoot, '.aip'), { recursive: true, force: true });
+    fs.symlinkSync(outside, path.join(fixture.projectRoot, '.aip'));
 
     assert.throws(
       () => saveMemory(
@@ -548,7 +548,7 @@ test('separates distinct inodes reported from the same device', () => {
 // Runs on every platform, but only the windows-latest CI leg exercises the
 // path-vs-handle dev divergence that issue #2626 reports.
 test('reads a regular file whose handle and path stats are compared', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-identity-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-identity-'));
   const target = path.join(root, 'target.md');
   try {
     fs.writeFileSync(target, 'durable');
@@ -559,7 +559,7 @@ test('reads a regular file whose handle and path stats are compared', () => {
 });
 
 test('opens regular text files without following a stable symlink', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-file-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-file-'));
   const target = path.join(root, 'target.md');
   const link = path.join(root, 'link.md');
   try {
@@ -576,7 +576,7 @@ test('opens regular text files without following a stable symlink', () => {
 });
 
 test('rejects malformed UTF-8 instead of altering durable text', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-utf8-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-utf8-'));
   const target = path.join(root, 'invalid.md');
   try {
     fs.writeFileSync(target, Buffer.from([0x61, 0xc3, 0x28, 0x62]));
@@ -590,7 +590,7 @@ test('rejects malformed UTF-8 instead of altering durable text', () => {
 });
 
 test('opens a file descriptor before inspecting path metadata', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-open-first-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-open-first-'));
   const target = path.join(root, 'target.md');
   const originalOpenSync = fs.openSync;
   const originalLstatSync = fs.lstatSync;
@@ -625,7 +625,7 @@ test('opens a file descriptor before inspecting path metadata', () => {
 // be requested as BigInt for the guard to hold. The stubs below mimic fs: BigInt
 // when { bigint: true } is requested, lossy numbers otherwise.
 test('detects a swapped file whose inode differs beyond Number precision', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-bigint-ino-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-bigint-ino-'));
   const target = path.join(root, 'target.md');
   const originalFstatSync = fs.fstatSync;
   const originalLstatSync = fs.lstatSync;
@@ -661,7 +661,7 @@ test('detects a swapped file whose inode differs beyond Number precision', () =>
 test('rejects a FIFO body path without blocking', () => {
   if (process.platform === 'win32') return;
 
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-fifo-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-fifo-'));
   const fifo = path.join(root, 'body.pipe');
   try {
     const created = spawnSync('mkfifo', [fifo], { encoding: 'utf8' });
@@ -803,7 +803,7 @@ test('reads backlinks derived from links without mutating either document', () =
 
 test('doctor reports malformed files, broken links, duplicate IDs, and skipped symlinks', () => {
   const fixture = createFixture();
-  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-outside-'));
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-outside-'));
   try {
     saveMemory(
       {

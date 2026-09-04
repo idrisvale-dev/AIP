@@ -30,7 +30,7 @@ function runDispatcher(mode, toolName, env = {}) {
   const raw = JSON.stringify({
     hook_event_name: 'PostToolUse',
     tool_name: toolName,
-    tool_input: toolName === 'Bash' ? { command: 'true' } : { file_path: path.join(os.tmpdir(), 'ecc-posttooluse-test.txt') },
+    tool_input: toolName === 'Bash' ? { command: 'true' } : { file_path: path.join(os.tmpdir(), 'aip-posttooluse-test.txt') },
     tool_response: {}
   });
 
@@ -41,7 +41,7 @@ function runDispatcher(mode, toolName, env = {}) {
     env: {
       ...process.env,
       CLAUDE_PLUGIN_ROOT: repoRoot,
-      ECC_PLUGIN_ROOT: repoRoot,
+      AIP_PLUGIN_ROOT: repoRoot,
       ...env
     },
     timeout: 10000
@@ -61,7 +61,7 @@ function runConfiguredCommand(entry, raw, env = {}) {
     env: {
       ...process.env,
       CLAUDE_PLUGIN_ROOT: repoRoot,
-      ECC_PLUGIN_ROOT: repoRoot,
+      AIP_PLUGIN_ROOT: repoRoot,
       ...env
     },
     timeout: 10000
@@ -89,7 +89,7 @@ function runTests() {
       assert.ok(entries[0].hooks[0].command.endsWith('" sync'));
       assert.ok(entries[1].hooks[0].command.includes('posttooluse-dispatcher.js'));
       assert.ok(entries[1].hooks[0].command.endsWith('" async'));
-      assert.ok(entries.every(entry => entry.hooks[0].command.includes('resolve-ecc-root')));
+      assert.ok(entries.every(entry => entry.hooks[0].command.includes('resolve-aip-root')));
       assert.ok(
         entries.every(entry => !entry.hooks[0].command.includes('plugin-hook-bootstrap.js')),
         'PostToolUse dispatchers should not spawn a second Node bootstrap process'
@@ -111,31 +111,31 @@ function runTests() {
             'post:edit:console-warn',
             'post:governance-capture',
             'post:session-activity-tracker',
-            'post:ecc-metrics-bridge',
-            'post:ecc-context-monitor'
+            'post:aip-metrics-bridge',
+            'post:aip-context-monitor'
           ],
           async: ['post:quality-gate', 'post:observe:continuous-learning']
         },
         {
           tool: 'Write',
-          sync: ['post:edit:design-quality-check', 'post:edit:accumulator', 'post:governance-capture', 'post:session-activity-tracker', 'post:ecc-metrics-bridge', 'post:ecc-context-monitor'],
+          sync: ['post:edit:design-quality-check', 'post:edit:accumulator', 'post:governance-capture', 'post:session-activity-tracker', 'post:aip-metrics-bridge', 'post:aip-context-monitor'],
           async: ['post:quality-gate', 'post:observe:continuous-learning']
         },
         {
           tool: 'Bash',
-          sync: ['post:governance-capture', 'post:session-activity-tracker', 'post:ecc-metrics-bridge', 'post:ecc-context-monitor'],
+          sync: ['post:governance-capture', 'post:session-activity-tracker', 'post:aip-metrics-bridge', 'post:aip-context-monitor'],
           async: ['post:bash:dispatcher', 'post:observe:continuous-learning']
         },
         {
           tool: 'Read',
-          sync: ['post:session-activity-tracker', 'post:ecc-metrics-bridge', 'post:ecc-context-monitor'],
+          sync: ['post:session-activity-tracker', 'post:aip-metrics-bridge', 'post:aip-context-monitor'],
           async: ['post:observe:continuous-learning']
         }
       ];
 
       for (const expected of cases) {
-        const sync = runDispatcher('sync', expected.tool, { ECC_DRY_RUN: '1' });
-        const asyncResult = runDispatcher('async', expected.tool, { ECC_DRY_RUN: '1' });
+        const sync = runDispatcher('sync', expected.tool, { AIP_DRY_RUN: '1' });
+        const asyncResult = runDispatcher('async', expected.tool, { AIP_DRY_RUN: '1' });
         assert.strictEqual(sync.status, 0, sync.stderr);
         assert.strictEqual(asyncResult.status, 0, asyncResult.stderr);
         assert.deepStrictEqual(previewedIds(sync.stderr), expected.sync, `${expected.tool} sync IDs`);
@@ -154,10 +154,10 @@ function runTests() {
       const raw = JSON.stringify({
         hook_event_name: 'PostToolUse',
         tool_name: 'Edit',
-        tool_input: { file_path: path.join(os.tmpdir(), 'ecc-posttooluse-test.txt') },
+        tool_input: { file_path: path.join(os.tmpdir(), 'aip-posttooluse-test.txt') },
         tool_response: {}
       });
-      const results = entries.map(entry => runConfiguredCommand(entry, raw, { ECC_DRY_RUN: '1' }));
+      const results = entries.map(entry => runConfiguredCommand(entry, raw, { AIP_DRY_RUN: '1' }));
 
       for (const result of results) {
         assert.strictEqual(result.status, 0, result.stderr);
@@ -170,8 +170,8 @@ function runTests() {
         'post:edit:console-warn',
         'post:governance-capture',
         'post:session-activity-tracker',
-        'post:ecc-metrics-bridge',
-        'post:ecc-context-monitor',
+        'post:aip-metrics-bridge',
+        'post:aip-context-monitor',
         'post:quality-gate',
         'post:observe:continuous-learning'
       ]);
@@ -195,7 +195,7 @@ function runTests() {
         assert.ok(Buffer.byteLength(raw, 'utf8') > 1024 * 1024);
 
         for (const entry of entries) {
-          const result = runConfiguredCommand(entry, raw, { ECC_DRY_RUN: '1' });
+          const result = runConfiguredCommand(entry, raw, { AIP_DRY_RUN: '1' });
           assert.strictEqual(result.status, 0, result.stderr);
           assert.strictEqual(result.stdout, '', `${entry.id} should suppress truncated pass-through`);
           assert.ok(result.stderr.includes('stdin exceeded'), `${entry.id} should report truncation`);
@@ -209,28 +209,28 @@ function runTests() {
   if (
     test('profiles and disabled IDs remain scoped to each original hook', () => {
       const minimalSync = runDispatcher('sync', 'Edit', {
-        ECC_DRY_RUN: '1',
-        ECC_HOOK_PROFILE: 'minimal'
+        AIP_DRY_RUN: '1',
+        AIP_HOOK_PROFILE: 'minimal'
       });
       assert.strictEqual(minimalSync.status, 0, minimalSync.stderr);
-      assert.deepStrictEqual(previewedIds(minimalSync.stderr), ['post:ecc-metrics-bridge']);
+      assert.deepStrictEqual(previewedIds(minimalSync.stderr), ['post:aip-metrics-bridge']);
 
       const minimalAsync = runDispatcher('async', 'Bash', {
-        ECC_DRY_RUN: '1',
-        ECC_HOOK_PROFILE: 'minimal'
+        AIP_DRY_RUN: '1',
+        AIP_HOOK_PROFILE: 'minimal'
       });
       assert.strictEqual(minimalAsync.status, 0, minimalAsync.stderr);
       assert.deepStrictEqual(previewedIds(minimalAsync.stderr), ['post:bash:dispatcher'], 'bash dispatcher phase must stay reachable in minimal profile like main; its sub-hooks gate themselves');
 
       const disabled = runDispatcher('sync', 'Edit', {
-        ECC_DRY_RUN: '1',
-        ECC_DISABLED_HOOKS: 'post:edit:accumulator'
+        AIP_DRY_RUN: '1',
+        AIP_DISABLED_HOOKS: 'post:edit:accumulator'
       });
       assert.strictEqual(disabled.status, 0, disabled.stderr);
       const ids = previewedIds(disabled.stderr);
       assert.ok(!ids.includes('post:edit:accumulator'));
       assert.ok(ids.includes('post:edit:design-quality-check'));
-      assert.ok(ids.includes('post:ecc-context-monitor'));
+      assert.ok(ids.includes('post:aip-context-monitor'));
     })
   )
     passed++;
@@ -240,8 +240,8 @@ function runTests() {
     test('Claude plugin hooks_enabled=false suppresses both dispatcher phases', () => {
       for (const mode of ['sync', 'async']) {
         const result = runDispatcher(mode, 'Edit', {
-          ECC_DRY_RUN: '1',
-          ECC_HOOKS_ENABLED: undefined,
+          AIP_DRY_RUN: '1',
+          AIP_HOOKS_ENABLED: undefined,
           CLAUDE_PLUGIN_OPTION_HOOKS_ENABLED: 'false'
         });
         assert.strictEqual(result.status, 0, result.stderr);
@@ -262,14 +262,14 @@ function runTests() {
       const raw = JSON.stringify({
         hook_event_name: 'PostToolUse',
         tool_name: 'Edit',
-        tool_input: { file_path: path.join(os.tmpdir(), 'ecc-posttooluse-test.txt') },
+        tool_input: { file_path: path.join(os.tmpdir(), 'aip-posttooluse-test.txt') },
         tool_response: {}
       });
 
       for (const entry of entries) {
         const result = runConfiguredCommand(entry, raw, {
-          ECC_DRY_RUN: '1',
-          ECC_DISABLED_HOOKS: entry.id
+          AIP_DRY_RUN: '1',
+          AIP_DISABLED_HOOKS: entry.id
         });
         assert.strictEqual(result.status, 0, result.stderr);
         assert.deepStrictEqual(previewedIds(result.stderr), [], `${entry.id} should disable all child hooks`);
@@ -282,10 +282,10 @@ function runTests() {
 
   if (
     test('dry-run has no PostToolUse side effects', () => {
-      const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-posttooluse-dry-run-'));
+      const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-posttooluse-dry-run-'));
       try {
         const result = runDispatcher('sync', 'Edit', {
-          ECC_DRY_RUN: '1',
+          AIP_DRY_RUN: '1',
           HOME: homeDir,
           USERPROFILE: homeDir,
           CLAUDE_SESSION_ID: 'dry-run-session'
@@ -342,7 +342,7 @@ function runTests() {
         }
       ];
 
-      const result = runHooks(raw, hooks, { toolName: 'Read', env: { ECC_HOOK_PROFILE: 'standard' } });
+      const result = runHooks(raw, hooks, { toolName: 'Read', env: { AIP_HOOK_PROFILE: 'standard' } });
       assert.deepStrictEqual(
         calls,
         [
@@ -376,7 +376,7 @@ function runTests() {
         cwd: repoRoot,
         input: JSON.stringify({ hook_event_name: 'PostToolUse', tool_name: 'Read', tool_input: {}, tool_response: {} }),
         encoding: 'utf8',
-        env: { ...process.env, CLAUDE_PLUGIN_ROOT: repoRoot, ECC_POSTTOOLUSE_PASSTHROUGH: '1' },
+        env: { ...process.env, CLAUDE_PLUGIN_ROOT: repoRoot, AIP_POSTTOOLUSE_PASSTHROUGH: '1' },
         timeout: 10000
       });
       assert.strictEqual(result.status, 7, 'OS-level exit status should reflect the failing hook');
@@ -433,7 +433,7 @@ function runTests() {
 
       const merged = runHooks(JSON.stringify({ tool_name: 'Read' }), [contextHook('post:test:one', 'first warning'), contextHook('post:test:two', 'second warning')], {
         toolName: 'Read',
-        env: { ECC_HOOK_PROFILE: 'standard' }
+        env: { AIP_HOOK_PROFILE: 'standard' }
       });
       assert.strictEqual(merged.stdout, envelope('first warning\nsecond warning'), 'context envelopes should merge into one');
       assert.ok(!merged.stderr.includes('dropped'), merged.stderr);
@@ -462,7 +462,7 @@ function runTests() {
         cwd: repoRoot,
         input: raw,
         encoding: 'utf8',
-        env: { ...process.env, CLAUDE_PLUGIN_ROOT: repoRoot, ECC_POSTTOOLUSE_PASSTHROUGH: '1' },
+        env: { ...process.env, CLAUDE_PLUGIN_ROOT: repoRoot, AIP_POSTTOOLUSE_PASSTHROUGH: '1' },
         timeout: 10000
       });
       assert.strictEqual(result.status, 0, result.stderr);

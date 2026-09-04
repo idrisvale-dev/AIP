@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const repoRoot = process.env.ECC_UNICODE_SCAN_ROOT
-  ? path.resolve(process.env.ECC_UNICODE_SCAN_ROOT)
+const repoRoot = process.env.AIP_UNICODE_SCAN_ROOT
+  ? path.resolve(process.env.AIP_UNICODE_SCAN_ROOT)
   : path.resolve(__dirname, '..', '..');
 
 const writeMode = process.argv.includes('--write');

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ECC Codex Git Hook: pre-push
+# AIP Codex Git Hook: pre-push
 # Runs a lightweight verification flow before pushes.
 
-if [[ "${ECC_SKIP_GIT_HOOKS:-0}" == "1" || "${ECC_SKIP_PREPUSH:-0}" == "1" ]]; then
+if [[ "${AIP_SKIP_GIT_HOOKS:-0}" == "1" || "${AIP_SKIP_PREPUSH:-0}" == "1" ]]; then
   exit 0
 fi
 
-if [[ -f ".ecc-hooks-disable" || -f ".git/ecc-hooks-disable" ]]; then
+if [[ -f ".aip-hooks-disable" || -f ".git/aip-hooks-disable" ]]; then
   exit 0
 fi
 
@@ -33,11 +33,11 @@ fi
 ran_any_check=0
 
 log() {
-  printf '[ECC pre-push] %s\n' "$*"
+  printf '[AIP pre-push] %s\n' "$*"
 }
 
 fail() {
-  printf '[ECC pre-push] FAILED: %s\n' "$*" >&2
+  printf '[AIP pre-push] FAILED: %s\n' "$*" >&2
   exit 1
 }
 
@@ -98,9 +98,9 @@ if [[ -f "package.json" ]]; then
     fi
   done
 
-  if [[ "${ECC_PREPUSH_AUDIT:-0}" == "1" ]]; then
+  if [[ "${AIP_PREPUSH_AUDIT:-0}" == "1" ]]; then
     ran_any_check=1
-    log "Running dependency audit (ECC_PREPUSH_AUDIT=1)"
+    log "Running dependency audit (AIP_PREPUSH_AUDIT=1)"
     case "$pm" in
       pnpm) run_pnpm audit --prod || fail "pnpm audit failed" ;;
       bun) bun audit || fail "bun audit failed" ;;

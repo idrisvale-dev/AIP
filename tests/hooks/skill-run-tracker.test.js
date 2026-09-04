@@ -40,7 +40,7 @@ function test(name, fn) {
 }
 
 function withTempHome(fn) {
-  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-skill-runs-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-skill-runs-'));
   try {
     return fn(homeDir);
   } finally {

@@ -37,7 +37,7 @@ function test(name, fn) {
 
 function representativeMemory(overrides = {}) {
   return {
-    schema: 'ecc.memory.v1',
+    schema: 'aip.memory.v1',
     id: 'mem_20260726_01kexample',
     title: 'Authentication migration handoff',
     kind: 'handoff',
@@ -66,7 +66,7 @@ function assertRejected(memory, expectedKeyword) {
   );
 }
 
-console.log('\n=== Testing ECC memory schema ===\n');
+console.log('\n=== Testing AIP memory schema ===\n');
 
 test('validates a memory after Markdown serialization and parsing', () => {
   const document = serializeMemoryDocument(representativeMemory());

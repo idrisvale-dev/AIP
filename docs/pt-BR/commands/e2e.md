@@ -337,7 +337,7 @@ Para PMX, priorize estes testes E2E:
 
 ## Agentes Relacionados
 
-Este comando invoca o agente `e2e-runner` fornecido pelo ECC.
+Este comando invoca o agente `e2e-runner` fornecido pelo AIP.
 
 Para instalações manuais, o arquivo fonte fica em:
 `agents/e2e-runner.md`

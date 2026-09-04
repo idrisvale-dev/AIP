@@ -346,7 +346,7 @@ WARNING:  FLAKY TEST DETECTED: tests/e2e/markets/trade.spec.ts
 
 ## 相关代理
 
-此命令调用由 ECC 提供的 `e2e-runner` 代理。
+此命令调用由 AIP 提供的 `e2e-runner` 代理。
 
 对于手动安装，源文件位于：
 `agents/e2e-runner.md`

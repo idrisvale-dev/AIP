@@ -41,7 +41,7 @@ function test(name, fn) {
 }
 
 function createTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-gemini-adapt-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-gemini-adapt-'));
 }
 
 function cleanupTempDir(dirPath) {
@@ -62,7 +62,7 @@ function runTests() {
   if (test('shows help with an explicit help flag', () => {
     const result = run(['--help']);
     assert.strictEqual(result.code, 0, result.stderr);
-    assert.ok(result.stdout.includes('Adapt ECC agent frontmatter for Gemini CLI'));
+    assert.ok(result.stdout.includes('Adapt AIP agent frontmatter for Gemini CLI'));
     assert.ok(result.stdout.includes('Usage:'));
   })) passed++; else failed++;
 

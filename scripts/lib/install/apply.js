@@ -276,7 +276,7 @@ function assertSafeInstallOperation(plan, operation) {
   }
 
   const targetRoot = plan && plan.targetRoot;
-  assertWithinTrustedRoot(operation.destinationPath, targetRoot, 'install ECC file');
+  assertWithinTrustedRoot(operation.destinationPath, targetRoot, 'install AIP file');
 
   const resolvedRoot = path.resolve(targetRoot);
   const resolvedTarget = path.resolve(operation.destinationPath);
@@ -290,7 +290,7 @@ function assertSafeInstallOperation(plan, operation) {
       const stats = fs.lstatSync(currentPath);
       if (stats.isSymbolicLink()) {
         throw new Error(
-          `Refusing to install ECC file through symlinked path: '${currentPath}'.`
+          `Refusing to install AIP file through symlinked path: '${currentPath}'.`
         );
       }
     } catch (error) {
@@ -369,7 +369,7 @@ function applyInstallPlan(plan, dependencies = {}) {
     operations: migration.appliedOperations,
   };
   const resolvedClaudeHooksPlan = buildResolvedClaudeHooks(appliedPlan);
-  const disabledServers = parseDisabledMcpServers(process.env.ECC_DISABLED_MCPS);
+  const disabledServers = parseDisabledMcpServers(process.env.AIP_DISABLED_MCPS);
   const linkIndex = buildLinkIndexForPlan(appliedPlan);
   const hasLegacyMigration = migration.legacyOperationsToRemove.length > 0;
 
@@ -503,7 +503,7 @@ function applyInstallPlan(plan, dependencies = {}) {
     const antigravityMigration = cleanupLegacyAntigravityInstall(appliedPlan);
     if (antigravityMigration.detected && !antigravityMigration.complete) {
       antigravityMigrationWarnings = [
-        'Legacy Antigravity migration is incomplete. ECC preserved modified, unverifiable, or unmanaged content under .agent; review and move anything you want to keep, then rerun the Antigravity install.',
+        'Legacy Antigravity migration is incomplete. AIP preserved modified, unverifiable, or unmanaged content under .agent; review and move anything you want to keep, then rerun the Antigravity install.',
         ...(Array.isArray(antigravityMigration.warnings) ? antigravityMigration.warnings : []),
       ];
     }
@@ -518,7 +518,7 @@ function applyInstallPlan(plan, dependencies = {}) {
     const opencodeMigration = cleanupLegacyOpencodeInstall(appliedPlan);
     if (opencodeMigration.detected && !opencodeMigration.complete) {
       opencodeMigrationWarnings = [
-        'Legacy OpenCode migration is incomplete. ECC preserved modified or unverifiable managed content under ~/.opencode; review it and rerun the OpenCode install.',
+        'Legacy OpenCode migration is incomplete. AIP preserved modified or unverifiable managed content under ~/.opencode; review it and rerun the OpenCode install.',
         ...(Array.isArray(opencodeMigration.warnings) ? opencodeMigration.warnings : []),
       ];
     }

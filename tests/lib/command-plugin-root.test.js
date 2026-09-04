@@ -4,11 +4,11 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const assert = require('assert');
-const { INLINE_RESOLVE } = require('../../scripts/lib/resolve-ecc-root');
+const { INLINE_RESOLVE } = require('../../scripts/lib/resolve-aip-root');
 
-// Sentinel ECC skill that resolveEccRoot() requires alongside the script tree
+// Sentinel AIP skill that resolveAipRoot() requires alongside the script tree
 // before accepting a root; kept in sync with the module's DEFAULT_SKILL_PROBE.
-const ECC_SKILL_SENTINEL = path.join('skills', 'continuous-learning-v2');
+const AIP_SKILL_SENTINEL = path.join('skills', 'continuous-learning-v2');
 
 let passed = 0;
 let failed = 0;
@@ -31,17 +31,17 @@ const instinctStatusDoc = fs.readFileSync(path.join(__dirname, '..', '..', 'comm
 
 test('sessions command uses shared inline resolver in all node scripts', () => {
   assert.strictEqual((sessionsDoc.match(/const _r = /g) || []).length, 6);
-  assert.strictEqual((sessionsDoc.match(/scripts','lib','resolve-ecc-root/g) || []).length, 6);
+  assert.strictEqual((sessionsDoc.match(/scripts','lib','resolve-aip-root/g) || []).length, 6);
 });
 
 test('skill-health command uses shared inline resolver in all shell snippets', () => {
   assert.strictEqual((skillHealthDoc.match(/var r=\(function/g) || []).length, 3);
-  assert.strictEqual((skillHealthDoc.match(/scripts','lib','resolve-ecc-root/g) || []).length, 3);
+  assert.strictEqual((skillHealthDoc.match(/scripts','lib','resolve-aip-root/g) || []).length, 3);
 });
 
 test('instinct-status command uses shared inline resolver (no stale legacy fallback) (#2037)', () => {
   assert.strictEqual((instinctStatusDoc.match(/var r=\(function/g) || []).length, 1);
-  assert.strictEqual((instinctStatusDoc.match(/scripts','lib','resolve-ecc-root/g) || []).length, 1);
+  assert.strictEqual((instinctStatusDoc.match(/scripts','lib','resolve-aip-root/g) || []).length, 1);
   // The pre-fix template hard-coded the legacy path as a fallback when
   // CLAUDE_PLUGIN_ROOT was unset. Asserting its absence prevents regression.
   assert.ok(
@@ -52,7 +52,7 @@ test('instinct-status command uses shared inline resolver (no stale legacy fallb
 
 test('auto-update command probes for the script it runs, not just scripts/lib', () => {
   // A partial install can carry full resolver evidence (script tree plus
-  // sentinel ECC skill, per #2544/#2577) yet still lack scripts/auto-update.js.
+  // sentinel AIP skill, per #2544/#2577) yet still lack scripts/auto-update.js.
   // The command's inline resolver must probe for the script it actually
   // executes so such roots don't shadow the complete plugin root.
   const autoUpdateDocs = [
@@ -63,44 +63,44 @@ test('auto-update command probes for the script it runs, not just scripts/lib', 
   for (const docPath of autoUpdateDocs) {
     const doc = fs.readFileSync(docPath, 'utf8');
     assert.strictEqual(
-      (doc.match(/scripts','lib','resolve-ecc-root/g) || []).length, 1,
+      (doc.match(/scripts','lib','resolve-aip-root/g) || []).length, 1,
       `${docPath} should embed the shared inline resolver`
     );
     assert.ok(
-      doc.includes("resolveEccRoot({probe:p.join('scripts','auto-update.js')})"),
+      doc.includes("resolveAipRoot({probe:p.join('scripts','auto-update.js')})"),
       `${docPath} should probe for scripts/auto-update.js`
     );
   }
 });
 
-test('resolveEccRoot module covers current and legacy marketplace plugin roots', () => {
-  const { resolveEccRoot } = require('../../scripts/lib/resolve-ecc-root');
-  assert.ok(typeof resolveEccRoot === 'function');
+test('resolveAipRoot module covers current and legacy marketplace plugin roots', () => {
+  const { resolveAipRoot } = require('../../scripts/lib/resolve-aip-root');
+  assert.ok(typeof resolveAipRoot === 'function');
 
-  const legacyHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-marketplace-legacy-'));
+  const legacyHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-marketplace-legacy-'));
   try {
-    const legacyRoot = path.join(legacyHomeDir, '.claude', 'plugins', 'marketplaces', 'ecc');
+    const legacyRoot = path.join(legacyHomeDir, '.claude', 'plugins', 'marketplaces', 'aip');
     fs.mkdirSync(path.join(legacyRoot, 'scripts', 'lib'), { recursive: true });
     fs.writeFileSync(path.join(legacyRoot, 'scripts', 'lib', 'utils.js'), '// stub');
-    fs.mkdirSync(path.join(legacyRoot, ECC_SKILL_SENTINEL), { recursive: true });
-    assert.strictEqual(resolveEccRoot({ envRoot: '', homeDir: legacyHomeDir }), legacyRoot);
+    fs.mkdirSync(path.join(legacyRoot, AIP_SKILL_SENTINEL), { recursive: true });
+    assert.strictEqual(resolveAipRoot({ envRoot: '', homeDir: legacyHomeDir }), legacyRoot);
   } finally {
     fs.rmSync(legacyHomeDir, { recursive: true, force: true });
   }
 
-  const cacheHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-marketplace-cache-'));
+  const cacheHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-marketplace-cache-'));
   try {
-    const cacheRoot = path.join(cacheHomeDir, '.claude', 'plugins', 'cache', 'ecc', 'reborncursed', '1.0.0');
+    const cacheRoot = path.join(cacheHomeDir, '.claude', 'plugins', 'cache', 'aip', 'reborncursed', '1.0.0');
     fs.mkdirSync(path.join(cacheRoot, 'scripts', 'lib'), { recursive: true });
     fs.writeFileSync(path.join(cacheRoot, 'scripts', 'lib', 'utils.js'), '// stub');
-    fs.mkdirSync(path.join(cacheRoot, ECC_SKILL_SENTINEL), { recursive: true });
-    assert.strictEqual(resolveEccRoot({ envRoot: '', homeDir: cacheHomeDir }), cacheRoot);
+    fs.mkdirSync(path.join(cacheRoot, AIP_SKILL_SENTINEL), { recursive: true });
+    assert.strictEqual(resolveAipRoot({ envRoot: '', homeDir: cacheHomeDir }), cacheRoot);
   } finally {
     fs.rmSync(cacheHomeDir, { recursive: true, force: true });
   }
 
   assert.ok(!INLINE_RESOLVE.includes('\\"'), 'Inline resolver should not require escaped double quotes');
-  assert.ok(INLINE_RESOLVE.includes("scripts','lib','resolve-ecc-root"));
+  assert.ok(INLINE_RESOLVE.includes("scripts','lib','resolve-aip-root"));
 });
 
 console.log(`Passed: ${passed}`);

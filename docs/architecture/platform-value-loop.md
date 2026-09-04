@@ -1,11 +1,11 @@
-# ECC Platform Value Loop
+# AIP Platform Value Loop
 
-ECC 2.0 is moving from a portable harness layer toward a full operator
+AIP 2.0 is moving from a portable harness layer toward a full operator
 system. The product direction is three layers:
 
 1. Meta-harness: portable skills, rules, hooks, MCP conventions, release gates,
    evals, and security evidence.
-2. Dedicated ECC agent: an agent that directly operates over ECC assets instead
+2. Dedicated AIP agent: an agent that directly operates over AIP assets instead
    of only reading them as static instructions.
 3. Control pane / agentic IDE: a visible operator surface for sessions, queues,
    skills, memory, evidence, releases, and team workflows.
@@ -14,7 +14,7 @@ The control pane is still a release-candidate direction until it is backed by a
 reproducible demo. The public claim is:
 
 ```text
-ECC can be used full-stack as a meta-harness + agent + control pane, or
+AIP can be used full-stack as a meta-harness + agent + control pane, or
 selectively as the portable harness layer inside the AI coding tools teams
 already use.
 ```
@@ -36,7 +36,7 @@ not just deployment. The paid or managed surface is:
 - managed evals, release gates, and evidence packs;
 - security review, supply-chain findings, and policy enforcement;
 - billing, entitlement, sponsor, and partner workflows;
-- product-specific integrations that can become reusable ECC skills.
+- product-specific integrations that can become reusable AIP skills.
 
 The open repo stays useful on its own. The platform earns value when serious
 teams want the same workflows managed, measured, secured, or connected to their
@@ -44,16 +44,16 @@ own products.
 
 ## Product Integration Contract
 
-External products can build on ECC without becoming ECC-branded products. The
+External products can build on AIP without becoming AIP-branded products. The
 contract is:
 
-| Layer | Product contributes | ECC receives |
+| Layer | Product contributes | AIP receives |
 | --- | --- | --- |
 | Skill pack | Public, non-secret workflows in `skills/*/SKILL.md` | New reusable agent behavior and install surface |
 | Gated API | Optional product credentials such as `PRODUCT_API_KEY` | A clear upgrade/request path without leaking secrets |
 | Fixtures and docs | Sanitized examples, no private accounts or live keys | Testable public proof instead of claims |
 | Eval and risk gates | Advice, safety, data, and execution boundaries | Reusable release discipline and trust surface |
-| Case study | A real product workflow that works through ECC | Distribution, sponsors, Pro interest, consulting demand |
+| Case study | A real product workflow that works through AIP | Distribution, sponsors, Pro interest, consulting demand |
 
 Every integration needs:
 
@@ -65,8 +65,8 @@ Every integration needs:
 
 ## Ito Example
 
-Ito is a separate prediction-market basket product. ECC can still distribute
-Ito-shaped skills because the skill workflows are useful without making ECC
+Ito is a separate prediction-market basket product. AIP can still distribute
+Ito-shaped skills because the skill workflows are useful without making AIP
 Tools an Ito product.
 
 The safe public surface is:
@@ -85,24 +85,24 @@ The gated surface is:
 - API-backed backtesting or visualization;
 - any workflow requiring `ITO_API_KEY`.
 
-The boundary is strict: public ECC skills do not place trades, do not provide investment advice, do not expose private strategy, and do not merge ECC Tools billing with Ito billing.
+The boundary is strict: public AIP skills do not place trades, do not provide investment advice, do not expose private strategy, and do not merge AIP Tools billing with Ito billing.
 
 ## Value Loop
 
 The platform loop should be explicit:
 
-1. A product team builds a useful workflow as an ECC skill pack.
+1. A product team builds a useful workflow as an AIP skill pack.
 2. The public skill pack works with public sources or local user-provided data.
 3. Serious users request gated access for live product data or hosted features.
 4. Product usage produces new operator patterns, failure modes, and examples.
-5. Sanitized patterns become better ECC skills, evals, gates, or docs.
-6. ECC gains distribution, maintainers, sponsors, Pro interest, and consulting leads.
+5. Sanitized patterns become better AIP skills, evals, gates, or docs.
+6. AIP gains distribution, maintainers, sponsors, Pro interest, and consulting leads.
 7. The product gains adoption because agent users can operate it through an
    already-installed harness.
 
 This is different from enterprise consulting alone. Consulting can fund the
 work, but the platform goal is repeatable distribution: every useful product
-integration becomes another reason to install ECC, and every serious ECC user
+integration becomes another reason to install AIP, and every serious AIP user
 becomes a possible sponsor, Pro user, partner, or integration customer.
 
 ## Release Lane

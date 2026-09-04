@@ -5,7 +5,7 @@ description: >
   and security. Quick reference for common patterns, index types, data types,
   and anti-pattern detection. Based on Supabase best practices.
 metadata:
-  origin: ECC
+  origin: AIP
   credit: Supabase team (MIT License)
 ---
 

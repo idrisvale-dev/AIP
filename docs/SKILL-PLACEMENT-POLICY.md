@@ -19,7 +19,7 @@ Location: `skills/<skill-name>/` with `SKILL.md` at root.
 
 - Included in `manifests/install-modules.json` paths.
 - Validated by `scripts/ci/validate-skills.js`.
-- No provenance file. Use `origin` in SKILL.md frontmatter (ECC, community) for attribution.
+- No provenance file. Use `origin` in SKILL.md frontmatter (AIP, community) for attribution.
 
 ## Learned Skills
 

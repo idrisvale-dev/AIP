@@ -18,7 +18,7 @@ Usage:
   node skills/terminal-opener/scripts/open-terminal.js --detect [--terminal <name>] [--json]
 
 Options:
-  --terminal <name>  Terminal adapter (default: ECC_TERMINAL or wezterm).
+  --terminal <name>  Terminal adapter (default: AIP_TERMINAL or wezterm).
   --cwd <path>       Initial host directory (default: current directory).
   --recover          Start a standalone terminal with stock configuration.
   --standalone       Alias for --recover.
@@ -87,7 +87,7 @@ function readValue(argv, index, option) {
 
 function parseArgs(argv, context = {}) {
   const env = context.env || process.env;
-  const initialTerminal = env.ECC_TERMINAL || DEFAULT_TERMINAL;
+  const initialTerminal = env.AIP_TERMINAL || DEFAULT_TERMINAL;
   const initialCwd = context.cwd || process.cwd();
   const options = {
     argv: [],

@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const SCHEMA_VERSION = 'ecc.release-approval-gate.v1';
+const SCHEMA_VERSION = 'aip.release-approval-gate.v1';
 const SCRIPT_PATH = 'scripts/release-approval-gate.js';
 const REQUIRED_COMMAND = 'npm run release:approval-gate -- --format json';
 
@@ -27,8 +27,8 @@ const REQUIRED_DECISIONS = [
     label: 'Codex repo marketplace',
   },
   {
-    id: 'ecc-tools-billing-language',
-    label: 'ECC Tools billing language',
+    id: 'aip-tools-billing-language',
+    label: 'AIP Tools billing language',
   },
   {
     id: 'video-upload',
@@ -53,12 +53,12 @@ const REQUIRED_URL_SURFACES = [
   {
     id: 'npm-rc-package-url',
     label: 'npm rc package URL',
-    exampleUrl: 'https://www.npmjs.com/package/ecc-universal/v/2.0.0-rc.1',
+    exampleUrl: 'https://www.npmjs.com/package/aip-universal/v/2.0.0-rc.1',
   },
   {
     id: 'claude-plugin-tag-url',
     label: 'Claude plugin tag URL',
-    exampleUrl: 'https://github.com/reborncursed/AIP/releases/tag/ecc--v2.0.0-rc.1',
+    exampleUrl: 'https://github.com/reborncursed/AIP/releases/tag/aip--v2.0.0-rc.1',
   },
   {
     id: 'codex-repo-marketplace-evidence',
@@ -76,9 +76,9 @@ const REQUIRED_URL_SURFACES = [
     exampleUrl: 'https://bytecore.org/status/0000000000000000001',
   },
   {
-    id: 'ecc-tools-billing-readiness-url',
-    label: 'ECC Tools billing/readiness URL',
-    exampleUrl: 'https://github.com/ECC-Tools',
+    id: 'aip-tools-billing-readiness-url',
+    label: 'AIP Tools billing/readiness URL',
+    exampleUrl: 'https://github.com/AIP-Tools',
   },
 ];
 
@@ -502,7 +502,7 @@ function buildReport(options = {}) {
 
 function renderText(report) {
   const lines = [
-    'ECC release approval gate',
+    'AIP release approval gate',
     `Release: ${report.release}`,
     `Ready: ${report.ready ? 'yes' : 'no'}`,
     `Digest: ${report.digest}`,

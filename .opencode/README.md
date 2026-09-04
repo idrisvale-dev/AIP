@@ -1,18 +1,18 @@
-# OpenCode ECC Plugin
+# OpenCode AIP Plugin
 
 > WARNING: This README is specific to OpenCode usage.
-> If you installed ECC via npm (e.g. `npm install opencode-ecc`), refer to the root README instead.
+> If you installed AIP via npm (e.g. `npm install opencode-aip`), refer to the root README instead.
 
-ECC plugin for OpenCode - agents, commands, hooks, and skills.
+AIP plugin for OpenCode - agents, commands, hooks, and skills.
 
 ## Installation
 
 ## Installation Overview
 
-There are two ways to use ECC:
+There are two ways to use AIP:
 
 1. **npm package (recommended for most users)**
-   Install via npm/bun/yarn and use the `ecc-install` CLI to set up rules and agents.
+   Install via npm/bun/yarn and use the `aip-install` CLI to set up rules and agents.
 
 2. **Direct clone / plugin mode**
    Clone the repository and run OpenCode directly inside it.
@@ -22,29 +22,29 @@ Choose the method that matches your workflow below.
 ### Option 1: npm Package
 
 ```bash
-npm install ecc-universal
+npm install aip-universal
 ```
 
 Add to your `opencode.json`:
 
 ```json
 {
-  "plugin": ["ecc-universal"]
+  "plugin": ["aip-universal"]
 }
 ```
 
-This loads the ECC OpenCode plugin module from npm:
+This loads the AIP OpenCode plugin module from npm:
 - hook/event integrations
 - bundled custom tools exported by the plugin
 
-It does **not** auto-register the full ECC command/agent/instruction catalog in your project config. For the full OpenCode setup, either:
+It does **not** auto-register the full AIP command/agent/instruction catalog in your project config. For the full OpenCode setup, either:
 - run OpenCode inside this repository, or
 - copy the relevant `.opencode/commands/`, `.opencode/prompts/`, `.opencode/instructions/`, and the `instructions`, `agent`, and `command` config entries into your own project
 
-After installation, the `ecc-install` CLI is also available:
+After installation, the `aip-install` CLI is also available:
 
 ```bash
-npx ecc-universal install typescript
+npx aip-universal install typescript
 ```
 
 ### Option 2: Direct Use
@@ -53,11 +53,11 @@ Clone and run OpenCode in the repository:
 
 ```bash
 git clone https://github.com/reborncursed/AIP
-cd ECC
+cd AIP
 opencode
 ```
 
-If you also want to apply the ECC home install
+If you also want to apply the AIP home install
 (`node scripts/install-apply.js --target opencode --profile full`), build the
 plugin first so the compiled payload at `.opencode/dist/` exists:
 
@@ -186,16 +186,16 @@ OpenCode has 20+ additional events not available in Claude Code.
 OpenCode plugin hooks honor the same runtime controls used by Claude Code/Cursor:
 
 ```bash
-export ECC_HOOK_PROFILE=standard
-export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
+export AIP_HOOK_PROFILE=standard
+export AIP_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 ```
 
-- `ECC_HOOK_PROFILE`: `minimal`, `standard` (default), `strict`
-- `ECC_DISABLED_HOOKS`: comma-separated hook IDs to disable
+- `AIP_HOOK_PROFILE`: `minimal`, `standard` (default), `strict`
+- `AIP_DISABLED_HOOKS`: comma-separated hook IDs to disable
 
 ## Skills
 
-The default OpenCode config loads 11 curated ECC skills via the `instructions` array:
+The default OpenCode config loads 11 curated AIP skills via the `instructions` array:
 
 - coding-standards
 - backend-patterns
@@ -235,7 +235,7 @@ Full configuration in `opencode.json`:
 ```
 
 The reference config intentionally leaves model selection to OpenCode. Connect a
-provider and select a model in OpenCode; ECC's primary agent uses that global
+provider and select a model in OpenCode; AIP's primary agent uses that global
 selection, and its subagents inherit the invoking primary agent's model.
 
 ## License

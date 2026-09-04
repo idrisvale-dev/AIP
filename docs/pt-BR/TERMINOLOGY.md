@@ -85,7 +85,7 @@ Este documento registra a correspondência de termos utilizados nas traduções 
 | CI/CD | CI/CD | Confirmado | Manter em inglês |
 | Pipeline | Pipeline | Confirmado | Manter em inglês |
 | Harness | Harness | Confirmado | Manter em inglês (contexto específico) |
-| Instinct | Instinct | Confirmado | Manter em inglês (contexto ECC) |
+| Instinct | Instinct | Confirmado | Manter em inglês (contexto AIP) |
 
 ---
 

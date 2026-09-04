@@ -4,20 +4,20 @@
 
 ### Destacados
 
-- Añade la superficie pública del release candidate de ECC 2.0 para la historia del operador Hermes.
-- Documenta ECC como el sustrato reutilizable cross-harness para Claude Code, Codex, Cursor, OpenCode y Gemini.
+- Añade la superficie pública del release candidate de AIP 2.0 para la historia del operador Hermes.
+- Documenta AIP como el sustrato reutilizable cross-harness para Claude Code, Codex, Cursor, OpenCode y Gemini.
 - Añade una superficie de skill de importación de Hermes sanitizada en lugar de publicar el estado del operador privado.
 
 ### Superficie de Lanzamiento
 
 - Actualizados los metadatos de paquete, plugin, marketplace, OpenCode, agente y README a `2.0.0-rc.1`.
 - Añadido `docs/releases/2.0.0-rc.1/` con notas de versión, borradores para redes sociales, lista de verificación de lanzamiento, notas de transferencia y prompts de demo.
-- Añadido `docs/architecture/cross-harness.md` y cobertura de regresión para el límite ECC/Hermes.
-- Mantenido el versionado de `ecc2/` independiente por ahora; sigue siendo un scaffold alfa del plano de control a menos que ingeniería de releases decida lo contrario.
+- Añadido `docs/architecture/cross-harness.md` y cobertura de regresión para el límite AIP/Hermes.
+- Mantenido el versionado de `aip2/` independiente por ahora; sigue siendo un scaffold alfa del plano de control a menos que ingeniería de releases decida lo contrario.
 
 ### Notas
 
-- Este es un release candidate, no una declaración GA para el roadmap completo del plano de control de ECC 2.0.
+- Este es un release candidate, no una declaración GA para el roadmap completo del plano de control de AIP 2.0.
 - La publicación npm de prerrelease debe usar el dist-tag `next` a menos que ingeniería de releases elija explícitamente lo contrario.
 
 ## 1.10.0 - 2026-04-05
@@ -27,7 +27,7 @@
 - Superficie de lanzamiento público sincronizada con el repo en vivo tras varias semanas de crecimiento OSS y fusiones del backlog.
 - Carril de flujos de trabajo de operador expandido con skills de voz, clasificación de grafos, facturación, espacio de trabajo y salida.
 - Carril de generación de medios expandido con herramientas de lanzamiento basadas en Manim y Remotion.
-- El binario del plano de control alfa de ECC 2.0 ya compila localmente desde `ecc2/` y expone la primera superficie de CLI/TUI utilizable.
+- El binario del plano de control alfa de AIP 2.0 ya compila localmente desde `aip2/` y expone la primera superficie de CLI/TUI utilizable.
 
 ### Superficie de Lanzamiento
 
@@ -43,16 +43,16 @@
 - `customer-billing-ops`, `google-workspace-ops`, `project-flow-ops`, `workspace-surface-audit`.
 - `manim-video`, `remotion-video-creation`, `nestjs-patterns`.
 
-### ECC 2.0 Alpha
+### AIP 2.0 Alpha
 
-- `cargo build --manifest-path ecc2/Cargo.toml` pasa en la línea base del repositorio.
-- `ecc-tui` actualmente expone `dashboard`, `start`, `sessions`, `status`, `stop`, `resume` y `daemon`.
+- `cargo build --manifest-path aip2/Cargo.toml` pasa en la línea base del repositorio.
+- `aip-tui` actualmente expone `dashboard`, `start`, `sessions`, `status`, `stop`, `resume` y `daemon`.
 - El alpha es real y utilizable para experimentación local, pero el roadmap más amplio del plano de control sigue incompleto y no debe tratarse como GA.
 
 ### Notas
 
 - El plugin de Claude sigue limitado por las restricciones de distribución de reglas a nivel de plataforma; la ruta de instalación selectiva / OSS sigue siendo la instalación completa más confiable.
-- Este lanzamiento es una corrección de la superficie del repo y una sincronización del ecosistema, no una declaración de que el roadmap completo de ECC 2.0 está completo.
+- Este lanzamiento es una corrección de la superficie del repo y una sincronización del ecosistema, no una declaración de que el roadmap completo de AIP 2.0 está completo.
 
 ## 1.9.0 - 2026-03-20
 
@@ -87,7 +87,7 @@
 - `ai-regression-testing` — flujos de trabajo de pruebas de regresión con IA (#433)
 - `claude-devfleet` — orquestación multi-agente (#505)
 - `blueprint` — planificación de construcción de múltiples sesiones
-- `everything-claude-code` — skill autorreferencial de ECC (#335)
+- `aip` — skill autorreferencial de AIP (#335)
 - `prompt-optimizer` — skill de optimización de prompts (#418)
 - 8 skills de dominio operacional de Evos (#290)
 - 3 skills de Laravel (#420)
@@ -186,7 +186,7 @@
 - Movida la persistencia del resumen de sesión a `Stop` donde el payload del transcript está disponible.
 - Añadidos hooks de quality-gate y cost-tracker.
 - Reemplazados los frágiles one-liners de hook en línea por archivos de script dedicados.
-- Añadidos controles `ECC_HOOK_PROFILE` y `ECC_DISABLED_HOOKS`.
+- Añadidos controles `AIP_HOOK_PROFILE` y `AIP_DISABLED_HOOKS`.
 
 ### Multiplataforma
 

@@ -192,7 +192,7 @@ process.stdin.on('end', () => {
 
     const sessionId =
       sanitizeSessionId(input.session_id) ||
-      sanitizeSessionId(process.env.ECC_SESSION_ID) ||
+      sanitizeSessionId(process.env.AIP_SESSION_ID) ||
       sanitizeSessionId(process.env.CLAUDE_SESSION_ID) ||
       'default';
 
@@ -247,7 +247,7 @@ process.stdin.on('end', () => {
     // Non-blocking — never fail the Stop hook.
   }
 
-  // Pass stdin through (ECC hook convention) — but never echo truncated
+  // Pass stdin through (AIP hook convention) — but never echo truncated
   // stdin: invalid JSON on stdout is reported as a Stop hook failure (#2090).
   if (truncated) {
     process.stderr.write('[Hook] cost-tracker: stdin exceeded 1MB; suppressing pass-through (fail-open)\n');

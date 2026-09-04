@@ -60,12 +60,12 @@ function fileExists(root, name) {
 
 /**
  * Resolve whether relevance ranking is enabled. Default on; opt out by setting
- * `ECC_INSTINCT_RELEVANCE_RANKING` to `off`, `false`, `0`, or `no`
+ * `AIP_INSTINCT_RELEVANCE_RANKING` to `off`, `false`, `0`, or `no`
  * (case-insensitive). Any other value (including unset) keeps ranking on.
  * @returns {boolean}
  */
 function isRelevanceRankingEnabled() {
-  const raw = process.env.ECC_INSTINCT_RELEVANCE_RANKING;
+  const raw = process.env.AIP_INSTINCT_RELEVANCE_RANKING;
   if (raw === undefined || raw === null || raw === '') return true;
   const normalized = String(raw).trim().toLowerCase();
   return !['off', 'false', '0', 'no'].includes(normalized);

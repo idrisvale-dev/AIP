@@ -1,7 +1,7 @@
 ---
 name: rust-patterns
 description: 地道的Rust模式、所有权、错误处理、特质、并发，以及构建安全、高性能应用程序的最佳实践。
-origin: ECC
+origin: AIP
 ---
 
 # Rust 开发模式

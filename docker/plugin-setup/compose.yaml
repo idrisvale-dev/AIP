@@ -1,4 +1,4 @@
-name: ecc-plugin-setup-test
+name: aip-plugin-setup-test
 
 x-node-image: &node-image node:22-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3
 
@@ -12,17 +12,17 @@ x-real-cli: &real-cli
   security_opt:
     - no-new-privileges:true
   tmpfs:
-    - /tmp:rw,nosuid,nodev,exec,size=${ECC_TMPFS_SIZE:-2g},uid=1000,gid=1000,mode=0700
-    - /workspace:rw,nosuid,nodev,noexec,size=${ECC_WORKSPACE_SIZE:-1g},uid=1000,gid=1000,mode=0700
+    - /tmp:rw,nosuid,nodev,exec,size=${AIP_TMPFS_SIZE:-2g},uid=1000,gid=1000,mode=0700
+    - /workspace:rw,nosuid,nodev,noexec,size=${AIP_WORKSPACE_SIZE:-1g},uid=1000,gid=1000,mode=0700
   environment:
-    CLAUDE_CONFIG_DIR: /tmp/ecc-claude-config
+    CLAUDE_CONFIG_DIR: /tmp/aip-claude-config
     DISABLE_AUTOUPDATER: "1"
-    HOME: /tmp/ecc-home
+    HOME: /tmp/aip-home
     NPM_CONFIG_CACHE: /tmp/npm-cache
   volumes:
     - type: bind
       source: ../..
-      target: /ecc
+      target: /aip
       read_only: true
     - type: bind
       source: "${TEST_PROJECT:-../../tests/fixtures/docker-plugin-project}"
@@ -32,14 +32,14 @@ x-real-cli: &real-cli
   tty: true
   entrypoint:
     - /bin/bash
-    - /ecc/docker/plugin-setup/run-real-cli.sh
+    - /aip/docker/plugin-setup/run-real-cli.sh
   command:
     - dry-run
 
 services:
   fixture-tests:
     image: *node-image
-    working_dir: /ecc
+    working_dir: /aip
     user: "1000:1000"
     network_mode: none
     read_only: true
@@ -53,15 +53,15 @@ services:
     volumes:
       - type: bind
         source: ../..
-        target: /ecc
+        target: /aip
         read_only: true
     entrypoint:
       - /bin/bash
-      - /ecc/docker/plugin-setup/run-fixture-tests.sh
+      - /aip/docker/plugin-setup/run-fixture-tests.sh
 
   real-cli:
     <<: *real-cli
-    image: ecc-plugin-setup:debian
+    image: aip-plugin-setup:debian
     build:
       context: .
       dockerfile: Dockerfile
@@ -76,11 +76,11 @@ services:
     profiles:
       - networked
     network_mode: default
-    image: ecc-plugin-setup:debian
+    image: aip-plugin-setup:debian
 
   real-cli-ubuntu:
     <<: *real-cli
-    image: ecc-plugin-setup:ubuntu
+    image: aip-plugin-setup:ubuntu
     build:
       context: .
       dockerfile: Dockerfile

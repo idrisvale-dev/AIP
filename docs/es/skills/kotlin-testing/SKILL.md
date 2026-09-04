@@ -1,7 +1,7 @@
 ---
 name: kotlin-testing
 description: Patrones de pruebas Kotlin con Kotest, MockK, pruebas de coroutines, pruebas basadas en propiedades y cobertura con Kover. Sigue la metodología TDD con prácticas idiomáticas de Kotlin.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Pruebas Kotlin

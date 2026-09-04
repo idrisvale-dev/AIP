@@ -5,7 +5,7 @@ description: >
   networking, volume strategies, and multi-service orchestration. Use when
   setting up containerized development environments or reviewing Docker configurations.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Docker Patterns

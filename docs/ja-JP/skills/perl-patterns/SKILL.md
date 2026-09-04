@@ -1,7 +1,7 @@
 ---
 name: perl-patterns
 description: 堅牢でメンテナブルなPerlアプリケーションを構築するためのModern Perl 5.36+のイディオム、ベストプラクティス、規約。
-origin: ECC
+origin: AIP
 ---
 
 # モダンPerl開発パターン

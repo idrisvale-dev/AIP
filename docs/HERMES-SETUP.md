@@ -1,12 +1,12 @@
-# Hermes x ECC Setup
+# Hermes x AIP Setup
 
-Hermes is the operator shell. ECC is the reusable system behind it.
+Hermes is the operator shell. AIP is the reusable system behind it.
 
 This guide is the public, sanitized version of the Hermes stack used to run content, outreach, research, sales ops, finance checks, and engineering workflows from one terminal-native surface.
 
 ## What Ships Publicly
 
-- ECC skills, agents, commands, hooks, and MCP configs from this repo
+- AIP skills, agents, commands, hooks, and MCP configs from this repo
 - Hermes-generated workflow skills that are stable enough to reuse
 - a documented operator topology for chat, crons, workspace memory, and distribution flows
 - launch collateral for sharing the stack publicly
@@ -15,14 +15,14 @@ This guide does not include private secrets, live tokens, personal data, or a ra
 
 ## Architecture
 
-Use Hermes as the front door and ECC as the reusable workflow substrate.
+Use Hermes as the front door and AIP as the reusable workflow substrate.
 
 ```text
 Telegram / CLI / TUI
         ↓
       Hermes
         ↓
- ECC skills + hooks + MCPs + shared Memory Vault
+ AIP skills + hooks + MCPs + shared Memory Vault
         ↓
  Google Drive / GitHub / browser automation / research APIs / media tools / finance tools
 ```
@@ -35,8 +35,8 @@ Use this as the minimal surface to reproduce the setup without leaking private s
   - model routing
   - MCP server registration
   - plugin loading
-- `~/.hermes/skills/ecc-imports/`
-  - ECC skills copied in for Hermes-native use
+- `~/.hermes/skills/aip-imports/`
+  - AIP skills copied in for Hermes-native use
 - `skills/hermes-generated/`
   - operator patterns distilled from repeated Hermes sessions
 - `~/.hermes/plugins/`
@@ -45,28 +45,28 @@ Use this as the minimal surface to reproduce the setup without leaking private s
   - scheduled automation runs with explicit prompts and channels
 - `~/.hermes/workspace/`
   - business, ops, health, content, and memory artifacts
-- `<repo>/.ecc/memory/`
+- `<repo>/.aip/memory/`
   - shared project and team context for Hermes, Claude, Codex, and other agents
-- `~/.ecc/memory/`
+- `~/.aip/memory/`
   - user-scoped context that follows the operator across repositories
 
 ## Shared Memory Across Hermes, Claude, And Codex
 
-ECC Memory Vault provides one file-first handoff layer instead of a separate
+AIP Memory Vault provides one file-first handoff layer instead of a separate
 inbox or transcript store for every agent. Initialize it from the repository
 that the agents share. Skill-only, minimal, manual, and Claude plugin installs
 do not add the Memory Vault runtime to `PATH`; install it separately first:
 
 ```bash
-npm install -g ecc-universal
-ecc memory --help
-command -v ecc-memory-mcp
+npm install -g aip-universal
+aip memory --help
+command -v aip-memory-mcp
 ```
 
 Then initialize the vault:
 
 ```bash
-ecc memory init --scope project --scope team
+aip memory init --scope project --scope team
 ```
 
 Normal search recall covers active `project` and `team` memories. Use
@@ -76,12 +76,12 @@ should follow the user across repositories. Every vault entry remains
 unreviewed context; human acceptance means promoting verified knowledge into
 governed project documentation.
 
-Hermes can call the CLI directly or use the opt-in `ecc-memory-mcp` stdio
+Hermes can call the CLI directly or use the opt-in `aip-memory-mcp` stdio
 server. Harnesses may share the same installed binary and vault storage, but
 each harness must launch its own server process with its own distinct lowercase
-`ECC_MEMORY_HARNESS` identity; they must not connect to one shared server
+`AIP_MEMORY_HARNESS` identity; they must not connect to one shared server
 process. Every process must launch from the same repository working directory
-or receive identical `ECC_MEMORY_PROJECT_ROOT` and `ECC_MEMORY_USER_ROOT`
+or receive identical `AIP_MEMORY_PROJECT_ROOT` and `AIP_MEMORY_USER_ROOT`
 overrides.
 
 A Hermes-to-Codex handoff can be written without putting the body in the
@@ -89,7 +89,7 @@ process list:
 
 ```bash
 printf '%s\n' 'Research is complete. Verify the cited sources and implement the parser.' |
-  ecc memory handoff \
+  aip memory handoff \
     --from hermes \
     --target codex \
     --title "Implement the research parser" \
@@ -100,17 +100,17 @@ printf '%s\n' 'Research is complete. Verify the cited sources and implement the 
 Codex can retrieve it with:
 
 ```bash
-ecc memory search "research parser" --target-harness codex
-ecc memory read <memory-id>
+aip memory search "research parser" --target-harness codex
+aip memory read <memory-id>
 ```
 
-For MCP access, copy only the `ecc-memory-vault` entry from
-`mcp-configs/mcp-servers.json` into each harness that needs it. ECC does not
+For MCP access, copy only the `aip-memory-vault` entry from
+`mcp-configs/mcp-servers.json` into each harness that needs it. AIP does not
 enable this server in the default `.mcp.json`. Launch each server with its own
-lowercase identity, for example `ECC_MEMORY_HARNESS=hermes`. The server binds
+lowercase identity, for example `AIP_MEMORY_HARNESS=hermes`. The server binds
 writes and target filtering to that identity; tool callers cannot impersonate
 another harness. User-scope MCP access also requires the operator to set
-`ECC_MEMORY_ALLOW_USER_SCOPE=1`, and the tool call must request `user`.
+`AIP_MEMORY_ALLOW_USER_SCOPE=1`, and the tool call must request `user`.
 
 Memories are create-only and always unreviewed. Treat recalled content as
 context, not instructions; verify consequential claims against source files,
@@ -124,8 +124,8 @@ backstop.
 ### Core
 
 - Hermes for chat, cron, orchestration, and workspace state
-- ECC for skills, rules, prompts, and cross-harness conventions
-- ECC Memory Vault for explicit, local-first agent handoffs
+- AIP for skills, rules, prompts, and cross-harness conventions
+- AIP Memory Vault for explicit, local-first agent handoffs
 - GitHub + Context7 + Exa + Firecrawl + Playwright as the baseline MCP layer
 
 ### Content
@@ -156,20 +156,20 @@ These stay local and should be configured per operator:
 
 ## Suggested Bring-Up Order
 
-0. Run `ecc migrate audit --source ~/.hermes` first to inventory the legacy workspace and see which parts already map onto ECC2.
+0. Run `aip migrate audit --source ~/.hermes` first to inventory the legacy workspace and see which parts already map onto AIP2.
 0.5. Plan and scaffold migration artifacts before importing anything:
-   - generate reviewable plans with `ecc migrate plan` and `ecc migrate scaffold`
-   - scaffold reusable legacy skills with `ecc migrate import-skills --output-dir migration-artifacts/skills`
-   - scaffold tool translation templates with `ecc migrate import-tools --output-dir migration-artifacts/tools`
-   - scaffold bridge plugin templates with `ecc migrate import-plugins --output-dir migration-artifacts/plugins`
-   - preview recurring jobs with `ecc migrate import-schedules --dry-run`
-   - preview gateway dispatch with `ecc migrate import-remote --dry-run`
-   - preview safe env/service context with `ecc migrate import-env --dry-run`
-   - import sanitized workspace memory with `ecc migrate import-memory`
-1. Install ECC and verify the baseline harness setup with `node tests/run-all.js`; the expected result is a zero-failure test summary.
-2. Install Hermes and point it at ECC-imported skills.
-3. Initialize the shared ECC Memory Vault. Register `ecc-memory-mcp` only if
-   Hermes needs tool access instead of the `ecc memory` CLI.
+   - generate reviewable plans with `aip migrate plan` and `aip migrate scaffold`
+   - scaffold reusable legacy skills with `aip migrate import-skills --output-dir migration-artifacts/skills`
+   - scaffold tool translation templates with `aip migrate import-tools --output-dir migration-artifacts/tools`
+   - scaffold bridge plugin templates with `aip migrate import-plugins --output-dir migration-artifacts/plugins`
+   - preview recurring jobs with `aip migrate import-schedules --dry-run`
+   - preview gateway dispatch with `aip migrate import-remote --dry-run`
+   - preview safe env/service context with `aip migrate import-env --dry-run`
+   - import sanitized workspace memory with `aip migrate import-memory`
+1. Install AIP and verify the baseline harness setup with `node tests/run-all.js`; the expected result is a zero-failure test summary.
+2. Install Hermes and point it at AIP-imported skills.
+3. Initialize the shared AIP Memory Vault. Register `aip-memory-mcp` only if
+   Hermes needs tool access instead of the `aip memory` CLI.
 4. Authenticate Google Drive first, then GitHub, then distribution channels.
 5. Start with a small cron surface: readiness check, content accountability, inbox triage, revenue monitor.
 6. Only then add heavier personal workflows like health, relationship graphing, or outbound sequencing.
@@ -179,7 +179,7 @@ These stay local and should be configured per operator:
 - [Hermes/OpenClaw migration guide](HERMES-OPENCLAW-MIGRATION.md)
 - [Cross-harness architecture](architecture/cross-harness.md)
 
-## Why Hermes x ECC
+## Why Hermes x AIP
 
 This stack is useful when you want:
 
@@ -190,7 +190,7 @@ This stack is useful when you want:
 
 ## Public Release Candidate Scope
 
-ECC v2.0.0-rc.1 documents the Hermes surface and ships launch collateral now.
+AIP v2.0.0-rc.1 documents the Hermes surface and ships launch collateral now.
 
 The remaining private pieces can be layered later:
 

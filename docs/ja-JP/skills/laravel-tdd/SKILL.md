@@ -1,7 +1,7 @@
 ---
 name: laravel-tdd
 description: Laravel での TDD：PHPUnit と Pest、ファクトリー、データベーステスト、フェイク、カバレッジターゲット
-origin: ECC
+origin: AIP
 ---
 
 # Laravel TDD ワークフロー

@@ -1,7 +1,7 @@
 ---
 name: redis-patterns
 description: Redisデータ構造パターン、キャッシング戦略、分散ロック、レート制限、Pub/Sub、本番アプリケーション用コネクション管理。
-origin: ECC
+origin: AIP
 ---
 
 # Redis Patterns

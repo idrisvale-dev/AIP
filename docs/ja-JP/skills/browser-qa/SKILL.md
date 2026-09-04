@@ -1,7 +1,7 @@
 ---
 name: browser-qa
 description: このスキルを使用して、機能をデプロイ後にブラウザ自動化を使用した自動ビジュアルテストとUI相互作用検証を自動化します。
-origin: ECC
+origin: AIP
 ---
 
 # ブラウザQA — 自動ビジュアルテストと相互作用

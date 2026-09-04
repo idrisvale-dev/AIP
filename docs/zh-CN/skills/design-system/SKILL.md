@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: 使用此技能生成或审计设计系统，检查视觉一致性，并审查涉及样式的PR。
-origin: ECC
+origin: AIP
 ---
 
 # 设计系统 — 生成与审查视觉系统

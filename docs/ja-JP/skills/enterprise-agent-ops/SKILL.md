@@ -1,7 +1,7 @@
 ---
 name: enterprise-agent-ops
 description: オブザーバビリティ、セキュリティ境界、およびライフサイクル管理を備えた長寿命エージェントワークロードを運用します。
-origin: ECC
+origin: AIP
 ---
 
 # Enterprise Agent Ops

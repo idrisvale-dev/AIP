@@ -42,7 +42,7 @@ The script computes up to 12 fixed categories (`0-10` normalized each). The firs
 12. Fly Integration *(when `fly.toml` is present)*
 
 Scores are derived from explicit file/rule checks and are reproducible for the same commit.
-The script audits the current working directory by default and auto-detects whether the target is the ECC repo itself or a consumer project using ECC.
+The script audits the current working directory by default and auto-detects whether the target is the AIP repo itself or a consumer project using AIP.
 
 ## Output Contract
 
@@ -53,7 +53,7 @@ Return:
 3. Category scores and concrete findings.
 4. Failed checks with exact file paths.
 5. Top 3 actions from the deterministic output (`top_actions`).
-6. Suggested ECC skills to apply next.
+6. Suggested AIP skills to apply next.
 
 ## Checklist
 

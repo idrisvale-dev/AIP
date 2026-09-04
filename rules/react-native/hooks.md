@@ -25,4 +25,4 @@ These are recommended PostToolUse automations to keep RN/Expo code healthy. Wire
 
 - Do not run heavy native builds inside fast edit hooks; keep edit-time hooks to typecheck/lint/format.
 - Reserve `eas build` / E2E for explicit commands or CI, not per-edit automation.
-- Keep these consistent with ECC hook runtime controls (`ECC_HOOK_PROFILE`, `ECC_DISABLED_HOOKS`).
+- Keep these consistent with AIP hook runtime controls (`AIP_HOOK_PROFILE`, `AIP_DISABLED_HOOKS`).

@@ -1,7 +1,7 @@
 ---
 name: eval-harness
 description: 평가 주도 개발(EDD) 원칙을 구현하는 Claude Code 세션용 공식 평가 프레임워크
-origin: ECC
+origin: AIP
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

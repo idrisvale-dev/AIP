@@ -5,6 +5,6 @@ module.exports = createInstallTargetAdapter({
   target: 'gemini',
   kind: 'project',
   rootSegments: ['.gemini'],
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   nativeRootRelativePath: '.gemini',
 });

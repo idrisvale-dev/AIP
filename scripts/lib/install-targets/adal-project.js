@@ -5,6 +5,6 @@ module.exports = createInstallTargetAdapter({
   target: 'adal',
   kind: 'project',
   rootSegments: ['.adal'],
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   nativeRootRelativePath: '.adal',
 });

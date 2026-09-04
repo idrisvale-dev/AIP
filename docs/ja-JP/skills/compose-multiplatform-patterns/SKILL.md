@@ -1,7 +1,7 @@
 ---
 name: compose-multiplatform-patterns
 description: KMPプロジェクト向けのCompose MultiplatformおよびJetpack Composeパターン — 状態管理、ナビゲーション、テーマ設定、パフォーマンス、プラットフォーム固有のUI。
-origin: ECC
+origin: AIP
 ---
 
 # Compose Multiplatformパターン

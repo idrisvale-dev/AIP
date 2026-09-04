@@ -140,7 +140,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 3. 플랜 업그레이드 → Stripe checkout → 구독 활성화
 4. Webhook: 구독 취소 → 무료 플랜으로 다운그레이드
 
-## ECC 워크플로우
+## AIP 워크플로우
 
 ```bash
 # 기능 계획 수립

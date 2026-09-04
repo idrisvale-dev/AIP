@@ -31,7 +31,7 @@ async function loadPlugin() {
   })
   assert.strictEqual(buildResult.status, 0, buildResult.stderr || buildResult.stdout)
   const pluginUrl = pathToFileURL(
-    path.join(repoRoot, ".opencode", "dist", "plugins", "ecc-hooks.js")
+    path.join(repoRoot, ".opencode", "dist", "plugins", "aip-hooks.js")
   ).href
   return import(pluginUrl)
 }
@@ -66,7 +66,7 @@ function createFailingShell() {
 }
 
 async function withTempProject(files, fn) {
-  const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "ecc-opencode-plugin-"))
+  const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "aip-opencode-plugin-"))
   try {
     for (const file of files) {
       const filePath = path.join(projectDir, file)
@@ -82,7 +82,7 @@ async function withTempProject(files, fn) {
 async function main() {
   console.log("\n=== Testing OpenCode plugin hooks ===\n")
 
-  const { ECCHooksPlugin } = await loadPlugin()
+  const { AIPHooksPlugin } = await loadPlugin()
   const tests = [
     [
       "plugin initializes and hooks stay usable when plugins/lib is missing",
@@ -103,13 +103,13 @@ async function main() {
 
           // Plugin initialization must resolve even though changed-files-store.js
           // cannot be found -- it must not throw and crash session startup (#2530).
-          const hooks = await ECCHooksPlugin({ client, $, directory: projectDir })
+          const hooks = await AIPHooksPlugin({ client, $, directory: projectDir })
 
           const disabledWarnings = client.logs.filter(
             (entry) =>
               entry.level === "warn" &&
-              entry.message.includes("[ECC] changed-files tracking disabled") &&
-              entry.message.includes("ecc repair --target opencode")
+              entry.message.includes("[AIP] changed-files tracking disabled") &&
+              entry.message.includes("aip repair --target opencode")
           )
           assert.strictEqual(
             disabledWarnings.length,
@@ -132,7 +132,7 @@ async function main() {
         const client = createClient()
         const $ = createFailingShell()
 
-        const hooks = await ECCHooksPlugin({ client, $, directory: projectDir })
+        const hooks = await AIPHooksPlugin({ client, $, directory: projectDir })
 
         assert.ok(
           !client.logs.some(
@@ -177,7 +177,7 @@ async function main() {
         async (projectDir) => {
           const client = createClient()
           const $ = createFailingShell()
-          const hooks = await ECCHooksPlugin({ client, $, directory: projectDir })
+          const hooks = await AIPHooksPlugin({ client, $, directory: projectDir })
 
           const env = await hooks["shell.env"]()
 
@@ -186,9 +186,9 @@ async function main() {
           assert.strictEqual(env.PACKAGE_MANAGER, "pnpm")
           assert.strictEqual(env.DETECTED_LANGUAGES, "typescript,python")
           assert.strictEqual(env.PRIMARY_LANGUAGE, "typescript")
-          // Verify ECC_VERSION is not hardcoded
-          assert.ok(env.ECC_VERSION !== "1.8.0", "ECC_VERSION should not be hardcoded to 1.8.0")
-          assert.ok(env.ECC_VERSION.match(/^\d+\.\d+\.\d+$/), "ECC_VERSION should be a valid semver version")
+          // Verify AIP_VERSION is not hardcoded
+          assert.ok(env.AIP_VERSION !== "1.8.0", "AIP_VERSION should not be hardcoded to 1.8.0")
+          assert.ok(env.AIP_VERSION.match(/^\d+\.\d+\.\d+$/), "AIP_VERSION should be a valid semver version")
         }
       ),
     ],
@@ -197,13 +197,13 @@ async function main() {
       async () => withTempProject(["CLAUDE.md"], async (projectDir) => {
         const client = createClient()
         const $ = createFailingShell()
-        const hooks = await ECCHooksPlugin({ client, $, directory: projectDir })
+        const hooks = await AIPHooksPlugin({ client, $, directory: projectDir })
 
         await hooks["session.created"]()
 
         assert.deepStrictEqual($.calls, [], `Unexpected shell probes: ${$.calls.join(", ")}`)
         assert.ok(
-          client.logs.some((entry) => entry.message === "[ECC] Found CLAUDE.md - loading project context"),
+          client.logs.some((entry) => entry.message === "[AIP] Found CLAUDE.md - loading project context"),
           "Expected CLAUDE.md detection log"
         )
       }),
@@ -211,19 +211,19 @@ async function main() {
     [
       "session.created ignores directories named CLAUDE.md",
       async () => {
-        const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "ecc-opencode-plugin-"))
+        const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "aip-opencode-plugin-"))
         try {
           fs.mkdirSync(path.join(projectDir, "CLAUDE.md"))
 
           const client = createClient()
           const $ = createFailingShell()
-          const hooks = await ECCHooksPlugin({ client, $, directory: projectDir })
+          const hooks = await AIPHooksPlugin({ client, $, directory: projectDir })
 
           await hooks["session.created"]()
 
           assert.deepStrictEqual($.calls, [], `Unexpected shell probes: ${$.calls.join(", ")}`)
           assert.ok(
-            !client.logs.some((entry) => entry.message === "[ECC] Found CLAUDE.md - loading project context"),
+            !client.logs.some((entry) => entry.message === "[AIP] Found CLAUDE.md - loading project context"),
             "Directory named CLAUDE.md should not be treated as project context"
           )
         } finally {
@@ -234,14 +234,14 @@ async function main() {
     [
       "shell.env ignores directories named like lockfiles and language markers",
       async () => {
-        const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "ecc-opencode-plugin-"))
+        const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "aip-opencode-plugin-"))
         try {
           fs.mkdirSync(path.join(projectDir, "pnpm-lock.yaml"))
           fs.mkdirSync(path.join(projectDir, "tsconfig.json"))
 
           const client = createClient()
           const $ = createFailingShell()
-          const hooks = await ECCHooksPlugin({ client, $, directory: projectDir })
+          const hooks = await AIPHooksPlugin({ client, $, directory: projectDir })
 
           const env = await hooks["shell.env"]()
 
@@ -261,7 +261,7 @@ async function main() {
         async (projectDir) => {
           const client = createClient()
           const $ = createFailingShell()
-          const hooks = await ECCHooksPlugin({ client, $, directory: projectDir })
+          const hooks = await AIPHooksPlugin({ client, $, directory: projectDir })
 
           // Test read-only tools
           const readResult = await hooks["permission.ask"]({ tool: "read", args: {} })
@@ -285,7 +285,7 @@ async function main() {
         async (projectDir) => {
           const client = createClient()
           const $ = createFailingShell()
-          const hooks = await ECCHooksPlugin({ client, $, directory: projectDir })
+          const hooks = await AIPHooksPlugin({ client, $, directory: projectDir })
 
           // Test formatter tools - note: args should be the command string, not object
           const prettierResult = await hooks["permission.ask"]({ 
@@ -313,7 +313,7 @@ async function main() {
         async (projectDir) => {
           const client = createClient()
           const $ = createFailingShell()
-          const hooks = await ECCHooksPlugin({ client, $, directory: projectDir })
+          const hooks = await AIPHooksPlugin({ client, $, directory: projectDir })
 
           // Test test execution tools
           const npmTestResult = await hooks["permission.ask"]({ 

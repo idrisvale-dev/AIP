@@ -1,6 +1,6 @@
-# ECC 2.0 Observability Readiness
+# AIP 2.0 Observability Readiness
 
-ECC 2.0 should be observable before it becomes more autonomous. The local
+AIP 2.0 should be observable before it becomes more autonomous. The local
 default is an opt-in, repo-owned readiness gate that checks whether the core
 signals are present without sending telemetry anywhere.
 
@@ -29,8 +29,8 @@ operator needs.
   for tool coverage, context efficiency, quality gates, memory persistence,
   eval coverage, security guardrails, and cost efficiency.
 - Tool activity: `scripts/hooks/session-activity-tracker.js` records local
-  `tool-usage.jsonl` events that ECC2 can sync.
-- Risk ledger: `ecc2/src/observability/mod.rs` scores tool calls and stores a
+  `tool-usage.jsonl` events that AIP2 can sync.
+- Risk ledger: `aip2/src/observability/mod.rs` scores tool calls and stores a
   paginated ledger for review.
 - Progress sync: `docs/architecture/progress-sync-contract.md` defines how
   GitHub, Linear, local handoffs, the repo roadmap, and `scripts/work-items.js`
@@ -56,7 +56,7 @@ The current agent-tooling ecosystem is converging on the same operating needs:
   harness-specific configuration that should still preserve portable project
   knowledge.
 
-ECC's answer is not a hosted analytics dependency by default. The first
+AIP's answer is not a hosted analytics dependency by default. The first
 release-candidate gate is local and file-backed. Hosted telemetry can come
 later, but only after the local event model is useful enough to trust.
 
@@ -65,7 +65,7 @@ later, but only after the local event model is useful enough to trust.
 1. Run `npm run observability:ready`.
 2. Run `npm run harness:audit -- --format json` for the broader harness
    scorecard.
-3. Run `node scripts/loop-status.js --json --write-dir .ecc/loop-status`
+3. Run `node scripts/loop-status.js --json --write-dir .aip/loop-status`
    during longer autonomous batches.
 4. Review `examples/hud-status-contract.json` before wiring a new HUD or
    operator dashboard.
@@ -73,13 +73,13 @@ later, but only after the local event model is useful enough to trust.
    session surfaces are available.
 6. Run `node scripts/work-items.js sync-github --repo <owner/repo>` before
    relying on local work-item status for a tracked repository.
-7. Use ECC2 tool logs for risky operations, conflict analysis, and handoff
+7. Use AIP2 tool logs for risky operations, conflict analysis, and handoff
    review before increasing autonomy.
 8. Re-run the release-safety evidence checks before any public release action:
    publication readiness, supply-chain incident response, workflow-security
    validation, package surface, and release-surface tests.
 
-The end-state is practical: before asking ECC to run larger multi-agent loops,
+The end-state is practical: before asking AIP to run larger multi-agent loops,
 the operator can prove the system has live status, durable session traces,
 baseline scorecards, a local risk ledger, and a progress-sync contract that
 keeps GitHub, Linear, handoffs, and roadmap evidence from drifting apart.

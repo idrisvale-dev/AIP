@@ -1,7 +1,7 @@
 ---
 name: fsharp-testing
 description: F#テストフレームワーク、プロパティベーステスト、および関数型アプローチ。
-origin: ECC
+origin: AIP
 ---
 
 # F# Testing Patterns

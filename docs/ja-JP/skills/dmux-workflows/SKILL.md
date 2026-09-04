@@ -1,7 +1,7 @@
 ---
 name: dmux-workflows
 description: 複数のAIエージェントとタスク集約ワークフローを調整します。複数のワーカーで作業を分配し、エラーを処理し、結果をマージ。
-origin: ECC
+origin: AIP
 ---
 
 # dmux ワークフロー

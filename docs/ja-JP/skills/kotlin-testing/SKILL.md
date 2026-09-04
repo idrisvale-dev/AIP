@@ -1,7 +1,7 @@
 ---
 name: kotlin-testing
 description: Kotlinテストフレームワーク、アサーション、モック、およびコルーチンテスト。
-origin: ECC
+origin: AIP
 ---
 
 # Kotlin Testing Patterns

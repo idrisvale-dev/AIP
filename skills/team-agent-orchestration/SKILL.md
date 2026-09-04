@@ -2,7 +2,7 @@
 name: team-agent-orchestration
 description: "Run team-based orchestration for agent squads using work items, ownership, agent Kanban, merge gates, and control pane handoffs. Use when coordinating an agent squad with work items, ownership, Kanban, and merge gates."
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Team Agent Orchestration

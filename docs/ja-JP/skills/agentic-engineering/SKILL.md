@@ -1,7 +1,7 @@
 ---
 name: agentic-engineering
 description: 評価ファースト実行、分解、コスト対応モデルルーティングを使用してエージェニックエンジニアとして動作します。
-origin: ECC
+origin: AIP
 ---
 
 # エージェニックエンジニアリング

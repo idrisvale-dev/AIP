@@ -22,7 +22,7 @@ module.exports = createInstallTargetAdapter({
   target: 'antigravity',
   kind: 'project',
   rootSegments: ['.agents'],
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   supportsModule(module) {
     const paths = Array.isArray(module && module.paths) ? module.paths : [];
     return paths.length > 0;

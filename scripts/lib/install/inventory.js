@@ -5,10 +5,10 @@ const os = require('os');
 const path = require('path');
 const { isWithinRoot, realpathNearestExisting } = require('../path-safety');
 
-const CURRENT_PLUGIN_ID = 'ecc@ecc';
+const CURRENT_PLUGIN_ID = 'aip@aip';
 const LEGACY_PLUGIN_IDS = new Set([
-  'everything-claude-code@everything-claude-code',
-  'everything-claude-code@ecc',
+  'aip@aip',
+  'aip@aip',
 ]);
 
 function resolveClaudePaths(options = {}) {
@@ -45,12 +45,12 @@ function findManualClaudePlugin(options = {}) {
   const { configDir } = resolveClaudePaths(options);
   const pluginsDir = path.join(configDir, 'plugins');
   const candidates = [
-    ['ecc', '.claude-plugin', 'plugin.json'],
-    ['ecc', 'plugin.json'],
-    ['ecc@ecc', '.claude-plugin', 'plugin.json'],
-    ['ecc@ecc', 'plugin.json'],
-    ['everything-claude-code', '.claude-plugin', 'plugin.json'],
-    ['everything-claude-code', 'plugin.json'],
+    ['aip', '.claude-plugin', 'plugin.json'],
+    ['aip', 'plugin.json'],
+    ['aip@aip', '.claude-plugin', 'plugin.json'],
+    ['aip@aip', 'plugin.json'],
+    ['aip', '.claude-plugin', 'plugin.json'],
+    ['aip', 'plugin.json'],
   ];
 
   for (const segments of candidates) {
@@ -69,7 +69,7 @@ function validateManagedState(state, statePath, expectedRoot) {
   const selectedModules = state?.resolution?.selectedModules;
   const operations = state?.operations;
   if (
-    state?.schemaVersion !== 'ecc.install.v1'
+    state?.schemaVersion !== 'aip.install.v1'
     || !state.target
     || typeof state.target !== 'object'
     || Array.isArray(state.target)
@@ -107,11 +107,11 @@ function findManagedClaudeInstalls(options = {}) {
   const { configDir, projectRoot } = resolveClaudePaths(options);
   const candidates = [
     {
-      statePath: path.join(configDir, 'ecc', 'install-state.json'),
+      statePath: path.join(configDir, 'aip', 'install-state.json'),
       expectedRoot: configDir,
     },
     {
-      statePath: path.join(projectRoot, '.claude', 'ecc', 'install-state.json'),
+      statePath: path.join(projectRoot, '.claude', 'aip', 'install-state.json'),
       expectedRoot: path.join(projectRoot, '.claude'),
     },
   ];

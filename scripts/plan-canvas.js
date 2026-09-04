@@ -69,7 +69,7 @@ function usage() {
     '  typing: --state <thinking|typing|idle>  Defaults to typing',
     '  server: --port <n> --host <h>',
     '',
-    'Environment: ECC_PLAN_CANVAS_PORT, ECC_PLAN_CANVAS_STATE_DIR, ECC_PLAN_CANVAS_IDLE_MS'
+    'Environment: AIP_PLAN_CANVAS_PORT, AIP_PLAN_CANVAS_STATE_DIR, AIP_PLAN_CANVAS_IDLE_MS'
   ].join('\n');
 }
 
@@ -158,7 +158,7 @@ function request(port, method, requestPath, body = null) {
 async function healthCheck(port) {
   try {
     const res = await request(port, 'GET', '/health');
-    return res.body && res.body.app === 'ecc-plan-canvas' ? res.body : null;
+    return res.body && res.body.app === 'aip-plan-canvas' ? res.body : null;
   } catch {
     return null;
   }
@@ -169,7 +169,7 @@ function sleep(ms) {
 }
 
 // Start (or reuse) the detached canvas server and return its port. A version
-// mismatch after an ECC update restarts the server so browser and CLI never
+// mismatch after an AIP update restarts the server so browser and CLI never
 // disagree about the protocol.
 async function ensureServer({ stateDir, port }) {
   const health = await healthCheck(port);
@@ -183,7 +183,7 @@ async function ensureServer({ stateDir, port }) {
   const child = spawn(process.execPath, [__filename, 'server', '--port', String(port)], {
     detached: true,
     stdio: ['ignore', logFd, logFd],
-    env: { ...process.env, ECC_PLAN_CANVAS_STATE_DIR: stateDir }
+    env: { ...process.env, AIP_PLAN_CANVAS_STATE_DIR: stateDir }
   });
   child.unref();
   fs.closeSync(logFd);
@@ -238,7 +238,7 @@ async function cmdOpen(file, args, { stateDir, port }) {
     url,
     browser: launched ? 'opened' : 'not opened',
     next_step:
-      'Run `ecc-plan-canvas await <file>` and leave it running; it returns when the human sends feedback, a verdict, or ends the session.'
+      'Run `aip-plan-canvas await <file>` and leave it running; it returns when the human sends feedback, a verdict, or ends the session.'
   };
 }
 
@@ -286,7 +286,7 @@ async function cmdAwait(file, args, { stateDir, port }) {
   if (result.status === 'feedback') {
     result.next_step = result.sessionEnded
       ? 'The user sent this feedback and ended the session. Address it and report in chat; do not reopen the canvas uninvited.'
-      : 'Address the feedback, then run `ecc-plan-canvas await <file> --reply "<what you changed>"` to answer in the canvas and keep listening.';
+      : 'Address the feedback, then run `aip-plan-canvas await <file> --reply "<what you changed>"` to answer in the canvas and keep listening.';
   } else if (result.status === 'ended') {
     result.next_step =
       result.endedBy === 'user'
@@ -320,7 +320,7 @@ function cmdPending({ stateDir }) {
     status: waiting.length ? 'pending' : 'clear',
     sessions: waiting,
     next_step: waiting.length
-      ? 'Run `ecc-plan-canvas await <file>` for each file above to receive the messages.'
+      ? 'Run `aip-plan-canvas await <file>` for each file above to receive the messages.'
       : 'No canvas feedback is waiting.'
   };
 }

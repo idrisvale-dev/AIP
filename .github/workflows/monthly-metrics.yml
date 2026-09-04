@@ -100,10 +100,10 @@ jobs:
               views14d,
               clones14d
             ] = await Promise.all([
-              getNpmDownloads("last-week", "ecc-universal"),
-              getNpmDownloads("last-week", "ecc-agentshield"),
-              getNpmDownloads("last-month", "ecc-universal"),
-              getNpmDownloads("last-month", "ecc-agentshield"),
+              getNpmDownloads("last-week", "aip-universal"),
+              getNpmDownloads("last-week", "aip-agentshield"),
+              getNpmDownloads("last-month", "aip-universal"),
+              getNpmDownloads("last-month", "aip-agentshield"),
               github.rest.repos.get({ owner, repo }),
               getContributorsCount(),
               getReleasesCount(),
@@ -115,7 +115,7 @@ jobs:
             const forks = repoData.data.forks_count;
 
             const tableHeader = [
-              "| Month (UTC) | ecc-universal (week) | ecc-agentshield (week) | ecc-universal (30d) | ecc-agentshield (30d) | Stars | Forks | Contributors | GitHub App installs (manual) | Views (14d) | Clones (14d) | Releases |",
+              "| Month (UTC) | aip-universal (week) | aip-agentshield (week) | aip-universal (30d) | aip-agentshield (30d) | Stars | Forks | Contributors | GitHub App installs (manual) | Views (14d) | Clones (14d) | Releases |",
               "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"
             ].join("\n");
 

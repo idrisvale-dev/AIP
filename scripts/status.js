@@ -14,7 +14,7 @@ function showHelp(exitCode = 0) {
   console.log(`
 Usage: node scripts/status.js [--db <path>] [--json|--markdown] [--write <path>] [--limit <n>] [--exit-code]
 
-Query the ECC SQLite state store for active sessions, recent skill runs,
+Query the AIP SQLite state store for active sessions, recent skill runs,
 install health, pending governance events, and linked work items.
 
 Use --exit-code to return 2 when readiness needs attention.
@@ -257,7 +257,7 @@ function printReadiness(section) {
 }
 
 function printHuman(payload) {
-  console.log('ECC status\n');
+  console.log('AIP status\n');
   console.log(`Database: ${payload.dbPath}\n`);
   printReadiness(payload.readiness);
   console.log();
@@ -286,7 +286,7 @@ function formatCode(value) {
 
 function renderMarkdown(payload) {
   const lines = [
-    '# ECC Status',
+    '# AIP Status',
     '',
     `Generated: ${payload.generatedAt}`,
     `Database: ${formatCode(payload.dbPath)}`,

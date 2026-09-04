@@ -1,7 +1,7 @@
 ---
 name: safety-guard
 description: 使用此技能可防止在生产系统上工作或自主运行代理时进行破坏性操作。
-origin: ECC
+origin: AIP
 ---
 
 # 安全防护 — 防止破坏性操作
@@ -71,5 +71,5 @@ origin: ECC
 ## 集成方案
 
 * 默认在 `codex -a never` 会话中启用
-* 配合 ECC 2.0 的可观测性风险评分
+* 配合 AIP 2.0 的可观测性风险评分
 * 所有被阻止的操作记录至 `~/.claude/safety-guard.log`

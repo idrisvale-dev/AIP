@@ -1,6 +1,6 @@
 /**
  * Session Aliases Library for Claude Code
- * Manages session aliases stored in $ECC_AGENT_DATA_HOME/session-aliases.json (default ~/.claude).
+ * Manages session aliases stored in $AIP_AGENT_DATA_HOME/session-aliases.json (default ~/.claude).
  */
 
 const fs = require('fs');

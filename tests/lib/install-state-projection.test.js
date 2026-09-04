@@ -36,12 +36,12 @@ async function test(name, fn) {
 }
 
 function createTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-install-projection-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-install-projection-'));
 }
 
 function createState(options = {}) {
   const targetRoot = options.targetRoot;
-  const installStatePath = options.installStatePath || path.join(targetRoot, 'ecc-install-state.json');
+  const installStatePath = options.installStatePath || path.join(targetRoot, 'aip-install-state.json');
   return createInstallState({
     adapter: {
       id: options.targetId || 'claude-home',
@@ -133,7 +133,7 @@ async function runTests() {
         {
           adapter: { id: 'codex-home', target: 'codex', kind: 'home' },
           targetRoot: absentRoot,
-          installStatePath: path.join(absentRoot, 'ecc-install-state.json'),
+          installStatePath: path.join(absentRoot, 'aip-install-state.json'),
           exists: false,
           state: null,
           error: null,
@@ -219,7 +219,7 @@ async function runTests() {
     const homeDir = path.join(tempDir, 'home');
     const projectDir = path.join(tempDir, 'project');
     const targetRoot = path.join(homeDir, '.claude');
-    const installStatePath = path.join(targetRoot, 'ecc', 'install-state.json');
+    const installStatePath = path.join(targetRoot, 'aip', 'install-state.json');
     const dbPath = path.join(tempDir, 'state.db');
     fs.mkdirSync(projectDir, { recursive: true });
     writeInstallState(installStatePath, createState({ targetRoot, installStatePath }));
@@ -247,7 +247,7 @@ async function runTests() {
     const homeDir = path.join(tempDir, 'home');
     const projectDir = path.join(tempDir, 'project');
     const targetRoot = path.join(homeDir, '.claude');
-    const installStatePath = path.join(targetRoot, 'ecc', 'install-state.json');
+    const installStatePath = path.join(targetRoot, 'aip', 'install-state.json');
     const destinationPath = path.join(targetRoot, 'managed-package.json');
     const sourcePath = path.join(__dirname, '..', '..', 'package.json');
     const sourceRelativePath = 'package.json';
@@ -311,7 +311,7 @@ async function runTests() {
     const projectDir = path.join(tempDir, 'project');
     const dbPath = path.join(tempDir, 'state.db');
     const targetRoot = path.join(homeDir, '.claude');
-    const installStatePath = path.join(targetRoot, 'ecc', 'install-state.json');
+    const installStatePath = path.join(targetRoot, 'aip', 'install-state.json');
     fs.mkdirSync(projectDir, { recursive: true });
     const state = createState({ targetRoot, installStatePath });
 

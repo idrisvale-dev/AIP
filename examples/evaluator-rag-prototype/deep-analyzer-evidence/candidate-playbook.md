@@ -9,12 +9,12 @@ deep-analysis risk-taxonomy behavior.
 ## Accepted Path
 
 1. Name the changed analyzer surface and source file.
-2. Retrieve the Deep Analyzer Evidence contract from `../ECC-Tools/README.md`
-   and the follow-up logic in `../ECC-Tools/src/lib/analyzer.ts`.
+2. Retrieve the Deep Analyzer Evidence contract from `../AIP-Tools/README.md`
+   and the follow-up logic in `../AIP-Tools/src/lib/analyzer.ts`.
 3. Match the change to maintained corpus or reference evidence:
-   - `../ECC-Tools/src/analyzers/fixtures/deep-analyzer-corpus.ts`
-   - `../ECC-Tools/src/analyzers/deep-analyzer-corpus.test.ts`
-   - `../ECC-Tools/src/lib/analyzer.compare.test.ts`
+   - `../AIP-Tools/src/analyzers/fixtures/deep-analyzer-corpus.ts`
+   - `../AIP-Tools/src/analyzers/deep-analyzer-corpus.test.ts`
+   - `../AIP-Tools/src/lib/analyzer.compare.test.ts`
 4. Compare expected outputs for the affected behavior:
    - folder type;
    - module organization;
@@ -25,7 +25,7 @@ deep-analysis risk-taxonomy behavior.
 5. Add or update analyzer corpus, expected-output snapshots, fixtures,
    benchmarks, golden cases, evals, or reference sets for the same changed
    surface.
-6. Run the relevant validation gate from `../ECC-Tools/`:
+6. Run the relevant validation gate from `../AIP-Tools/`:
    - `npm test -- src/analyzers/deep-analyzer-corpus.test.ts src/lib/analyzer.compare.test.ts`
    - `npm run typecheck`
    - `npm run lint`

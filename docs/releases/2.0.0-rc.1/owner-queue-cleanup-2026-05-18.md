@@ -1,6 +1,6 @@
 # Owner-Wide Queue Cleanup - 2026-05-18
 
-This note records the live GitHub queue cleanup outside the five ECC release
+This note records the live GitHub queue cleanup outside the five AIP release
 repos tracked by `scripts/platform-audit.js`.
 
 ## Commands
@@ -27,13 +27,13 @@ gh search issues --owner reborncursed --state open --json repository,number,titl
 
 ## Final PR Disposition
 
-- `reborncursed/dprc-autotrader-v2#5`: closed stale generated ECC bundle with
+- `reborncursed/dprc-autotrader-v2#5`: closed stale generated AIP bundle with
   failing checks and dependency-update base.
 - `reborncursed/x-algorithm-score#2`: closed stale/conflicting external feature
   PR with accidental local AI-tool directories noted in the PR body.
-- `reborncursed/dexploy#28`: closed stale generated ECC skill PR with requested
+- `reborncursed/dexploy#28`: closed stale generated AIP skill PR with requested
   changes.
-- `reborncursed/zenith#5`: closed stale generated ECC skill PR.
+- `reborncursed/zenith#5`: closed stale generated AIP skill PR.
 - `reborncursed/zenith#4`: closed test/noise PR whose diff only added a
   non-actionable script comment.
 - `reborncursed/reborncursed#1`: closed stale/conflicting third-party README-card PR.
@@ -58,8 +58,8 @@ gh search issues --owner reborncursed --state open --json repository,number,titl
 ## Disposition
 
 The closed dependency PRs were stale generated version bumps and should be
-regenerated from current bases if still needed. The closed generated ECC bundle
-PRs should be regenerated from the current ECC Tools flow if those repositories
+regenerated from current bases if still needed. The closed generated AIP bundle
+PRs should be regenerated from the current AIP Tools flow if those repositories
 become active again. The closed legacy payments/0EM issues were old planning
-items superseded by the ECC Tools native-payments, hosted analysis,
+items superseded by the AIP Tools native-payments, hosted analysis,
 billing-readback, and Linear/project roadmap lanes.

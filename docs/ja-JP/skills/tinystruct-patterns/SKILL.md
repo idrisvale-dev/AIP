@@ -1,7 +1,7 @@
 ---
 name: tinystruct-patterns
 description: tinystructフレームワークでアプリケーションモジュールまたはマイクロサービスを開発する際に使用。ルーティング、コンテキスト管理、BuilderによるJSON処理、CLI/HTTPデュアルモードのパターンをカバー。
-origin: ECC
+origin: AIP
 ---
 
 # tinystruct 開発パターン

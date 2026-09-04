@@ -1,6 +1,6 @@
-# Everything Claude Code for Trae
+# AIP for Trae
 
-Bring Everything Claude Code (ECC) workflows to Trae IDE. This repository provides custom commands, agents, skills, and rules that can be installed into any Trae project with a single command.
+Bring AIP (AIP) workflows to Trae IDE. This repository provides custom commands, agents, skills, and rules that can be installed into any Trae project with a single command.
 
 ## Quick Start
 
@@ -49,7 +49,7 @@ cd /path/to/your/project
 TRAE_ENV=cn .trae/install.sh
 ```
 
-This creates `/path/to/your/project/.trae-cn/` with all ECC components.
+This creates `/path/to/your/project/.trae-cn/` with all AIP components.
 
 ### Global Installation
 
@@ -64,9 +64,9 @@ cd .trae
 TRAE_ENV=cn ./install.sh ~
 ```
 
-This creates `~/.trae-cn/` with all ECC components. All Trae projects will use these global installations.
+This creates `~/.trae-cn/` with all AIP components. All Trae projects will use these global installations.
 
-**Note**: Global installation is useful when you want to maintain a single copy of ECC across all your projects.
+**Note**: Global installation is useful when you want to maintain a single copy of AIP across all your projects.
 
 ## Environment Support
 
@@ -88,7 +88,7 @@ TRAE_ENV=cn ./install.sh
 
 ## Uninstall
 
-The uninstaller uses a manifest file (`.ecc-manifest`) to track installed files, ensuring safe removal:
+The uninstaller uses a manifest file (`.aip-manifest`) to track installed files, ensuring safe removal:
 
 ```bash
 # Uninstall from current directory (if already inside .trae or .trae-cn)
@@ -107,10 +107,10 @@ TRAE_ENV=cn .trae/uninstall.sh ~
 
 ### Uninstall Behavior
 
-- **Safe removal**: Only removes files tracked in the manifest (installed by ECC)
+- **Safe removal**: Only removes files tracked in the manifest (installed by AIP)
 - **User files preserved**: Any files you added manually are kept
 - **Non-empty directories**: Directories containing user-added files are skipped
-- **Manifest-based**: Requires `.ecc-manifest` file (created during install)
+- **Manifest-based**: Requires `.aip-manifest` file (created during install)
 
 ### Environment Support
 
@@ -181,4 +181,4 @@ All files are yours to modify after installation. The installer never overwrites
 
 - Open your project in Trae
 - Type `/` to see available commands
-- Enjoy the ECC workflows!
+- Enjoy the AIP workflows!

@@ -2,7 +2,7 @@
 name: content-engine
 description: Create platform-native content systems for X, LinkedIn, TikTok, YouTube, newsletters, and repurposed multi-platform campaigns. Use when the user wants social posts, threads, scripts, content calendars, or one source asset adapted cleanly across platforms.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Content Engine
@@ -50,7 +50,7 @@ Run it first when:
 - the content is launch, outreach, or reputation-sensitive
 
 Reuse the resulting `VOICE PROFILE` here instead of rebuilding a second voice model.
-If the user wants ByteCore / ECC voice specifically, still treat `brand-voice` as the source of truth and feed it the best live or source-derived material available.
+If the user wants ByteCore / AIP voice specifically, still treat `brand-voice` as the source of truth and feed it the best live or source-derived material available.
 
 ## Hard Bans
 

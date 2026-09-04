@@ -1,7 +1,7 @@
 ---
 name: rust-patterns
 description: 慣用的なRustパターン、所有権、エラー処理、トレイト、並行処理、および安全で高性能なアプリケーションを構築するためのベストプラクティス。
-origin: ECC
+origin: AIP
 ---
 
 # Rust 開発パターン

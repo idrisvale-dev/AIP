@@ -27,39 +27,39 @@ console.log('\n=== Testing packed-artifact lifecycle runner ===\n');
 
 test('resolves package and hash from explicit environment variables', () => {
   const options = lifecycle.parseEnvironment({
-    ECC_RELEASE_PACKAGE: 'release-artifacts/ecc-universal-2.2.0.tgz',
-    ECC_RELEASE_SHA256: 'a'.repeat(64),
+    AIP_RELEASE_PACKAGE: 'release-artifacts/aip-universal-2.2.0.tgz',
+    AIP_RELEASE_SHA256: 'a'.repeat(64),
   }, '/workspace');
 
   assert.strictEqual(
     options.packagePath,
-    path.resolve('/workspace', 'release-artifacts/ecc-universal-2.2.0.tgz')
+    path.resolve('/workspace', 'release-artifacts/aip-universal-2.2.0.tgz')
   );
   assert.strictEqual(options.expectedSha256, 'a'.repeat(64));
 });
 
 test('rejects missing, malformed, and non-tgz release inputs', () => {
-  assert.throws(() => lifecycle.parseEnvironment({}, '/workspace'), /ECC_RELEASE_PACKAGE/);
+  assert.throws(() => lifecycle.parseEnvironment({}, '/workspace'), /AIP_RELEASE_PACKAGE/);
   assert.throws(() => lifecycle.parseEnvironment({
-    ECC_RELEASE_PACKAGE: 'package.zip',
-    ECC_RELEASE_SHA256: 'a'.repeat(64),
+    AIP_RELEASE_PACKAGE: 'package.zip',
+    AIP_RELEASE_SHA256: 'a'.repeat(64),
   }, '/workspace'), /\.tgz/);
   assert.throws(() => lifecycle.parseEnvironment({
-    ECC_RELEASE_PACKAGE: 'release-artifacts/ecc-universal-2.2.0.tgz',
-    ECC_RELEASE_SHA256: 'not-a-hash',
+    AIP_RELEASE_PACKAGE: 'release-artifacts/aip-universal-2.2.0.tgz',
+    AIP_RELEASE_SHA256: 'not-a-hash',
   }, '/workspace'), /SHA-256/);
   assert.throws(() => lifecycle.parseEnvironment({
-    ECC_RELEASE_PACKAGE: '../release-artifacts/ecc-universal-2.2.0.tgz',
-    ECC_RELEASE_SHA256: 'a'.repeat(64),
+    AIP_RELEASE_PACKAGE: '../release-artifacts/aip-universal-2.2.0.tgz',
+    AIP_RELEASE_SHA256: 'a'.repeat(64),
   }, '/workspace'), /release-artifacts/);
   assert.throws(() => lifecycle.parseEnvironment({
-    ECC_RELEASE_PACKAGE: '/tmp/ecc-universal-2.2.0.tgz',
-    ECC_RELEASE_SHA256: 'a'.repeat(64),
+    AIP_RELEASE_PACKAGE: '/tmp/aip-universal-2.2.0.tgz',
+    AIP_RELEASE_SHA256: 'a'.repeat(64),
   }, '/workspace'), /release-artifacts/);
 });
 
 test('hashFile computes a lowercase SHA-256 digest', () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-packed-hash-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-packed-hash-'));
   const filePath = path.join(tempDir, 'package.tgz');
 
   try {
@@ -98,7 +98,7 @@ test('lifecycle child processes receive no inherited credentials', () => {
 
 test('public CLI invocations use npm exec instead of internal package paths', () => {
   const invocation = lifecycle.getNpmExecInvocation(
-    ['ecc-universal', 'setup', '--help'],
+    ['aip-universal', 'setup', '--help'],
     { ComSpec: 'C:\\Windows\\System32\\cmd.exe' },
     'win32'
   );
@@ -108,11 +108,11 @@ test('public CLI invocations use npm exec instead of internal package paths', ()
     '/d',
     '/s',
     '/c',
-    'npm exec --offline --yes=false -- ecc-universal setup --help',
+    'npm exec --offline --yes=false -- aip-universal setup --help',
   ]);
 
   const unixInvocation = lifecycle.getNpmExecInvocation(
-    ['ecc', 'doctor', '--target', 'cursor', '--json'],
+    ['aip', 'doctor', '--target', 'cursor', '--json'],
     {},
     'linux'
   );
@@ -121,14 +121,14 @@ test('public CLI invocations use npm exec instead of internal package paths', ()
     unixInvocation.args.slice(0, 4),
     ['exec', '--offline', '--yes=false', '--']
   );
-  assert.strictEqual(unixInvocation.args[4], 'ecc');
+  assert.strictEqual(unixInvocation.args[4], 'aip');
   assert.ok(!unixInvocation.args.some(argument => argument.includes('node_modules')));
 });
 
 test('Windows public CLI invocation accepts the exact Itô capability selection', () => {
   const invocation = lifecycle.getNpmExecInvocation(
     [
-      'ecc', 'install', '--profile', 'core',
+      'aip', 'install', '--profile', 'core',
       '--with', 'capability:ito-compute',
       '--with', 'capability:prediction-markets',
       '--target', 'cursor', '--enable-hooks', '--json',
@@ -140,7 +140,7 @@ test('Windows public CLI invocation accepts the exact Itô capability selection'
   assert.strictEqual(invocation.command, 'C:\\Windows\\System32\\cmd.exe');
   assert.strictEqual(
     invocation.args[3],
-    'npm exec --offline --yes=false -- ecc install --profile core --with capability:ito-compute --with capability:prediction-markets --target cursor --enable-hooks --json'
+    'npm exec --offline --yes=false -- aip install --profile core --with capability:ito-compute --with capability:prediction-markets --target cursor --enable-hooks --json'
   );
 });
 

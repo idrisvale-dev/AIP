@@ -1,7 +1,7 @@
 ---
 name: quarkus-security
 description: Quarkus認証、認可、JWT/OIDC、RBAC、入力検証、CSRF、シークレット管理、依存関係セキュリティのセキュリティベストプラクティス。
-origin: ECC
+origin: AIP
 ---
 
 # Quarkus Security Review

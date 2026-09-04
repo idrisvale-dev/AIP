@@ -30,7 +30,7 @@ const fs = require('fs');
 const responses = ${JSON.stringify(responses)};
 const args = process.argv.slice(2);
 const key = args.join(' ');
-const logPath = process.env.ECC_GH_SHIM_LOG;
+const logPath = process.env.AIP_GH_SHIM_LOG;
 if (logPath) {
   fs.appendFileSync(logPath, JSON.stringify({ args }, null, 0) + '\\n');
 }
@@ -117,8 +117,8 @@ async function runTests() {
         const result = run(['claim', '12', '--repo', 'reborncursed/AIP', '--actor', 'codex', '--db', dbPath, '--json'], {
           cwd: rootDir,
           env: {
-            ECC_GH_SHIM: shim.shimPath,
-            ECC_GH_SHIM_LOG: shim.logPath
+            AIP_GH_SHIM: shim.shimPath,
+            AIP_GH_SHIM_LOG: shim.logPath
           }
         });
         assert.strictEqual(result.status, 0, result.stderr);
@@ -160,11 +160,11 @@ async function runTests() {
           '',
           'Dependencies: #2',
           '',
-          '<!-- ecc-coordination:start -->',
+          '<!-- aip-coordination:start -->',
           '```json',
           JSON.stringify(
             {
-              schemaVersion: 'ecc.github.coordination.v1',
+              schemaVersion: 'aip.github.coordination.v1',
               kind: 'epic',
               status: 'blocked',
               owner: 'codex',
@@ -184,7 +184,7 @@ async function runTests() {
             2
           ),
           '```',
-          '<!-- ecc-coordination:end -->'
+          '<!-- aip-coordination:end -->'
         ].join('\n');
         const openIssue = {
           number: 1,
@@ -214,8 +214,8 @@ async function runTests() {
         const result = run(['unblock', '--repo', 'reborncursed/AIP', '--db', dbPath, '--json'], {
           cwd: rootDir,
           env: {
-            ECC_GH_SHIM: shim.shimPath,
-            ECC_GH_SHIM_LOG: shim.logPath
+            AIP_GH_SHIM: shim.shimPath,
+            AIP_GH_SHIM_LOG: shim.logPath
           }
         });
         assert.strictEqual(result.status, 0, result.stderr);

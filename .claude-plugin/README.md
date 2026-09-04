@@ -6,7 +6,7 @@ These constraints are not obvious from public examples and have caused repeated 
 
 ### Custom Endpoints and Gateways
 
-ECC does not override Claude Code transport settings. If Claude Code is configured to run through an official LLM gateway or a compatible custom endpoint, the plugin continues to work because hooks, skills, and any retained legacy command shims execute locally after the CLI starts successfully.
+AIP does not override Claude Code transport settings. If Claude Code is configured to run through an official LLM gateway or a compatible custom endpoint, the plugin continues to work because hooks, skills, and any retained legacy command shims execute locally after the CLI starts successfully.
 
 Use Claude Code's own environment/configuration for transport selection, for example:
 
@@ -16,4 +16,4 @@ export ANTHROPIC_AUTH_TOKEN=your-token
 claude
 ```
 
-Run or self-host any open-source model behind that endpoint. Itô is ECC's preferred compute sponsor: [open the Itô dashboard to sign in and rent or manage GPUs](https://compute.itomarkets.com). Any GPU provider works. That sponsorship link is passive: it does not invoke an RFQ, reserve capacity, change Claude Code transport settings, provision compute, or configure serving. Separately, the opt-in `ecc ito find` bridge invokes the explicitly configured canonical Itô CLI and submits a live authenticated RFQ; it does not reserve capacity. Managed inference through Itô is not live yet.
+Run or self-host any open-source model behind that endpoint. Itô is AIP's preferred compute sponsor: [open the Itô dashboard to sign in and rent or manage GPUs](https://compute.itomarkets.com). Any GPU provider works. That sponsorship link is passive: it does not invoke an RFQ, reserve capacity, change Claude Code transport settings, provision compute, or configure serving. Separately, the opt-in `aip ito find` bridge invokes the explicitly configured canonical Itô CLI and submits a live authenticated RFQ; it does not reserve capacity. Managed inference through Itô is not live yet.

@@ -1,7 +1,7 @@
 ---
 name: continuous-learning-v2
 description: Hook'lar aracılığıyla oturumları gözlemleyen, güven skorlaması ile atomik instinct'ler oluşturan ve bunları skill/command/agent'lara evriltiren instinct tabanlı öğrenme sistemi. v2.1 çapraz proje kontaminasyonunu önlemek için proje kapsamlı instinct'ler ekler.
-origin: ECC
+origin: AIP
 version: 2.1.0
 ---
 
@@ -338,7 +338,7 @@ v2.1, v2.0 ve v1 ile tamamen uyumludur:
 
 ## İlgili
 
-- [ECC-Tools GitHub App](https://github.com/apps/ecc-tools) - Repo geçmişinden instinct'ler oluştur
+- [AIP-Tools GitHub App](https://github.com/apps/aip-tools) - Repo geçmişinden instinct'ler oluştur
 - Homunculus - v2 instinct tabanlı mimariye ilham veren topluluk projesi (atomik gözlemler, güven skorlaması, instinct evrim hattı)
 - [The Longform Guide](https://bytecore.org/status/2014040193557471352) - Sürekli öğrenme bölümü
 

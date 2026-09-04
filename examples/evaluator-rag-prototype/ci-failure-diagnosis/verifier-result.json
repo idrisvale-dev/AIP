@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.verifier.v1",
+  "schema_version": "aip.evaluator-rag.verifier.v1",
   "scenario_id": "ci-failure-diagnosis",
   "run_id": "2026-05-12-ci-failure-diagnosis-prototype",
   "read_only": true,

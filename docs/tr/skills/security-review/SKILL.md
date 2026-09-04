@@ -1,7 +1,7 @@
 ---
 name: security-review
 description: Kimlik doğrulama eklerken, kullanıcı girdisi işlerken, secret'larla çalışırken, API endpoint'leri oluştururken veya ödeme/hassas özellikler uygularken bu skill'i kullanın. Kapsamlı güvenlik kontrol listesi ve kalıplar sağlar.
-origin: ECC
+origin: AIP
 ---
 
 # Güvenlik İnceleme Skill'i

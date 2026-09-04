@@ -1,10 +1,10 @@
 # Team Agent Orchestration Content Pack
 
-This pack turns the current ECC direction into publishable ideas without exposing private research sources. The core claim: agent tools are moving from solo chat windows into team orchestration systems with boards, control panes, dynamic workflows, eval gates, and shared skills.
+This pack turns the current AIP direction into publishable ideas without exposing private research sources. The core claim: agent tools are moving from solo chat windows into team orchestration systems with boards, control panes, dynamic workflows, eval gates, and shared skills.
 
 ## Positioning
 
-ECC should be framed as an orchestration and control-plane layer for the multi-agent stack. The point is not "another prompt library." The point is a workflow operating system for teams that use Claude Code, Codex, OpenCode, Hermes-style desktops, terminal panes, browser agents, MCP gateways, and internal agent tools at the same time.
+AIP should be framed as an orchestration and control-plane layer for the multi-agent stack. The point is not "another prompt library." The point is a workflow operating system for teams that use Claude Code, Codex, OpenCode, Hermes-style desktops, terminal panes, browser agents, MCP gateways, and internal agent tools at the same time.
 
 ## Narrative Thesis
 
@@ -87,7 +87,7 @@ Argument:
 
 - The next developer surface is a control pane that coordinates agents, tools, memory, and gates.
 - Chat remains the interaction layer, but the product value lives in orchestration state.
-- ECC should be positioned as the shared layer across local harnesses, desktop agents, and team systems.
+- AIP should be positioned as the shared layer across local harnesses, desktop agents, and team systems.
 
 Suggested sections:
 
@@ -130,10 +130,10 @@ Suggested sections:
 1. Publish one short post on agent Kanban.
 2. Follow with a 90-second video showing a card moving through a control pane.
 3. Publish the article on shared skills as team playbooks.
-4. Release a demo clip of ECC control pane plus a dynamic workflow card.
+4. Release a demo clip of AIP control pane plus a dynamic workflow card.
 5. Turn comments into the next skill or article.
 
-## Product Implications For ECC
+## Product Implications For AIP
 
 - Build skills first; commands are compatibility shims.
 - Make the control pane show work items, agent Kanban state, gates, and reusable-skill candidates.

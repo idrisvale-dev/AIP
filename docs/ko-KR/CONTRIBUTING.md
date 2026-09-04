@@ -1,4 +1,4 @@
-# Everything Claude Code에 기여하기
+# AIP에 기여하기
 
 기여에 관심을 가져주셔서 감사합니다! 이 저장소는 Claude Code 사용자를 위한 커뮤니티 리소스입니다.
 
@@ -50,7 +50,7 @@
 ```bash
 # 1. 포크 및 클론
 gh repo fork reborncursed/AIP --clone
-cd everything-claude-code
+cd aip
 
 # 2. 브랜치 생성
 git checkout -b feat/my-contribution
@@ -85,7 +85,7 @@ skills/
 ---
 name: your-skill-name
 description: 스킬 목록에 표시되는 간단한 설명
-origin: ECC
+origin: AIP
 ---
 
 # 스킬 제목
@@ -352,14 +352,14 @@ description: /help에 표시되는 간단한 설명
 
 ### 스킬 서브셋 (Codex 및 Cursor)
 
-ECC는 다른 하네스를 위한 스킬 서브셋도 제공합니다:
+AIP는 다른 하네스를 위한 스킬 서브셋도 제공합니다:
 
 - **Codex:** `.agents/skills/` — `agents/openai.yaml`에 나열된 스킬이 Codex에서 로드됩니다.
 - **Cursor:** `.cursor/skills/` — Cursor용 스킬 서브셋이 별도로 포함됩니다.
 
 Codex 또는 Cursor에서도 제공해야 하는 **새 스킬**을 추가한다면:
 
-1. 먼저 `skills/your-skill-name/` 아래에 일반적인 ECC 스킬로 추가합니다.
+1. 먼저 `skills/your-skill-name/` 아래에 일반적인 AIP 스킬로 추가합니다.
 2. **Codex**에서도 제공해야 하면 `.agents/skills/`에 반영하고, 필요하면 `agents/openai.yaml`에도 참조를 추가합니다.
 3. **Cursor**에서도 제공해야 하면 Cursor 레이아웃에 맞게 `.cursor/skills/` 아래에 추가합니다.
 

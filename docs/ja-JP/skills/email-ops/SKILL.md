@@ -1,7 +1,7 @@
 ---
 name: email-ops
-description: ECC用の証拠ベースのメールボックストリアージ、ドラフト作成、送信検証、および送信済みメールセーフフォローアップワークフロー。ユーザーがメールを整理したり、実際のメールサーフェスを通じてドラフトまたは送信したい、または送信済みメールに何が到着したかを証明したい場合に使用します。
-origin: ECC
+description: AIP用の証拠ベースのメールボックストリアージ、ドラフト作成、送信検証、および送信済みメールセーフフォローアップワークフロー。ユーザーがメールを整理したり、実際のメールサーフェスを通じてドラフトまたは送信したい、または送信済みメールに何が到着したかを証明したい場合に使用します。
+origin: AIP
 ---
 
 # Email Ops
@@ -12,7 +12,7 @@ This is not a generic writing skill. It is an operator workflow around the actua
 
 ## Skill Stack
 
-Pull these ECC-native skills into the workflow when relevant:
+Pull these AIP-native skills into the workflow when relevant:
 
 - `brand-voice` before drafting anything user-facing
 - `investor-outreach` for investor, partner, or sponsor-facing mail

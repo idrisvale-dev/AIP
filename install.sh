@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh — Legacy shell entrypoint for the ECC installer.
+# install.sh — Legacy shell entrypoint for the AIP installer.
 #
 # This wrapper resolves the real repo/package root when invoked through a
 # symlinked npm bin, then delegates to the Node-based installer runtime.
@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 
 # Auto-install Node dependencies when running from a git clone
 if [ ! -d "$SCRIPT_DIR/node_modules" ]; then
-    echo "[ECC] Installing dependencies..."
+    echo "[AIP] Installing dependencies..."
     (cd "$SCRIPT_DIR" && npm install --no-audit --no-fund --loglevel=error)
 fi
 

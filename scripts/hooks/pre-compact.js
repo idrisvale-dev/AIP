@@ -17,8 +17,8 @@ const fs = require('fs');
 const { getSessionsDir, getDateTimeString, getTimeString, findFiles, ensureDir, appendFile, readFile, writeFile, getProjectName, log } = require('../lib/utils');
 const { generateSessionSummary } = require('../lib/llm-summary');
 
-const SUMMARY_START_MARKER = '<!-- ECC:SUMMARY:START -->';
-const SUMMARY_END_MARKER = '<!-- ECC:SUMMARY:END -->';
+const SUMMARY_START_MARKER = '<!-- AIP:SUMMARY:START -->';
+const SUMMARY_END_MARKER = '<!-- AIP:SUMMARY:END -->';
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

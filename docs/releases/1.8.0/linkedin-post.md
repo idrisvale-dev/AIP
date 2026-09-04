@@ -1,6 +1,6 @@
-# LinkedIn Draft - ECC v1.8.0
+# LinkedIn Draft - AIP v1.8.0
 
-ECC v1.8.0 is now focused on harness performance at the system level.
+AIP v1.8.0 is now focused on harness performance at the system level.
 
 This release improves:
 - hook reliability and lifecycle behavior

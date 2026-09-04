@@ -89,14 +89,14 @@ function dedupeRecentSessions(searchDirs) {
 }
 
 /**
- * Resolve session retention days from the ECC_SESSION_RETENTION_DAYS env var.
+ * Resolve session retention days from the AIP_SESSION_RETENTION_DAYS env var.
  *
  * @returns {number|null} The retention window in days, or `null` when the
  *   user has explicitly opted out of pruning. Falsy/garbage values fall back
  *   to {@link DEFAULT_SESSION_RETENTION_DAYS}.
  */
 function getSessionRetentionDays() {
-  const raw = process.env.ECC_SESSION_RETENTION_DAYS;
+  const raw = process.env.AIP_SESSION_RETENTION_DAYS;
   if (!raw) return DEFAULT_SESSION_RETENTION_DAYS;
 
   const normalized = String(raw).trim().toLowerCase();
@@ -109,12 +109,12 @@ function getSessionRetentionDays() {
 }
 
 function isSessionStartContextDisabled() {
-  const raw = String(process.env.ECC_SESSION_START_CONTEXT || '').trim().toLowerCase();
+  const raw = String(process.env.AIP_SESSION_START_CONTEXT || '').trim().toLowerCase();
   return ['0', 'false', 'off', 'none', 'disabled'].includes(raw);
 }
 
 function getSessionStartMaxContextChars() {
-  const raw = process.env.ECC_SESSION_START_MAX_CHARS;
+  const raw = process.env.AIP_SESSION_START_MAX_CHARS;
   if (!raw) return DEFAULT_SESSION_START_CONTEXT_MAX_CHARS;
 
   const parsed = Number.parseInt(raw, 10);
@@ -123,14 +123,14 @@ function getSessionStartMaxContextChars() {
 
 /**
  * Resolve the minimum confidence an instinct needs to be injected at
- * SessionStart. Overridable via `ECC_INSTINCT_CONFIDENCE_THRESHOLD`
+ * SessionStart. Overridable via `AIP_INSTINCT_CONFIDENCE_THRESHOLD`
  * (a number in [0, 1]); falsy or out-of-range values fall back to
  * {@link DEFAULT_INSTINCT_CONFIDENCE_THRESHOLD}.
  *
  * @returns {number} The confidence floor for injected instincts.
  */
 function getInstinctConfidenceThreshold() {
-  const raw = process.env.ECC_INSTINCT_CONFIDENCE_THRESHOLD;
+  const raw = process.env.AIP_INSTINCT_CONFIDENCE_THRESHOLD;
   if (!raw) return DEFAULT_INSTINCT_CONFIDENCE_THRESHOLD;
 
   // Require a plain decimal (e.g. "0.7", "1", "0.95") so trailing junk
@@ -147,14 +147,14 @@ function getInstinctConfidenceThreshold() {
 
 /**
  * Resolve the maximum number of instincts injected at SessionStart.
- * Overridable via `ECC_MAX_INJECTED_INSTINCTS` (a positive integer);
+ * Overridable via `AIP_MAX_INJECTED_INSTINCTS` (a positive integer);
  * falsy or invalid values fall back to
  * {@link DEFAULT_MAX_INJECTED_INSTINCTS}.
  *
  * @returns {number} The cap on injected instincts.
  */
 function getMaxInjectedInstincts() {
-  const raw = process.env.ECC_MAX_INJECTED_INSTINCTS;
+  const raw = process.env.AIP_MAX_INJECTED_INSTINCTS;
   if (!raw) return DEFAULT_MAX_INJECTED_INSTINCTS;
 
   // Require a plain non-negative integer so "3.9", "6abc", "0x1" (hex),
@@ -201,7 +201,7 @@ function limitSessionStartContext(additionalContext, maxChars = getSessionStartM
     return context;
   }
 
-  const marker = '\n\n[SessionStart truncated context. Set ECC_SESSION_START_MAX_CHARS to raise the cap or ECC_SESSION_START_CONTEXT=off to disable injected context.]';
+  const marker = '\n\n[SessionStart truncated context. Set AIP_SESSION_START_MAX_CHARS to raise the cap or AIP_SESSION_START_CONTEXT=off to disable injected context.]';
   const prefixLength = Math.max(0, maxChars - marker.length);
   log(`[SessionStart] Truncated additional context from ${context.length} to ${maxChars} chars`);
 
@@ -430,7 +430,7 @@ function summarizeActiveInstincts(observerContext) {
   // Relevance ranking (issue #2371 part b): at SessionStart there is no user
   // task yet, so relevance is location/stack based. Project-scoped and
   // stack-matching instincts get a small additive boost over their confidence.
-  // Gated by ECC_INSTINCT_RELEVANCE_RANKING (default on); when off, or when no
+  // Gated by AIP_INSTINCT_RELEVANCE_RANKING (default on); when off, or when no
   // stack is detected and nothing is project-scoped, every boost is 0 and the
   // ranking collapses to confidence-only (unchanged behaviour).
   // Detect the stack from the real project source tree (projectRoot), not the
@@ -615,7 +615,7 @@ async function main() {
 
   const retentionDays = getSessionRetentionDays();
   if (retentionDays === null) {
-    log('[SessionStart] Pruning disabled via ECC_SESSION_RETENTION_DAYS');
+    log('[SessionStart] Pruning disabled via AIP_SESSION_RETENTION_DAYS');
   } else {
     const prunedSessions = pruneExpiredSessions(sessionSearchDirs, retentionDays);
     if (prunedSessions > 0) {
@@ -635,9 +635,9 @@ async function main() {
   }
 
   if (explicitContextDisabled) {
-    log('[SessionStart] Additional context injection disabled by ECC_SESSION_START_CONTEXT');
+    log('[SessionStart] Additional context injection disabled by AIP_SESSION_START_CONTEXT');
   } else if (maxContextChars === 0) {
-    log('[SessionStart] Additional context injection disabled by ECC_SESSION_START_MAX_CHARS=0');
+    log('[SessionStart] Additional context injection disabled by AIP_SESSION_START_MAX_CHARS=0');
   }
 
   if (shouldInjectContext) {

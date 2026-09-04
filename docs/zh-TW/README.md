@@ -1,4 +1,4 @@
-# Everything Claude Code
+# AIP
 
 [![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -33,12 +33,12 @@
 <tr>
 <td width="50%">
 <a href="https://bytecore.org/status/2012378465664745795">
-<img src="https://github.com/user-attachments/assets/1a471488-59cc-425b-8345-5245c7efbcef" alt="Everything Claude Code 簡明指南" />
+<img src="https://github.com/user-attachments/assets/1a471488-59cc-425b-8345-5245c7efbcef" alt="AIP 簡明指南" />
 </a>
 </td>
 <td width="50%">
 <a href="https://bytecore.org/status/2014040193557471352">
-<img src="https://github.com/user-attachments/assets/c9ca43bc-b149-427f-b551-af6840c368f0" alt="Everything Claude Code 完整指南" />
+<img src="https://github.com/user-attachments/assets/c9ca43bc-b149-427f-b551-af6840c368f0" alt="AIP 完整指南" />
 </a>
 </td>
 </tr>
@@ -70,7 +70,7 @@
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # 安裝外掛程式
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 ### 第二步：安裝規則（必需）
@@ -82,20 +82,20 @@
 git clone https://github.com/reborncursed/AIP.git
 
 # 複製規則（應用於所有專案）
-cp -r everything-claude-code/rules/* ~/.claude/rules/
+cp -r aip/rules/* ~/.claude/rules/
 ```
 
 ### 第三步：開始使用
 
 ```bash
 # 嘗試一個指令（外掛安裝使用命名空間形式）
-/ecc:plan "新增使用者認證"
+/aip:plan "新增使用者認證"
 
 # 手動安裝（選項2）使用簡短形式：
 # /plan "新增使用者認證"
 
 # 查看可用指令
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
 **完成！** 您現在使用 15+ 代理程式、30+ 技能和 20+ 指令。
@@ -142,7 +142,7 @@ node scripts/setup-package-manager.js --detect
 本儲存庫是一個 **Claude Code 外掛程式** - 可直接安裝或手動複製元件。
 
 ```
-everything-claude-code/
+aip/
 |-- .claude-plugin/   # 外掛程式和市集清單
 |   |-- plugin.json         # 外掛程式中繼資料和元件路徑
 |   |-- marketplace.json    # 用於 /plugin marketplace add 的市集目錄
@@ -270,7 +270,7 @@ everything-claude-code/
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # 安裝外掛程式
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 或直接新增到您的 `~/.claude/settings.json`：
@@ -278,7 +278,7 @@ everything-claude-code/
 ```json
 {
   "extraKnownMarketplaces": {
-    "ecc": {
+    "aip": {
       "source": {
         "source": "github",
         "repo": "reborncursed/AIP"
@@ -286,7 +286,7 @@ everything-claude-code/
     }
   },
   "enabledPlugins": {
-    "ecc@ecc": true
+    "aip@aip": true
   }
 }
 ```
@@ -304,23 +304,23 @@ everything-claude-code/
 git clone https://github.com/reborncursed/AIP.git
 
 # 將代理程式複製到您的 Claude 設定
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp aip/agents/*.md ~/.claude/agents/
 
 # 複製規則
-cp everything-claude-code/rules/*.md ~/.claude/rules/
+cp aip/rules/*.md ~/.claude/rules/
 
 # 複製指令
-cp everything-claude-code/commands/*.md ~/.claude/commands/
+cp aip/commands/*.md ~/.claude/commands/
 
 # 複製技能
-cp -r everything-claude-code/skills/* ~/.claude/skills/
+cp -r aip/skills/* ~/.claude/skills/
 ```
 
 #### 將鉤子新增到 settings.json
 
 僅在手動安裝時，才將 `hooks/hooks.json` 中的鉤子複製到您的 `~/.claude/settings.json`。
 
-如果您是透過 `/plugin install` 安裝 ECC，請不要再把這些鉤子複製到 `settings.json`。Claude Code v2.1+ 會自動載入外掛中的 `hooks/hooks.json`，重複註冊會導致重複執行以及 `${CLAUDE_PLUGIN_ROOT}` 無法解析。
+如果您是透過 `/plugin install` 安裝 AIP，請不要再把這些鉤子複製到 `settings.json`。Claude Code v2.1+ 會自動載入外掛中的 `hooks/hooks.json`，重複註冊會導致重複執行以及 `${CLAUDE_PLUGIN_ROOT}` 無法解析。
 
 #### 設定 MCP
 
@@ -465,8 +465,8 @@ node tests/hooks/hooks.test.js
 
 ## 連結
 
-- **簡明指南（從這裡開始）：** [Everything Claude Code 簡明指南](https://bytecore.org/status/2012378465664745795)
-- **完整指南（進階）：** [Everything Claude Code 完整指南](https://bytecore.org/status/2014040193557471352)
+- **簡明指南（從這裡開始）：** [AIP 簡明指南](https://bytecore.org/status/2012378465664745795)
+- **完整指南（進階）：** [AIP 完整指南](https://bytecore.org/status/2014040193557471352)
 - **追蹤：** [@bytecore](https://bytecore.org)
 - **bytecore.org：** [bytecore.org](https://bytecore.org)
 - **技能目錄：** awesome-agent-skills（社區維護的智能體技能目錄）

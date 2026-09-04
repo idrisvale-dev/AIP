@@ -30,8 +30,8 @@ function reader(map) {
   return (p) => (Object.prototype.hasOwnProperty.call(map, p) ? map[p] : null);
 }
 
-const A = '/ecc-pre-compact-test/work/projA';
-const B = '/ecc-pre-compact-test/work/projB';
+const A = '/aip-pre-compact-test/work/projA';
+const B = '/aip-pre-compact-test/work/projB';
 
 if (test('selects the session matching the current worktree, not the newest', () => {
   const sessions = [

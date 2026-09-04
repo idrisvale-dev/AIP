@@ -4,7 +4,7 @@ description: 为多地点零售商提供需求预测、安全库存优化、补�
 license: Apache-2.0
 version: 1.0.0
 homepage: https://github.com/reborncursed/AIP
-origin: ECC
+origin: AIP
 metadata:
   author: evos
   clawdbot:

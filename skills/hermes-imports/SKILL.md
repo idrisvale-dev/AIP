@@ -1,20 +1,20 @@
 ---
 name: hermes-imports
-description: Convert local Hermes operator workflows into sanitized ECC skills and release-pack artifacts. Use when preparing a Hermes workflow for public ECC reuse without leaking private workspace state, credentials, or local-only paths.
+description: Convert local Hermes operator workflows into sanitized AIP skills and release-pack artifacts. Use when preparing a Hermes workflow for public AIP reuse without leaking private workspace state, credentials, or local-only paths.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Hermes Imports
 
-Use this skill when turning a repeated Hermes workflow into something safe to ship in ECC.
+Use this skill when turning a repeated Hermes workflow into something safe to ship in AIP.
 
-Hermes is the operator shell. ECC is the reusable workflow layer. Imports should move stable patterns from Hermes into ECC without moving private state.
+Hermes is the operator shell. AIP is the reusable workflow layer. Imports should move stable patterns from Hermes into AIP without moving private state.
 
 ## When To Use
 
 - A Hermes workflow has repeated enough times to become reusable.
-- A local operator prompt should become a public ECC skill.
+- A local operator prompt should become a public AIP skill.
 - A launch, content, research, or engineering workflow needs sanitized handoff docs.
 - A workflow mentions local paths, credentials, personal datasets, or private account names that must be removed before publication.
 
@@ -56,7 +56,7 @@ Local Hermes prompt:
 Read my local workspace files and finalize launch copy.
 ```
 
-ECC-safe version:
+AIP-safe version:
 
 ```text
 Use the public release pack under docs/releases/<version>/.
@@ -71,7 +71,7 @@ Local Hermes job:
 Run my private inbox, finance, and content checks overnight.
 ```
 
-ECC-safe version:
+AIP-safe version:
 
 ```text
 Describe the scheduler policy, the quiet-hours window, the escalation rules, and the categories of checks. Do not include private data sources or credentials.
@@ -81,7 +81,7 @@ Describe the scheduler policy, the quiet-hours window, the escalation rules, and
 
 Return:
 
-- candidate ECC skill name
+- candidate AIP skill name
 - sanitized workflow summary
 - required public inputs
 - private inputs removed

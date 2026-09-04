@@ -1,7 +1,7 @@
 ---
 name: continuous-agent-loop
 description: 品質ゲート、評価、リカバリーコントロールを備えた継続的な自律エージェントループのパターン。
-origin: ECC
+origin: AIP
 ---
 
 # 継続的エージェントループ

@@ -7,7 +7,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const MEMORY_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'memory.js');
-const ECC_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'ecc.js');
+const AIP_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'aip.js');
 const {
   readBoundedStdin,
   runCommand,
@@ -30,7 +30,7 @@ function test(name, fn) {
 }
 
 function createFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-cli-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-cli-'));
   const projectRoot = path.join(root, 'project');
   const homeDir = path.join(root, 'home');
   fs.mkdirSync(path.join(projectRoot, '.git'), { recursive: true });
@@ -43,8 +43,8 @@ function createFixture() {
       ...process.env,
       HOME: homeDir,
       USERPROFILE: homeDir,
-      ECC_MEMORY_PROJECT_ROOT: path.join(projectRoot, '.ecc', 'memory'),
-      ECC_MEMORY_USER_ROOT: path.join(homeDir, '.ecc', 'memory'),
+      AIP_MEMORY_PROJECT_ROOT: path.join(projectRoot, '.aip', 'memory'),
+      AIP_MEMORY_USER_ROOT: path.join(homeDir, '.aip', 'memory'),
     },
   };
 }
@@ -64,24 +64,24 @@ function json(result) {
   return JSON.parse(result.stdout);
 }
 
-console.log('\n=== Testing ecc memory CLI ===\n');
+console.log('\n=== Testing aip memory CLI ===\n');
 
 test('keeps runCommand focused on dispatch under the function-size guideline', () => {
   const lineCount = runCommand.toString().split('\n').length;
   assert.ok(lineCount < 50, `runCommand is ${lineCount} lines; expected fewer than 50`);
 });
 
-test('shows memory command help directly and through the ecc router', () => {
+test('shows memory command help directly and through the aip router', () => {
   const fixture = createFixture();
   try {
     const direct = run(MEMORY_SCRIPT, ['--help'], fixture);
     assert.strictEqual(direct.status, 0, direct.stderr);
-    assert.ok(direct.stdout.includes('ecc memory save'));
-    assert.ok(direct.stdout.includes('ecc-memory-mcp'));
+    assert.ok(direct.stdout.includes('aip memory save'));
+    assert.ok(direct.stdout.includes('aip-memory-mcp'));
 
-    const routed = run(ECC_SCRIPT, ['memory', '--help'], fixture);
+    const routed = run(AIP_SCRIPT, ['memory', '--help'], fixture);
     assert.strictEqual(routed.status, 0, routed.stderr);
-    assert.ok(routed.stdout.includes('ecc memory search'));
+    assert.ok(routed.stdout.includes('aip memory search'));
     assert.ok(routed.stdout.includes('Default recall scopes: project and team'));
     assert.ok(routed.stdout.includes('user scope must be requested explicitly'));
   } finally {
@@ -89,10 +89,10 @@ test('shows memory command help directly and through the ecc router', () => {
   }
 });
 
-test('routes stdin through ecc memory without dropping the body', () => {
+test('routes stdin through aip memory without dropping the body', () => {
   const fixture = createFixture();
   try {
-    const saved = json(run(ECC_SCRIPT, [
+    const saved = json(run(AIP_SCRIPT, [
       'memory',
       'save',
       '--title', 'Routed stdin',
@@ -182,7 +182,7 @@ test('initializes selected scopes and reports their roots as JSON', () => {
       ['init', '--scope', 'project', '--scope', 'team', '--json'],
       fixture
     ));
-    assert.strictEqual(payload.schemaVersion, 'ecc.memory.init.v1');
+    assert.strictEqual(payload.schemaVersion, 'aip.memory.init.v1');
     assert.deepStrictEqual(payload.scopes, ['project', 'team']);
     assert.ok(fs.statSync(path.join(payload.roots.project, 'handoffs')).isDirectory());
     assert.ok(fs.statSync(path.join(payload.roots.team, 'decisions')).isDirectory());
@@ -205,7 +205,7 @@ test('saves and reads a targeted handoff without a harness-specific inbox', () =
       '--json',
     ], fixture, { input: 'Token rotation tests pass.' }));
 
-    assert.strictEqual(saved.schemaVersion, 'ecc.memory.write.v1');
+    assert.strictEqual(saved.schemaVersion, 'aip.memory.write.v1');
     assert.strictEqual(saved.memory.kind, 'handoff');
     assert.strictEqual(saved.memory.trust, 'unreviewed');
     assert.deepStrictEqual(saved.memory.targetHarnesses, ['claude', 'hermes']);
@@ -217,7 +217,7 @@ test('saves and reads a targeted handoff without a harness-specific inbox', () =
       ['read', saved.memory.id, '--json'],
       fixture
     ));
-    assert.strictEqual(read.schemaVersion, 'ecc.memory.read.v1');
+    assert.strictEqual(read.schemaVersion, 'aip.memory.read.v1');
     assert.strictEqual(read.memory.body, 'Token rotation tests pass.');
     assert.deepStrictEqual(read.backlinks, []);
 
@@ -291,7 +291,7 @@ test('accepts body content over stdin and finds it through bounded JSON search',
       '--limit', '5',
       '--json',
     ], fixture));
-    assert.strictEqual(search.schemaVersion, 'ecc.memory.search.v1');
+    assert.strictEqual(search.schemaVersion, 'aip.memory.search.v1');
     assert.strictEqual(search.results.length, 1);
     assert.strictEqual(search.results[0].memory.id, saved.memory.id);
     assert.ok(search.results[0].excerpt.includes('SQLite'));
@@ -310,7 +310,7 @@ test('doctor is machine-readable and clean for a valid vault', () => {
       '--json',
     ], fixture, { input: 'No broken links.' }));
     const report = json(run(MEMORY_SCRIPT, ['doctor', '--json'], fixture));
-    assert.strictEqual(report.schemaVersion, 'ecc.memory.doctor.v1');
+    assert.strictEqual(report.schemaVersion, 'aip.memory.doctor.v1');
     assert.strictEqual(report.ok, true);
     assert.strictEqual(report.memoryCount, 1);
   } finally {
@@ -392,7 +392,7 @@ test('rejects ambiguous body sources and does not expose a trust promotion flag'
     assert.notStrictEqual(invalidUtf8.status, 0);
     assert.match(invalidUtf8.stderr, /valid UTF-8/i);
     assert.strictEqual(
-      fs.existsSync(path.join(fixture.projectRoot, '.ecc', 'memory')),
+      fs.existsSync(path.join(fixture.projectRoot, '.aip', 'memory')),
       false
     );
   } finally {
@@ -411,7 +411,7 @@ test('global dry-run rejects every mutating memory command without creating a va
     const fixture = createFixture();
     try {
       const result = run(
-        ECC_SCRIPT,
+        AIP_SCRIPT,
         ['--dry-run', 'memory', ...args],
         fixture,
         { input: 'Must never be written.' }
@@ -419,12 +419,12 @@ test('global dry-run rejects every mutating memory command without creating a va
       assert.notStrictEqual(result.status, 0, `${args[0]} unexpectedly succeeded`);
       assert.ok(result.stderr.toLowerCase().includes('dry-run'), result.stderr);
       assert.strictEqual(
-        fs.existsSync(path.join(fixture.projectRoot, '.ecc', 'memory')),
+        fs.existsSync(path.join(fixture.projectRoot, '.aip', 'memory')),
         false,
         `${args[0]} created project memory state`
       );
       assert.strictEqual(
-        fs.existsSync(path.join(fixture.homeDir, '.ecc', 'memory')),
+        fs.existsSync(path.join(fixture.homeDir, '.aip', 'memory')),
         false,
         `${args[0]} created user memory state`
       );

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Cursor sessionStart hook — inject ECC_AGENT_DATA_HOME for the composer session.
+ * Cursor sessionStart hook — inject AIP_AGENT_DATA_HOME for the composer session.
  *
  * Cursor passes session-scoped env from sessionStart output to all later hooks.
  * @see https://cursor.com/docs/hooks
@@ -21,10 +21,10 @@ function main() {
       const payload = {
         env: envPayload,
         additional_context: [
-          'ECC memory persistence uses a dedicated agent data root for this Cursor session.',
+          'AIP memory persistence uses a dedicated agent data root for this Cursor session.',
           `${AGENT_DATA_HOME_ENV}=${agentDataHome}`,
           'Session summaries, learned skills, aliases, and metrics live under that directory.',
-          'Override via shell env, project .cursor/ecc-agent-data.json, or ECC docs (issue #2065).',
+          'Override via shell env, project .cursor/aip-agent-data.json, or AIP docs (issue #2065).',
         ].join('\n'),
       };
 

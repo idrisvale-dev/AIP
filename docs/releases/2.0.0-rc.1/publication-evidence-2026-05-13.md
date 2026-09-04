@@ -1,4 +1,4 @@
-# ECC v2.0.0-rc.1 Publication Evidence - 2026-05-13
+# AIP v2.0.0-rc.1 Publication Evidence - 2026-05-13
 
 This is release-readiness evidence only. It does not create a GitHub release,
 npm publication, plugin tag, marketplace submission, or announcement post.
@@ -20,7 +20,7 @@ commit with a clean checkout before publishing.
 
 | Surface | Command | Result |
 | --- | --- | --- |
-| GitHub PRs and issues | `gh pr list` / `gh issue list` across trunk, AgentShield, JARVIS, ECC-Tools, ECC-website | 0 open PRs and 0 open issues across tracked repos |
+| GitHub PRs and issues | `gh pr list` / `gh issue list` across trunk, AgentShield, JARVIS, AIP-Tools, AIP-website | 0 open PRs and 0 open issues across tracked repos |
 | Trunk discussions | GraphQL discussion sweep for `reborncursed/AIP` | Latest 100 discussions were closed; no open discussion backlog found |
 | npm audit signature gate | PR #1846 | Merged as `797f283`; workflows that run `npm audit` now need `npm audit signatures` |
 
@@ -34,8 +34,8 @@ commit with a clean checkout before publishing.
 | Root suite | `node tests/run-all.js` | `2376` passed, `0` failed |
 | Markdown lint | `npx markdownlint-cli '**/*.md' --ignore node_modules` | Passed after normalizing two zh-CN CLAUDE docs from asterisk bullets to dash bullets |
 | Package surface | `node tests/scripts/npm-publish-surface.test.js` | Passed `2/2`; package surface still excludes Python bytecode/cache artifacts |
-| Release surface | `node tests/docs/ecc2-release-surface.test.js` | Passed `18/18` |
-| Rust surface | `cd ecc2 && cargo test` | Passed `462/462`; warnings only for unused functions/fields |
+| Release surface | `node tests/docs/aip2-release-surface.test.js` | Passed `18/18` |
+| Rust surface | `cd aip2 && cargo test` | Passed `462/462`; warnings only for unused functions/fields |
 
 ## Security Gate Evidence
 
@@ -50,11 +50,11 @@ commit with a clean checkout before publishing.
 ## Blockers Still Requiring Approval Or External Action
 
 - Create or verify GitHub prerelease `v2.0.0-rc.1`.
-- Publish `ecc-universal@2.0.0-rc.1` with npm dist-tag `next`.
+- Publish `aip-universal@2.0.0-rc.1` with npm dist-tag `next`.
 - Create and push the Claude plugin tag only after explicit approval.
 - Confirm the live Claude/Codex/OpenCode marketplace submission path or record
   the manual submission owner and status.
-- Verify ECC Tools billing/App/Marketplace claims before using them in launch
+- Verify AIP Tools billing/App/Marketplace claims before using them in launch
   copy.
 - Refresh announcement copy with live URLs after release and package/plugin
   URLs exist.

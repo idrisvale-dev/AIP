@@ -1,7 +1,7 @@
 ---
 name: golang-patterns
 description: İdiomatic Go desenler, en iyi uygulamalar ve sağlam, verimli ve bakımı kolay Go uygulamaları oluşturmak için konvansiyonlar.
-origin: ECC
+origin: AIP
 ---
 
 # Go Geliştirme Desenleri

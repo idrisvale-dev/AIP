@@ -4,19 +4,19 @@
 /**
  * Proximity tick — the live loop that turns the agent-space distance metric into
  * action: scan the airspace from the control-pane state, then steer/transmit by
- * sending session-to-session messages via `ecc-tui messages send`.
+ * sending session-to-session messages via `aip-tui messages send`.
  *
  *   node scripts/proximity-tick.js              # one shot, deliver triggers
  *   node scripts/proximity-tick.js --dry-run    # show what would fire, send nothing
  *   node scripts/proximity-tick.js --watch 30   # re-scan every 30s (dedupes per cooldown)
  *
- * Messages are internal ECC agent-to-agent coordination (the ecc2 `messages`
+ * Messages are internal AIP agent-to-agent coordination (the aip2 `messages`
  * table) — not any external channel.
  */
 
 const { resolveControlPaneConfig, buildControlPaneSnapshot } = require('./lib/control-pane/state');
 const { createProximityDispatcher, runProximityTick } = require('./lib/control-pane/proximity');
-const { createEccMessageSink } = require('./lib/control-pane/message-sink');
+const { createAipMessageSink } = require('./lib/control-pane/message-sink');
 
 function parseArgs(argv) {
   const args = argv.slice(2);
@@ -79,7 +79,7 @@ async function main() {
     return;
   }
   const config = resolveControlPaneConfig(opts);
-  const sink = opts.dryRun ? null : createEccMessageSink({});
+  const sink = opts.dryRun ? null : createAipMessageSink({});
   const dispatcher = createProximityDispatcher({ sendMessage: sink });
   const buildSnapshot = () =>
     buildControlPaneSnapshot({

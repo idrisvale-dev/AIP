@@ -1,7 +1,7 @@
 ---
 name: nuxt4-patterns
 description: ハイドレーション安全性、パフォーマンス、ルートルール、遅延ロード、useFetchとuseAsyncDataを使ったSSR安全なデータフェッチングのためのNuxt 4アプリパターン。
-origin: ECC
+origin: AIP
 ---
 
 # Nuxt 4パターン

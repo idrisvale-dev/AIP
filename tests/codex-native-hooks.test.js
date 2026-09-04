@@ -32,7 +32,7 @@ function test(name, fn) {
 }
 
 function runSessionStart({ pluginRoot }) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-codex-hook-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-codex-hook-'));
   const userHome = path.join(fixtureRoot, 'user-home');
   const projectDir = path.join(fixtureRoot, 'project');
   const pluginData = path.join(fixtureRoot, 'plugin-data');

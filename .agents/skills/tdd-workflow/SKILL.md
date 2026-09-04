@@ -52,7 +52,7 @@ ALWAYS write tests first, then implement code to make tests pass.
 
 Do not assume `npm test`. The commands in the steps and examples below use `<test>`, `<test-watch>`, and `<coverage>` as placeholders for the project's actual runner. Resolve them once before starting:
 
-1. **Run the package-manager detector** (ships with ECC):
+1. **Run the package-manager detector** (ships with AIP):
 
    ```bash
    node scripts/setup-package-manager.js --detect

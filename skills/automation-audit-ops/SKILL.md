@@ -1,8 +1,8 @@
 ---
 name: automation-audit-ops
-description: Evidence-first automation inventory and overlap audit workflow for ECC. Use when the user wants to know which jobs, hooks, connectors, MCP servers, or wrappers are live, broken, redundant, or missing before fixing anything.
+description: Evidence-first automation inventory and overlap audit workflow for AIP. Use when the user wants to know which jobs, hooks, connectors, MCP servers, or wrappers are live, broken, redundant, or missing before fixing anything.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Automation Audit Ops
@@ -13,12 +13,12 @@ This is an audit-first operator skill. The job is to produce an evidence-backed 
 
 ## Skill Stack
 
-Pull these ECC-native skills into the workflow when relevant:
+Pull these AIP-native skills into the workflow when relevant:
 
 - `workspace-surface-audit` for connector, MCP, hook, and app inventory
 - `knowledge-ops` when the audit needs to reconcile live repo truth with durable context
 - `github-ops` when the answer depends on CI, scheduled workflows, issues, or PR automation
-- `ecc-tools-cost-audit` when the real problem is webhook fanout, queued jobs, or billing burn in the sibling app repo
+- `aip-tools-cost-audit` when the real problem is webhook fanout, queued jobs, or billing burn in the sibling app repo
 - `research-ops` when local inventory must be compared against current platform support or public docs
 - `verification-loop` for proving post-fix state instead of relying on assumed recovery
 
@@ -26,7 +26,7 @@ Pull these ECC-native skills into the workflow when relevant:
 
 - user asks "what automations do I have", "what is live", "what is broken", or "what overlaps"
 - the task spans cron jobs, GitHub Actions, local hooks, MCP servers, connectors, wrappers, or app integrations
-- the user wants to know what was ported from another agent system and what still needs to be rebuilt inside ECC
+- the user wants to know what was ported from another agent system and what still needs to be rebuilt inside AIP
 - the workspace has accumulated multiple ways to do the same thing and the user wants one canonical lane
 
 ## Guardrails
@@ -102,7 +102,7 @@ For each overlapping or suspect surface, return one call:
 - cut
 - fix next
 
-The value is in collapsing noisy automation into one canonical ECC lane, not in preserving every historical path.
+The value is in collapsing noisy automation into one canonical AIP lane, not in preserving every historical path.
 
 ## Output Format
 
@@ -125,7 +125,7 @@ RECOMMENDATION
 - cut
 - fix next
 
-NEXT ECC MOVE
+NEXT AIP MOVE
 - exact skill / hook / workflow / app lane to strengthen
 ```
 

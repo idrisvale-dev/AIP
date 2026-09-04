@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Host/Origin gating for ECC's loopback HTTP servers (control pane, plan
+ * Host/Origin gating for AIP's loopback HTTP servers (control pane, plan
  * canvas). DNS rebinding can point an attacker-controlled hostname at
  * 127.0.0.1, so every request must present a Host header from this
  * allowlist before the server does any work.

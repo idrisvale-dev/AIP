@@ -1,7 +1,7 @@
 {
-  "name": "ecc-universal",
+  "name": "aip-universal",
   "version": "2.2.1",
-  "description": "ECC plugin for OpenCode - agents, commands, hooks, and skills",
+  "description": "AIP plugin for OpenCode - agents, commands, hooks, and skills",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -37,7 +37,7 @@
     "plugin",
     "claude-code",
     "agents",
-    "ecc",
+    "aip",
     "ai-coding",
     "developer-tools",
     "hooks",

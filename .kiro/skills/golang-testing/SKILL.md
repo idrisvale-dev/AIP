@@ -5,7 +5,7 @@ description: >
   benchmarking, race detection, coverage analysis, and integration testing
   patterns. Use when writing or improving Go tests.
 metadata:
-  origin: ECC
+  origin: AIP
   globs: ["**/*.go", "**/go.mod", "**/go.sum"]
 ---
 

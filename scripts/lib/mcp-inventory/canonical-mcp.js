@@ -1,6 +1,6 @@
 'use strict';
 
-const MCP_SCHEMA_VERSION = 'ecc.mcp.v1';
+const MCP_SCHEMA_VERSION = 'aip.mcp.v1';
 
 // Env keys whose values are almost always secrets. Used only to flag a server
 // as carrying credentials; values are NEVER copied into the canonical record.
@@ -154,7 +154,7 @@ function buildSignature({ transport, command, args, url }) {
   return `stdio:${[command, argString].filter(Boolean).join(' ')}`.trim();
 }
 
-// Normalize a single raw server entry (from any reader) to ecc.mcp.v1 shape.
+// Normalize a single raw server entry (from any reader) to aip.mcp.v1 shape.
 // rawServer fields the readers already pre-split: name, type, command, args,
 // url, env, enabled, source { harness, scope, configPath }.
 function normalizeServerEntry(rawServer) {

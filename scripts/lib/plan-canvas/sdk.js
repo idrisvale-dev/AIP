@@ -13,8 +13,8 @@ function artifactSdkJs() {
   return `'use strict';
 (() => {
   if (window.parent === window) return; // only meaningful inside the canvas
-  if (window.__eccPlanCanvasSdk) return;
-  window.__eccPlanCanvasSdk = true;
+  if (window.__aipPlanCanvasSdk) return;
+  window.__aipPlanCanvasSdk = true;
 
   let annotate = true;
   let card = null;
@@ -23,7 +23,7 @@ function artifactSdkJs() {
 
   // --- shadow-root UI host --------------------------------------------
   const host = document.createElement('div');
-  host.setAttribute('data-ecc-plan-canvas', 'ui');
+  host.setAttribute('data-aip-plan-canvas', 'ui');
   host.style.cssText = 'position:absolute;top:0;left:0;width:0;height:0;z-index:2147483647';
   const root = host.attachShadow({ mode: 'open' });
   root.innerHTML = \`

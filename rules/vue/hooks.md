@@ -41,5 +41,5 @@ vue-tsc --noEmit
 
 ## Reference
 
-- ECC skills: `frontend-patterns`, `vite-patterns`.
+- AIP skills: `frontend-patterns`, `vite-patterns`.
 - Docs: <https://github.com/vuejs/language-tools> (vue-tsc) · <https://eslint.vuejs.org/> · <https://github.com/feature-sliced/steiger>

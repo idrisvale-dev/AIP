@@ -1,7 +1,7 @@
 ---
 name: regex-vs-llm-structured-text
 description: 構造化テキストの解析に正規表現と大規模言語モデルのどちらを使うかを選択するための意思決定フレームワーク——まず正規表達式から始め、信頼度の低いエッジケースにのみ大規模言語モデルを追加する。
-origin: ECC
+origin: AIP
 ---
 
 # 構造化テキスト解析における正規表現 vs LLM

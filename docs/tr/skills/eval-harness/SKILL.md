@@ -1,7 +1,7 @@
 ---
 name: eval-harness
 description: Eval-driven development (EDD) ilkelerini uygulayan Claude Code oturumları için formal değerlendirme çerçevesi
-origin: ECC
+origin: AIP
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

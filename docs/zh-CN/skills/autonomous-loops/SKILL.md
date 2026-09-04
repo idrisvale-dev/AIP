@@ -1,7 +1,7 @@
 ---
 name: autonomous-loops
 description: "自主Claude代码循环的模式与架构——从简单的顺序管道到基于RFC的多智能体有向无环图系统。"
-origin: ECC
+origin: AIP
 ---
 
 # 自主循环技能
@@ -109,7 +109,7 @@ claude -p --allowedTools "Read,Write,Edit,Bash" "Implement the fixes from securi
 
 ## 2. NanoClaw REPL
 
-**ECC 内置的持久循环。** 一个具有会话感知的 REPL，它使用完整的对话历史同步调用 `claude -p`。
+**AIP 内置的持久循环。** 一个具有会话感知的 REPL，它使用完整的对话历史同步调用 `claude -p`。
 
 ```bash
 # Start the default session
@@ -577,7 +577,7 @@ evictionContext ─────────────────────�
 
 2. **连续 Claude + 去草率化** — 为每次迭代添加带有去草率化指令的 `--review-prompt`。
 
-3. **任何循环 + 验证** — 在提交前，使用 ECC 的 `/verify` 命令或 `verification-loop` 技能作为关卡。
+3. **任何循环 + 验证** — 在提交前，使用 AIP 的 `/verify` 命令或 `verification-loop` 技能作为关卡。
 
 4. **Ralphinho 在简单循环中的分层方法** — 即使在顺序流水线中，你也可以将简单任务路由到 Haiku，复杂任务路由到 Opus：
    ```bash
@@ -615,5 +615,5 @@ evictionContext ─────────────────────�
 | Ralphinho | enitrat | credit: @enitrat |
 | Infinite Agentic Loop | disler | credit: @disler |
 | Continuous Claude | AnandChowdhary | credit: @AnandChowdhary |
-| NanoClaw | ECC | 此仓库中的 `/claw` 命令 |
-| Verification Loop | ECC | 此仓库中的 `skills/verification-loop/` |
+| NanoClaw | AIP | 此仓库中的 `/claw` 命令 |
+| Verification Loop | AIP | 此仓库中的 `skills/verification-loop/` |

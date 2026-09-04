@@ -1,7 +1,7 @@
 ---
 name: nestjs-patterns
 description: NestJS 架构模式，涵盖模块、控制器、提供者、DTO 验证、守卫、拦截器、配置以及生产级 TypeScript 后端。
-origin: ECC
+origin: AIP
 ---
 
 # NestJS 开发模式

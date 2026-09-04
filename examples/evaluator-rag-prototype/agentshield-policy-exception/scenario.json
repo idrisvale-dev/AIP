@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.scenario.v1",
+  "schema_version": "aip.evaluator-rag.scenario.v1",
   "scenario_id": "agentshield-policy-exception",
   "title": "Gate AgentShield policy exceptions with report and SARIF evidence",
   "mode": "read_only_prototype",
@@ -7,13 +7,13 @@
   "sources": [
     {
       "kind": "repo_doc",
-      "path": "docs/ECC-2.0-GA-ROADMAP.md",
+      "path": "docs/AIP-2.0-GA-ROADMAP.md",
       "purpose": "Durable record of AgentShield policy gates, SARIF output, policy packs, reports, corpus benchmark, and exception lifecycle audit evidence"
     },
     {
       "kind": "repo_command",
       "path": "commands/security-scan.md",
-      "purpose": "ECC command contract for running AgentShield and separating scanner facts from follow-up judgment"
+      "purpose": "AIP command contract for running AgentShield and separating scanner facts from follow-up judgment"
     },
     {
       "kind": "repo_skill",
@@ -47,7 +47,7 @@
     "treating expired exceptions as active",
     "blanket-suppressing AgentShield policy packs or organization-policy gates",
     "downgrading critical/high findings without owner, ticket, scope, and expiry",
-    "editing AgentShield code or policy files from this ECC evaluator run",
+    "editing AgentShield code or policy files from this AIP evaluator run",
     "publishing or enforcing new security policy from this read-only evaluator run"
   ],
   "acceptance_gates": [

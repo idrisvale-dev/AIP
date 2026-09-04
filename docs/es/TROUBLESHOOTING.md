@@ -1,6 +1,6 @@
 # Guía de Resolución de Problemas
 
-Problemas comunes y soluciones para el plugin Everything Claude Code (ECC).
+Problemas comunes y soluciones para el plugin AIP (AIP).
 
 ## Tabla de Contenidos
 
@@ -249,10 +249,10 @@ tmux attach -t dev
 
 **Soluciones:**
 ```bash
-# Primero inspecciona qué sabe ECC sobre esta máquina
-ecc list-installed
-ecc doctor
-ecc repair
+# Primero inspecciona qué sabe AIP sobre esta máquina
+aip list-installed
+aip doctor
+aip repair
 
 # Solo reinstala si doctor/repair no puede restaurar los archivos faltantes
 
@@ -264,10 +264,10 @@ mv ~/.claude/plugins/cache ~/.claude/plugins/cache.backup.$(date +%Y%m%d-%H%M%S)
 mkdir -p ~/.claude/plugins/cache
 
 # Reinstalar desde el marketplace
-# Claude Code → Extensions → Everything Claude Code → Uninstall
+# Claude Code → Extensions → AIP → Uninstall
 # Luego reinstalar desde el marketplace
 
-# Si el problema es el acceso al marketplace/cuenta, usa la recuperación de cuenta/facturación de ECC Tools por separado; no uses la reinstalación como sustituto de la recuperación de cuenta
+# Si el problema es el acceso al marketplace/cuenta, usa la recuperación de cuenta/facturación de AIP Tools por separado; no uses la reinstalación como sustituto de la recuperación de cuenta
 
 # Verificar la versión de Claude Code
 claude --version
@@ -275,7 +275,7 @@ claude --version
 
 # Instalación manual (si el marketplace falla)
 git clone https://github.com/reborncursed/AIP.git
-cp -r everything-claude-code ~/.claude/plugins/ecc
+cp -r aip ~/.claude/plugins/aip
 ```
 
 ### Falla la Detección del Gestor de Paquetes
@@ -380,11 +380,11 @@ chmod -R u+rwX,go+rX ~/.claude/homunculus
 
 ```bash
 # Instalar dependencias del plugin
-cd ~/.claude/plugins/cache/ecc
+cd ~/.claude/plugins/cache/aip
 npm install
 
 # O para instalación manual
-cd ~/.claude/plugins/ecc
+cd ~/.claude/plugins/aip
 npm install
 ```
 

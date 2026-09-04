@@ -320,9 +320,9 @@ PASS: TDD 会话完成！
 
 ## 相关代理
 
-此命令调用由 ECC 提供的 `tdd-guide` 代理。
+此命令调用由 AIP 提供的 `tdd-guide` 代理。
 
-相关的 `tdd-workflow` 技能也随 ECC 捆绑提供。
+相关的 `tdd-workflow` 技能也随 AIP 捆绑提供。
 
 对于手动安装，源文件位于：
 - `agents/tdd-guide.md`

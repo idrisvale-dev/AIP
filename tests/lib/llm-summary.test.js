@@ -56,52 +56,52 @@ function assistantEntry(text) {
 console.log('getLLMModel:');
 
 test('returns haiku by default', () => {
-  const orig = process.env.ECC_LLM_SUMMARY_MODEL;
-  delete process.env.ECC_LLM_SUMMARY_MODEL;
+  const orig = process.env.AIP_LLM_SUMMARY_MODEL;
+  delete process.env.AIP_LLM_SUMMARY_MODEL;
   assert.strictEqual(getLLMModel(), 'haiku');
-  if (orig !== undefined) process.env.ECC_LLM_SUMMARY_MODEL = orig;
+  if (orig !== undefined) process.env.AIP_LLM_SUMMARY_MODEL = orig;
 });
 
-test('reads ECC_LLM_SUMMARY_MODEL env var', () => {
-  const orig = process.env.ECC_LLM_SUMMARY_MODEL;
-  process.env.ECC_LLM_SUMMARY_MODEL = 'sonnet';
+test('reads AIP_LLM_SUMMARY_MODEL env var', () => {
+  const orig = process.env.AIP_LLM_SUMMARY_MODEL;
+  process.env.AIP_LLM_SUMMARY_MODEL = 'sonnet';
   assert.strictEqual(getLLMModel(), 'sonnet');
-  if (orig !== undefined) process.env.ECC_LLM_SUMMARY_MODEL = orig;
-  else delete process.env.ECC_LLM_SUMMARY_MODEL;
+  if (orig !== undefined) process.env.AIP_LLM_SUMMARY_MODEL = orig;
+  else delete process.env.AIP_LLM_SUMMARY_MODEL;
 });
 
 // --- getContextThreshold ---
 console.log('\ngetContextThreshold:');
 
 test('returns 20 by default', () => {
-  const orig = process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD;
-  delete process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD;
+  const orig = process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD;
+  delete process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD;
   assert.strictEqual(getContextThreshold(), 20);
-  if (orig !== undefined) process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD = orig;
+  if (orig !== undefined) process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD = orig;
 });
 
-test('reads ECC_LLM_SUMMARY_CONTEXT_THRESHOLD env var', () => {
-  const orig = process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD;
-  process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD = '70';
+test('reads AIP_LLM_SUMMARY_CONTEXT_THRESHOLD env var', () => {
+  const orig = process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD;
+  process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD = '70';
   assert.strictEqual(getContextThreshold(), 70);
-  if (orig !== undefined) process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD = orig;
-  else delete process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD;
+  if (orig !== undefined) process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD = orig;
+  else delete process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD;
 });
 
 test('falls back to 20 on invalid value', () => {
-  const orig = process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD;
-  process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD = 'notanumber';
+  const orig = process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD;
+  process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD = 'notanumber';
   assert.strictEqual(getContextThreshold(), 20);
-  if (orig !== undefined) process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD = orig;
-  else delete process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD;
+  if (orig !== undefined) process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD = orig;
+  else delete process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD;
 });
 
 test('falls back to 20 when value exceeds 100', () => {
-  const orig = process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD;
-  process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD = '150';
+  const orig = process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD;
+  process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD = '150';
   assert.strictEqual(getContextThreshold(), 20);
-  if (orig !== undefined) process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD = orig;
-  else delete process.env.ECC_LLM_SUMMARY_CONTEXT_THRESHOLD;
+  if (orig !== undefined) process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD = orig;
+  else delete process.env.AIP_LLM_SUMMARY_CONTEXT_THRESHOLD;
 });
 
 // --- extractConversationText ---
@@ -176,20 +176,20 @@ test('returns numeric percentage for transcript with usage data', () => {
 // --- generateSessionSummary ---
 console.log('\ngenerateSessionSummary:');
 
-test('returns null when ECC_SKIP_LLM_SUMMARY is set', () => {
-  const orig = process.env.ECC_SKIP_LLM_SUMMARY;
-  process.env.ECC_SKIP_LLM_SUMMARY = '1';
+test('returns null when AIP_SKIP_LLM_SUMMARY is set', () => {
+  const orig = process.env.AIP_SKIP_LLM_SUMMARY;
+  process.env.AIP_SKIP_LLM_SUMMARY = '1';
   const p = writeTranscript([userEntry('test')]);
   assert.strictEqual(generateSessionSummary(p), null);
-  if (orig !== undefined) process.env.ECC_SKIP_LLM_SUMMARY = orig;
-  else delete process.env.ECC_SKIP_LLM_SUMMARY;
+  if (orig !== undefined) process.env.AIP_SKIP_LLM_SUMMARY = orig;
+  else delete process.env.AIP_SKIP_LLM_SUMMARY;
 });
 
 test('returns null for missing transcript (no conversation to summarize)', () => {
-  const orig = process.env.ECC_SKIP_LLM_SUMMARY;
-  delete process.env.ECC_SKIP_LLM_SUMMARY;
+  const orig = process.env.AIP_SKIP_LLM_SUMMARY;
+  delete process.env.AIP_SKIP_LLM_SUMMARY;
   assert.strictEqual(generateSessionSummary('/nonexistent.jsonl'), null);
-  if (orig !== undefined) process.env.ECC_SKIP_LLM_SUMMARY = orig;
+  if (orig !== undefined) process.env.AIP_SKIP_LLM_SUMMARY = orig;
 });
 
 test('marks the spawned summarizer so its Stop hook cannot create resume state', () => {
@@ -197,7 +197,7 @@ test('marks the spawned summarizer so its Stop hook cannot create resume state',
     path.join(__dirname, '..', '..', 'scripts', 'lib', 'llm-summary.js'),
     'utf8'
   );
-  assert.match(source, /ECC_LLM_SUMMARY_SUBPROCESS:\s*'1'/);
+  assert.match(source, /AIP_LLM_SUMMARY_SUBPROCESS:\s*'1'/);
 });
 
 // --- Results ---

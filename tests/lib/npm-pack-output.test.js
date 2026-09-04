@@ -19,46 +19,46 @@ function test(name, fn) {
 test('reads the npm 11 array response', () => {
   const entry = getNpmPackEntry([
     { name: 'unrelated-package', filename: 'unrelated-package-1.0.0.tgz' },
-    { name: 'ecc-universal', filename: 'ecc-universal-2.2.0.tgz' },
-  ], 'ecc-universal');
+    { name: 'aip-universal', filename: 'aip-universal-2.2.0.tgz' },
+  ], 'aip-universal');
 
-  assert.strictEqual(entry.filename, 'ecc-universal-2.2.0.tgz');
+  assert.strictEqual(entry.filename, 'aip-universal-2.2.0.tgz');
 });
 
 test('reads the npm 12 package-keyed response', () => {
   const entry = getNpmPackEntry({
-    'ecc-universal': {
-      name: 'ecc-universal',
-      filename: 'ecc-universal-2.2.0.tgz',
+    'aip-universal': {
+      name: 'aip-universal',
+      filename: 'aip-universal-2.2.0.tgz',
     },
-  }, 'ecc-universal');
+  }, 'aip-universal');
 
-  assert.strictEqual(entry.filename, 'ecc-universal-2.2.0.tgz');
+  assert.strictEqual(entry.filename, 'aip-universal-2.2.0.tgz');
 });
 
 test('finds a requested package in a generic object response', () => {
   const entry = getNpmPackEntry({
     unrelated: { name: 'unrelated-package', filename: 'unrelated-package-1.0.0.tgz' },
-    target: { name: 'ecc-universal', filename: 'ecc-universal-2.2.0.tgz' },
-  }, 'ecc-universal');
+    target: { name: 'aip-universal', filename: 'aip-universal-2.2.0.tgz' },
+  }, 'aip-universal');
 
-  assert.strictEqual(entry.filename, 'ecc-universal-2.2.0.tgz');
+  assert.strictEqual(entry.filename, 'aip-universal-2.2.0.tgz');
 });
 
 test('returns undefined for empty or malformed responses', () => {
-  assert.strictEqual(getNpmPackEntry([], 'ecc-universal'), undefined);
-  assert.strictEqual(getNpmPackEntry({}, 'ecc-universal'), undefined);
-  assert.strictEqual(getNpmPackEntry(null, 'ecc-universal'), undefined);
+  assert.strictEqual(getNpmPackEntry([], 'aip-universal'), undefined);
+  assert.strictEqual(getNpmPackEntry({}, 'aip-universal'), undefined);
+  assert.strictEqual(getNpmPackEntry(null, 'aip-universal'), undefined);
   assert.strictEqual(
     getNpmPackEntry([
       { name: 'unrelated-package', filename: 'unrelated-package-1.0.0.tgz' },
-    ], 'ecc-universal'),
+    ], 'aip-universal'),
     undefined
   );
   assert.strictEqual(
     getNpmPackEntry({
       unrelated: { name: 'unrelated-package', filename: 'unrelated-package-1.0.0.tgz' },
-    }, 'ecc-universal'),
+    }, 'aip-universal'),
     undefined
   );
 });

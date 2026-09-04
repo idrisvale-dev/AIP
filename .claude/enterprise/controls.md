@@ -1,6 +1,6 @@
 # Enterprise Controls
 
-This is a starter governance file for enterprise ECC deployments.
+This is a starter governance file for enterprise AIP deployments.
 
 ## Baseline
 

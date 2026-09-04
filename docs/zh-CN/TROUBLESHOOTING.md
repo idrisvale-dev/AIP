@@ -1,6 +1,6 @@
 # 故障排除指南
 
-Everything Claude Code (ECC) 插件的常见问题与解决方案。
+AIP (AIP) 插件的常见问题与解决方案。
 
 ## 目录
 
@@ -274,7 +274,7 @@ mv ~/.claude/plugins/cache ~/.claude/plugins/cache.backup.$(date +%Y%m%d-%H%M%S)
 mkdir -p ~/.claude/plugins/cache
 
 # Reinstall from marketplace
-# Claude Code → Extensions → Everything Claude Code → Uninstall
+# Claude Code → Extensions → AIP → Uninstall
 # Then reinstall from marketplace
 
 # Check Claude Code version
@@ -283,7 +283,7 @@ claude --version
 
 # Manual install (if marketplace fails)
 git clone https://github.com/reborncursed/AIP.git
-cp -r everything-claude-code ~/.claude/plugins/ecc
+cp -r aip ~/.claude/plugins/aip
 ```
 
 ### 包管理器检测失败
@@ -394,11 +394,11 @@ chmod -R u+rwX,go+rX ~/.claude/homunculus
 
 ```bash
 # Install plugin dependencies
-cd ~/.claude/plugins/cache/ecc
+cd ~/.claude/plugins/cache/aip
 npm install
 
 # Or for manual install
-cd ~/.claude/plugins/ecc
+cd ~/.claude/plugins/aip
 npm install
 ```
 

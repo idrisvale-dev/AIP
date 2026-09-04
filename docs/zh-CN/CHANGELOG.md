@@ -4,20 +4,20 @@
 
 ### 亮点
 
-* 为 Hermes 操作员叙事新增公开的 ECC 2.0 release candidate 表面。
-* 将 ECC 明确记录为跨 Claude Code、Codex、Cursor、OpenCode 和 Gemini 的可复用 cross-harness 基础层。
+* 为 Hermes 操作员叙事新增公开的 AIP 2.0 release candidate 表面。
+* 将 AIP 明确记录为跨 Claude Code、Codex、Cursor、OpenCode 和 Gemini 的可复用 cross-harness 基础层。
 * 新增经过清理的 Hermes import 技能表面，而不是发布私有操作员状态。
 
 ### 发布表面
 
 * 将 package、plugin、marketplace、OpenCode、agent 和 README 元数据更新为 `2.0.0-rc.1`。
 * 在 `docs/releases/2.0.0-rc.1/` 下集中发布说明、社交草稿、发布清单、交接说明和演示提示词。
-* 新增 `docs/architecture/cross-harness.md`，并补充 ECC/Hermes 边界的回归覆盖。
-* `ecc2/` 版本保持独立；除非 release engineering 另有决定，它仍是 alpha control-plane scaffold。
+* 新增 `docs/architecture/cross-harness.md`，并补充 AIP/Hermes 边界的回归覆盖。
+* `aip2/` 版本保持独立；除非 release engineering 另有决定，它仍是 alpha control-plane scaffold。
 
 ### 备注
 
-* 这是 release candidate，不是完整 ECC 2.0 control-plane 路线图的 GA 声明。
+* 这是 release candidate，不是完整 AIP 2.0 control-plane 路线图的 GA 声明。
 * 预发布 npm 发布应使用 `next` dist-tag，除非 release engineering 明确选择其他策略。
 
 ## 1.10.0 - 2026-04-05
@@ -27,7 +27,7 @@
 * 在数周 OSS 增长和 backlog 合并后，公开发布表面已同步到当前仓库状态。
 * 操作员工作流扩展了 voice、graph-ranking、billing、workspace 和 outbound 技能。
 * 媒体生成工作流扩展了 Manim 和 Remotion 优先的发布工具。
-* ECC 2.0 alpha control-plane binary 现在可从 `ecc2/` 本地构建，并提供首个可用的 CLI/TUI 表面。
+* AIP 2.0 alpha control-plane binary 现在可从 `aip2/` 本地构建，并提供首个可用的 CLI/TUI 表面。
 
 ### 发布表面
 
@@ -38,7 +38,7 @@
 ### 备注
 
 * Claude plugin 仍受平台级 rules 分发限制影响；selective install / OSS 路径仍是最可靠的完整安装方式。
-* 这是仓库表面校正和生态同步版本，不表示完整 ECC 2.0 路线图已经完成。
+* 这是仓库表面校正和生态同步版本，不表示完整 AIP 2.0 路线图已经完成。
 
 ## 1.9.0 - 2026-03-20
 
@@ -73,7 +73,7 @@
 * `ai-regression-testing` — AI 回归测试工作流 (#433)
 * `claude-devfleet` — 多代理编排 (#505)
 * `blueprint` — 多会话构建规划
-* `everything-claude-code` — 自引用 ECC 技能 (#335)
+* `aip` — 自引用 AIP 技能 (#335)
 * `prompt-optimizer` — 提示优化技能 (#418)
 * 8 个 Evos 操作领域技能 (#290)
 * 3 个 Laravel 技能 (#420)
@@ -172,7 +172,7 @@
 * 将会话摘要持久化移至 `Stop`，此处可获得转录负载。
 * 增加了质量门和成本追踪钩子。
 * 用专门的脚本文件替换了脆弱的单行内联钩子。
-* 增加了 `ECC_HOOK_PROFILE` 和 `ECC_DISABLED_HOOKS` 控制。
+* 增加了 `AIP_HOOK_PROFILE` 和 `AIP_DISABLED_HOOKS` 控制。
 
 ### 跨平台
 

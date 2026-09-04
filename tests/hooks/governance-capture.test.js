@@ -255,8 +255,8 @@ async function runTests() {
   // ── run() function ─────────────────────────────────────────
 
   if (await test('run() passes through input when feature flag is off', async () => {
-    const original = process.env.ECC_GOVERNANCE_CAPTURE;
-    delete process.env.ECC_GOVERNANCE_CAPTURE;
+    const original = process.env.AIP_GOVERNANCE_CAPTURE;
+    delete process.env.AIP_GOVERNANCE_CAPTURE;
 
     try {
       const input = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'git push --force' } });
@@ -264,14 +264,14 @@ async function runTests() {
       assert.strictEqual(result, input);
     } finally {
       if (original !== undefined) {
-        process.env.ECC_GOVERNANCE_CAPTURE = original;
+        process.env.AIP_GOVERNANCE_CAPTURE = original;
       }
     }
   })) passed += 1; else failed += 1;
 
   if (await test('run() passes through input when feature flag is on', async () => {
-    const original = process.env.ECC_GOVERNANCE_CAPTURE;
-    process.env.ECC_GOVERNANCE_CAPTURE = '1';
+    const original = process.env.AIP_GOVERNANCE_CAPTURE;
+    process.env.AIP_GOVERNANCE_CAPTURE = '1';
 
     try {
       const input = JSON.stringify({ tool_name: 'Read', tool_input: { file_path: 'index.js' } });
@@ -279,35 +279,35 @@ async function runTests() {
       assert.strictEqual(result, input);
     } finally {
       if (original !== undefined) {
-        process.env.ECC_GOVERNANCE_CAPTURE = original;
+        process.env.AIP_GOVERNANCE_CAPTURE = original;
       } else {
-        delete process.env.ECC_GOVERNANCE_CAPTURE;
+        delete process.env.AIP_GOVERNANCE_CAPTURE;
       }
     }
   })) passed += 1; else failed += 1;
 
   if (await test('run() handles invalid JSON gracefully', async () => {
-    const original = process.env.ECC_GOVERNANCE_CAPTURE;
-    process.env.ECC_GOVERNANCE_CAPTURE = '1';
+    const original = process.env.AIP_GOVERNANCE_CAPTURE;
+    process.env.AIP_GOVERNANCE_CAPTURE = '1';
 
     try {
       const result = run('not valid json');
       assert.strictEqual(result, 'not valid json');
     } finally {
       if (original !== undefined) {
-        process.env.ECC_GOVERNANCE_CAPTURE = original;
+        process.env.AIP_GOVERNANCE_CAPTURE = original;
       } else {
-        delete process.env.ECC_GOVERNANCE_CAPTURE;
+        delete process.env.AIP_GOVERNANCE_CAPTURE;
       }
     }
   })) passed += 1; else failed += 1;
 
   if (await test('run() emits hook_input_truncated event without logging raw command text', async () => {
-    const original = process.env.ECC_GOVERNANCE_CAPTURE;
+    const original = process.env.AIP_GOVERNANCE_CAPTURE;
     const originalHookEvent = process.env.CLAUDE_HOOK_EVENT_NAME;
     const originalWrite = process.stderr.write;
     const stderr = [];
-    process.env.ECC_GOVERNANCE_CAPTURE = '1';
+    process.env.AIP_GOVERNANCE_CAPTURE = '1';
     process.env.CLAUDE_HOOK_EVENT_NAME = 'PreToolUse';
     process.stderr.write = (chunk, encoding, callback) => {
       stderr.push(String(chunk));
@@ -323,9 +323,9 @@ async function runTests() {
     } finally {
       process.stderr.write = originalWrite;
       if (original !== undefined) {
-        process.env.ECC_GOVERNANCE_CAPTURE = original;
+        process.env.AIP_GOVERNANCE_CAPTURE = original;
       } else {
-        delete process.env.ECC_GOVERNANCE_CAPTURE;
+        delete process.env.AIP_GOVERNANCE_CAPTURE;
       }
       if (originalHookEvent !== undefined) {
         process.env.CLAUDE_HOOK_EVENT_NAME = originalHookEvent;

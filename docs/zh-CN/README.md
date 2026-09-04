@@ -1,13 +1,13 @@
 **语言：** [English](../../README.md) | [Português (Brasil)](../pt-BR/README.md) | [简体中文](../../README.zh-CN.md) | [繁體中文](../zh-TW/README.md) | [日本語](../ja-JP/README.md) | [한국어](../ko-KR/README.md) | [Türkçe](../tr/README.md) | [Русский](../ru/README.md) | [Tiếng Việt](../vi-VN/README.md) | [ไทย](../th/README.md) | [Українська](../uk-UA/README.md)
 
-# Everything Claude Code
+# AIP
 
 [![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
 [![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
 [![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
-[![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20weekly%20downloads\&logo=npm)](https://www.npmjs.com/package/ecc-universal)
-[![npm ecc-agentshield](https://img.shields.io/npm/dw/ecc-agentshield?label=ecc-agentshield%20weekly%20downloads\&logo=npm)](https://www.npmjs.com/package/ecc-agentshield)
-[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/ecc-tools)
+[![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads\&logo=npm)](https://www.npmjs.com/package/aip-universal)
+[![npm aip-agentshield](https://img.shields.io/npm/dw/aip-agentshield?label=aip-agentshield%20weekly%20downloads\&logo=npm)](https://www.npmjs.com/package/aip-agentshield)
+[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/aip-tools)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Shell](https://img.shields.io/badge/-Shell-4EAA25?logo=gnu-bash\&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript\&logoColor=white)
@@ -87,16 +87,16 @@
 
 ### v2.1.0 — 智能体 Harness 操作系统（2026年6月）
 
-2.0 主线稳定版：261 个技能、control-pane 基底（会话适配器 + MCP 清单）、worktree 生命周期服务，以及 [ECC Discord 社区](https://discord.gg/36yGMHGFbR)。
+2.0 主线稳定版：261 个技能、control-pane 基底（会话适配器 + MCP 清单）、worktree 生命周期服务，以及 [AIP Discord 社区](https://discord.gg/36yGMHGFbR)。
 
-### v2.0.0-rc.1 — 表面同步、运营工作流与 ECC 2.0 Alpha（2026年4月）
+### v2.0.0-rc.1 — 表面同步、运营工作流与 AIP 2.0 Alpha（2026年4月）
 
 * **公共表面已与真实仓库同步** —— 元数据、目录数量、插件清单以及安装文档现在都与实际开源表面保持一致。
 * **运营与外向型工作流扩展** —— `brand-voice`、`social-graph-ranker`、`customer-billing-ops`、`google-workspace-ops` 等运营型 skill 已纳入同一系统。
 * **媒体与发布工具补齐** —— `manim-video`、`remotion-video-creation` 以及社媒发布能力让技术讲解和发布流程直接在同一仓库内完成。
 * **框架与产品表面继续扩展** —— `nestjs-patterns`、更完整的 Codex/OpenCode 安装表面，以及跨 harness 打包改进，让仓库不再局限于 Claude Code。
-* **ECC 2.0 alpha 已进入仓库** —— `ecc2/` 下的 Rust 控制层现已可在本地构建，并提供 `dashboard`、`start`、`sessions`、`status`、`stop`、`resume` 与 `daemon` 命令。
-* **生态加固持续推进** —— AgentShield、ECC Tools 成本控制、计费门户工作与网站刷新仍围绕核心插件持续交付。
+* **AIP 2.0 alpha 已进入仓库** —— `aip2/` 下的 Rust 控制层现已可在本地构建，并提供 `dashboard`、`start`、`sessions`、`status`、`stop`、`resume` 与 `daemon` 命令。
+* **生态加固持续推进** —— AgentShield、AIP Tools 成本控制、计费门户工作与网站刷新仍围绕核心插件持续交付。
 
 ### v1.9.0 — 选择性安装与语言扩展 (2026年3月)
 
@@ -112,9 +112,9 @@
 
 ### v1.8.0 — 平台性能系统（2026 年 3 月）
 
-* **平台优先发布** — ECC 现在被明确构建为一个智能体平台性能系统，而不仅仅是一个配置包。
+* **平台优先发布** — AIP 现在被明确构建为一个智能体平台性能系统，而不仅仅是一个配置包。
 * **钩子可靠性大修** — SessionStart 根回退、Stop 阶段会话摘要，以及用基于脚本的钩子替换脆弱的单行内联钩子。
-* **钩子运行时控制** — `ECC_HOOK_PROFILE=minimal|standard|strict` 和 `ECC_DISABLED_HOOKS=...` 用于运行时门控，无需编辑钩子文件。
+* **钩子运行时控制** — `AIP_HOOK_PROFILE=minimal|standard|strict` 和 `AIP_DISABLED_HOOKS=...` 用于运行时门控，无需编辑钩子文件。
 * **新平台命令** — `/harness-audit`、`/loop-start`、`/loop-status`、`/quality-gate`、`/model-route`。
 * **NanoClaw v2** — 模型路由、技能热加载、会话分支/搜索/导出/压缩/指标。
 * **跨平台一致性** — 在 Claude Code、Cursor、OpenCode 和 Codex 应用/CLI 中行为更加统一。
@@ -133,7 +133,7 @@
 * **Codex CLI 支持** — 新的 `/codex-setup` 命令生成 `codex.md` 以实现 OpenAI Codex CLI 兼容性
 * **7个新技能** — `search-first`、`swift-actor-persistence`、`swift-protocol-di-testing`、`regex-vs-llm-structured-text`、`content-hash-cache-pattern`、`cost-aware-llm-pipeline`、`skill-stocktake`
 * **AgentShield 集成** — `/security-scan` 技能直接从 Claude Code 运行 AgentShield；1282 项测试，102 条规则
-* **GitHub 市场** — ECC Tools GitHub 应用已在 [github.com/marketplace/ecc-tools](https://github.com/marketplace/ecc-tools) 上线，提供免费/专业/企业版
+* **GitHub 市场** — AIP Tools GitHub 应用已在 [github.com/marketplace/aip-tools](https://github.com/marketplace/aip-tools) 上线，提供免费/专业/企业版
 * **合并了 30+ 个社区 PR** — 来自 6 种语言的 30 位贡献者的贡献
 * **978项内部测试** — 在代理、技能、命令、钩子和规则方面扩展了验证套件
 
@@ -143,7 +143,7 @@
 
 ### v1.4.0 — 多语言规则、安装向导 & PM2 (2026年2月)
 
-* **交互式安装向导** — 新的 `configure-ecc` 技能提供了带有合并/覆盖检测的引导式设置
+* **交互式安装向导** — 新的 `configure-aip` 技能提供了带有合并/覆盖检测的引导式设置
 * **PM2 & 多智能体编排** — 6 个新命令 (`/pm2`, `/multi-plan`, `/multi-execute`, `/multi-backend`, `/multi-frontend`, `/multi-workflow`) 用于管理复杂的多服务工作流
 * **多语言规则架构** — 规则从扁平文件重组为 `common/` + `typescript/` + `python/` + `golang/` 目录。仅安装您需要的语言
 * **中文 (zh-CN) 翻译** — 所有智能体、命令、技能和规则的完整翻译 (80+ 个文件)
@@ -169,30 +169,30 @@
 
 ## 统一记忆库
 
-`ecc memory` 使用可检查的 `ecc.memory.v1` Markdown 文档，在 Claude、
+`aip memory` 使用可检查的 `aip.memory.v1` Markdown 文档，在 Claude、
 Codex、Hermes 等 harness 之间传递上下文。常规搜索只召回 `project` 和
 `team` 范围内状态为 active 的条目，按 ID 直接读取仍可用于检查非 active
 条目；`user` 范围必须显式请求。首个版本中的所有记忆都保持 unreviewed，
 接受后的知识应进入受治理的项目文档，
 而不是修改记忆的信任字段。召回内容始终是不可信数据，不能作为指令执行。
 
-可选的 `ecc-memory-mcp` 服务必须由操作者设置小写
-`ECC_MEMORY_HARNESS` 身份；工具调用方不能覆盖该身份。只有操作者另外设置
-`ECC_MEMORY_ALLOW_USER_SCOPE=1` 后，MCP 调用才能显式请求 `user` 范围。
+可选的 `aip-memory-mcp` 服务必须由操作者设置小写
+`AIP_MEMORY_HARNESS` 身份；工具调用方不能覆盖该身份。只有操作者另外设置
+`AIP_MEMORY_ALLOW_USER_SCOPE=1` 后，MCP 调用才能显式请求 `user` 范围。
 该服务默认不会启用。
 
 仅安装 skill、最小配置、手动复制或 Claude 插件不会把记忆库运行时加入
-`PATH`。请先单独安装 ECC npm 运行时：
+`PATH`。请先单独安装 AIP npm 运行时：
 
 ```bash
-npm install -g ecc-universal
-ecc memory --help
-command -v ecc-memory-mcp
+npm install -g aip-universal
+aip memory --help
+command -v aip-memory-mcp
 ```
 
 如需启用 MCP，请从 `mcp-configs/mcp-servers.json` 复制
-`ecc-memory-vault` 配置到对应 harness，并为每个 harness 分别启动一个服务
-进程，例如 `ECC_MEMORY_HARNESS=codex ecc-memory-mcp`。不同 harness 可以共享
+`aip-memory-vault` 配置到对应 harness，并为每个 harness 分别启动一个服务
+进程，例如 `AIP_MEMORY_HARNESS=codex aip-memory-mcp`。不同 harness 可以共享
 同一个二进制文件和记忆库目录，但不能共用同一个服务进程。
 
 ## 快速开始
@@ -206,21 +206,21 @@ command -v ecc-memory-mcp
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # Install plugin
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 ### 步骤 2：安装规则（必需）
 
 > WARNING: **重要提示：** Claude Code 插件无法自动分发 `rules`。
 >
-> 如果你已经通过 `/plugin install` 安装了 ECC，**不要再运行 `./install.sh --profile full`、`.\install.ps1 --profile full` 或 `npx ecc-universal install --profile full`**。插件已经会自动加载 ECC 的技能、命令和 hooks；此时再执行完整安装，会把同一批内容再次复制到用户目录，导致技能重复以及运行时行为重复。
+> 如果你已经通过 `/plugin install` 安装了 AIP，**不要再运行 `./install.sh --profile full`、`.\install.ps1 --profile full` 或 `npx aip-universal install --profile full`**。插件已经会自动加载 AIP 的技能、命令和 hooks；此时再执行完整安装，会把同一批内容再次复制到用户目录，导致技能重复以及运行时行为重复。
 >
-> 对于插件安装路径，请只手动复制你需要的 `rules/` 目录。只有在你完全不走插件安装、而是选择“纯手动安装 ECC”时，才应该使用完整安装器。
+> 对于插件安装路径，请只手动复制你需要的 `rules/` 目录。只有在你完全不走插件安装、而是选择“纯手动安装 AIP”时，才应该使用完整安装器。
 
 ```bash
 # Clone the repo first
 git clone https://github.com/reborncursed/AIP.git
-cd everything-claude-code
+cd aip
 
 # Install dependencies (pick your package manager)
 npm install        # or: pnpm install | yarn install | bun install
@@ -230,7 +230,7 @@ mkdir -p ~/.claude/rules
 cp -R rules/common ~/.claude/rules/
 cp -R rules/typescript ~/.claude/rules/
 
-# Fully manual ECC install path (do this instead of /plugin install)
+# Fully manual AIP install path (do this instead of /plugin install)
 # ./install.sh --profile full
 ```
 
@@ -240,9 +240,9 @@ New-Item -ItemType Directory -Force -Path "$HOME/.claude/rules" | Out-Null
 Copy-Item -Recurse rules/common "$HOME/.claude/rules/"
 Copy-Item -Recurse rules/typescript "$HOME/.claude/rules/"
 
-# Fully manual ECC install path (do this instead of /plugin install)
+# Fully manual AIP install path (do this instead of /plugin install)
 # .\install.ps1 --profile full
-# npx ecc-universal install --profile full
+# npx aip-universal install --profile full
 ```
 
 手动安装说明请参阅 `rules/` 文件夹中的 README。
@@ -251,13 +251,13 @@ Copy-Item -Recurse rules/typescript "$HOME/.claude/rules/"
 
 ```bash
 # Try a command (plugin install uses namespaced form)
-/ecc:plan "Add user authentication"
+/aip:plan "Add user authentication"
 
 # Manual install (Option 2) uses the shorter form:
 # /plan "Add user authentication"
 
 # Check available commands
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
 **搞定！** 你现在可以使用 68 个智能体、286 项技能和 94 个命令了。
@@ -303,10 +303,10 @@ node scripts/setup-package-manager.js --detect
 
 ```bash
 # Hook strictness profile (default: standard)
-export ECC_HOOK_PROFILE=standard
+export AIP_HOOK_PROFILE=standard
 
 # Comma-separated hook IDs to disable
-export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
+export AIP_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 ```
 
 ***
@@ -316,7 +316,7 @@ export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 此仓库是一个 **Claude Code 插件** - 可以直接安装或手动复制组件。
 
 ```
-everything-claude-code/
+aip/
 |-- .claude-plugin/   # 插件和市场清单
 |   |-- plugin.json         # 插件元数据和组件路径
 |   |-- marketplace.json    # 用于 /plugin marketplace add 的市场目录
@@ -392,7 +392,7 @@ everything-claude-code/
 |   |-- springboot-security/        # Spring Boot 安全（新增）
 |   |-- springboot-tdd/             # Spring Boot TDD（新增）
 |   |-- springboot-verification/    # Spring Boot 验证（新增）
-|   |-- configure-ecc/              # 交互式安装向导（新增）
+|   |-- configure-aip/              # 交互式安装向导（新增）
 |   |-- security-scan/              # AgentShield 安全审计集成（新增）
 |   |-- java-coding-standards/     # Java 编码规范（新增）
 |   |-- jpa-patterns/              # JPA/Hibernate 模式（新增）
@@ -562,16 +562,16 @@ everything-claude-code/
 
 ```bash
 # Quick scan (no install needed)
-npx ecc-agentshield scan
+npx aip-agentshield scan
 
 # Auto-fix safe issues
-npx ecc-agentshield scan --fix
+npx aip-agentshield scan --fix
 
 # Deep analysis with three Opus 4.6 agents
-npx ecc-agentshield scan --opus --stream
+npx aip-agentshield scan --opus --stream
 
 # Generate secure config from scratch
-npx ecc-agentshield init
+npx aip-agentshield init
 ```
 
 **它扫描什么：** CLAUDE.md、settings.json、MCP 配置、钩子、代理定义以及 5 个类别的技能 —— 密钥检测（14 种模式）、权限审计、钩子注入分析、MCP 服务器风险剖析和代理配置审查。
@@ -582,7 +582,7 @@ npx ecc-agentshield init
 
 在 Claude Code 中使用 `/security-scan` 来运行它，或者通过 [GitHub Action](https://github.com/reborncursed/agentshield) 添加到 CI。
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/ecc-agentshield)
+[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 
 ### Plankton — 编写时代码质量强制执行
 
@@ -642,7 +642,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # Install the plugin
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 或者直接添加到您的 `~/.claude/settings.json`：
@@ -650,7 +650,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 ```json
 {
   "extraKnownMarketplaces": {
-    "ecc": {
+    "aip": {
       "source": {
         "source": "github",
         "repo": "reborncursed/AIP"
@@ -658,7 +658,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
     }
   },
   "enabledPlugins": {
-    "ecc@ecc": true
+    "aip@aip": true
   }
 }
 ```
@@ -673,16 +673,16 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 >
 > # 选项 A：用户级规则（适用于所有项目）
 > mkdir -p ~/.claude/rules
-> cp -r everything-claude-code/rules/common ~/.claude/rules/common
-> cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript   # 选择您的技术栈
-> cp -r everything-claude-code/rules/python ~/.claude/rules/python
-> cp -r everything-claude-code/rules/golang ~/.claude/rules/golang
-> cp -r everything-claude-code/rules/php ~/.claude/rules/php
+> cp -r aip/rules/common ~/.claude/rules/common
+> cp -r aip/rules/typescript ~/.claude/rules/typescript   # 选择您的技术栈
+> cp -r aip/rules/python ~/.claude/rules/python
+> cp -r aip/rules/golang ~/.claude/rules/golang
+> cp -r aip/rules/php ~/.claude/rules/php
 >
 > # 选项 B：项目级规则（仅适用于当前项目）
 > mkdir -p .claude/rules
-> cp -r everything-claude-code/rules/common .claude/rules/common
-> cp -r everything-claude-code/rules/typescript .claude/rules/typescript     # 选择您的技术栈
+> cp -r aip/rules/common .claude/rules/common
+> cp -r aip/rules/typescript .claude/rules/typescript     # 选择您的技术栈
 > ```
 
 ***
@@ -696,29 +696,29 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 git clone https://github.com/reborncursed/AIP.git
 
 # Copy agents to your Claude config
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp aip/agents/*.md ~/.claude/agents/
 
 # Copy rules (common + language-specific)
-cp -r everything-claude-code/rules/common ~/.claude/rules/common
-cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript   # pick your stack
-cp -r everything-claude-code/rules/python ~/.claude/rules/python
-cp -r everything-claude-code/rules/golang ~/.claude/rules/golang
-cp -r everything-claude-code/rules/php ~/.claude/rules/php
+cp -r aip/rules/common ~/.claude/rules/common
+cp -r aip/rules/typescript ~/.claude/rules/typescript   # pick your stack
+cp -r aip/rules/python ~/.claude/rules/python
+cp -r aip/rules/golang ~/.claude/rules/golang
+cp -r aip/rules/php ~/.claude/rules/php
 
 # Copy maintained commands
-cp everything-claude-code/commands/*.md ~/.claude/commands/
+cp aip/commands/*.md ~/.claude/commands/
 
 # Retired shims live in legacy-command-shims/commands/.
 # Copy individual files from there only if you still need old names such as /tdd.
 
 # Copy skills (core vs niche)
 # Recommended (new users): core/general skills only
-cp -r everything-claude-code/.agents/skills/* ~/.claude/skills/
-cp -r everything-claude-code/skills/search-first ~/.claude/skills/
+cp -r aip/.agents/skills/* ~/.claude/skills/
+cp -r aip/skills/search-first ~/.claude/skills/
 
 # Optional: add niche/framework-specific skills only when needed
 # for s in django-patterns django-tdd laravel-patterns springboot-patterns quarkus-patterns; do
-# cp -r everything-claude-code/skills/$s ~/.claude/skills/
+# cp -r aip/skills/$s ~/.claude/skills/
 # done
 ```
 
@@ -804,8 +804,8 @@ rules/
 
 | 我想要... | 使用此表面 | 使用的智能体 |
 |--------------|-----------------|------------|
-| 规划新功能 | `/ecc:plan "Add auth"` | planner |
-| 设计系统架构 | `/ecc:plan` + architect agent | architect |
+| 规划新功能 | `/aip:plan "Add auth"` | planner |
+| 设计系统架构 | `/aip:plan` + architect agent | architect |
 | 先写测试再写代码 | `tdd-workflow` 技能 | tdd-guide |
 | 评审我刚写的代码 | `/code-review` | code-reviewer |
 | 修复失败的构建 | `/build-fix` | build-error-resolver |
@@ -823,7 +823,7 @@ rules/
 **开始新功能：**
 
 ```
-/ecc:plan "使用 OAuth 添加用户身份验证"
+/aip:plan "使用 OAuth 添加用户身份验证"
                                               → 规划器创建实现蓝图
 tdd-workflow 技能                             → tdd-guide 强制执行先写测试
 /code-review                                  → 代码审查员检查你的工作
@@ -853,7 +853,7 @@ e2e-testing 技能                              → e2e-runner: 关键用户流�
 <summary><b>如何检查已安装的代理/命令？</b></summary>
 
 ```bash
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
 这会显示插件中所有可用的代理、命令和技能。
@@ -868,9 +868,9 @@ e2e-testing 技能                              → e2e-runner: 关键用户流�
 </details>
 
 <details>
-<summary><b>我能否在自定义API端点或模型网关上使用ECC与Claude Code？</b></summary>
+<summary><b>我能否在自定义API端点或模型网关上使用AIP与Claude Code？</b></summary>
 
-是的。ECC 不会硬编码 Anthropic 托管的传输设置。它通过 Claude Code 正常的 CLI/插件接口在本地运行，因此可以与以下系统配合工作：
+是的。AIP 不会硬编码 Anthropic 托管的传输设置。它通过 Claude Code 正常的 CLI/插件接口在本地运行，因此可以与以下系统配合工作：
 
 * Anthropic 托管的 Claude Code
 * 使用 `ANTHROPIC_BASE_URL` 和 `ANTHROPIC_AUTH_TOKEN` 的官方 Claude Code 网关设置
@@ -884,7 +884,7 @@ export ANTHROPIC_AUTH_TOKEN=your-token
 claude
 ```
 
-如果您的网关重新映射模型名称，请在 Claude Code 中配置，而不是在 ECC 中。一旦 `claude` CLI 已经正常工作，ECC 的钩子、技能、命令和规则就与模型提供商无关。
+如果您的网关重新映射模型名称，请在 Claude Code 中配置，而不是在 AIP 中。一旦 `claude` CLI 已经正常工作，AIP 的钩子、技能、命令和规则就与模型提供商无关。
 
 官方参考资料：
 
@@ -918,10 +918,10 @@ claude
 
 ```bash
 # Just agents
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp aip/agents/*.md ~/.claude/agents/
 
 # Just rules
-cp -r everything-claude-code/rules/common ~/.claude/rules/common
+cp -r aip/rules/common ~/.claude/rules/common
 ```
 
 每个组件都是完全独立的。
@@ -931,7 +931,7 @@ cp -r everything-claude-code/rules/common ~/.claude/rules/common
 <details>
 <summary><b>这能与 Cursor / OpenCode / Codex / Antigravity 一起使用吗？</b></summary>
 
-是的。ECC 是跨平台的：
+是的。AIP 是跨平台的：
 
 * **Cursor**: 预翻译的配置位于 `.cursor/`。参见 [Cursor IDE 支持](#cursor-ide-支持)。
 * **OpenCode**: `.opencode/` 中的完整插件支持。参见 [OpenCode 支持](#opencode-支持)。
@@ -996,7 +996,7 @@ node tests/hooks/hooks.test.js
 
 ## Cursor IDE 支持
 
-ECC 提供**完整的 Cursor IDE 支持**，包括为 Cursor 原生格式适配的钩子、规则、代理、技能、命令和 MCP 配置。
+AIP 提供**完整的 Cursor IDE 支持**，包括为 Cursor 原生格式适配的钩子、规则、代理、技能、命令和 MCP 配置。
 
 ### 快速开始 (Cursor)
 
@@ -1057,7 +1057,7 @@ alwaysApply: false
 
 ## Codex macOS 应用 + CLI 支持
 
-ECC 为 macOS 应用和 CLI 提供 **一流的 Codex 支持**，包括参考配置、Codex 特定的 AGENTS.md 补充文档以及共享技能。
+AIP 为 macOS 应用和 CLI 提供 **一流的 Codex 支持**，包括参考配置、Codex 特定的 AGENTS.md 补充文档以及共享技能。
 
 ### 快速开始（Codex 应用 + CLI）
 
@@ -1111,7 +1111,7 @@ Codex macOS 应用：
 | documentation-lookup | 通过 Context7 MCP 获取最新库和框架文档 |
 | e2e-testing | Playwright 端到端测试 |
 | eval-harness | 评估驱动的开发 |
-| everything-claude-code | ECC 项目的开发约定和模式 |
+| aip | AIP 项目的开发约定和模式 |
 | exa-search | 通过 Exa MCP 进行网络、代码和公司研究 |
 | fal-ai-media | 图像、视频和音频的统一媒体生成 |
 | frontend-patterns | React/Next.js 模式 |
@@ -1131,7 +1131,7 @@ Codex macOS 应用：
 
 ### 关键限制
 
-Codex **尚未提供与 Claude 风格同等的钩子执行功能**。ECC 在该平台上的强制执行是通过 `AGENTS.md`、可选的 `model_instructions_file` 覆盖以及沙箱/批准设置以指令方式实现的。
+Codex **尚未提供与 Claude 风格同等的钩子执行功能**。AIP 在该平台上的强制执行是通过 `AGENTS.md`、可选的 `model_instructions_file` 覆盖以及沙箱/批准设置以指令方式实现的。
 
 ### 多代理支持
 
@@ -1142,7 +1142,7 @@ Codex **尚未提供与 Claude 风格同等的钩子执行功能**。ECC 在该�
 * 将每个角色指向 `.codex/agents/` 下的一个文件
 * 在 CLI 中使用 `/agent` 来检查或引导子代理
 
-ECC 附带了三个示例角色配置：
+AIP 附带了三个示例角色配置：
 
 | 角色 | 目的 |
 |------|---------|
@@ -1154,7 +1154,7 @@ ECC 附带了三个示例角色配置：
 
 ## OpenCode 支持
 
-ECC 提供 **完整的 OpenCode 支持**，包括插件和钩子。
+AIP 提供 **完整的 OpenCode 支持**，包括插件和钩子。
 
 ### 快速开始
 
@@ -1239,28 +1239,28 @@ OpenCode 的插件系统比 Claude Code 更复杂，有 20 多种事件类型：
 **选项 1：直接使用**
 
 ```bash
-cd everything-claude-code
+cd aip
 opencode
 ```
 
 **选项 2：作为 npm 包安装**
 
 ```bash
-npm install ecc-universal
+npm install aip-universal
 ```
 
 然后添加到您的 `opencode.json`：
 
 ```json
 {
-  "plugin": ["ecc-universal"]
+  "plugin": ["aip-universal"]
 }
 ```
 
-该 npm 插件条目启用了 ECC 发布的 OpenCode 插件模块（钩子/事件和插件工具）。
-它**不会**自动将 ECC 的完整命令/代理/指令目录添加到您的项目配置中。
+该 npm 插件条目启用了 AIP 发布的 OpenCode 插件模块（钩子/事件和插件工具）。
+它**不会**自动将 AIP 的完整命令/代理/指令目录添加到您的项目配置中。
 
-要获得完整的 ECC OpenCode 设置，您可以：
+要获得完整的 AIP OpenCode 设置，您可以：
 
 * 在此仓库内运行 OpenCode，或者
 * 将捆绑的 `.opencode/` 配置资源复制到您的项目中，并在 `opencode.json` 中连接 `instructions`、`agent` 和 `command` 条目
@@ -1276,7 +1276,7 @@ npm install ecc-universal
 
 ## 跨工具功能对等
 
-ECC 是**第一个最大化利用每个主要 AI 编码工具的插件**。以下是每个平台的比较：
+AIP 是**第一个最大化利用每个主要 AI 编码工具的插件**。以下是每个平台的比较：
 
 | 功能特性 | Claude Code           | Cursor IDE | Codex CLI | OpenCode |
 |---------|-----------------------|------------|-----------|----------|
@@ -1299,7 +1299,7 @@ ECC 是**第一个最大化利用每个主要 AI 编码工具的插件**。以�
 * **AGENTS.md** 在根目录是通用的跨工具文件（所有 4 个工具都能读取）
 * **DRY 适配器模式** 让 Cursor 可以重用 Claude Code 的钩子脚本而无需重复
 * **技能格式**（带有 YAML 前言的 SKILL.md）在 Claude Code、Codex 和 OpenCode 中都能工作
-* Codex 通过原生 `SessionStart` 引导钩子初始化 ECC；其余行为由 `AGENTS.md`、可选的 `model_instructions_file` 覆盖以及沙箱权限提供
+* Codex 通过原生 `SessionStart` 引导钩子初始化 AIP；其余行为由 `AGENTS.md`、可选的 `model_instructions_file` 覆盖以及沙箱权限提供
 
 ***
 

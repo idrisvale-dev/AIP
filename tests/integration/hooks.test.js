@@ -231,7 +231,7 @@ function getTestHomunculusEnv(testDir) {
   return {
     HOME: testDir,
     XDG_DATA_HOME: xdgDataHome,
-    homunculusDir: path.join(xdgDataHome, 'ecc-homunculus'),
+    homunculusDir: path.join(xdgDataHome, 'aip-homunculus'),
   };
 }
 
@@ -589,9 +589,9 @@ async function runTests() {
         { tool_name: 'mcp__broken__search', tool_input: {} },
         {
           CLAUDE_HOOK_EVENT_NAME: 'PreToolUse',
-          ECC_MCP_CONFIG_PATH: configPath,
-          ECC_MCP_HEALTH_STATE_PATH: statePath,
-          ECC_MCP_HEALTH_TIMEOUT_MS: '1000'
+          AIP_MCP_CONFIG_PATH: configPath,
+          AIP_MCP_HEALTH_STATE_PATH: statePath,
+          AIP_MCP_HEALTH_TIMEOUT_MS: '1000'
         }
       );
 

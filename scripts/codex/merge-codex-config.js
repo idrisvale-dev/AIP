@@ -18,8 +18,8 @@ let TOML;
 try {
   TOML = require('@iarna/toml');
 } catch {
-  console.error('[ecc-codex] Missing dependency: @iarna/toml');
-  console.error('[ecc-codex] Run: npm install   (from the ECC repo root)');
+  console.error('[aip-codex] Missing dependency: @iarna/toml');
+  console.error('[aip-codex] Run: npm install   (from the AIP repo root)');
   process.exit(1);
 }
 
@@ -36,11 +36,11 @@ const TABLE_PATHS = [
 const TOML_HEADER_RE = /^[ \t]*(?:\[[^[\]\n][^\]\n]*\]|\[\[[^[\]\n][^\]\n]*\]\])[ \t]*(?:#.*)?$/m;
 
 function log(message) {
-  console.log(`[ecc-codex] ${message}`);
+  console.log(`[aip-codex] ${message}`);
 }
 
 function warn(message) {
-  console.warn(`[ecc-codex] WARNING: ${message}`);
+  console.warn(`[aip-codex] WARNING: ${message}`);
 }
 
 function getNested(obj, pathParts) {
@@ -221,12 +221,12 @@ function main() {
 
   const referencePath = path.join(__dirname, '..', '..', '.codex', 'config.toml');
   if (!fs.existsSync(referencePath)) {
-    console.error(`[ecc-codex] Reference config not found: ${referencePath}`);
+    console.error(`[aip-codex] Reference config not found: ${referencePath}`);
     process.exit(1);
   }
 
   if (!fs.existsSync(configPath)) {
-    console.error(`[ecc-codex] Config file not found: ${configPath}`);
+    console.error(`[aip-codex] Config file not found: ${configPath}`);
     process.exit(1);
   }
 
@@ -239,7 +239,7 @@ function main() {
     targetConfig = TOML.parse(raw);
     referenceConfig = TOML.parse(referenceRaw);
   } catch (error) {
-    console.error(`[ecc-codex] Failed to parse TOML: ${error.message}`);
+    console.error(`[aip-codex] Failed to parse TOML: ${error.message}`);
     process.exit(1);
   }
 

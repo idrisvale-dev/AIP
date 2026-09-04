@@ -282,7 +282,7 @@ pytest -n auto
 pytest --lf
 ```
 
-## ECC 工作流
+## AIP 工作流
 
 ```bash
 # Planning

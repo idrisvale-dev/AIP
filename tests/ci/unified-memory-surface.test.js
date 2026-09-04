@@ -43,17 +43,17 @@ function stripFrontmatter(source) {
 
 console.log('\n=== Testing unified-memory install and adapter surfaces ===\n');
 
-test('documents the separately installed ECC runtime on every exposed surface', () => {
+test('documents the separately installed AIP runtime on every exposed surface', () => {
   for (const relativePath of RUNTIME_DOC_PATHS) {
     const source = read(relativePath);
     assert.match(
       source,
-      /npm install -g ecc-universal/i,
+      /npm install -g aip-universal/i,
       `${relativePath} must state how to install the required CLI runtime`
     );
     assert.match(
       source,
-      /ecc-memory-mcp/,
+      /aip-memory-mcp/,
       `${relativePath} must identify the optional MCP binary`
     );
   }

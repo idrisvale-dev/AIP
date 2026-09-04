@@ -1,7 +1,7 @@
 ---
 name: taste
-description: A creative-direction (taste) layer for music videos and short-form edits in the angelcore / cloud-trance / hyperpop visual family. Distills a named-genre aesthetic vocabulary, a mood + color + light system, and a beat-synced editing grammar, then chains ECC's video skills (video-editing, fal-ai-media, remotion-video-creation, motion-*, content-engine) into one production pipeline. Use when the work is not just making a video function but making it feel intentional, when building a music video, a fancam/edit, a moodboard-driven reel, or when choosing a coherent visual direction for AI-generated b-roll.
-origin: ECC
+description: A creative-direction (taste) layer for music videos and short-form edits in the angelcore / cloud-trance / hyperpop visual family. Distills a named-genre aesthetic vocabulary, a mood + color + light system, and a beat-synced editing grammar, then chains AIP's video skills (video-editing, fal-ai-media, remotion-video-creation, motion-*, content-engine) into one production pipeline. Use when the work is not just making a video function but making it feel intentional, when building a music video, a fancam/edit, a moodboard-driven reel, or when choosing a coherent visual direction for AI-generated b-roll.
+origin: AIP
 ---
 
 # Taste
@@ -119,9 +119,9 @@ From the reference edits, the techniques that recur and define the style:
 shot held past its musical phrase; readable on-screen UI chrome (crop it out); mixed aspect
 ratios in one timeline.
 
-## The Pipeline — mixing the ECC video skills
+## The Pipeline — mixing the AIP video skills
 
-This skill is the conductor. Each ECC skill is an instrument. Do not skip layers.
+This skill is the conductor. Each AIP skill is an instrument. Do not skip layers.
 
 ```
 0. TASTE (this skill)        decide genre + mood + grammar BEFORE anything renders
@@ -135,7 +135,7 @@ This skill is the conductor. Each ECC skill is an instrument. Do not skip layers
 8. DISTRIBUTE (content-engine) platform-native versions + caption/cover
 ```
 
-| Step | ECC skill to load | What it does here |
+| Step | AIP skill to load | What it does here |
 |------|-------------------|-------------------|
 | Structure & cut | `video-editing` | FFmpeg cut/concat/reframe, EDL, scene/silence detection |
 | Generate b-roll | `fal-ai-media` | image/video models per genre preset |

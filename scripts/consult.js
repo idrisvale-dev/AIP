@@ -10,7 +10,7 @@ const {
 const DEFAULT_TARGET = 'claude';
 const DEFAULT_LIMIT = 5;
 const MAX_LIMIT = 20;
-const SCHEMA_VERSION = 'ecc.consult.v1';
+const SCHEMA_VERSION = 'aip.consult.v1';
 const FUZZY_EXCLUDED_TOKENS = new Set(['review']);
 const MACHINE_LEARNING_CONTEXT_TOKENS = new Set([
   'data-science',
@@ -118,7 +118,7 @@ const PROFILE_ALIASES = Object.freeze({
 
 function showHelp(exitCode = 0) {
   console.log(`
-Consult ECC install components and profiles from any project
+Consult AIP install components and profiles from any project
 
 Usage:
   node scripts/consult.js "security reviews" [--target <target>] [--limit <n>] [--json]
@@ -240,14 +240,14 @@ function parseArgs(argv) {
 
 function commandFor(kind, id, target) {
   if (kind === 'profile') {
-    return `npx ecc-universal install --profile ${id} --target ${target}`;
+    return `npx aip-universal install --profile ${id} --target ${target}`;
   }
 
-  return `npx ecc-universal install --profile minimal --target ${target} --with ${id}`;
+  return `npx aip-universal install --profile minimal --target ${target} --with ${id}`;
 }
 
 function planCommandFor(componentId, target) {
-  return `npx ecc-universal plan --profile minimal --target ${target} --with ${componentId}`;
+  return `npx aip-universal plan --profile minimal --target ${target} --with ${componentId}`;
 }
 
 function buildSearchCorpus(parts) {
@@ -421,7 +421,7 @@ function buildConsultation(options) {
         `Install it: ${matches[0].installCommand}`,
       ]
       : [
-        'Run `npx ecc-universal catalog components` to browse all components.',
+        'Run `npx aip-universal catalog components` to browse all components.',
         'Try a more specific query such as "security review", "Next.js", or "operator workflows".',
       ],
   };
@@ -429,7 +429,7 @@ function buildConsultation(options) {
 
 function formatText(payload) {
   const lines = [
-    `ECC consult (${payload.generatedAt})`,
+    `AIP consult (${payload.generatedAt})`,
     `Query: ${payload.query}`,
     `Target: ${payload.target}`,
     '',
@@ -437,7 +437,7 @@ function formatText(payload) {
 
   if (payload.matches.length === 0) {
     lines.push('No strong component matches found.');
-    lines.push('Try: npx ecc-universal catalog components');
+    lines.push('Try: npx aip-universal catalog components');
   } else {
     lines.push('Recommended components:');
     payload.matches.forEach((match, index) => {

@@ -1,7 +1,7 @@
 ---
 name: ai-first-engineering
 description: AI エージェントが大量の実装出力を生成するチームのためのエンジニアリング運用モデル。
-origin: ECC
+origin: AIP
 ---
 
 # AI ファーストエンジニアリング

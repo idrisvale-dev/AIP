@@ -16,7 +16,7 @@ const {
 } = require('../../scripts/ci/catalog');
 
 function createTestDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-ci-catalog-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ci-catalog-'));
 }
 
 function cleanupTestDir(testDir) {
@@ -71,12 +71,12 @@ function writePluginMetadata(root, counts) {
   fs.mkdirSync(pluginDir, { recursive: true });
 
   fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify({
-    name: 'ecc',
+    name: 'aip',
     description: `Fixture plugin — ${counts.agents} agents, ${counts.skills} skills, ${counts.commands} legacy command shims`,
   }, null, 2));
   fs.writeFileSync(path.join(pluginDir, 'marketplace.json'), JSON.stringify({
     plugins: [{
-      name: 'ecc',
+      name: 'aip',
       description: `Fixture marketplace plugin — ${counts.agents} agents, ${counts.skills} skills, ${counts.commands} legacy command shims`,
     }],
   }, null, 2));

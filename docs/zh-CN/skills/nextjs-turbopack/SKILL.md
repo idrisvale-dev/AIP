@@ -1,7 +1,7 @@
 ---
 name: nextjs-turbopack
 description: Next.js 16+ 和 Turbopack — 增量打包、文件系统缓存、开发速度，以及何时使用 Turbopack 与 webpack。
-origin: ECC
+origin: AIP
 ---
 
 # Next.js 与 Turbopack

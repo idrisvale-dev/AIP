@@ -22,7 +22,7 @@ const {
 const { test, banner, section, summary } = require('./helpers/mini-test-runner');
 
 function withTempDir(fn) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-policy-test-'));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-policy-test-'));
   try {
     fn(tmpDir);
   } finally {

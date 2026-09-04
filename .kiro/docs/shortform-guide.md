@@ -4,8 +4,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ecc-kiro-public-repo.git
-cd ecc-kiro-public-repo
+git clone https://github.com/yourusername/aip-kiro-public-repo.git
+cd aip-kiro-public-repo
 
 # Install to current project
 ./install.sh
@@ -285,7 +285,7 @@ chmod +x .kiro/scripts/*.sh
 
 - **Longform Guide**: `docs/longform-guide.md` - Deep dive on agentic workflows
 - **Security Guide**: `docs/security-guide.md` - Security best practices
-- **Migration Guide**: `docs/migration-from-ecc.md` - For Claude Code users
+- **Migration Guide**: `docs/migration-from-aip.md` - For Claude Code users
 - **GitHub Issues**: Report bugs and request features
 - **Kiro Documentation**: https://kiro.dev/docs
 

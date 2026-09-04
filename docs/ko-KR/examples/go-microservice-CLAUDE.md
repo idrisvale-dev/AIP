@@ -241,7 +241,7 @@ go tool cover -html=coverage.out  # 브라우저
 go test ./... -race -count=1
 ```
 
-## ECC 워크플로우
+## AIP 워크플로우
 
 ```bash
 # 계획 수립

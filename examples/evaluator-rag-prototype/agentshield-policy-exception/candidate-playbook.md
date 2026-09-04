@@ -37,9 +37,9 @@ the underlying issue.
 
 ## Minimum Validation
 
-- `npx ecc-agentshield scan --format json`
+- `npx aip-agentshield scan --format json`
 - AgentShield SARIF/code-scanning artifact or report evidence
-- `npx ecc-agentshield scan --format html` when executive review evidence is
+- `npx aip-agentshield scan --format html` when executive review evidence is
   needed
 - Current exception lifecycle fields: owner, ticket, scope, expiry, status
 - `node tests/docs/evaluator-rag-prototype.test.js`

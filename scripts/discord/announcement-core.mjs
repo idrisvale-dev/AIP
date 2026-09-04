@@ -9,7 +9,7 @@ export function isAnnouncementDiscussion(discussion) {
 export function releaseMarker(tag) {
   const normalized = String(tag || '').trim();
   if (!normalized) throw new Error('release tag is required');
-  return `<!-- ecc-release:${normalized} -->`;
+  return `<!-- aip-release:${normalized} -->`;
 }
 
 export function findReleaseDiscussion(discussions, marker) {
@@ -28,15 +28,15 @@ export function announcementKey({ repository, discussionId }) {
 
 export function buildDiscordPayload({ title, body, url, key }) {
   const discussionId = String(key).split(':').at(-1);
-  const footer = `ecc:${discussionId}`;
+  const footer = `aip:${discussionId}`;
   const description = String(body || '').trim().slice(0, DISCORD_DESCRIPTION_LIMIT);
-  const nonce = `ecc-${createHash('sha256').update(String(key)).digest('hex').slice(0, 16)}`;
+  const nonce = `aip-${createHash('sha256').update(String(key)).digest('hex').slice(0, 16)}`;
   return {
     allowed_mentions: { parse: [] },
     nonce,
     enforce_nonce: true,
     embeds: [{
-      title: String(title || 'ECC announcement').trim().slice(0, 256),
+      title: String(title || 'AIP announcement').trim().slice(0, 256),
       description,
       url: String(url || ''),
       footer: { text: footer },
@@ -46,7 +46,7 @@ export function buildDiscordPayload({ title, body, url, key }) {
 
 export function findDiscordReceipt(messages, key) {
   const discussionId = String(key).split(':').at(-1);
-  return messages.find(message => message.embeds?.some(embed => embed.footer?.text === `ecc:${discussionId}`)) || null;
+  return messages.find(message => message.embeds?.some(embed => embed.footer?.text === `aip:${discussionId}`)) || null;
 }
 
 export function normalizeDiscordWebhookUrl(value) {
@@ -68,7 +68,7 @@ export function normalizeDiscordWebhookUrl(value) {
 }
 
 export function discussionReceiptMarker(key) {
-  return `<!-- ecc-discord-receipt:${createHash('sha256').update(String(key)).digest('hex').slice(0, 32)} -->`;
+  return `<!-- aip-discord-receipt:${createHash('sha256').update(String(key)).digest('hex').slice(0, 32)} -->`;
 }
 
 export function findDiscussionReceipt(comments, marker) {

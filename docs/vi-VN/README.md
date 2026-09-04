@@ -1,13 +1,13 @@
 **Ngôn ngữ:** [English](../../README.md) | [Português (Brasil)](../pt-BR/README.md) | [简体中文](../../README.zh-CN.md) | [繁體中文](../zh-TW/README.md) | [日本語](../ja-JP/README.md) | [한국어](../ko-KR/README.md) | [Türkçe](../tr/README.md) | [Русский](../ru/README.md) | **Tiếng Việt** | [ไทย](../th/README.md) | [Deutsch](../de-DE/README.md) | [Українська](../uk-UA/README.md)
 
-# Everything Claude Code
+# AIP
 
-![Everything Claude Code - hệ thống hiệu năng cho AI agent harness](../../assets/hero.png)
+![AIP - hệ thống hiệu năng cho AI agent harness](../../assets/hero.png)
 
 [![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
 [![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
 [![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
-[![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-universal)
+[![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-universal)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 
 > **140K+ sao** | **21K+ fork** | **170+ contributor** | **12+ hệ sinh thái ngôn ngữ** | **Anthropic Hackathon Winner**
@@ -24,9 +24,9 @@
 
 ---
 
-**Everything Claude Code là hệ thống tối ưu hiệu năng cho AI agent harness.**
+**AIP là hệ thống tối ưu hiệu năng cho AI agent harness.**
 
-ECC không chỉ là một bộ cấu hình. Repo này đóng gói agents, skills, hooks, rules, MCP config, selective install, kiểm tra bảo mật, và workflow vận hành cho Claude Code, Codex, Cursor, OpenCode, Gemini và các harness agent khác.
+AIP không chỉ là một bộ cấu hình. Repo này đóng gói agents, skills, hooks, rules, MCP config, selective install, kiểm tra bảo mật, và workflow vận hành cho Claude Code, Codex, Cursor, OpenCode, Gemini và các harness agent khác.
 
 Trang tiếng Việt này là bản onboarding gọn, được phục hồi từ đóng góp cộng đồng trong PR [#1322](https://github.com/reborncursed/AIP/pull/1322) và cập nhật để khớp mặt cài đặt hiện tại. README tiếng Anh vẫn là nguồn chuẩn đầy đủ nhất.
 
@@ -40,9 +40,9 @@ Với Claude Code, phần lớn người dùng nên chọn đúng **một** tron
 
 - **Khuyến nghị:** cài plugin Claude Code, sau đó copy thủ công chỉ những thư mục `rules/` bạn thật sự cần.
 - **Dùng installer thủ công** nếu bạn muốn kiểm soát chi tiết hơn, muốn tránh plugin, hoặc bản Claude Code của bạn không resolve được marketplace tự host.
-- **Không chồng nhiều cách cài lên nhau.** Cấu hình dễ hỏng nhất là `/plugin install` trước, rồi chạy tiếp `install.sh --profile full` hoặc `npx ecc-universal install --profile full`.
+- **Không chồng nhiều cách cài lên nhau.** Cấu hình dễ hỏng nhất là `/plugin install` trước, rồi chạy tiếp `install.sh --profile full` hoặc `npx aip-universal install --profile full`.
 
-Nếu bạn đã cài chồng nhiều lần và thấy skill/hook bị trùng, xem [Reset / Gỡ ECC](#reset--gỡ-ecc).
+Nếu bạn đã cài chồng nhiều lần và thấy skill/hook bị trùng, xem [Reset / Gỡ AIP](#reset--gỡ-aip).
 
 ### Cài plugin Claude Code
 
@@ -51,16 +51,16 @@ Nếu bạn đã cài chồng nhiều lần và thấy skill/hook bị trùng, x
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # Cài plugin
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
-ECC có ba định danh công khai khác nhau:
+AIP có ba định danh công khai khác nhau:
 
 - Repo GitHub: `reborncursed/AIP`
-- Plugin Claude marketplace: `ecc@ecc`
-- Gói npm: `ecc-universal`
+- Plugin Claude marketplace: `aip@aip`
+- Gói npm: `aip-universal`
 
-Các tên này cố ý khác nhau. Plugin Claude Code dùng `ecc@ecc`; npm vẫn dùng `ecc-universal`.
+Các tên này cố ý khác nhau. Plugin Claude Code dùng `aip@aip`; npm vẫn dùng `aip-universal`.
 
 ### Copy rules nếu cần
 
@@ -68,20 +68,20 @@ Plugin Claude Code không tự phân phối `rules/`. Nếu bạn đã cài bằ
 
 ```bash
 git clone https://github.com/reborncursed/AIP.git
-cd everything-claude-code
+cd aip
 
-mkdir -p ~/.claude/rules/ecc
-cp -R rules/common ~/.claude/rules/ecc/
-cp -R rules/typescript ~/.claude/rules/ecc/
+mkdir -p ~/.claude/rules/aip
+cp -R rules/common ~/.claude/rules/aip/
+cp -R rules/typescript ~/.claude/rules/aip/
 ```
 
 ```powershell
 git clone https://github.com/reborncursed/AIP.git
-cd everything-claude-code
+cd aip
 
-New-Item -ItemType Directory -Force -Path "$HOME/.claude/rules/ecc" | Out-Null
-Copy-Item -Recurse rules/common "$HOME/.claude/rules/ecc/"
-Copy-Item -Recurse rules/typescript "$HOME/.claude/rules/ecc/"
+New-Item -ItemType Directory -Force -Path "$HOME/.claude/rules/aip" | Out-Null
+Copy-Item -Recurse rules/common "$HOME/.claude/rules/aip/"
+Copy-Item -Recurse rules/typescript "$HOME/.claude/rules/aip/"
 ```
 
 Copy cả thư mục ngôn ngữ, ví dụ `rules/common` hoặc `rules/golang`, thay vì copy từng file riêng lẻ.
@@ -99,7 +99,7 @@ npm install
 npm install
 .\install.ps1 --profile full
 # hoặc
-npx ecc-universal install --profile full
+npx aip-universal install --profile full
 ```
 
 Nếu chọn đường thủ công, dừng ở đó. Đừng chạy thêm `/plugin install`.
@@ -115,25 +115,25 @@ Nếu bạn chỉ muốn rules, agents, commands và core workflow skills, dùng
 ```powershell
 .\install.ps1 --profile minimal --target claude
 # hoặc
-npx ecc-universal install --profile minimal --target claude
+npx aip-universal install --profile minimal --target claude
 ```
 
 Profile này cố ý không cài `hooks-runtime`.
 
 ---
 
-## Reset / Gỡ ECC
+## Reset / Gỡ AIP
 
-Nếu ECC bị trùng, quá xâm lấn, hoặc hoạt động sai, đừng tiếp tục cài đè lên chính nó.
+Nếu AIP bị trùng, quá xâm lấn, hoặc hoạt động sai, đừng tiếp tục cài đè lên chính nó.
 
-- **Đường plugin:** gỡ plugin trong Claude Code, rồi xoá các rule folder bạn đã copy thủ công dưới `~/.claude/rules/ecc/`.
+- **Đường plugin:** gỡ plugin trong Claude Code, rồi xoá các rule folder bạn đã copy thủ công dưới `~/.claude/rules/aip/`.
 - **Đường installer/CLI:** từ root repo, preview trước:
 
 ```bash
 node scripts/uninstall.js --dry-run
 ```
 
-Sau đó gỡ các file do ECC quản lý:
+Sau đó gỡ các file do AIP quản lý:
 
 ```bash
 node scripts/uninstall.js
@@ -142,13 +142,13 @@ node scripts/uninstall.js
 Bạn cũng có thể dùng lifecycle wrapper:
 
 ```bash
-node scripts/ecc.js list-installed
-node scripts/ecc.js doctor
-node scripts/ecc.js repair
-node scripts/ecc.js uninstall --dry-run
+node scripts/aip.js list-installed
+node scripts/aip.js doctor
+node scripts/aip.js repair
+node scripts/aip.js uninstall --dry-run
 ```
 
-ECC chỉ xoá file có trong install-state của nó. Nó không xoá file không liên quan.
+AIP chỉ xoá file có trong install-state của nó. Nó không xoá file không liên quan.
 
 ---
 
@@ -167,13 +167,13 @@ ECC chỉ xoá file có trong install-state của nó. Nó không xoá file khô
 
 ```bash
 # Plugin install dùng namespace đầy đủ
-/ecc:plan "Thêm xác thực người dùng"
+/aip:plan "Thêm xác thực người dùng"
 
 # Manual install giữ dạng slash ngắn
 # /plan "Thêm xác thực người dùng"
 
 # Xem plugin đang cài
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
-ECC hiện cung cấp hàng chục agent, hơn 200 skill và legacy command shim cho các workflow agent khác nhau. Kiểm tra README tiếng Anh để xem danh sách và hướng dẫn chi tiết nhất.
+AIP hiện cung cấp hàng chục agent, hơn 200 skill và legacy command shim cho các workflow agent khác nhau. Kiểm tra README tiếng Anh để xem danh sách và hướng dẫn chi tiết nhất.

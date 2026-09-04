@@ -430,7 +430,7 @@ This will automatically select the next pending phase and create an implementati
 
 ---
 
-## Integration with ECC
+## Integration with AIP
 
 After PRD generation:
 - Use `/prp-plan` to create implementation plans from PRD phases

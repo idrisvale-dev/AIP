@@ -22,7 +22,7 @@ function runCheck(root, args = []) {
   return spawnSync('node', [scriptPath, ...args], {
     env: {
       ...process.env,
-      ECC_UNICODE_SCAN_ROOT: root,
+      AIP_UNICODE_SCAN_ROOT: root,
     },
     encoding: 'utf8',
   });
@@ -42,7 +42,7 @@ let failed = 0;
 
 if (
   test('fails on invisible unicode and emoji before cleanup', () => {
-    const root = makeTempRoot('ecc-unicode-check-');
+    const root = makeTempRoot('aip-unicode-check-');
     fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
     fs.mkdirSync(path.join(root, 'scripts'), { recursive: true });
     fs.writeFileSync(path.join(root, 'docs', 'guide.md'), `> ${warningEmoji} Important launch note\n`);
@@ -59,7 +59,7 @@ else failed++;
 
 if (
   test('write mode removes emoji and invisible unicode', () => {
-    const root = makeTempRoot('ecc-unicode-fix-');
+    const root = makeTempRoot('aip-unicode-fix-');
     fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
     fs.writeFileSync(path.join(root, 'docs', 'guide.md'), `> ${warningEmoji} Important launch note\n`);
     fs.writeFileSync(path.join(root, 'README.md'), `## ${toolsEmoji} Tools\n`);
@@ -81,7 +81,7 @@ else failed++;
 
 if (
   test('write mode does not rewrite executable files', () => {
-    const root = makeTempRoot('ecc-unicode-code-');
+    const root = makeTempRoot('aip-unicode-code-');
     fs.mkdirSync(path.join(root, 'scripts'), { recursive: true });
     const scriptFile = path.join(root, 'scripts', 'sample.js');
     const original = `const label = "Launch ${rocketEmoji}";\n`;
@@ -98,9 +98,9 @@ else failed++;
 
 if (
   test('plain symbols like copyright remain allowed', () => {
-    const root = makeTempRoot('ecc-unicode-symbols-');
+    const root = makeTempRoot('aip-unicode-symbols-');
     fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'docs', 'legal.md'), 'Copyright © ECC\nTrademark ® ECC\n');
+    fs.writeFileSync(path.join(root, 'docs', 'legal.md'), 'Copyright © AIP\nTrademark ® AIP\n');
 
     const result = runCheck(root);
     assert.strictEqual(result.status, 0, result.stdout + result.stderr);
@@ -129,7 +129,7 @@ const NEWLY_COVERED_RANGES = [
 for (const { codePoint, label } of NEWLY_COVERED_RANGES) {
   if (
     test(`detects ${label}`, () => {
-      const root = makeTempRoot('ecc-unicode-newly-covered-');
+      const root = makeTempRoot('aip-unicode-newly-covered-');
       fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
       const hex = codePoint.toString(16).toUpperCase().padStart(4, '0');
       fs.writeFileSync(
@@ -149,7 +149,7 @@ for (const { codePoint, label } of NEWLY_COVERED_RANGES) {
 
 if (
   test('write mode strips newly-covered invisibles from markdown', () => {
-    const root = makeTempRoot('ecc-unicode-newly-covered-write-');
+    const root = makeTempRoot('aip-unicode-newly-covered-write-');
     fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
     const tagHidden = [...Array(5)].map((_, i) => String.fromCodePoint(0xE0041 + i)).join('');
     const mongolianHidden = String.fromCodePoint(0x180E);
@@ -179,7 +179,7 @@ else failed++;
 
 if (
   test('skips Python virtual environments', () => {
-    const root = makeTempRoot('ecc-unicode-venv-');
+    const root = makeTempRoot('aip-unicode-venv-');
     fs.mkdirSync(path.join(root, '.venv', 'lib', 'python3.12', 'site-packages'), { recursive: true });
     fs.mkdirSync(path.join(root, 'venv', 'lib', 'python3.12', 'site-packages'), { recursive: true });
     fs.writeFileSync(
@@ -200,7 +200,7 @@ else failed++;
 
 if (
   test('skips tool cache directories (.pytest_cache, .ruff_cache, .turbo, .cache)', () => {
-    const root = makeTempRoot('ecc-unicode-cache-');
+    const root = makeTempRoot('aip-unicode-cache-');
     for (const cacheDir of ['.pytest_cache', '.ruff_cache', '.turbo', '.cache']) {
       fs.mkdirSync(path.join(root, cacheDir), { recursive: true });
       fs.writeFileSync(

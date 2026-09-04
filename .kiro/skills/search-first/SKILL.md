@@ -6,7 +6,7 @@ description: >
   solutions before implementing" approach. Use when starting new features or
   adding functionality.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # /search-first — Research Before You Code

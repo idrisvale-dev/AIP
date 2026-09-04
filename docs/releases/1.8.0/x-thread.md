@@ -1,6 +1,6 @@
-# X Thread Draft - ECC v1.8.0
+# X Thread Draft - AIP v1.8.0
 
-1/ ECC v1.8.0 is live. This release is about one thing: better agent harness performance.
+1/ AIP v1.8.0 is live. This release is about one thing: better agent harness performance.
 
 2/ We shipped hook reliability fixes, loop operations commands, and stronger eval workflows.
 

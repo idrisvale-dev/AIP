@@ -1,7 +1,7 @@
 ---
 name: search-first
 description: コーディング前の調査ワークフロー。カスタムコードを書く前に既存のツール、ライブラリ、パターンを検索します。researcher エージェントを呼び出します。
-origin: ECC
+origin: AIP
 ---
 
 # /search-first — コーディング前に調査する

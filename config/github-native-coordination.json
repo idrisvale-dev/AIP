@@ -1,6 +1,6 @@
 {
-  "schemaVersion": "ecc.github.coordination.v1",
-  "sectionMarker": "ecc-coordination",
+  "schemaVersion": "aip.github.coordination.v1",
+  "sectionMarker": "aip-coordination",
   "labels": {
     "epic": "epic",
     "available": "coordination:available",

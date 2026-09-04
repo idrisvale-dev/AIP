@@ -10,7 +10,7 @@ const { assertWithinTrustedRoot } = require('../path-safety');
 const ANTIGRAVITY_TARGET = 'antigravity';
 const CANONICAL_ROOT_NAME = '.agents';
 const LEGACY_ROOT_NAME = '.agent';
-const INSTALL_STATE_NAME = 'ecc-install-state.json';
+const INSTALL_STATE_NAME = 'aip-install-state.json';
 
 function samePath(leftPath, rightPath) {
   const left = path.resolve(leftPath);
@@ -208,7 +208,7 @@ function getVerifiedManagedFile(operation, legacyRoot, sourceRoot) {
       destinationPath,
       fileStat: destination.stat,
       missing: false,
-      retainedReason: 'The current ECC source file is unavailable, so its provenance cannot be revalidated.',
+      retainedReason: 'The current AIP source file is unavailable, so its provenance cannot be revalidated.',
     };
   }
 
@@ -218,7 +218,7 @@ function getVerifiedManagedFile(operation, legacyRoot, sourceRoot) {
       destinationPath,
       fileStat: destination.stat,
       missing: false,
-      retainedReason: 'The current ECC source differs from the recorded installed content, so the legacy file was preserved.',
+      retainedReason: 'The current AIP source differs from the recorded installed content, so the legacy file was preserved.',
     };
   }
 

@@ -109,15 +109,15 @@ function run() {
     assert.deepStrictEqual(archivedCommands, RETIRED_LEGACY_SHIMS);
   })) passed++; else failed++;
 
-  if (test('canonical Anthropic skills are not re-bundled in active ECC skill surfaces', () => {
+  if (test('canonical Anthropic skills are not re-bundled in active AIP skill surfaces', () => {
     for (const skillName of CANONICAL_ANTHROPIC_SKILLS) {
       assert.ok(
         !fs.existsSync(path.join(SKILLS_DIR, skillName, 'SKILL.md')),
-        `${skillName} should be installed from anthropics/skills, not ECC skills/`
+        `${skillName} should be installed from anthropics/skills, not AIP skills/`
       );
       assert.ok(
         !fs.existsSync(path.join(CODEX_SKILLS_DIR, skillName, 'SKILL.md')),
-        `${skillName} should be installed from anthropics/skills, not ECC .agents/skills/`
+        `${skillName} should be installed from anthropics/skills, not AIP .agents/skills/`
       );
     }
   })) passed++; else failed++;

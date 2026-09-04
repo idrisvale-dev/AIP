@@ -1,7 +1,7 @@
 ---
 name: nodejs-keccak256
 description: 防止 JavaScript 和 TypeScript 中的以太坊哈希错误。Node 的 sha3-256 是 NIST SHA3，而非以太坊 Keccak-256，会静默破坏选择器、签名、存储槽和地址推导。
-origin: ECC direct-port adaptation
+origin: AIP direct-port adaptation
 version: "1.0.0"
 ---
 

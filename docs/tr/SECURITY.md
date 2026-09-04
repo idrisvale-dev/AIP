@@ -10,7 +10,7 @@
 
 ## Güvenlik Açığı Bildirimi
 
-ECC'de bir güvenlik açığı keşfederseniz, lütfen sorumlu bir şekilde bildirin.
+AIP'de bir güvenlik açığı keşfederseniz, lütfen sorumlu bir şekilde bildirin.
 
 **Güvenlik açıkları için herkese açık GitHub issue açmayın.**
 
@@ -39,15 +39,15 @@ Güvenlik açığı reddedilirse, nedenini açıklayacağız ve başka bir yere 
 
 Bu politika aşağıdakileri kapsar:
 
-- ECC eklentisi ve bu depodaki tüm script'ler
+- AIP eklentisi ve bu depodaki tüm script'ler
 - Makinenizde çalışan hook script'leri
 - Install/uninstall/repair yaşam döngüsü script'leri
-- ECC ile birlikte gelen MCP konfigürasyonları
+- AIP ile birlikte gelen MCP konfigürasyonları
 - AgentShield güvenlik tarayıcısı ([github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield))
 
 ## Güvenlik Kaynakları
 
-- **AgentShield**: Agent konfigürasyonunuzu güvenlik açıkları için tarayın — `npx ecc-agentshield scan`
+- **AgentShield**: Agent konfigürasyonunuzu güvenlik açıkları için tarayın — `npx aip-agentshield scan`
 - **Güvenlik Kılavuzu**: [The Shorthand Guide to Everything Agentic Security](./the-security-guide.md)
 - **OWASP MCP Top 10**: [owasp.org/www-project-mcp-top-10](https://owasp.org/www-project-mcp-top-10/)
 - **OWASP Agentic Applications Top 10**: [genai.owasp.org](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/)

@@ -1,7 +1,7 @@
 ---
 name: agent-harness-construction
 description: AI エージェントのアクション空間、ツール定義、観測フォーマットを設計・最適化して完了率を向上させます。
-origin: ECC
+origin: AIP
 ---
 
 # エージェントハーネス構築

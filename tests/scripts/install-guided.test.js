@@ -171,7 +171,7 @@ function runGuidedPtyFixture(answers) {
     assert.strictEqual(code, 0);
     assert.deepStrictEqual(
       confirmationTerminal.prompts,
-      ['Apply ECC to these harnesses? [y/N]: ']
+      ['Apply AIP to these harnesses? [y/N]: ']
     );
   });
 
@@ -188,7 +188,7 @@ function runGuidedPtyFixture(answers) {
       'Choose [Recommended: user] (one option only):',
       'Choose [Recommended: standard] (one option only):',
       'Choose [Recommended: core] (one option only):',
-      'Apply ECC to these harnesses? [y/N]:',
+      'Apply AIP to these harnesses? [y/N]:',
       'PTY_WELCOME_SHOWN',
     ];
     let previousIndex = -1;
@@ -242,7 +242,7 @@ function runGuidedPtyFixture(answers) {
     assert.strictEqual(code, 0);
     assert.deepStrictEqual(events, ['preflight', 'apply', 'spinner:stop', 'welcome']);
     assert.strictEqual(
-      terminal.prompts.filter(prompt => /Apply ECC to these harnesses\?/.test(prompt)).length,
+      terminal.prompts.filter(prompt => /Apply AIP to these harnesses\?/.test(prompt)).length,
       1
     );
   });
@@ -306,7 +306,7 @@ function runGuidedPtyFixture(answers) {
     assert.strictEqual(code, 1);
     assert.match(
       errorOutput.read(),
-      /Retry with: ecc-universal install --guided --harness codex/
+      /Retry with: aip-universal install --guided --harness codex/
     );
 
     const jsonError = capture();
@@ -346,7 +346,7 @@ function runGuidedPtyFixture(answers) {
     assert.strictEqual(code, 1);
     assert.match(
       errorOutput.read(),
-      /Retry with: ecc-universal install --guided --harness claude --harness kimi --claude-scope local --claude-hooks strict --profile developer/
+      /Retry with: aip-universal install --guided --harness claude --harness kimi --claude-scope local --claude-hooks strict --profile developer/
     );
   });
 

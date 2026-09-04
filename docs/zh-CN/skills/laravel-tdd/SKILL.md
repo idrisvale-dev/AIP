@@ -1,7 +1,7 @@
 ---
 name: laravel-tdd
 description: 使用 PHPUnit 和 Pest、工厂、数据库测试、模拟以及覆盖率目标进行 Laravel 的测试驱动开发。
-origin: ECC
+origin: AIP
 ---
 
 # Laravel TDD 工作流

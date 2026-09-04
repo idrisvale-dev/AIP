@@ -1,7 +1,7 @@
 ---
 name: laravel-plugin-discovery
 description: Laravel プラグイン検出、パッケージ管理、依存関係解決、およびサービスプロバイダ統合。
-origin: ECC
+origin: AIP
 ---
 
 # Laravel Plugin Discovery

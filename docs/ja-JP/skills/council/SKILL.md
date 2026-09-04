@@ -1,7 +1,7 @@
 ---
 name: council
 description: 曖昧な決定、トレードオフ、ゴー/ノーゴーの判断のために4つの声のカウンシルを召集します。複数の有効なパスが存在し、選択前に構造化された異議が必要な場合に使用します。
-origin: ECC
+origin: AIP
 ---
 
 # カウンシル
@@ -191,7 +191,7 @@ Be direct. No hedging. Keep it under 300 words.
 質問：
 
 ```text
-Should we ship ECC 2.0 as alpha now, or hold until the control-plane UI is more complete?
+Should we ship AIP 2.0 as alpha now, or hold until the control-plane UI is more complete?
 ```
 
 カウンシルの可能性のある形：

@@ -56,7 +56,7 @@ function usage() {
     'a safe cleanup plan that never removes dirty or unmerged worktrees.',
     '',
     'Options:',
-    '  --json            Print the full ecc.worktree-lifecycle.v1 report as JSON',
+    '  --json            Print the full aip.worktree-lifecycle.v1 report as JSON',
     '  --conflicts       Only show worktrees that would conflict on merge',
     '  --stale           Only show stale (clean, inactive) worktrees',
     '  --cleanup-plan    Show which worktrees are safe to remove and why',

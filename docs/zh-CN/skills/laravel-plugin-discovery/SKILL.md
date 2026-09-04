@@ -1,7 +1,7 @@
 ---
 name: laravel-plugin-discovery
 description: 通过LaraPlugins.io MCP发现和评估Laravel包。当用户想要查找插件、检查包的健康状况或评估Laravel/PHP兼容性时使用。
-origin: ECC
+origin: AIP
 ---
 
 # Laravel 插件发现

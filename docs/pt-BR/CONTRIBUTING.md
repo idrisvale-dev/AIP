@@ -1,4 +1,4 @@
-# Contribuindo para o Everything Claude Code
+# Contribuindo para o AIP
 
 Obrigado por querer contribuir! Este repositório é um recurso comunitário para usuários do Claude Code.
 
@@ -52,7 +52,7 @@ Comandos slash que invocam fluxos de trabalho úteis:
 ```bash
 # 1. Fork e clone
 gh repo fork reborncursed/AIP --clone
-cd everything-claude-code
+cd aip
 
 # 2. Criar uma branch
 git checkout -b feat/minha-contribuicao
@@ -87,7 +87,7 @@ skills/
 ---
 name: nome-da-sua-skill
 description: Breve descrição mostrada na lista de skills
-origin: ECC
+origin: AIP
 ---
 
 # Título da Sua Skill
@@ -330,7 +330,7 @@ Skills e agentes podem usar ferramentas **MCP (Model Context Protocol)** para ob
 
 ### Subconjuntos de Skills (Codex e Cursor)
 
-O ECC vem com subconjuntos de skills para outros harnesses:
+O AIP vem com subconjuntos de skills para outros harnesses:
 
 - **Codex:** `.agents/skills/` — skills listadas em `agents/openai.yaml` são carregadas pelo Codex.
 - **Cursor:** `.cursor/skills/` — um subconjunto de skills é incluído para Cursor.

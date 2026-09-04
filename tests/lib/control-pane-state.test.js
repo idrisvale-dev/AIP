@@ -1,5 +1,5 @@
 /**
- * Tests for the local ECC2 control-pane state projection.
+ * Tests for the local AIP2 control-pane state projection.
  */
 
 const assert = require('assert');
@@ -23,7 +23,7 @@ async function test(name, fn) {
   }
 }
 
-async function writeSampleEcc2Database(dbPath) {
+async function writeSampleAip2Database(dbPath) {
   const SQL = await initSqlJs();
   const db = new SQL.Database();
 
@@ -113,17 +113,17 @@ async function writeSampleEcc2Database(dbPath) {
   `);
   insertSession.run([
     'lead-hermes',
-    'Coordinate Hermes desktop and ECC release work',
-    'ECC',
+    'Coordinate Hermes desktop and AIP release work',
+    'AIP',
     '2.0-control-pane',
     'claude',
     'claude',
     JSON.stringify(['claude', 'codex']),
-    '/repo/ecc',
+    '/repo/aip',
     'running',
     4242,
-    '/tmp/ecc-worktrees/hermes',
-    'ecc/hermes-control-pane',
+    '/tmp/aip-worktrees/hermes',
+    'aip/hermes-control-pane',
     'main',
     1200,
     800,
@@ -139,12 +139,12 @@ async function writeSampleEcc2Database(dbPath) {
   insertSession.run([
     'worker-kb',
     'Index operator memory',
-    'ECC',
+    'AIP',
     'knowledge',
     'codex',
     'codex',
     JSON.stringify(['codex']),
-    '/repo/ecc',
+    '/repo/aip',
     'idle',
     null,
     null,
@@ -183,7 +183,7 @@ async function writeSampleEcc2Database(dbPath) {
     'runbook',
     'Hermes revenue runbook',
     '/notes/hermes.md',
-    'How ByteCore routes Hermes Desktop, Zellij panes, Devin-style delegation, and ECC release control work.',
+    'How ByteCore routes Hermes Desktop, Zellij panes, Devin-style delegation, and AIP release control work.',
     JSON.stringify({ source: 'hermes_workspace', platform: 'desktop' }),
     '2026-06-03T10:10:00Z',
     '2026-06-03T10:10:00Z'
@@ -207,7 +207,7 @@ async function writeSampleEcc2Database(dbPath) {
     'operator_memory',
     3,
     1,
-    'Hermes Desktop and ECC should share recall before dispatching work.',
+    'Hermes Desktop and AIP should share recall before dispatching work.',
     JSON.stringify({ note: 'safe public summary only' }),
     '2026-06-03T10:12:00Z'
   ]);
@@ -268,7 +268,7 @@ async function writeSampleWorkItemsDatabase(dbPath) {
     'high',
     null,
     'codex',
-    '/repo/ecc',
+    '/repo/aip',
     'lead-hermes',
     JSON.stringify({
       branch: 'product/dynamic-workflow-team-orchestration',
@@ -282,15 +282,15 @@ async function writeSampleWorkItemsDatabase(dbPath) {
     'agent-card-002',
     'github-pr',
     '2131',
-    'Merge ECC control pane',
+    'Merge AIP control pane',
     'done',
     'normal',
     'https://github.com/reborncursed/AIP/pull/2131',
     'bytecore',
-    '/repo/ecc',
+    '/repo/aip',
     null,
     JSON.stringify({
-      branch: 'product/ecc2-knowledge-control-pane',
+      branch: 'product/aip2-knowledge-control-pane',
       mergeStateStatus: 'CLEAN'
     }),
     '2026-06-03T13:00:00Z',
@@ -305,7 +305,7 @@ async function writeSampleWorkItemsDatabase(dbPath) {
     'high',
     null,
     'operator',
-    '/repo/ecc',
+    '/repo/aip',
     null,
     JSON.stringify({
       blocker: 'needs publish approval',
@@ -323,7 +323,7 @@ async function writeSampleWorkItemsDatabase(dbPath) {
     'high',
     'https://github.com/reborncursed/AIP/issues/2290',
     null,
-    '/repo/ecc',
+    '/repo/aip',
     null,
     JSON.stringify({}),
     '2026-06-04T09:20:00Z',
@@ -354,12 +354,12 @@ async function runTests() {
   let failed = 0;
 
   if (
-    await test('builds an operator snapshot from ECC2 SQLite and configured connectors', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-state-'));
-      const dbPath = path.join(tempDir, 'ecc2.db');
+    await test('builds an operator snapshot from AIP2 SQLite and configured connectors', async () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-state-'));
+      const dbPath = path.join(tempDir, 'aip2.db');
 
       try {
-        await writeSampleEcc2Database(dbPath);
+        await writeSampleAip2Database(dbPath);
         const snapshot = await buildControlPaneSnapshot({
           dbPath,
           repoRoot: path.join(__dirname, '..', '..'),
@@ -380,7 +380,7 @@ async function runTests() {
           }
         });
 
-        assert.strictEqual(snapshot.schemaVersion, 'ecc.control-pane.snapshot.v1');
+        assert.strictEqual(snapshot.schemaVersion, 'aip.control-pane.snapshot.v1');
         assert.strictEqual(snapshot.summary.totalSessions, 2);
         assert.strictEqual(snapshot.summary.runningSessions, 1);
         assert.strictEqual(snapshot.summary.unreadMessages, 1);
@@ -404,12 +404,12 @@ async function runTests() {
 
   if (
     await test('projects state-store work items into agent Kanban summary', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-work-items-'));
-      const dbPath = path.join(tempDir, 'ecc2.db');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-work-items-'));
+      const dbPath = path.join(tempDir, 'aip2.db');
       const stateDbPath = path.join(tempDir, 'state.db');
 
       try {
-        await writeSampleEcc2Database(dbPath);
+        await writeSampleAip2Database(dbPath);
         await writeSampleWorkItemsDatabase(stateDbPath);
 
         const snapshot = await buildControlPaneSnapshot({
@@ -448,12 +448,12 @@ async function runTests() {
 
   if (
     await test('treats an unreadable optional state-store database as empty work items', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-corrupt-work-items-'));
-      const dbPath = path.join(tempDir, 'ecc2.db');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-corrupt-work-items-'));
+      const dbPath = path.join(tempDir, 'aip2.db');
       const stateDbPath = path.join(tempDir, 'corrupt-state.db');
 
       try {
-        await writeSampleEcc2Database(dbPath);
+        await writeSampleAip2Database(dbPath);
         fs.writeFileSync(stateDbPath, 'not a sqlite database', 'utf8');
 
         const snapshot = await buildControlPaneSnapshot({
@@ -476,9 +476,9 @@ async function runTests() {
 
   if (
     await test('resolves config from explicit db path and TOML connector file', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-config-'));
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-config-'));
       const dbPath = path.join(tempDir, 'state.db');
-      const configPath = path.join(tempDir, 'ecc2.toml');
+      const configPath = path.join(tempDir, 'aip2.toml');
 
       try {
         fs.writeFileSync(
@@ -513,10 +513,10 @@ async function runTests() {
 
   if (
     await test('prefers the operator home config over stale app-support config', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-precedence-'));
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-precedence-'));
       const homeDir = path.join(tempDir, 'home');
       const homeConfigDir = path.join(homeDir, '.claude');
-      const appConfigDir = path.join(homeDir, 'Library', 'Application Support', 'ecc2');
+      const appConfigDir = path.join(homeDir, 'Library', 'Application Support', 'aip2');
       const homeDbPath = path.join(tempDir, 'operator.db');
       const staleDbPath = path.join(tempDir, 'stale-smoke.db');
 
@@ -524,7 +524,7 @@ async function runTests() {
         fs.mkdirSync(homeConfigDir, { recursive: true });
         fs.mkdirSync(appConfigDir, { recursive: true });
         fs.writeFileSync(path.join(appConfigDir, 'config.toml'), `db_path = "${staleDbPath.replace(/\\/g, '\\\\')}"\n`, 'utf8');
-        fs.writeFileSync(path.join(homeConfigDir, 'ecc2.toml'), `db_path = "${homeDbPath.replace(/\\/g, '\\\\')}"\n`, 'utf8');
+        fs.writeFileSync(path.join(homeConfigDir, 'aip2.toml'), `db_path = "${homeDbPath.replace(/\\/g, '\\\\')}"\n`, 'utf8');
 
         const config = resolveControlPaneConfig({
           cwd: tempDir,
@@ -542,7 +542,7 @@ async function runTests() {
 
   if (
     await test('shows configured connectors even when the SQLite database is missing', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-missing-db-'));
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-missing-db-'));
 
       try {
         const snapshot = await buildControlPaneSnapshot({
@@ -572,8 +572,8 @@ async function runTests() {
   else failed++;
 
   if (
-    await test('handles an existing SQLite database before ECC2 tables are created', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-empty-db-'));
+    await test('handles an existing SQLite database before AIP2 tables are created', async () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-empty-db-'));
       const dbPath = path.join(tempDir, 'empty.db');
 
       try {
@@ -664,11 +664,11 @@ async function runTests() {
 
   if (
     await test('handles malformed JSON rows and all session state counters', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-edge-db-'));
-      const dbPath = path.join(tempDir, 'ecc2.db');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-edge-db-'));
+      const dbPath = path.join(tempDir, 'aip2.db');
 
       try {
-        await writeSampleEcc2Database(dbPath);
+        await writeSampleAip2Database(dbPath);
         await mutateSqlDatabase(dbPath, db => {
           const insertSession = db.prepare(`
           INSERT INTO sessions (
@@ -682,7 +682,7 @@ async function runTests() {
             insertSession.run([
               `session-${state}`,
               `Exercise ${state}`,
-              'ECC',
+              'AIP',
               'coverage',
               'codex',
               '',
@@ -819,7 +819,7 @@ async function runTests() {
           entityId: 3,
           priority: 1,
           pinned: false,
-          summary: 'Ito should expose market backtesting through ECC tools.'
+          summary: 'Ito should expose market backtesting through AIP tools.'
         }
       ];
 

@@ -13,7 +13,7 @@
  * The fix records the "well-formed PID that is no longer alive" case, counts
  * consecutive non-survivals in ${PROJECT_DIR}/.observer-nosurvive-count, and
  * logs one explanatory warning when the streak reaches
- * ECC_OBSERVER_NOSURVIVE_WARN_AFTER (default 3). Finding the observer alive
+ * AIP_OBSERVER_NOSURVIVE_WARN_AFTER (default 3). Finding the observer alive
  * resets the streak.
  *
  * These tests drive the real observe.sh through the sandbox harness established
@@ -56,7 +56,7 @@ async function asyncTest(name, fn) {
 }
 
 function createTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nosurvive-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nosurvive-'));
 }
 
 function cleanupDir(dir) {
@@ -106,7 +106,7 @@ function buildSandbox() {
 
   // HOME is set to projectDir when observe.sh runs, so CONFIG_DIR resolves
   // under it. The observer must read as enabled for the lazy-start block to run.
-  const configDir = path.join(projectDir, '.local', 'share', 'ecc-homunculus');
+  const configDir = path.join(projectDir, '.local', 'share', 'aip-homunculus');
   fs.mkdirSync(configDir, { recursive: true });
   fs.writeFileSync(
     path.join(configDir, 'config.json'),
@@ -116,7 +116,7 @@ function buildSandbox() {
     path.join(scriptsLibDir, 'homunculus-dir.sh'),
     [
       '#!/bin/bash',
-      '_clv2_resolve_homunculus_dir() { printf "%s\\n" "$HOME/.local/share/ecc-homunculus"; }',
+      '_clv2_resolve_homunculus_dir() { printf "%s\\n" "$HOME/.local/share/aip-homunculus"; }',
       ''
     ].join('\n')
   );
@@ -150,8 +150,8 @@ function runObserve(testObserve, projectDir, extraEnv) {
         ...process.env,
         HOME: projectDir,
         CLAUDE_CODE_ENTRYPOINT: 'cli',
-        ECC_HOOK_PROFILE: 'standard',
-        ECC_SKIP_OBSERVE: '0',
+        AIP_HOOK_PROFILE: 'standard',
+        AIP_SKIP_OBSERVE: '0',
         CLAUDE_PROJECT_DIR: projectDir,
         ...extraEnv
       },
@@ -238,8 +238,8 @@ test('the streak increment runs under the lazy-start lock, never unlocked', () =
 test('the non-survival warning is threshold-gated, not logged every call', () => {
   const content = fs.readFileSync(observeShPath, 'utf8');
   assert.ok(
-    /ECC_OBSERVER_NOSURVIVE_WARN_AFTER/.test(content),
-    'the threshold should be overridable via ECC_OBSERVER_NOSURVIVE_WARN_AFTER'
+    /AIP_OBSERVER_NOSURVIVE_WARN_AFTER/.test(content),
+    'the threshold should be overridable via AIP_OBSERVER_NOSURVIVE_WARN_AFTER'
   );
   assert.ok(
     /\[ "\$streak" -eq "\$warn_after" \]/.test(content),
@@ -253,7 +253,7 @@ async function runWarnsAtThreshold() {
   const { testDir, projectDir, testObserve } = buildSandbox();
   try {
     fs.writeFileSync(path.join(projectDir, '.observer.pid'), `${deadPid()}\n`);
-    await runObserve(testObserve, projectDir, { ECC_OBSERVER_NOSURVIVE_WARN_AFTER: '1' });
+    await runObserve(testObserve, projectDir, { AIP_OBSERVER_NOSURVIVE_WARN_AFTER: '1' });
 
     assert.strictEqual(readStreak(projectDir), 1, 'first non-survival should record a streak of 1');
     const log = readStartLog(projectDir);
@@ -262,7 +262,7 @@ async function runWarnsAtThreshold() {
       `observer-start.log should explain the non-survival, got: ${log.trim() || '(empty)'}`
     );
     assert.ok(
-      log.includes('ECC_OBSERVER_NOSURVIVE_WARN_AFTER'),
+      log.includes('AIP_OBSERVER_NOSURVIVE_WARN_AFTER'),
       'the warning should name the threshold knob'
     );
   } finally {
@@ -276,7 +276,7 @@ async function runSilentBelowThreshold() {
   const { testDir, projectDir, testObserve } = buildSandbox();
   try {
     fs.writeFileSync(path.join(projectDir, '.observer.pid'), `${deadPid()}\n`);
-    await runObserve(testObserve, projectDir, { ECC_OBSERVER_NOSURVIVE_WARN_AFTER: '3' });
+    await runObserve(testObserve, projectDir, { AIP_OBSERVER_NOSURVIVE_WARN_AFTER: '3' });
 
     assert.strictEqual(readStreak(projectDir), 1, 'streak should advance to 1');
     assert.ok(
@@ -286,7 +286,7 @@ async function runSilentBelowThreshold() {
 
     // Second non-survival: still below a threshold of 3.
     fs.writeFileSync(path.join(projectDir, '.observer.pid'), `${deadPid()}\n`);
-    await runObserve(testObserve, projectDir, { ECC_OBSERVER_NOSURVIVE_WARN_AFTER: '3' });
+    await runObserve(testObserve, projectDir, { AIP_OBSERVER_NOSURVIVE_WARN_AFTER: '3' });
 
     assert.strictEqual(readStreak(projectDir), 2, 'streak should advance to 2');
     assert.ok(
@@ -306,7 +306,7 @@ async function runRejectsZeroThreshold() {
   try {
     for (let i = 0; i < 3; i++) {
       fs.writeFileSync(path.join(projectDir, '.observer.pid'), `${deadPid()}\n`);
-      await runObserve(testObserve, projectDir, { ECC_OBSERVER_NOSURVIVE_WARN_AFTER: '00' });
+      await runObserve(testObserve, projectDir, { AIP_OBSERVER_NOSURVIVE_WARN_AFTER: '00' });
     }
     assert.strictEqual(readStreak(projectDir), 3, 'streak should still advance with a bogus threshold');
     const log = readStartLog(projectDir);
@@ -331,7 +331,7 @@ async function runLeadingZeroThreshold() {
   try {
     fs.writeFileSync(path.join(projectDir, '.observer.pid'), `${deadPid()}\n`);
     // runObserve rejects on a non-zero exit, so an octal abort fails here.
-    await runObserve(testObserve, projectDir, { ECC_OBSERVER_NOSURVIVE_WARN_AFTER: '08' });
+    await runObserve(testObserve, projectDir, { AIP_OBSERVER_NOSURVIVE_WARN_AFTER: '08' });
 
     assert.strictEqual(readStreak(projectDir), 1, 'streak should advance under an "08" threshold');
     assert.ok(
@@ -357,7 +357,7 @@ async function runSilentWhenCounterUnwritable() {
       fs.writeFileSync(path.join(projectDir, '.observer.pid'), `${deadPid()}\n`);
       // runObserve rejects on a non-zero exit, so this also asserts the hook
       // never fails the tool call just because the counter is unwritable.
-      await runObserve(testObserve, projectDir, { ECC_OBSERVER_NOSURVIVE_WARN_AFTER: '1' });
+      await runObserve(testObserve, projectDir, { AIP_OBSERVER_NOSURVIVE_WARN_AFTER: '1' });
     }
 
     assert.ok(
@@ -376,7 +376,7 @@ async function runResetWhenAlive() {
   let live = null;
   try {
     fs.writeFileSync(path.join(projectDir, '.observer.pid'), `${deadPid()}\n`);
-    await runObserve(testObserve, projectDir, { ECC_OBSERVER_NOSURVIVE_WARN_AFTER: '3' });
+    await runObserve(testObserve, projectDir, { AIP_OBSERVER_NOSURVIVE_WARN_AFTER: '3' });
     assert.strictEqual(readStreak(projectDir), 1, 'streak should be seeded by the dead observer');
 
     // A live PID > 1. process.pid is unusable here: in a container Node can be
@@ -385,7 +385,7 @@ async function runResetWhenAlive() {
     live = spawn('sleep', ['30'], { stdio: 'ignore' });
     assert.ok(live.pid > 1, 'expected a live child PID greater than 1');
     fs.writeFileSync(path.join(projectDir, '.observer.pid'), `${live.pid}\n`);
-    await runObserve(testObserve, projectDir, { ECC_OBSERVER_NOSURVIVE_WARN_AFTER: '3' });
+    await runObserve(testObserve, projectDir, { AIP_OBSERVER_NOSURVIVE_WARN_AFTER: '3' });
 
     assert.strictEqual(
       readStreak(projectDir),

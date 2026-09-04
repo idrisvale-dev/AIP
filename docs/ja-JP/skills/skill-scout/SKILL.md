@@ -59,7 +59,7 @@ Web検索では、最大3つのターゲットクエリを使用します（例�
 ```text
 "claude code skill" keyword
 "SKILL.md" keyword
-"everything-claude-code" keyword
+"aip" keyword
 ```
 
 ### ステップ4 - 外部マッチを審査する
@@ -102,8 +102,8 @@ Web検索では、最大3つのターゲットクエリを使用します（例�
 ```markdown
 | # | スキル | ソース | マッチする理由 | ギャップ |
 | --- | --- | --- | --- | --- |
-| 1 | article-writing | ローカル ECC | 記事とガイドの草稿作成 | リリースノートに特化していない |
-| 2 | content-engine | ローカル ECC | マルチフォーマットコンテンツワークフロー | 必要以上に重い |
+| 1 | article-writing | ローカル AIP | 記事とガイドの草稿作成 | リリースノートに特化していない |
+| 2 | content-engine | ローカル AIP | マルチフォーマットコンテンツワークフロー | 必要以上に重い |
 | 3 | blog-writer | GitHub | 最近のコミットがあるブログ執筆スキル | セキュリティレビューが必要 |
 ```
 

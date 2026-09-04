@@ -1,7 +1,7 @@
 ---
 name: opensource-pipeline
 description: "オープンソースパイプライン: プライベートプロジェクトをフォーク、サニタイズし、安全な公開リリースのためにパッケージ化する。3つのエージェント（フォーカー、サニタイザー、パッケージャー）を連鎖させる。トリガー: '/opensource'、'open source this'、'make this public'、'prepare for open source'。"
-origin: ECC
+origin: AIP
 ---
 
 # オープンソースパイプラインスキル

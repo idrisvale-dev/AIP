@@ -32,32 +32,32 @@
 Run the canonical guided setup from your terminal:
 
 ```bash
-npx ecc-universal setup
+npx aip-universal setup
 ```
 
 If npm reports a version or cache error, confirm the registry version before retrying:
 
 ```bash
-npm view ecc-universal version
+npm view aip-universal version
 ```
 
 This path requires Node.js 18 or newer, Git, and Claude Code 2.1 or newer on
-`PATH`. It safely installs, updates, or moves one `ecc@ecc` plugin scope and
+`PATH`. It safely installs, updates, or moves one `aip@aip` plugin scope and
 records the hook profile you choose.
 
 Alternatively, run Claude Code's native plugin commands inside Claude Code:
 
 ```text
 /plugin marketplace add https://github.com/reborncursed/AIP
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
-The native path installs ECC's skills, agents, commands, and plugin-managed hooks. If you choose it, stop there. Do not also run a full manual install into Claude Code.
+The native path installs AIP's skills, agents, commands, and plugin-managed hooks. If you choose it, stop there. Do not also run a full manual install into Claude Code.
 
-> Both paths install the same `ecc@ecc` plugin. Choose one and do not stack
+> Both paths install the same `aip@aip` plugin. Choose one and do not stack
 > another manual Claude install on top.
 
-<p align="center"><a href="#install-ecc">Jump to install ↓</a></p>
+<p align="center"><a href="#install-aip">Jump to install ↓</a></p>
 
 # AIP
 
@@ -71,7 +71,7 @@ Instead of rebuilding that process in every prompt, you install it once and make
 
 > Optimize the context window. Persist everything else.
 
-ECC is MIT-licensed open source. It works best with Claude Code today, has a supported Codex sync path, and provides capability-limited adapters for Cursor, OpenCode, Gemini, Zed, GitHub Copilot, Antigravity, Qwen, and other harnesses. See the [support status matrix](#platform-support) before assuming feature parity.
+AIP is MIT-licensed open source. It works best with Claude Code today, has a supported Codex sync path, and provides capability-limited adapters for Cursor, OpenCode, Gemini, Zed, GitHub Copilot, Antigravity, Qwen, and other harnesses. See the [support status matrix](#platform-support) before assuming feature parity.
 
 Access to 68 agents, 286 skills, and 94 legacy command shims, plus hooks, rules, memory, continuous learning, and AgentShield security scanning. The agents are specialized for planning, review, build repair, security, architecture, and domain work.
 
@@ -79,15 +79,15 @@ Access to 68 agents, 286 skills, and 94 legacy command shims, plus hooks, rules,
 | ---------------- | ----------: | ------------------------------------------------------------------------------------ |
 | Agents           |   68 agents | Planning, review, build repair, security, architecture, and domain work              |
 | Skills           |  286 skills | TDD, research, security, docs, frontend, data, ML, operations, and more              |
-| Commands         | 94 commands | Convenient entry points while ECC moves to a skills-first surface                    |
+| Commands         | 94 commands | Convenient entry points while AIP moves to a skills-first surface                    |
 | Hooks and memory |     Runtime | Enforcement, session summaries, continuous learning, instincts, and context controls |
 | Rules            |   Selective | Always-loaded standards you choose by language or project                            |
 | AgentShield      |    Included | Scanning for prompts, hooks, MCP config, permissions, secrets, and agent files       |
 
-## Install ECC
+## Install AIP
 
 > [!IMPORTANT]
-> ECC 2.2 includes guided package setup for Claude Code, Codex, and Kimi Code.
+> AIP 2.2 includes guided package setup for Claude Code, Codex, and Kimi Code.
 > The universal package requires Node.js 18 or newer. Claude plugin setup also
 > requires Git and Claude Code 2.1 or newer on `PATH`.
 
@@ -97,18 +97,18 @@ Run the package command from your terminal. For Claude Code setup, updates,
 scope changes, and hook-profile changes:
 
 ```bash
-npx ecc-universal setup
+npx aip-universal setup
 ```
 
 To configure Claude Code, Codex, or Kimi Code in one reviewed flow:
 
 ```bash
-npx ecc-universal install --guided
+npx aip-universal install --guided
 ```
 
 ### Pick one path only (per harness)
 
-You can use ECC with Claude Code, Codex, and other harnesses at the same time. Choose one install method for each harness:
+You can use AIP with Claude Code, Codex, and other harnesses at the same time. Choose one install method for each harness:
 
 - **Recommended default:** run the guided Claude plugin setup above
 - **Also supported for Claude Code:** use the [native plugin commands above](#install-with-claude-code)
@@ -118,26 +118,26 @@ You can use ECC with Claude Code, Codex, and other harnesses at the same time. C
 - **Avoid:** Claude Code plugin + full Claude manual install
 - **Avoid:** Codex sync + Codex marketplace plugin
 
-**Do not stack install methods.** Installing ECC twice into the same harness can duplicate skills, commands, hooks, or configuration; installing it once into multiple harnesses does not.
+**Do not stack install methods.** Installing AIP twice into the same harness can duplicate skills, commands, hooks, or configuration; installing it once into multiple harnesses does not.
 
-If you already layered multiple installs and things look duplicated, skip straight to [Reset / Uninstall ECC](#reset--uninstall-ecc).
+If you already layered multiple installs and things look duplicated, skip straight to [Reset / Uninstall AIP](#reset--uninstall-aip).
 
-**Install trouble?** Open the short [install or runtime problem form](https://github.com/reborncursed/AIP/issues/new?template=install-problem.yml), or run `ecc feedback`. ECC never uploads diagnostics automatically.
+**Install trouble?** Open the short [install or runtime problem form](https://github.com/reborncursed/AIP/issues/new?template=install-problem.yml), or run `aip feedback`. AIP never uploads diagnostics automatically.
 
 ### Claude Code details
 
-Claude Code owns these built-in commands, including their errors when a marketplace, plugin, or conflicting scope already exists. ECC cannot intercept that parser. If either native command reports an existing install or scope conflict, use the 2.2 guided setup or resolve the conflicting Claude plugin scope before retrying; do not layer a manual install on top.
+Claude Code owns these built-in commands, including their errors when a marketplace, plugin, or conflicting scope already exists. AIP cannot intercept that parser. If either native command reports an existing install or scope conflict, use the 2.2 guided setup or resolve the conflicting Claude plugin scope before retrying; do not layer a manual install on top.
 
-After ECC is installed, `/ecc:configure-ecc` is the namespaced in-Claude reconfiguration skill. It delegates to the same safe setup flow, but it is available only after the plugin is installed and cannot replace Claude Code's built-in `/plugin` command during a first install.
+After AIP is installed, `/aip:configure-aip` is the namespaced in-Claude reconfiguration skill. It delegates to the same safe setup flow, but it is available only after the plugin is installed and cannot replace Claude Code's built-in `/plugin` command during a first install.
 
 Claude Code plugins cannot distribute `rules`, so add only the rule packs you actually want:
 
 ```bash
 git clone https://github.com/reborncursed/AIP.git
-cd ECC
-mkdir -p ~/.claude/rules/ecc
-cp -R rules/common ~/.claude/rules/ecc/
-cp -R rules/typescript ~/.claude/rules/ecc/  # replace with your stack
+cd AIP
+mkdir -p ~/.claude/rules/aip
+cp -R rules/common ~/.claude/rules/aip/
+cp -R rules/typescript ~/.claude/rules/aip/  # replace with your stack
 ```
 
 Start with `rules/common` plus one language or framework pack you actually use. If you install the plugin, do not run `./install.sh --profile full` afterward.
@@ -150,7 +150,7 @@ Add directly to your `~/.claude/settings.json`:
 ```json
 {
   "extraKnownMarketplaces": {
-    "ecc": {
+    "aip": {
       "source": {
         "source": "github",
         "repo": "reborncursed/AIP"
@@ -158,7 +158,7 @@ Add directly to your `~/.claude/settings.json`:
     }
   },
   "enabledPlugins": {
-    "ecc@ecc": true
+    "aip@aip": true
   }
 }
 ```
@@ -167,66 +167,66 @@ This gives you the same result as the two `/plugin` commands above.
 </details>
 
 <details>
-<summary><strong>Naming + migration note (ecc@ecc, reborncursed/AIP, ecc-universal)</strong></summary>
+<summary><strong>Naming + migration note (aip@aip, reborncursed/AIP, aip-universal)</strong></summary>
 
-ECC has three public identifiers, and they are not interchangeable:
+AIP has three public identifiers, and they are not interchangeable:
 
 - GitHub source repo: `reborncursed/AIP`
-- Claude marketplace/plugin identifier: `ecc@ecc`
-- npm package: `ecc-universal`
+- Claude marketplace/plugin identifier: `aip@aip`
+- npm package: `aip-universal`
 
-This is intentional. Anthropic marketplace/plugin installs are keyed by a canonical plugin identifier, so ECC uses `ecc@ecc` to keep tool names and slash-command namespaces short enough for strict Desktop/API validators. Older posts may still show the former long marketplace identifier; treat that as a legacy alias only. Separately, the npm package stayed on `ecc-universal`, so npm installs and marketplace installs intentionally use different names.
+This is intentional. Anthropic marketplace/plugin installs are keyed by a canonical plugin identifier, so AIP uses `aip@aip` to keep tool names and slash-command namespaces short enough for strict Desktop/API validators. Older posts may still show the former long marketplace identifier; treat that as a legacy alias only. Separately, the npm package stayed on `aip-universal`, so npm installs and marketplace installs intentionally use different names.
 
-npm releases are cut per version tag, not per commit, so `ecc-universal` tracks releases (2.1, 2.2, ...) rather than every push to `main`. Install from git if you want the bleeding edge.
+npm releases are cut per version tag, not per commit, so `aip-universal` tracks releases (2.1, 2.2, ...) rather than every push to `main`. Install from git if you want the bleeding edge.
 
-If your local Claude setup was wiped or reset, that does not mean you need to repurchase anything. Start with `node scripts/ecc.js list-installed`, then run `node scripts/ecc.js doctor` and `node scripts/ecc.js repair` before reinstalling. That usually restores ECC-managed files without rebuilding your setup.
+If your local Claude setup was wiped or reset, that does not mean you need to repurchase anything. Start with `node scripts/aip.js list-installed`, then run `node scripts/aip.js doctor` and `node scripts/aip.js repair` before reinstalling. That usually restores AIP-managed files without rebuilding your setup.
 </details>
 
 ### Codex App and CLI
 
-Current Codex releases can install ECC as a native repo-marketplace plugin. The marketplace entry uses the repository root so Codex's cache receives the manifest together with all referenced skills, MCP configuration, hook runtime, scripts, and assets:
+Current Codex releases can install AIP as a native repo-marketplace plugin. The marketplace entry uses the repository root so Codex's cache receives the manifest together with all referenced skills, MCP configuration, hook runtime, scripts, and assets:
 
 ```bash
 codex plugin marketplace add reborncursed/AIP
-codex plugin add ecc@ecc
+codex plugin add aip@aip
 codex plugin list --json
 node scripts/codex/check-plugin-cache.js
 ```
 
-Both add commands are idempotent. To refresh later, run `codex plugin marketplace upgrade ecc` followed by `codex plugin add ecc@ecc`. Codex stores one enabled plugin state in the active `CODEX_HOME`; it does not offer Claude's `user`, `project`, and `local` scopes. Its native hooks require an explicit trust decision and do not use Claude's four ECC hook profiles. Inside Codex, invoke `$configure-ecc` for the guided provider-aware flow.
+Both add commands are idempotent. To refresh later, run `codex plugin marketplace upgrade aip` followed by `codex plugin add aip@aip`. Codex stores one enabled plugin state in the active `CODEX_HOME`; it does not offer Claude's `user`, `project`, and `local` scopes. Its native hooks require an explicit trust decision and do not use Claude's four AIP hook profiles. Inside Codex, invoke `$configure-aip` for the guided provider-aware flow.
 
-The older `scripts/sync-ecc-to-codex.sh` path is a deprecated compatibility option for users who intentionally need copied and merged configuration in `~/.codex`; it is not required for the native plugin. New sync runs write an ownership manifest so cleanup can preserve modified user files. Run Codex once first so `~/.codex/config.toml` exists, then:
+The older `scripts/sync-aip-to-codex.sh` path is a deprecated compatibility option for users who intentionally need copied and merged configuration in `~/.codex`; it is not required for the native plugin. New sync runs write an ownership manifest so cleanup can preserve modified user files. Run Codex once first so `~/.codex/config.toml` exists, then:
 
 ```bash
 git clone https://github.com/reborncursed/AIP.git
-cd ECC
+cd AIP
 npm install
-bash scripts/sync-ecc-to-codex.sh
+bash scripts/sync-aip-to-codex.sh
 ```
 
 To inspect or remove that legacy layer without touching Codex conversations or native plugin caches:
 
 ```bash
-node scripts/ecc.js uninstall --legacy-codex-sync --dry-run
-node scripts/ecc.js uninstall --legacy-codex-sync
+node scripts/aip.js uninstall --legacy-codex-sync --dry-run
+node scripts/aip.js uninstall --legacy-codex-sync
 ```
 
-Pre-manifest installations are handled conservatively: ECC removes its marked `AGENTS.md` block but preserves copied files it cannot prove it owns and reports them for review.
+Pre-manifest installations are handled conservatively: AIP removes its marked `AGENTS.md` block but preserves copied files it cannot prove it owns and reports them for review.
 
-You can also open the ECC repository directly in Codex for a project-local setup. Codex reads the root `AGENTS.md` and the trusted project configuration in `.codex/` without a global sync. Do not add the native marketplace plugin on top of the sync flow.
+You can also open the AIP repository directly in Codex for a project-local setup. Codex reads the root `AGENTS.md` and the trusted project configuration in `.codex/` without a global sync. Do not add the native marketplace plugin on top of the sync flow.
 
-For repo navigation, surface ownership, and PR diff packet guidance, read the [Codex ECC Navigation Map](docs/CODEX-NAVIGATION-GUIDE.md). See the [.codex plugin notes](.codex-plugin/README.md) for native lifecycle details.
+For repo navigation, surface ownership, and PR diff packet guidance, read the [Codex AIP Navigation Map](docs/CODEX-NAVIGATION-GUIDE.md). See the [.codex plugin notes](.codex-plugin/README.md) for native lifecycle details.
 
 ### Other agents and editors
 
 <details>
 <summary><strong>Cursor, OpenCode, Gemini, Zed, Antigravity, Qwen, Hermes, OpenClaw, Kimi, CodeBuddy, JoyCode, Copilot</strong></summary>
 
-Clone ECC once, then choose the target that matches your harness:
+Clone AIP once, then choose the target that matches your harness:
 
 ```bash
 git clone https://github.com/reborncursed/AIP.git
-cd ECC
+cd AIP
 ```
 
 | Harness | Install or setup | Notes |
@@ -245,18 +245,18 @@ cd ECC
 
 GitHub Copilot support is already included in this repository. `.github/copilot-instructions.md` provides the instruction layer, `.github/prompts/` contains the reusable `/plan`, `/tdd`, `/security-review`, `/build-fix`, and `/refactor` prompts, and `.vscode/settings.json` enables `chat.promptFiles`.
 
-For a harness without a native ECC target, use the [manual adaptation guide](docs/MANUAL-ADAPTATION-GUIDE.md). It explains how to carry a small set of ECC skills and workflow instructions into chat-style tools without pretending hooks or native skill discovery are available.
+For a harness without a native AIP target, use the [manual adaptation guide](docs/MANUAL-ADAPTATION-GUIDE.md). It explains how to carry a small set of AIP skills and workflow instructions into chat-style tools without pretending hooks or native skill discovery are available.
 
-Cursor installs agent definitions under `.cursor/agents/ecc-*.md`. Cursor-native loading behavior can vary by Cursor build. ECC does not install root `AGENTS.md` into `.cursor/`. The adapter keeps Cursor's context scoped to its native rules and agent surfaces.
+Cursor installs agent definitions under `.cursor/agents/aip-*.md`. Cursor-native loading behavior can vary by Cursor build. AIP does not install root `AGENTS.md` into `.cursor/`. The adapter keeps Cursor's context scoped to its native rules and agent surfaces.
 
 Deep per-harness notes (feature parity, hook adapters, limitations) live in [Platform Support](#platform-support) below.
 </details>
 
 ## Self-Hosted Models and Custom Endpoints
 
-ECC works through each harness's normal configuration, so you can use an official provider, a compatible custom API endpoint or model gateway, or a self-hosted model without changing ECC's workflows.
+AIP works through each harness's normal configuration, so you can use an official provider, a compatible custom API endpoint or model gateway, or a self-hosted model without changing AIP's workflows.
 
-For Claude Code, ECC does not hardcode Anthropic-hosted transport settings. Minimal gateway example:
+For Claude Code, AIP does not hardcode Anthropic-hosted transport settings. Minimal gateway example:
 
 ```bash
 export ANTHROPIC_BASE_URL=https://your-gateway.example.com
@@ -264,13 +264,13 @@ export ANTHROPIC_AUTH_TOKEN=your-token
 claude
 ```
 
-If your gateway remaps model names, configure that in Claude Code rather than in ECC. ECC's hooks, skills, commands, and rules are model-provider agnostic once the `claude` CLI is already working. See Anthropic's [LLM gateway documentation](https://docs.anthropic.com/en/docs/claude-code/llm-gateway) and [model configuration documentation](https://docs.anthropic.com/en/docs/claude-code/model-config).
+If your gateway remaps model names, configure that in Claude Code rather than in AIP. AIP's hooks, skills, commands, and rules are model-provider agnostic once the `claude` CLI is already working. See Anthropic's [LLM gateway documentation](https://docs.anthropic.com/en/docs/claude-code/llm-gateway) and [model configuration documentation](https://docs.anthropic.com/en/docs/claude-code/model-config).
 
-Run or self-host any open-source model behind that gateway using separate compute and serving setup. If you need GPU capacity, [Itô](https://compute.itomarkets.com) is ECC's preferred compute sponsor; any GPU provider works. The sponsorship link is passive: it does not invoke an RFQ, reserve capacity, provision compute, or configure serving. Separately, `ecc ito find` invokes the explicitly configured canonical Itô CLI and submits a live authenticated RFQ; it does not reserve capacity. Managed inference through Itô is not live yet.
+Run or self-host any open-source model behind that gateway using separate compute and serving setup. If you need GPU capacity, [Itô](https://compute.itomarkets.com) is AIP's preferred compute sponsor; any GPU provider works. The sponsorship link is passive: it does not invoke an RFQ, reserve capacity, provision compute, or configure serving. Separately, `aip ito find` invokes the explicitly configured canonical Itô CLI and submits a live authenticated RFQ; it does not reserve capacity. Managed inference through Itô is not live yet.
 
-### Self-host Kimi with ECC + Itô compute
+### Self-host Kimi with AIP + Itô compute
 
-The Kimi Code harness and the model-serving layer are separate. ECC configures the agent harness; you bring an API endpoint or self-host an open-weight Kimi model on your own GPU capacity. This adapter is verified against Kimi Code 0.31.x (`@moonshot-ai/kimi-code`):
+The Kimi Code harness and the model-serving layer are separate. AIP configures the agent harness; you bring an API endpoint or self-host an open-weight Kimi model on your own GPU capacity. This adapter is verified against Kimi Code 0.31.x (`@moonshot-ai/kimi-code`):
 
 <table aria-label="Local Kimi model path" width="100%">
 <tr>
@@ -288,30 +288,30 @@ The Kimi Code harness and the model-serving layer are separate. ECC configures t
 </td>
 <td width="33%" align="center">
   <a href=".kimi/README.md">
-    <strong>3. Run Kimi Code with ECC</strong>
+    <strong>3. Run Kimi Code with AIP</strong>
   </a><br />
   <sub>Install project instructions and skills, then start Kimi Code.</sub>
 </td>
 </tr>
 </table>
 
-Configure the endpoint with Kimi Code's <a href="https://moonshotai.github.io/kimi-cli/en/configuration/providers.html">official provider guide</a>, then install ECC:
+Configure the endpoint with Kimi Code's <a href="https://moonshotai.github.io/kimi-cli/en/configuration/providers.html">official provider guide</a>, then install AIP:
 
 ```bash
 bash ./install.sh --target kimi --profile minimal
-node scripts/ecc.js doctor --target kimi
+node scripts/aip.js doctor --target kimi
 kimi
 ```
 
-Kimi Code discovers the installed `.kimi-code/AGENTS.md` instructions and `.kimi-code/skills/` workflows natively; project-level `.agents/skills/` is also an official discovery location. ECC safely merges project MCP entries into `.kimi-code/mcp.json` and does not change the user-level `~/.kimi-code/config.toml`. Kimi Code supports native hooks, but ECC's current managed-project adapter does not configure them, so this installer does not offer Kimi hook profiles. The installer dry-run and regression suite verify that every managed Kimi write stays inside the project-local `.kimi-code/` root.
+Kimi Code discovers the installed `.kimi-code/AGENTS.md` instructions and `.kimi-code/skills/` workflows natively; project-level `.agents/skills/` is also an official discovery location. AIP safely merges project MCP entries into `.kimi-code/mcp.json` and does not change the user-level `~/.kimi-code/config.toml`. Kimi Code supports native hooks, but AIP's current managed-project adapter does not configure them, so this installer does not offer Kimi hook profiles. The installer dry-run and regression suite verify that every managed Kimi write stays inside the project-local `.kimi-code/` root.
 
 ### Itô compute CLI bridge
 
-`ecc ito` delegates to the separately installed canonical Itô client; ECC does not maintain a second API client. `ecc ito login [--no-browser]` performs device authorization, opens the Itô verification page by default, and persists a device token in macOS Keychain; `--no-browser` suppresses the page handoff. ECC itself does no browser automation. `ecc ito auth` is validation-only and rejects `--no-browser`. The available operations are `ecc ito login`, `ecc ito auth`, `ecc ito find`, `ecc ito status`, and the separately gated `ecc ito evals`. The matching MCP tools remain `ito_auth`, `ito_find`, and `ito_status`; `ito_auth` validates existing credentials and node qualification is CLI-only.
+`aip ito` delegates to the separately installed canonical Itô client; AIP does not maintain a second API client. `aip ito login [--no-browser]` performs device authorization, opens the Itô verification page by default, and persists a device token in macOS Keychain; `--no-browser` suppresses the page handoff. AIP itself does no browser automation. `aip ito auth` is validation-only and rejects `--no-browser`. The available operations are `aip ito login`, `aip ito auth`, `aip ito find`, `aip ito status`, and the separately gated `aip ito evals`. The matching MCP tools remain `ito_auth`, `ito_find`, and `ito_status`; `ito_auth` validates existing credentials and node qualification is CLI-only.
 
-The `ito-compute-cli` package is currently unpublished. Build it locally from the Itô runtime repo (private while the desk hardens; design partners get access) under `cli/ito-compute-cli`, run `npm ci` and `npm run check`, then set `ECC_ITO_CLI_EXECUTABLE` to that build's absolute `dist/bin/ito.js` path. Login never inherits `ITO_API_KEY`; auth, find, and status forward `ITO_API_KEY` directly when configured, and `ITO_AUTH_MODE=legacy` is not required. `ecc ito logout` revokes the current device credential and retains its local copy if remote revocation cannot be confirmed. Device tokens use macOS Keychain by default; explicit file fallback must retain owner-only directory/file permissions. ECC does not discover this credential-bearing client through `PATH`. See the [`ito-compute` skill](skills/ito-compute/SKILL.md) for the full RFQ authority and MCP setup contract.
+The `ito-compute-cli` package is currently unpublished. Build it locally from the Itô runtime repo (private while the desk hardens; design partners get access) under `cli/ito-compute-cli`, run `npm ci` and `npm run check`, then set `AIP_ITO_CLI_EXECUTABLE` to that build's absolute `dist/bin/ito.js` path. Login never inherits `ITO_API_KEY`; auth, find, and status forward `ITO_API_KEY` directly when configured, and `ITO_AUTH_MODE=legacy` is not required. `aip ito logout` revokes the current device credential and retains its local copy if remote revocation cannot be confirmed. Device tokens use macOS Keychain by default; explicit file fallback must retain owner-only directory/file permissions. AIP does not discover this credential-bearing client through `PATH`. See the [`ito-compute` skill](skills/ito-compute/SKILL.md) for the full RFQ authority and MCP setup contract.
 
-`find` submits a live authenticated RFQ. It does not reserve capacity. `evals` requires both `ITO_ENABLE_SIXTYTWO_LIVE=1` and `--live-sixtytwo`, a separately installed `sixtytwo-cli==0.3.33`, an explicit node list, and an existing absolute configuration directory. It cannot rent, launch, recover, repair, or purchase. ECC exposes no quote lock, purchase, workload, or inference path, and it never replaces a missing client or failed live call with a local result.
+`find` submits a live authenticated RFQ. It does not reserve capacity. `evals` requires both `ITO_ENABLE_SIXTYTWO_LIVE=1` and `--live-sixtytwo`, a separately installed `sixtytwo-cli==0.3.33`, an explicit node list, and an existing absolute configuration directory. It cannot rent, launch, recover, repair, or purchase. AIP exposes no quote lock, purchase, workload, or inference path, and it never replaces a missing client or failed live call with a local result.
 
 ## Advanced Install Options
 
@@ -322,10 +322,10 @@ The options stay here, directly under the main install paths, so you do not have
 
 ### Low-context / no-hooks path
 
-Use this when you want ECC's rules, agents, commands, platform config, and core workflows without runtime hooks:
+Use this when you want AIP's rules, agents, commands, platform config, and core workflows without runtime hooks:
 
 ```bash
-npx ecc-universal install --profile minimal --target claude
+npx aip-universal install --profile minimal --target claude
 ```
 
 From a source checkout, the equivalent command is:
@@ -342,7 +342,7 @@ Windows:
 
 This profile intentionally excludes `hooks-runtime`.
 
-Claude manual installs place each skill directly under `~/.claude/skills/<skill-name>/` (or `.claude/skills/<skill-name>/` for `claude-project`) so Claude Code can discover it. When upgrading an older ECC manual install, the installer migrates only nested `skills/ecc/` files recorded in ECC install-state. If a flat skill directory is user-owned, ECC preserves it, prints a conflict warning, and keeps any older managed copy tracked for a safe uninstall instead of overwriting user files.
+Claude manual installs place each skill directly under `~/.claude/skills/<skill-name>/` (or `.claude/skills/<skill-name>/` for `claude-project`) so Claude Code can discover it. When upgrading an older AIP manual install, the installer migrates only nested `skills/aip/` files recorded in AIP install-state. If a flat skill directory is user-owned, AIP preserves it, prints a conflict warning, and keeps any older managed copy tracked for a safe uninstall instead of overwriting user files.
 
 For the normal core profile with hooks disabled:
 
@@ -360,7 +360,7 @@ Add the hook runtime later only if you want it:
 Any install whose profile or modules would materialize the hook runtime requires
 an explicit decision. Without `--enable-hooks` or `--no-hooks`, the installer
 prints what the hooks can do and stops before writing anything. The guided
-installer (`ecc install --guided`) asks for this choice interactively.
+installer (`aip install --guided`) asks for this choice interactively.
 </details>
 
 <details>
@@ -371,7 +371,7 @@ installer (`ecc install --guided`) asks for this choice interactively.
 Ask the packaged advisor which components match your work:
 
 ```bash
-node scripts/ecc.js consult "security reviews" --target claude
+node scripts/aip.js consult "security reviews" --target claude
 ```
 
 It returns matching components, related profiles, and preview/install commands. Use the preview command before installing if you want to inspect the exact file plan.
@@ -380,7 +380,7 @@ You can also install explicit skills or capabilities:
 
 ```bash
 ./install.sh --target claude --skills tdd-workflow,security-review
-node scripts/ecc.js install --profile minimal --target claude --with capability:machine-learning
+node scripts/aip.js install --profile minimal --target claude --with capability:machine-learning
 ```
 
 Manual component-by-component copying also works. Each component is fully independent:
@@ -390,12 +390,12 @@ Manual component-by-component copying also works. Each component is fully indepe
 cp agents/*.md ~/.claude/agents/
 
 # Rules directories (common + language-specific)
-mkdir -p ~/.claude/rules/ecc
-cp -r rules/common ~/.claude/rules/ecc/
-cp -r rules/typescript ~/.claude/rules/ecc/   # pick your stack
+mkdir -p ~/.claude/rules/aip
+cp -r rules/common ~/.claude/rules/aip/
+cp -r rules/typescript ~/.claude/rules/aip/   # pick your stack
 
 # Core/general skills only (Claude Code loads skills from direct children
-# of ~/.claude/skills; do not nest manual installs under ~/.claude/skills/ecc/)
+# of ~/.claude/skills; do not nest manual installs under ~/.claude/skills/aip/)
 mkdir -p ~/.claude/skills
 cp -r .agents/skills/* ~/.claude/skills/
 cp -r skills/search-first ~/.claude/skills/
@@ -411,13 +411,13 @@ Retired shims live in `legacy-command-shims/`. Copy individual files from there 
 <details>
 <summary><strong>Project-local rules instead of global rules</strong></summary>
 
-Use project-local rules when ECC's standards should apply to one repository rather than every Claude Code session:
+Use project-local rules when AIP's standards should apply to one repository rather than every Claude Code session:
 
 ```bash
 cd your-project
-mkdir -p .claude/rules/ecc
-cp -R /path/to/ECC/rules/common .claude/rules/ecc/
-cp -R /path/to/ECC/rules/typescript .claude/rules/ecc/
+mkdir -p .claude/rules/aip
+cp -R /path/to/AIP/rules/common .claude/rules/aip/
+cp -R /path/to/AIP/rules/typescript .claude/rules/aip/
 ```
 
 Rules are always-loaded context, so begin with `common` and one pack for the stack you actually use. When copying rules manually, copy the whole language directory (for example `rules/common` or `rules/golang`), not the files inside it, so relative references keep working and filenames do not collide.
@@ -430,7 +430,7 @@ Use this only when you are intentionally skipping the plugin path:
 
 ```bash
 git clone https://github.com/reborncursed/AIP.git
-cd ECC
+cd AIP
 ./install.sh --profile full
 ```
 
@@ -438,13 +438,13 @@ Windows:
 
 ```powershell
 git clone https://github.com/reborncursed/AIP.git
-cd ECC
+cd AIP
 .\install.ps1 --profile full
 ```
 
 If you choose this path, stop there. Do not also run `/plugin install`.
 
-For hand-picked manual installs, Claude discovers skills as direct children of `~/.claude/skills/`; do not nest them under `~/.claude/skills/ecc/`.
+For hand-picked manual installs, Claude discovers skills as direct children of `~/.claude/skills/`; do not nest them under `~/.claude/skills/aip/`.
 
 #### Install hooks
 
@@ -456,7 +456,7 @@ bash ./install.sh --target claude --modules hooks-runtime --enable-hooks
 
 That writes resolved hooks to `~/.claude/hooks/hooks.json` and leaves any existing `~/.claude/settings.json` untouched.
 
-If you installed ECC via `/plugin install`, do not copy those hooks into `settings.json`. Claude Code v2.1+ already auto-loads plugin `hooks/hooks.json`, and duplicating them in `settings.json` causes duplicate execution and cross-platform hook conflicts.
+If you installed AIP via `/plugin install`, do not copy those hooks into `settings.json`. Claude Code v2.1+ already auto-loads plugin `hooks/hooks.json`, and duplicating them in `settings.json` causes duplicate execution and cross-platform hook conflicts.
 
 On Windows, Claude's config root is `%USERPROFILE%\\.claude`; install the hook runtime with:
 
@@ -466,19 +466,19 @@ pwsh -File .\install.ps1 --target claude --modules hooks-runtime --enable-hooks
 
 #### Configure MCPs
 
-Claude plugin installs intentionally do not auto-enable ECC's bundled MCP server definitions. This avoids overlong plugin MCP tool names on strict third-party gateways while keeping manual MCP setup available.
+Claude plugin installs intentionally do not auto-enable AIP's bundled MCP server definitions. This avoids overlong plugin MCP tool names on strict third-party gateways while keeping manual MCP setup available.
 
 Use Claude Code's `/mcp` command or CLI-managed MCP setup for live Claude Code server changes; Claude Code persists those choices in `~/.claude.json`. For repo-local MCP access, copy desired MCP server definitions from `mcp-configs/mcp-servers.json` into a project-scoped `.mcp.json`.
 
-ECC ships exactly one default connector (`chrome-devtools`); everything else is a skill wrapping a CLI/REST API or an opt-in catalog entry. The rule and the June 2026 audit that retired the previous six defaults live in [docs/MCP-CONNECTOR-POLICY.md](docs/MCP-CONNECTOR-POLICY.md).
+AIP ships exactly one default connector (`chrome-devtools`); everything else is a skill wrapping a CLI/REST API or an opt-in catalog entry. The rule and the June 2026 audit that retired the previous six defaults live in [docs/MCP-CONNECTOR-POLICY.md](docs/MCP-CONNECTOR-POLICY.md).
 
-If you already run your own copies of ECC-bundled MCPs, set:
+If you already run your own copies of AIP-bundled MCPs, set:
 
 ```bash
-export ECC_DISABLED_MCPS="chrome-devtools"
+export AIP_DISABLED_MCPS="chrome-devtools"
 ```
 
-ECC-managed install and Codex sync flows will skip or remove those bundled servers instead of re-adding duplicates. `ECC_DISABLED_MCPS` is an ECC install/sync filter, not a live Claude Code toggle.
+AIP-managed install and Codex sync flows will skip or remove those bundled servers instead of re-adding duplicates. `AIP_DISABLED_MCPS` is an AIP install/sync filter, not a live Claude Code toggle.
 
 **Important:** Replace `YOUR_*_HERE` placeholders with your actual API keys.
 </details>
@@ -501,26 +501,26 @@ Without `ccg-workflow`, these `multi-*` commands will not run correctly.
 <details>
 <summary><strong>Reset, repair, or uninstall</strong></summary>
 
-### Reset / Uninstall ECC
+### Reset / Uninstall AIP
 
 If you installed from the universal package, run these commands from the same
 project directory used for installation:
 
 ```bash
-npx ecc-universal list-installed
-npx ecc-universal doctor
-npx ecc-universal repair
-npx ecc-universal uninstall --dry-run
-npx ecc-universal uninstall
+npx aip-universal list-installed
+npx aip-universal doctor
+npx aip-universal repair
+npx aip-universal uninstall --dry-run
+npx aip-universal uninstall
 ```
 
 From a source checkout, inspect the managed state before reinstalling:
 
 ```bash
-node scripts/ecc.js list-installed
-node scripts/ecc.js doctor
-node scripts/ecc.js repair
-node scripts/ecc.js uninstall --dry-run
+node scripts/aip.js list-installed
+node scripts/aip.js doctor
+node scripts/aip.js repair
+node scripts/aip.js uninstall --dry-run
 ```
 
 For a direct source-checkout uninstall:
@@ -530,14 +530,14 @@ node scripts/uninstall.js --dry-run
 node scripts/uninstall.js
 ```
 
-If you are leaving, the uninstall command prints an optional [20-second feedback form](https://github.com/reborncursed/AIP/issues/new?template=quick-feedback.yml). It is a public GitHub issue, never blocks uninstall, and ECC does not upload diagnostics. You can also run `ecc feedback` at any time to see the problem, feedback, and feature routes.
+If you are leaving, the uninstall command prints an optional [20-second feedback form](https://github.com/reborncursed/AIP/issues/new?template=quick-feedback.yml). It is a public GitHub issue, never blocks uninstall, and AIP does not upload diagnostics. You can also run `aip feedback` at any time to see the problem, feedback, and feature routes.
 
-Plugin users should remove the plugin from Claude Code, then delete only the rule folders they manually copied and no longer want. ECC only removes files recorded in its install-state. It does not claim unrelated files in your harness directories.
+Plugin users should remove the plugin from Claude Code, then delete only the rule folders they manually copied and no longer want. AIP only removes files recorded in its install-state. It does not claim unrelated files in your harness directories.
 
 If you stacked methods, clean up in this order:
 
 1. Remove the Claude Code plugin install.
-2. Run the ECC uninstall command from the project directory that contains the managed install-state.
+2. Run the AIP uninstall command from the project directory that contains the managed install-state.
 3. Delete any extra rule folders you copied manually and no longer want.
 4. Reinstall once, using a single path.
 </details>
@@ -545,47 +545,47 @@ If you stacked methods, clean up in this order:
 ## Universal guided setup details
 
 > [!IMPORTANT]
-> These package-runner commands require `ecc-universal` 2.2.0 or newer and
+> These package-runner commands require `aip-universal` 2.2.0 or newer and
 > Node.js 18 or newer. Claude plugin setup also requires Git and Claude Code
 > 2.1 or newer on `PATH`.
 
 For Claude Code plugin setup, updates, scope changes, and hook-profile changes:
 
 ```bash
-npx ecc-universal setup
+npx aip-universal setup
 ```
 
-ECC 2.2 supports the same guided setup through modern package runners:
+AIP 2.2 supports the same guided setup through modern package runners:
 
 | Package runner | Guided setup command |
 |---|---|
-| npm / npx | `npx ecc-universal setup` |
-| pnpm | `pnpm dlx ecc-universal setup` |
-| Yarn 2+ | `yarn dlx ecc-universal setup` |
-| Bun | `bunx ecc-universal setup` |
+| npm / npx | `npx aip-universal setup` |
+| pnpm | `pnpm dlx aip-universal setup` |
+| Yarn 2+ | `yarn dlx aip-universal setup` |
+| Bun | `bunx aip-universal setup` |
 
 Yarn Classic 1 does not provide `yarn dlx`; use `npx`, install the package globally, or upgrade Yarn for a temporary one-shot run.
 
-The wizard inventories the official marketplace and every native Claude install scope before making changes, then installs, updates, or safely moves `ecc@ecc` to the scope you choose. Rerun the same command whenever you want to update ECC, change scope, or change its hook profile. This setup wizard currently configures the Claude Code plugin; use the multi-harness wizard below for Codex or Kimi Code.
+The wizard inventories the official marketplace and every native Claude install scope before making changes, then installs, updates, or safely moves `aip@aip` to the scope you choose. Rerun the same command whenever you want to update AIP, change scope, or change its hook profile. This setup wizard currently configures the Claude Code plugin; use the multi-harness wizard below for Codex or Kimi Code.
 
 To configure more than one coding agent in one reviewed flow, use the multi-harness wizard:
 
 ```bash
-npx ecc-universal install --guided
+npx aip-universal install --guided
 ```
 
 It lets you select any combination of Claude Code, Codex, and Kimi Code, shows each install channel and destination, preflights every selection before the first write, and asks for one final confirmation.
 
 | Harness | Guided install behavior |
 |---|---|
-| Claude Code | Native `ecc@ecc` plugin with one `user`, `project`, or `local` scope and an ECC hook profile |
+| Claude Code | Native `aip@aip` plugin with one `user`, `project`, or `local` scope and an AIP hook profile |
 | Codex | Native Codex marketplace/plugin lifecycle; hook review and trust remain Codex-owned |
-| Kimi Code | Managed project files under `./.kimi-code`; ECC hooks, model/provider settings, and authentication are not configured |
+| Kimi Code | Managed project files under `./.kimi-code`; AIP hooks, model/provider settings, and authentication are not configured |
 
 For automation, make every provider-specific choice explicit:
 
 ```bash
-npx ecc-universal install --guided \
+npx aip-universal install --guided \
   --harness claude --harness codex --harness kimi \
   --claude-scope local --claude-hooks standard \
   --profile core --yes
@@ -594,29 +594,29 @@ npx ecc-universal install --guided \
 Verify the native guided Codex path and managed Kimi path without writing first:
 
 ```bash
-npx ecc-universal install --guided --harness codex --dry-run
-npx ecc-universal install --profile core --target kimi --dry-run
+npx aip-universal install --guided --harness codex --dry-run
+npx aip-universal install --profile core --target kimi --dry-run
 ```
 
 Additional package-name commands are also available through the 2.2 alias:
 
 ```bash
-npx ecc-universal consult "security reviews" --target claude
-npx ecc-universal install --profile minimal --target claude --with capability:machine-learning
-npx ecc-universal doctor --target kimi
+npx aip-universal consult "security reviews" --target claude
+npx aip-universal install --profile minimal --target claude --with capability:machine-learning
+npx aip-universal doctor --target kimi
 ```
 
-Do not use `npx ecc-install --profile minimal --target claude`: `ecc-install` is a binary name inside `ecc-universal`, not a separately published npm package.
+Do not use `npx aip-install --profile minimal --target claude`: `aip-install` is a binary name inside `aip-universal`, not a separately published npm package.
 
-ECC also ships advanced managed adapters for `cursor`, `antigravity`, `gemini`, `opencode`, `codebuddy`, `joycode`, `qwen`, `zed`, `hermes`, and `openclaw`. Those targets still use their documented `ecc install --target ...` paths until each adapter has passed the guided collision, update, repair, and uninstall lifecycle matrix. Neither wizard silently installs into every detected harness.
+AIP also ships advanced managed adapters for `cursor`, `antigravity`, `gemini`, `opencode`, `codebuddy`, `joycode`, `qwen`, `zed`, `hermes`, and `openclaw`. Those targets still use their documented `aip install --target ...` paths until each adapter has passed the guided collision, update, repair, and uninstall lifecycle matrix. Neither wizard silently installs into every detected harness.
 
-## Start Using ECC
+## Start Using AIP
 
 Start with the workflow you need, not the full catalog.
 
 | What you are doing | Start here |
 |---|---|
-| Building a feature | `/ecc:plan "describe the feature"`, then `tdd-workflow` |
+| Building a feature | `/aip:plan "describe the feature"`, then `tdd-workflow` |
 | Fixing a bug | Reproduce it with a failing test, then use `tdd-workflow` |
 | Reviewing new code | `/code-review` for a fresh-context review |
 | Repairing a build | `/build-fix` |
@@ -624,7 +624,7 @@ Start with the workflow you need, not the full catalog.
 | Checking context pressure | `/context-budget` |
 | Ending a long session | `/save-session` or `/learn-eval` |
 | Resuming later | `/resume-session` |
-| Auditing agent config | `/security-scan` or `npx -y ecc-agentshield scan --path .` |
+| Auditing agent config | `/security-scan` or `npx -y aip-agentshield scan --path .` |
 
 <details>
 <summary><strong>Plugin commands and manual commands</strong></summary>
@@ -632,7 +632,7 @@ Start with the workflow you need, not the full catalog.
 Claude Code plugin commands use the namespaced form:
 
 ```text
-/ecc:plan "Add authentication"
+/aip:plan "Add authentication"
 ```
 
 Manual installs may expose the shorter compatibility form:
@@ -644,7 +644,7 @@ Manual installs may expose the shorter compatibility form:
 Skills are the primary workflow surface. Commands remain convenient entry points and compatibility shims. Check what is installed with:
 
 ```bash
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 </details>
 
@@ -655,8 +655,8 @@ Skills are the canonical workflow surface; maintained slash entries stay availab
 
 | I want to... | Use this surface | Agent used |
 |--------------|-----------------|------------|
-| Plan a new feature | `/ecc:plan "Add auth"` | planner |
-| Design system architecture | `/ecc:plan` + architect agent | architect |
+| Plan a new feature | `/aip:plan "Add auth"` | planner |
+| Design system architecture | `/aip:plan` + architect agent | architect |
 | Write code with tests first | `tdd-workflow` skill | tdd-guide |
 | Review code I just wrote | `/code-review` | code-reviewer |
 | Fix a failing build | `/build-fix` | build-error-resolver |
@@ -681,7 +681,7 @@ Slash forms below are shown where they remain part of the maintained command sur
 
 **Starting a new feature:**
 ```
-/ecc:plan "Add user authentication with OAuth"
+/aip:plan "Add user authentication with OAuth"
                                               -> planner creates implementation blueprint
 tdd-workflow skill                            -> tdd-guide enforces write-tests-first
 /code-review                                  -> code-reviewer checks your work
@@ -702,44 +702,44 @@ e2e-testing skill                             -> e2e-runner: critical user flow 
 ```
 </details>
 
-## What's New: ECC 2.1
+## What's New: AIP 2.1
 
 > [!IMPORTANT]
-> **NEW IN ECC 2.1: Plan Canvas · Kimi harness · self-hosted compute on Itô GPUs.**
+> **NEW IN AIP 2.1: Plan Canvas · Kimi harness · self-hosted compute on Itô GPUs.**
 > [See the full release notes →](https://github.com/reborncursed/AIP/blob/main/docs/releases/2.1.0/release-notes.md)
 
 ### Plan Canvas: review plans by pointing, not retyping
 
 Your agent writes a plan, then opens it in a loopback-only browser canvas. Click the part you mean, attach numbered annotations, chat from a side rail, and hit **Approve plan** or **Request changes**. The verdict maps straight onto `/plan`'s CONFIRM gate. Mermaid diagrams render live, and edits to the plan file reload the page.
 
-![Plan Canvas demo: reviewing an ECC plan in the browser, scrolling diagrams, attaching an anchored annotation, chatting with the agent, and approving the plan](https://raw.githubusercontent.com/reborncursed/AIP/main/docs/releases/2.1.0/assets/ecc-plan-canvas-demo.gif)
+![Plan Canvas demo: reviewing an AIP plan in the browser, scrolling diagrams, attaching an anchored annotation, chatting with the agent, and approving the plan](https://raw.githubusercontent.com/reborncursed/AIP/main/docs/releases/2.1.0/assets/aip-plan-canvas-demo.gif)
 
-It's harness- and model-agnostic: a plain CLI (`ecc-plan-canvas`) speaking JSON, so any agent can drive it. Try it: ask your agent to `/ecc:plan` anything, then review from the page instead of the terminal.
+It's harness- and model-agnostic: a plain CLI (`aip-plan-canvas`) speaking JSON, so any agent can drive it. Try it: ask your agent to `/aip:plan` anything, then review from the page instead of the terminal.
 
 [Open the plan used in this demo →](https://github.com/reborncursed/AIP/blob/main/docs/releases/2.1.0/plan-canvas-demo.plan.md)
 
 ### Also in 2.1
 
-- **Kimi Code install target** (`--target kimi`): ECC installs natively into [Moonshot AI](https://www.moonshot.ai)'s Kimi Code CLI
-- **Self-host on GPUs**: a verified path with [Itô](https://compute.itomarkets.com), ECC's preferred compute sponsor, including the opt-in `ecc ito find` RFQ bridge (details and disclosures above in [Self-Hosted Models and Custom Endpoints](#self-hosted-models-and-custom-endpoints))
+- **Kimi Code install target** (`--target kimi`): AIP installs natively into [Moonshot AI](https://www.moonshot.ai)'s Kimi Code CLI
+- **Self-host on GPUs**: a verified path with [Itô](https://compute.itomarkets.com), AIP's preferred compute sponsor, including the opt-in `aip ito find` RFQ bridge (details and disclosures above in [Self-Hosted Models and Custom Endpoints](#self-hosted-models-and-custom-endpoints))
 - **Moonshot AI (Kimi), Itô, and Atlas Cloud** are now public sponsors
 - **Hermes + OpenClaw install targets**, a Codex navigation guide, consolidated PostToolUse hooks, and supply-chain hardening
 
 ### Current development: Unified Memory Vault
 
-`ecc memory` gives Claude, Codex, Hermes, OpenClaw, Kimi, and other harnesses one local, inspectable Markdown format for durable context and handoffs. The optional `ecc-memory-mcp` stdio server exposes the same bounded save/search/read/doctor surface without enabling itself by default. Full detail in [Share context between harnesses](#share-context-between-harnesses) below.
+`aip memory` gives Claude, Codex, Hermes, OpenClaw, Kimi, and other harnesses one local, inspectable Markdown format for durable context and handoffs. The optional `aip-memory-mcp` stdio server exposes the same bounded save/search/read/doctor surface without enabling itself by default. Full detail in [Share context between harnesses](#share-context-between-harnesses) below.
 
 <details>
 <summary><strong>Previous releases</strong></summary>
 
 | Version | Highlights |
 |---|---|
-| [v2.0.0](https://github.com/reborncursed/AIP/releases/tag/v2.0.0) | The Agent Harness Operating System: cross-harness graduation, control-pane substrate, `orch-*` orchestrators, Discord + ECC bot, single-connector MCP policy |
-| [v1.10.0](https://github.com/reborncursed/AIP/releases/tag/v1.10.0) | Surface refresh, operator workflows, ECC 2.0 alpha |
-| [v1.9.0](https://github.com/reborncursed/AIP/releases/tag/v1.9.0) | Selective install, ECC Tools Pro, 12 language ecosystems |
+| [v2.0.0](https://github.com/reborncursed/AIP/releases/tag/v2.0.0) | The Agent Harness Operating System: cross-harness graduation, control-pane substrate, `orch-*` orchestrators, Discord + AIP bot, single-connector MCP policy |
+| [v1.10.0](https://github.com/reborncursed/AIP/releases/tag/v1.10.0) | Surface refresh, operator workflows, AIP 2.0 alpha |
+| [v1.9.0](https://github.com/reborncursed/AIP/releases/tag/v1.9.0) | Selective install, AIP Tools Pro, 12 language ecosystems |
 | [v1.8.0](https://github.com/reborncursed/AIP/releases/tag/v1.8.0) | Harness performance and cross-platform reliability |
 | [v1.7.0](https://github.com/reborncursed/AIP/releases/tag/v1.7.0) | Cross-platform expansion and presentation builder |
-| [v1.6.0](https://github.com/reborncursed/AIP/releases/tag/v1.6.0) | Codex Edition and the ECC Tools GitHub App |
+| [v1.6.0](https://github.com/reborncursed/AIP/releases/tag/v1.6.0) | Codex Edition and the AIP Tools GitHub App |
 | [v1.5.0](https://github.com/reborncursed/AIP/releases/tag/v1.5.0) | Universal Edition |
 | [v1.4.0](https://github.com/reborncursed/AIP/releases/tag/v1.4.0) | Multi-language rules, installation wizard, PM2 orchestration |
 | [v1.3.0](https://github.com/reborncursed/AIP/releases/tag/v1.3.0) | Complete OpenCode plugin support |
@@ -754,20 +754,20 @@ It's harness- and model-agnostic: a plain CLI (`ecc-plan-canvas`) speaking JSON,
 
 ### v2.0.0: The Agent Harness Operating System (Jun 2026)
 
-Stable graduation of the 2.0 line: the control-pane substrate (session adapters + MCP inventory), the worktree-lifecycle service, the `orch-*` orchestrator family, and the launch of the [ECC Discord community](https://discord.gg/36yGMHGFbR). Full notes: [docs/releases/2.0.0/release-notes.md](docs/releases/2.0.0/release-notes.md).
+Stable graduation of the 2.0 line: the control-pane substrate (session adapters + MCP inventory), the worktree-lifecycle service, the `orch-*` orchestrator family, and the launch of the [AIP Discord community](https://discord.gg/36yGMHGFbR). Full notes: [docs/releases/2.0.0/release-notes.md](docs/releases/2.0.0/release-notes.md).
 
-### v2.0.0-rc.1: Surface Refresh, Operator Workflows, and ECC 2.0 Alpha (Apr 2026)
+### v2.0.0-rc.1: Surface Refresh, Operator Workflows, and AIP 2.0 Alpha (Apr 2026)
 
-- **Dashboard GUI**: New Tkinter-based desktop application (`ecc_dashboard.py` or `npm run dashboard`) with dark/light theme toggle, font customization, and project logo in header and taskbar.
+- **Dashboard GUI**: New Tkinter-based desktop application (`aip_dashboard.py` or `npm run dashboard`) with dark/light theme toggle, font customization, and project logo in header and taskbar.
 - **Public surface synced to the live repo**: metadata, catalog counts, plugin manifests, and install-facing docs now match the actual OSS surface.
-- **Operator and outbound workflow expansion**: `brand-voice`, `social-graph-ranker`, `connections-optimizer`, `customer-billing-ops`, `ecc-tools-cost-audit`, `google-workspace-ops`, `project-flow-ops`, and `workspace-surface-audit` round out the operator lane.
+- **Operator and outbound workflow expansion**: `brand-voice`, `social-graph-ranker`, `connections-optimizer`, `customer-billing-ops`, `aip-tools-cost-audit`, `google-workspace-ops`, `project-flow-ops`, and `workspace-surface-audit` round out the operator lane.
 - **Media and launch tooling**: `manim-video`, `remotion-video-creation`, and upgraded social publishing surfaces make technical explainers and launch content part of the same system.
 - **Framework and product surface growth**: `nestjs-patterns`, richer Codex/OpenCode install surfaces, and expanded cross-harness packaging keep the repo usable beyond a single harness.
-- **Itô prediction-market skill pack**: the consolidated `ito-baskets` skill (read-only basket index, comparison, market briefs, and non-executable planning worksheets — replacing the former `ito-market-intelligence`, `ito-basket-compare`, `ito-trade-planner`, and `ito-data-atlas-agent` skills), plus `prediction-market-oracle-research` and `prediction-market-risk-review`, add public, non-advisory market/basket workflows while keeping live Itô API access gated and separate from ECC Tools billing.
+- **Itô prediction-market skill pack**: the consolidated `ito-baskets` skill (read-only basket index, comparison, market briefs, and non-executable planning worksheets — replacing the former `ito-market-intelligence`, `ito-basket-compare`, `ito-trade-planner`, and `ito-data-atlas-agent` skills), plus `prediction-market-oracle-research` and `prediction-market-risk-review`, add public, non-advisory market/basket workflows while keeping live Itô API access gated and separate from AIP Tools billing.
 - **Optimization skill pack**: `parallel-execution-optimizer`, `benchmark-optimization-loop`, `data-throughput-accelerator`, `latency-critical-systems`, and `recursive-decision-ledger` turn repeated speed/recursion prompts into bounded benchmark, throughput, and decision-ledger workflows.
-- **ECC 2.0 alpha in-tree**: the Rust control-plane prototype in `ecc2/` builds locally and exposes `dashboard`, `start`, `sessions`, `status`, `stop`, `resume`, and `daemon` commands.
-- **Operator status snapshots**: `ecc status --markdown --write status.md` turns the local state store into a portable handoff covering readiness, active sessions, skill-run health, install health, pending governance events, and linked work items from Linear/GitHub/handoffs.
-- **Ecosystem hardening**: AgentShield, ECC Tools cost controls, billing portal work, and website refreshes continue to ship around the core plugin instead of drifting into separate silos.
+- **AIP 2.0 alpha in-tree**: the Rust control-plane prototype in `aip2/` builds locally and exposes `dashboard`, `start`, `sessions`, `status`, `stop`, `resume`, and `daemon` commands.
+- **Operator status snapshots**: `aip status --markdown --write status.md` turns the local state store into a portable handoff covering readiness, active sessions, skill-run health, install health, pending governance events, and linked work items from Linear/GitHub/handoffs.
+- **Ecosystem hardening**: AgentShield, AIP Tools cost controls, billing portal work, and website refreshes continue to ship around the core plugin instead of drifting into separate silos.
 
 ### v1.9.0: Selective Install and Language Expansion (Mar 2026)
 
@@ -783,9 +783,9 @@ Stable graduation of the 2.0 line: the control-pane substrate (session adapters 
 
 ### v1.8.0: Harness Performance System (Mar 2026)
 
-- **Harness-first release**: ECC is explicitly framed as an agent harness performance system, not just a config pack.
+- **Harness-first release**: AIP is explicitly framed as an agent harness performance system, not just a config pack.
 - **Hook reliability overhaul**: SessionStart root fallback, Stop-phase session summaries, and script-based hooks replacing fragile inline one-liners.
-- **Hook runtime controls**: `ECC_HOOK_PROFILE=minimal|standard|strict` and `ECC_DISABLED_HOOKS=...` for runtime gating without editing hook files.
+- **Hook runtime controls**: `AIP_HOOK_PROFILE=minimal|standard|strict` and `AIP_DISABLED_HOOKS=...` for runtime gating without editing hook files.
 - **New harness commands**: `/harness-audit`, `/loop-start`, `/loop-status`, `/quality-gate`, `/model-route`.
 - **NanoClaw v2**: model routing, skill hot-load, session branch/search/export/compact/metrics.
 - **Cross-harness parity**: behavior tightened across Claude Code, Cursor, OpenCode, and Codex app/CLI.
@@ -804,7 +804,7 @@ Stable graduation of the 2.0 line: the control-pane substrate (session adapters 
 - **Codex CLI support**: New `/codex-setup` command generates `codex.md` for OpenAI Codex CLI compatibility
 - **7 new skills**: `search-first`, `swift-actor-persistence`, `swift-protocol-di-testing`, `regex-vs-llm-structured-text`, `content-hash-cache-pattern`, `cost-aware-llm-pipeline`, `skill-stocktake`
 - **AgentShield integration**: `/security-scan` runs AgentShield directly from Claude Code; 1282 tests, 102 rules
-- **GitHub Marketplace**: ECC Tools GitHub App live at [github.com/marketplace/ecc-tools](https://github.com/marketplace/ecc-tools) with free/pro/enterprise tiers
+- **GitHub Marketplace**: AIP Tools GitHub App live at [github.com/marketplace/aip-tools](https://github.com/marketplace/aip-tools) with free/pro/enterprise tiers
 - **30+ community PRs merged**: Contributions from 30 contributors across 6 languages
 - **978 internal tests**: Expanded validation suite across agents, skills, commands, hooks, and rules
 
@@ -814,7 +814,7 @@ Stable graduation of the 2.0 line: the control-pane substrate (session adapters 
 
 ### v1.4.0: Multi-Language Rules, Installation Wizard, and PM2 (Feb 2026)
 
-- **Interactive installation wizard**: New `configure-ecc` skill provides guided setup with merge/overwrite detection
+- **Interactive installation wizard**: New `configure-aip` skill provides guided setup with merge/overwrite detection
 - **PM2 and multi-agent orchestration**: 6 new commands (`/pm2`, `/multi-plan`, `/multi-execute`, `/multi-backend`, `/multi-frontend`, `/multi-workflow`) for managing complex multi-service workflows
 - **Multi-language rules architecture**: Rules restructured from flat files into `common/` + `typescript/` + `python/` + `golang/` directories. Install only the languages you need
 - **Chinese (zh-CN) translations**: Complete translation of all agents, commands, skills, and rules (80+ files)
@@ -837,9 +837,9 @@ Stable graduation of the 2.0 line: the control-pane substrate (session adapters 
 See the full changelog in [Releases](https://github.com/reborncursed/AIP/releases).
 </details>
 
-## Why Choose ECC?
+## Why Choose AIP?
 
-| Without a system                                        | With ECC                                                              |
+| Without a system                                        | With AIP                                                              |
 | ------------------------------------------------------- | --------------------------------------------------------------------- |
 | Plans disappear into chat history                       | Plans become editable artifacts before implementation starts          |
 | "Please use TDD" is an instruction the model may forget | TDD becomes a gated RED -> GREEN -> REFACTOR workflow with evidence   |
@@ -851,7 +851,7 @@ See the full changelog in [Releases](https://github.com/reborncursed/AIP/release
 ### TDD: Test-Driven Development
 
 ```text
-/ecc:plan "Add usage-based billing alerts"
+/aip:plan "Add usage-based billing alerts"
   -> confirm or edit the plan
   -> activate tdd-workflow
   -> capture RED evidence before implementation
@@ -865,7 +865,7 @@ A result is not just code. It's a trail of evidence: the plan, the failing test,
 
 ### Skills keep the context focused
 
-Rules, skills, agents, and hooks solve different problems. Keeping those jobs separate is how ECC adds capability without dumping the entire repository into every session.
+Rules, skills, agents, and hooks solve different problems. Keeping those jobs separate is how AIP adds capability without dumping the entire repository into every session.
 
 | Concept | What it does | Context behavior |
 |---|---|---|
@@ -877,54 +877,54 @@ Rules, skills, agents, and hooks solve different problems. Keeping those jobs se
 
 ### Share context between harnesses
 
-ECC's Memory Vault gives Claude, Codex, Hermes, OpenClaw, Kimi, and other harnesses one local, inspectable Markdown format for durable context and handoffs. Project and team memories live under `.ecc/memory/`; user memories live under `~/.ecc/memory/`.
+AIP's Memory Vault gives Claude, Codex, Hermes, OpenClaw, Kimi, and other harnesses one local, inspectable Markdown format for durable context and handoffs. Project and team memories live under `.aip/memory/`; user memories live under `~/.aip/memory/`.
 
 ```bash
-npm install -g ecc-universal
-ecc memory init --scope project
-ecc memory search "authentication migration" --target-harness codex
-ecc memory doctor
+npm install -g aip-universal
+aip memory init --scope project
+aip memory search "authentication migration" --target-harness codex
+aip memory doctor
 ```
 
-Memory is unreviewed context, not executable policy. Verify important claims against authoritative sources and promote accepted knowledge into governed project documentation. The optional `ecc-memory-mcp` server exposes the same bounded save, search, read, and doctor surface without enabling itself by default.
+Memory is unreviewed context, not executable policy. Verify important claims against authoritative sources and promote accepted knowledge into governed project documentation. The optional `aip-memory-mcp` server exposes the same bounded save, search, read, and doctor surface without enabling itself by default.
 
 [Open the Unified Memory workflow →](skills/unified-memory/SKILL.md)
 
 <details>
 <summary><strong>Memory Vault in depth: scopes, handoffs, and trust boundaries</strong></summary>
 
-The Memory Vault stores portable `ecc.memory.v1` Markdown documents instead of copying vendor transcripts or emailing context between agents. Project memories are protected by a fail-closed `.gitignore`; use the team scope only for human-inspected, version-controlled sharing. Team memories remain unreviewed context even after they are committed.
+The Memory Vault stores portable `aip.memory.v1` Markdown documents instead of copying vendor transcripts or emailing context between agents. Project memories are protected by a fail-closed `.gitignore`; use the team scope only for human-inspected, version-controlled sharing. Team memories remain unreviewed context even after they are committed.
 
 Skill-only, minimal, manual, and Claude plugin installs do not put the Memory Vault runtime on `PATH`. Install the npm runtime separately before using the CLI or optional MCP server:
 
 ```bash
-npm install -g ecc-universal
-ecc memory --help
-command -v ecc-memory-mcp
+npm install -g aip-universal
+aip memory --help
+command -v aip-memory-mcp
 ```
 
 ```bash
 # Initialize the project vault.
-ecc memory init --scope project
+aip memory init --scope project
 
 # Write a handoff body to a regular file, then target the next harness.
-ecc memory handoff \
+aip memory handoff \
   --from hermes \
   --target codex \
   --title "Continue authentication migration" \
   --body-file ./handoff.md
 
 # Recall it from another harness.
-ecc memory search "authentication migration" --target-harness codex
-ecc memory read <memory-id>
+aip memory search "authentication migration" --target-harness codex
+aip memory read <memory-id>
 
 # Validate the vault before sharing team memories.
-ecc memory doctor
+aip memory doctor
 ```
 
 Memory bodies are accepted only through `--stdin` or `--body-file`, not as command-line values. The first release keeps every vault entry unreviewed and create-only; human review promotes accepted knowledge into governed project documentation rather than changing memory trust. Normal search recall returns active project and team memories. A direct ID read may inspect a non-active entry. User-scope recall must be requested explicitly. Agents must verify important claims against authoritative sources and must never treat recalled bodies as executable instructions or policy.
 
-For opt-in MCP access, add the `ecc-memory-vault` entry from [`mcp-configs/mcp-servers.json`](mcp-configs/mcp-servers.json) to each harness that needs it, then run `ecc-memory-mcp`. The server exposes only `memory_save`, `memory_search`, `memory_read`, and `memory_doctor`. Each server must launch with a lowercase `ECC_MEMORY_HARNESS` identity; the identity is server-bound and cannot be supplied by a tool caller. User scope additionally requires the operator-controlled `ECC_MEMORY_ALLOW_USER_SCOPE=1` opt-in. See [`skills/unified-memory/SKILL.md`](skills/unified-memory/SKILL.md) for the workflow and trust boundaries, and [`docs/design/ecc-memory-vault.md`](docs/design/ecc-memory-vault.md) for the capability contract.
+For opt-in MCP access, add the `aip-memory-vault` entry from [`mcp-configs/mcp-servers.json`](mcp-configs/mcp-servers.json) to each harness that needs it, then run `aip-memory-mcp`. The server exposes only `memory_save`, `memory_search`, `memory_read`, and `memory_doctor`. Each server must launch with a lowercase `AIP_MEMORY_HARNESS` identity; the identity is server-bound and cannot be supplied by a tool caller. User scope additionally requires the operator-controlled `AIP_MEMORY_ALLOW_USER_SCOPE=1` opt-in. See [`skills/unified-memory/SKILL.md`](skills/unified-memory/SKILL.md) for the workflow and trust boundaries, and [`docs/design/aip-memory-vault.md`](docs/design/aip-memory-vault.md) for the capability contract.
 </details>
 
 ## Documentation
@@ -934,7 +934,7 @@ See the [Commands Quick Reference](./COMMANDS-QUICK-REF.md), the [Manual Adaptat
 ## What's Inside
 
 ```text
-ECC/
+AIP/
 |-- agents/           # 68 specialized subagents for delegation
 |-- skills/           # 284 reusable workflows loaded on demand
 |-- commands/         # 94 maintained slash-command shims
@@ -954,7 +954,7 @@ The root is the source of truth. Platform adapters package or map these same wor
 <summary><strong>Annotated component catalog</strong></summary>
 
 ```
-ECC/
+AIP/
 |-- .claude-plugin/   # Plugin and marketplace manifests
 |   |-- plugin.json         # Plugin metadata and component paths
 |   |-- marketplace.json    # Marketplace catalog for /plugin marketplace add
@@ -1033,7 +1033,7 @@ ECC/
 |   |-- springboot-security/        # Spring Boot security
 |   |-- springboot-tdd/             # Spring Boot TDD
 |   |-- springboot-verification/    # Spring Boot verification
-|   |-- configure-ecc/              # Interactive installation wizard
+|   |-- configure-aip/              # Interactive installation wizard
 |   |-- security-scan/              # AgentShield security auditor integration
 |   |-- java-coding-standards/      # Java coding standards
 |   |-- jpa-patterns/               # JPA/Hibernate patterns
@@ -1100,7 +1100,7 @@ ECC/
 |   |-- verify.md           # /verify - Prefer the verification-loop skill
 |   |-- orchestrate.md      # /orchestrate - Prefer dmux-workflows or multi-workflow
 |
-|-- rules/            # Always-follow guidelines (copy to ~/.claude/rules/ecc/)
+|-- rules/            # Always-follow guidelines (copy to ~/.claude/rules/aip/)
 |   |-- README.md            # Structure overview and installation guide
 |   |-- common/              # Language-agnostic principles
 |   |   |-- coding-style.md    # Immutability, file organization
@@ -1158,7 +1158,7 @@ ECC/
 |-- mcp-configs/      # MCP server configurations
 |   |-- mcp-servers.json    # GitHub, Supabase, Vercel, Railway, etc.
 |
-|-- ecc_dashboard.py  # Desktop GUI dashboard (Tkinter)
+|-- aip_dashboard.py  # Desktop GUI dashboard (Tkinter)
 |
 |-- marketplace.json  # Self-hosted marketplace config (for /plugin marketplace add)
 ```
@@ -1167,12 +1167,12 @@ ECC/
 <details>
 <summary><strong>Dashboard GUI</strong></summary>
 
-Launch the desktop dashboard to visually explore ECC components:
+Launch the desktop dashboard to visually explore AIP components:
 
 ```bash
 npm run dashboard
 # or
-python3 ./ecc_dashboard.py
+python3 ./aip_dashboard.py
 ```
 
 **Features:**
@@ -1205,11 +1205,11 @@ This analyzes your git history locally and generates SKILL.md files.
 
 For advanced features (10k+ commits, auto-PRs, team sharing):
 
-[Install ECC Tools GitHub App](https://github.com/apps/ecc-tools) | [bytecore.org](https://bytecore.org)
+[Install AIP Tools GitHub App](https://github.com/apps/aip-tools) | [bytecore.org](https://bytecore.org)
 
 ```bash
 # Comment on any issue:
-/ecc-tools analyze
+/aip-tools analyze
 ```
 
 Both options create:
@@ -1227,16 +1227,16 @@ Scan your agent configuration for vulnerabilities, misconfigurations, and inject
 
 ```bash
 # Quick scan (no install needed)
-npx ecc-agentshield scan
+npx aip-agentshield scan
 
 # Auto-fix safe issues
-npx ecc-agentshield scan --fix
+npx aip-agentshield scan --fix
 
 # Deep analysis with three Opus 4.6 agents
-npx ecc-agentshield scan --opus --stream
+npx aip-agentshield scan --opus --stream
 
 # Generate secure config from scratch
-npx ecc-agentshield init
+npx aip-agentshield init
 ```
 
 **What it scans:** CLAUDE.md, settings.json, MCP configs, hooks, agent definitions, and skills across 5 categories: secrets detection (14 patterns), permission auditing, hook injection analysis, MCP server risk profiling, and agent config review.
@@ -1247,7 +1247,7 @@ npx ecc-agentshield init
 
 Use `/security-scan` in Claude Code to run it, or add to CI with the [GitHub Action](https://github.com/reborncursed/agentshield).
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/ecc-agentshield)
+[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 </details>
 
 <details>
@@ -1287,7 +1287,7 @@ You are a senior code reviewer...
 
 ### Skills
 
-Skills are the primary workflow surface. They can be invoked directly, suggested automatically, and reused by agents. ECC still ships maintained `commands/` during migration, while retired short-name shims live under `legacy-command-shims/` for explicit opt-in only. New workflow development should land in `skills/` first.
+Skills are the primary workflow surface. They can be invoked directly, suggested automatically, and reused by agents. AIP still ships maintained `commands/` during migration, while retired short-name shims live under `legacy-command-shims/` for explicit opt-in only. New workflow development should land in `skills/` first.
 
 ```markdown
 # TDD Workflow
@@ -1333,7 +1333,7 @@ See [`rules/README.md`](rules/README.md) for installation and structure details.
 
 ## Cross-Platform Support
 
-ECC's core Node.js CLI and managed installers run on **Windows, macOS, and Linux**, but optional capabilities are not at full parity. Some continuous-learning, GAN, and orchestration paths still require Bash or Python; harnesses also expose different hook, agent, and skill APIs.
+AIP's core Node.js CLI and managed installers run on **Windows, macOS, and Linux**, but optional capabilities are not at full parity. Some continuous-learning, GAN, and orchestration paths still require Bash or Python; harnesses also expose different hook, agent, and skill APIs.
 
 | Platform | Status | Current limitation |
 |---|---|---|
@@ -1382,62 +1382,62 @@ Use runtime flags to tune strictness or disable specific hooks temporarily:
 
 ```bash
 # Hook strictness profile (default: standard)
-export ECC_HOOK_PROFILE=standard
+export AIP_HOOK_PROFILE=standard
 
 # Comma-separated hook IDs to disable
-export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
+export AIP_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 
 # Cap SessionStart additional context (default: 8000 chars)
-export ECC_SESSION_START_MAX_CHARS=4000
+export AIP_SESSION_START_MAX_CHARS=4000
 
 # Disable SessionStart additional context entirely for low-context/local-model setups
-export ECC_SESSION_START_CONTEXT=off
+export AIP_SESSION_START_CONTEXT=off
 
 # Session-tmp retention window in days (default: 30).
 # Set to 0, off, false, disabled, never, or none to keep all sessions (disable pruning).
-export ECC_SESSION_RETENTION_DAYS=14
+export AIP_SESSION_RETENTION_DAYS=14
 
 # Cap how many learned instincts SessionStart injects into context (default: 6)
-export ECC_MAX_INJECTED_INSTINCTS=6
+export AIP_MAX_INJECTED_INSTINCTS=6
 
 # Minimum confidence an instinct needs to be injected, 0-1 (default: 0.7)
-export ECC_INSTINCT_CONFIDENCE_THRESHOLD=0.7
+export AIP_INSTINCT_CONFIDENCE_THRESHOLD=0.7
 
 # SessionStart ranks injected instincts by confidence + project/stack relevance
 # (default: on). Project-scoped instincts, and instincts whose domain/trigger
 # matches the detected stack (languages, frameworks, plus terraform/dbt markers),
 # get a small ranking boost so they surface above unrelated higher-confidence
 # ones. Set to off/false/0/no to rank by confidence alone.
-export ECC_INSTINCT_RELEVANCE_RANKING=on
+export AIP_INSTINCT_RELEVANCE_RANKING=on
 
 # Keep context/scope/loop warnings but suppress API-rate cost estimates
-export ECC_CONTEXT_MONITOR_COST_WARNINGS=off
+export AIP_CONTEXT_MONITOR_COST_WARNINGS=off
 ```
 
 Windows PowerShell:
 
 ```powershell
-[Environment]::SetEnvironmentVariable('ECC_CONTEXT_MONITOR_COST_WARNINGS', 'off', 'User')
-[Environment]::SetEnvironmentVariable('ECC_SESSION_RETENTION_DAYS', '14', 'User')
+[Environment]::SetEnvironmentVariable('AIP_CONTEXT_MONITOR_COST_WARNINGS', 'off', 'User')
+[Environment]::SetEnvironmentVariable('AIP_SESSION_RETENTION_DAYS', '14', 'User')
 ```
 </details>
 
 <details>
 <summary><strong>Agent data home (multi-harness isolation)</strong></summary>
 
-Memory persistence hooks (session summaries, learned skills, session aliases, metrics) store data under a single agent data root. By default that root is `~/.claude`. When you use ECC in both Claude Code and Cursor on the same machine, set a separate root for Cursor so the two environments do not overwrite each other's session files:
+Memory persistence hooks (session summaries, learned skills, session aliases, metrics) store data under a single agent data root. By default that root is `~/.claude`. When you use AIP in both Claude Code and Cursor on the same machine, set a separate root for Cursor so the two environments do not overwrite each other's session files:
 
 ```bash
 # Cursor-only boundary (Claude Code keeps the default ~/.claude)
-export ECC_AGENT_DATA_HOME="$HOME/.cursor/ecc"
+export AIP_AGENT_DATA_HOME="$HOME/.cursor/aip"
 ```
 
 Paths resolved under that root include:
 
-- `$ECC_AGENT_DATA_HOME/session-data/`: session summaries
-- `$ECC_AGENT_DATA_HOME/skills/learned/`: learned skills from evaluate-session
-- `$ECC_AGENT_DATA_HOME/session-aliases.json`: session aliases
-- `$ECC_AGENT_DATA_HOME/metrics/`: cost and activity metrics
+- `$AIP_AGENT_DATA_HOME/session-data/`: session summaries
+- `$AIP_AGENT_DATA_HOME/skills/learned/`: learned skills from evaluate-session
+- `$AIP_AGENT_DATA_HOME/session-aliases.json`: session aliases
+- `$AIP_AGENT_DATA_HOME/metrics/`: cost and activity metrics
 
 See [reborncursed/AIP#2065](https://github.com/reborncursed/AIP/issues/2065).
 </details>
@@ -1448,9 +1448,9 @@ See [reborncursed/AIP#2065](https://github.com/reborncursed/AIP/issues/2065).
 |---|---|---|---|
 | Claude Code | Stable primary | Plugin or selective installer | The plugin advertises the installed catalog to the model; use a selective/manual profile when context footprint matters. Optional shell-backed skills are not portable to every OS. |
 | Codex | Supported native plugin | Codex marketplace plugin or repo config | Native hooks require an explicit trust decision and do not use Claude's hook profiles. The legacy sync is compatibility-only. |
-| Cursor | Beta project adapter | Selective installer into `.cursor/` | Agent discovery varies by Cursor build, and ECC's installer paths do not yet expose identical hook sets ([#2419](https://github.com/reborncursed/AIP/issues/2419)). |
-| OpenCode | Beta built plugin | Build plugin, then selective installer | ECC ships a subset of the catalog; connect a provider and select a model in OpenCode ([#2617](https://github.com/reborncursed/AIP/issues/2617)). |
-| GitHub Copilot | Instruction-only | Checked-in instructions and prompt files | No ECC hooks, runtime agents, delegation, or native skill discovery. |
+| Cursor | Beta project adapter | Selective installer into `.cursor/` | Agent discovery varies by Cursor build, and AIP's installer paths do not yet expose identical hook sets ([#2419](https://github.com/reborncursed/AIP/issues/2419)). |
+| OpenCode | Beta built plugin | Build plugin, then selective installer | AIP ships a subset of the catalog; connect a provider and select a model in OpenCode ([#2617](https://github.com/reborncursed/AIP/issues/2617)). |
+| GitHub Copilot | Instruction-only | Checked-in instructions and prompt files | No AIP hooks, runtime agents, delegation, or native skill discovery. |
 | Gemini, Zed, Antigravity, Qwen, Hermes, OpenClaw, Kimi, CodeBuddy, JoyCode | Experimental/minimal adapters | Harness-specific selective target | File placement and instruction portability are tested; full Claude feature parity is not claimed. |
 
 ### Cross-tool capability map
@@ -1460,8 +1460,8 @@ See [reborncursed/AIP#2065](https://github.com/reborncursed/AIP/issues/2065).
 | Instructions | Native | Native `AGENTS.md` | Project rules | Plugin instructions | Native instruction file |
 | Skills | Native installed set | Native plugin set | Build-dependent/project set | Built subset | Prompt/instruction references only |
 | Agents/delegation | Native agents | Codex multi-agent roles; Claude agent files are not installed as roles | Build-dependent project agents | Plugin agents | Not supported |
-| ECC hooks | Native plugin hooks | Native reviewed subset with explicit trust | Cursor hook adapter; install-path differences remain | Plugin events | Not supported |
-| MCP configuration | Available, explicit activation | Native plugin manifest; legacy sync can merge TOML | Explicit project/user config | Provider/plugin config | Not supplied by ECC |
+| AIP hooks | Native plugin hooks | Native reviewed subset with explicit trust | Cursor hook adapter; install-path differences remain | Plugin events | Not supported |
+| MCP configuration | Available, explicit activation | Native plugin manifest; legacy sync can merge TOML | Explicit project/user config | Provider/plugin config | Not supplied by AIP |
 | Parity with Claude Code | Primary reference | Partial | Partial | Partial | Not a parity target |
 
 **Key architectural decisions:**
@@ -1473,7 +1473,7 @@ See [reborncursed/AIP#2065](https://github.com/reborncursed/AIP/issues/2065).
 <details>
 <summary><strong>Cursor IDE support in depth</strong></summary>
 
-ECC provides Cursor IDE support with hooks, rules, agents, skills, commands, and MCP configs adapted for Cursor's project layout.
+AIP provides Cursor IDE support with hooks, rules, agents, skills, commands, and MCP configs adapted for Cursor's project layout.
 
 ```bash
 # macOS/Linux
@@ -1494,35 +1494,35 @@ ECC provides Cursor IDE support with hooks, rules, agents, skills, commands, and
 | Hook Events | 15 | sessionStart, beforeShellExecution, afterFileEdit, beforeMCPExecution, beforeSubmitPrompt, and 10 more |
 | Hook Scripts | 16 | Thin Node.js scripts delegating to `scripts/hooks/` via shared adapter |
 | Rules | 34 | 9 common (alwaysApply) + 25 language-specific (TypeScript, Python, Go, Swift, PHP) |
-| Agents | 48 | `.cursor/agents/ecc-*.md` when installed; prefixed to avoid collisions with user or marketplace agents |
+| Agents | 48 | `.cursor/agents/aip-*.md` when installed; prefixed to avoid collisions with user or marketplace agents |
 | Skills | Shared + Bundled | `.cursor/skills/` for translated additions |
 | Commands | Shared | `.cursor/commands/` if installed |
 | MCP Config | Shared | `.cursor/mcp.json` if installed |
 
 #### Cursor loading notes
 
-ECC does not install root `AGENTS.md` into `.cursor/`. Cursor treats nested `AGENTS.md` files as directory context, so copying ECC's repo identity into a host project would pollute that project.
+AIP does not install root `AGENTS.md` into `.cursor/`. Cursor treats nested `AGENTS.md` files as directory context, so copying AIP's repo identity into a host project would pollute that project.
 
-Cursor-native loading behavior can vary by Cursor build. ECC installs agents as `.cursor/agents/ecc-*.md`; if your Cursor build does not expose project agents, those files still work as explicit reference definitions instead of hidden global prompt context.
+Cursor-native loading behavior can vary by Cursor build. AIP installs agents as `.cursor/agents/aip-*.md`; if your Cursor build does not expose project agents, those files still work as explicit reference definitions instead of hidden global prompt context.
 
 #### Memory and data isolation (Cursor + Claude Code)
 
-ECC memory hooks reuse the same `scripts/hooks/*.js` as Claude Code. For Cursor, ECC tries to keep memory **out of `~/.claude` automatically**:
+AIP memory hooks reuse the same `scripts/hooks/*.js` as Claude Code. For Cursor, AIP tries to keep memory **out of `~/.claude` automatically**:
 
-1. **Cursor `sessionStart` hook** (installed to `.cursor/hooks.json` on `--target cursor`) injects `ECC_AGENT_DATA_HOME` for the whole composer session.
-2. **Hook runtime default**: when `CURSOR_VERSION` or `CURSOR_PROJECT_DIR` is present, hooks default to `~/.cursor/ecc` if the env var is unset.
-3. **Project config**: `.cursor/ecc-agent-data.json` documents and overrides the path (`agentDataHome`).
-4. **Always-on rule**: `.cursor/rules/ecc-agent-data-home.mdc` reminds the agent where memory lives.
+1. **Cursor `sessionStart` hook** (installed to `.cursor/hooks.json` on `--target cursor`) injects `AIP_AGENT_DATA_HOME` for the whole composer session.
+2. **Hook runtime default**: when `CURSOR_VERSION` or `CURSOR_PROJECT_DIR` is present, hooks default to `~/.cursor/aip` if the env var is unset.
+3. **Project config**: `.cursor/aip-agent-data.json` documents and overrides the path (`agentDataHome`).
+4. **Always-on rule**: `.cursor/rules/aip-agent-data-home.mdc` reminds the agent where memory lives.
 
 You can still override explicitly:
 
 ```bash
-export ECC_AGENT_DATA_HOME="$HOME/.cursor/ecc"
+export AIP_AGENT_DATA_HOME="$HOME/.cursor/aip"
 ```
 
-To **share** memory with Claude Code on purpose, set `ECC_AGENT_DATA_HOME=~/.claude` in the shell or in `.cursor/ecc-agent-data.json`.
+To **share** memory with Claude Code on purpose, set `AIP_AGENT_DATA_HOME=~/.claude` in the shell or in `.cursor/aip-agent-data.json`.
 
-Continuous learning v2 instincts remain separate under `CLV2_HOMUNCULUS_DIR` (default `~/.local/share/ecc-homunculus`).
+Continuous learning v2 instincts remain separate under `CLV2_HOMUNCULUS_DIR` (default `~/.local/share/aip-homunculus`).
 
 #### Hook architecture (DRY adapter pattern)
 
@@ -1556,12 +1556,12 @@ alwaysApply: false
 <details>
 <summary><strong>Codex macOS app + CLI support in depth</strong></summary>
 
-ECC provides a supported native Codex marketplace plugin and repo-local configuration for the macOS app and CLI. The native plugin carries shared skills, MCP configuration, and a reviewed hook subset; Codex keeps hook trust under explicit user control. The older sync path remains compatibility-only. For repo navigation, surface ownership, and PR diff packet guidance, start with [`docs/CODEX-NAVIGATION-GUIDE.md`](docs/CODEX-NAVIGATION-GUIDE.md).
+AIP provides a supported native Codex marketplace plugin and repo-local configuration for the macOS app and CLI. The native plugin carries shared skills, MCP configuration, and a reviewed hook subset; Codex keeps hook trust under explicit user control. The older sync path remains compatibility-only. For repo navigation, surface ownership, and PR diff packet guidance, start with [`docs/CODEX-NAVIGATION-GUIDE.md`](docs/CODEX-NAVIGATION-GUIDE.md).
 
 ```bash
-# Recommended current install: add ECC's native plugin from the repo marketplace
+# Recommended current install: add AIP's native plugin from the repo marketplace
 codex plugin marketplace add reborncursed/AIP
-codex plugin add ecc@ecc
+codex plugin add aip@aip
 codex plugin list --json
 
 # Or run Codex CLI in the repo: AGENTS.md and .codex/ are auto-detected
@@ -1572,15 +1572,15 @@ Legacy copied-configuration compatibility is still available when you intentiona
 
 ```bash
 # Compatibility-only managed sync into ~/.codex
-npm install && bash scripts/sync-ecc-to-codex.sh
+npm install && bash scripts/sync-aip-to-codex.sh
 
 # Or copy only the reference config manually
 cp .codex/config.toml ~/.codex/config.toml
 ```
 
-The sync script safely merges ECC MCP servers into your existing `~/.codex/config.toml` using an **add-only** strategy: it never removes or modifies your existing servers. Run with `--dry-run` to preview changes, or `--update-mcp` to force-refresh ECC servers to the latest recommended config.
+The sync script safely merges AIP MCP servers into your existing `~/.codex/config.toml` using an **add-only** strategy: it never removes or modifies your existing servers. Run with `--dry-run` to preview changes, or `--update-mcp` to force-refresh AIP servers to the latest recommended config.
 
-For Context7, ECC uses the canonical Codex section name `[mcp_servers.context7]` while still launching the `@upstash/context7-mcp` package. If you already have a legacy `[mcp_servers.context7-mcp]` entry, `--update-mcp` migrates it to the canonical section name.
+For Context7, AIP uses the canonical Codex section name `[mcp_servers.context7]` while still launching the `@upstash/context7-mcp` package. If you already have a legacy `[mcp_servers.context7-mcp]` entry, `--update-mcp` migrates it to the canonical section name.
 
 Codex macOS app:
 - Open this repository as your workspace.
@@ -1604,7 +1604,7 @@ Skills at `.agents/skills/` are auto-loaded by Codex. Canonical Anthropic skills
 
 #### Key limitation
 
-Codex does **not provide Claude-style hook execution parity**. The native ECC plugin includes a reviewed hook subset that requires explicit trust in `/hooks`; `AGENTS.md`, optional `model_instructions_file` overrides, and sandbox/approval settings provide the remaining instruction and policy layers.
+Codex does **not provide Claude-style hook execution parity**. The native AIP plugin includes a reviewed hook subset that requires explicit trust in `/hooks`; `AGENTS.md`, optional `model_instructions_file` overrides, and sandbox/approval settings provide the remaining instruction and policy layers.
 
 #### Multi-agent support
 
@@ -1615,7 +1615,7 @@ Current Codex builds support stable multi-agent workflows.
 - Point each role at a file under `.codex/agents/`
 - Use `/agent` in the CLI to inspect or steer child agents
 
-ECC ships three sample role configs:
+AIP ships three sample role configs:
 
 | Role | Purpose |
 |------|---------|
@@ -1628,7 +1628,7 @@ ECC ships three sample role configs:
 <details>
 <summary><strong>Zed support</strong></summary>
 
-ECC provides Zed project support through a conservative `.zed` adapter for project-local settings, flattened rules, agents, commands, and skills.
+AIP provides Zed project support through a conservative `.zed` adapter for project-local settings, flattened rules, agents, commands, and skills.
 
 ```bash
 ./install.sh --profile minimal --target zed
@@ -1638,13 +1638,13 @@ ECC provides Zed project support through a conservative `.zed` adapter for proje
 .\install.ps1 --profile minimal --target zed
 ```
 
-The adapter writes ECC-managed files under `.zed/` and keeps BYOK/OpenRouter credentials out of the repo. Configure Zed account or API keys through Zed's own settings UI or your local user settings.
+The adapter writes AIP-managed files under `.zed/` and keeps BYOK/OpenRouter credentials out of the repo. Configure Zed account or API keys through Zed's own settings UI or your local user settings.
 </details>
 
 <details>
 <summary><strong>OpenCode support in depth</strong></summary>
 
-ECC provides a beta OpenCode plugin integration with instructions, a catalog subset, commands, custom tools, and hook events. It does not provide feature parity with Claude Code. The reference config inherits the user's OpenCode model selection instead of pinning a provider-specific model.
+AIP provides a beta OpenCode plugin integration with instructions, a catalog subset, commands, custom tools, and hook events. It does not provide feature parity with Claude Code. The reference config inherits the user's OpenCode model selection instead of pinning a provider-specific model.
 
 ```bash
 # Install OpenCode
@@ -1674,25 +1674,25 @@ OpenCode's plugin system has 20+ event types:
 
 **Option 1: Use directly**
 ```bash
-cd ECC
+cd AIP
 opencode
 ```
 
 **Option 2: Install as npm package**
 ```bash
-npm install ecc-universal
+npm install aip-universal
 ```
 
 Then add to your `opencode.json`:
 ```json
 {
-  "plugin": ["ecc-universal"]
+  "plugin": ["aip-universal"]
 }
 ```
 
-That npm plugin entry enables ECC's published OpenCode plugin module (hooks/events and plugin tools). It does **not** automatically add ECC's full command/agent/instruction catalog to your project config.
+That npm plugin entry enables AIP's published OpenCode plugin module (hooks/events and plugin tools). It does **not** automatically add AIP's full command/agent/instruction catalog to your project config.
 
-For the full ECC OpenCode setup, either:
+For the full AIP OpenCode setup, either:
 - run OpenCode inside this repository, or
 - copy the bundled `.opencode/` config assets into your project and wire the `instructions`, `agent`, and `command` entries in `opencode.json`
 
@@ -1707,7 +1707,7 @@ For the full ECC OpenCode setup, either:
 <details>
 <summary><strong>GitHub Copilot support in depth</strong></summary>
 
-ECC provides **GitHub Copilot support** for VS Code via Copilot Chat's native instruction and prompt file system. No extra tooling required.
+AIP provides **GitHub Copilot support** for VS Code via Copilot Chat's native instruction and prompt file system. No extra tooling required.
 
 #### What's included for GitHub Copilot
 
@@ -1730,7 +1730,7 @@ To use the workflow prompts in Copilot Chat:
 
 #### Feature coverage
 
-| ECC Feature | Copilot equivalent |
+| AIP Feature | Copilot equivalent |
 |-------------|-------------------|
 | Coding standards | Always-on via `copilot-instructions.md` |
 | Security checklist | Always-on + `security-review` prompt |
@@ -1745,16 +1745,16 @@ To use the workflow prompts in Copilot Chat:
 
 #### Limitations
 
-GitHub Copilot does not have a hook system or a subagent API, so ECC's hook automations (auto-format, TypeScript check, session persistence, dev-server guard) and agent delegation are unavailable. The instruction and prompt layer still brings the full ECC coding philosophy (standards, security, TDD, and workflow) into every Copilot Chat session.
+GitHub Copilot does not have a hook system or a subagent API, so AIP's hook automations (auto-format, TypeScript check, session persistence, dev-server guard) and agent delegation are unavailable. The instruction and prompt layer still brings the full AIP coding philosophy (standards, security, TDD, and workflow) into every Copilot Chat session.
 </details>
 
 <details>
 <summary><strong>What changed in v2.0.0</strong></summary>
 
-ECC v2.0.0 stabilizes the 2.0 line with the public Hermes operator story, 281 skills, 67 agents, 94 command shims, session adapters, MCP inventory, worktree lifecycle services, orchestrator workflows, and the ECC Discord community.
+AIP v2.0.0 stabilizes the 2.0 line with the public Hermes operator story, 281 skills, 67 agents, 94 command shims, session adapters, MCP inventory, worktree lifecycle services, orchestrator workflows, and the AIP Discord community.
 
 - [v2.0.0 release notes](docs/releases/2.0.0/release-notes.md)
-- [ECC 2.0 reference architecture](docs/ECC-2.0-REFERENCE-ARCHITECTURE.md)
+- [AIP 2.0 reference architecture](docs/AIP-2.0-REFERENCE-ARCHITECTURE.md)
 - [Hermes setup guide](docs/HERMES-SETUP.md)
 - [Migration guide from 1.x](docs/MIGRATION-1X-TO-2.0.md)
 </details>
@@ -1784,7 +1784,7 @@ Add to `~/.claude/settings.json`:
 | `model` | opus | **sonnet** | ~60% cost reduction; handles 80%+ of coding tasks |
 | `MAX_THINKING_TOKENS` | 31,999 | **10,000** | ~70% reduction in hidden thinking cost per request |
 | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | 95 | **50** | Compacts earlier, better quality in long sessions |
-| `ECC_CONTEXT_MONITOR_COST_WARNINGS` | on | **off for subscription users** | Suppresses agent-facing API-rate estimate warnings while keeping context/scope/loop warnings |
+| `AIP_CONTEXT_MONITOR_COST_WARNINGS` | on | **off for subscription users** | Suppresses agent-facing API-rate estimate warnings while keeping context/scope/loop warnings |
 
 Switch to Opus only when you need deep architectural reasoning:
 ```
@@ -1803,7 +1803,7 @@ Switch to Opus only when you need deep architectural reasoning:
 | `/compact` | At logical task breakpoints (research done, milestone complete) |
 | `/cost` | Monitor token spending during session |
 
-If you use a subscription and the context monitor's API-rate estimates are not useful, set `ECC_CONTEXT_MONITOR_COST_WARNINGS=off`. This only suppresses the agent-facing cost warnings; it does not disable context exhaustion, scope, or loop warnings.
+If you use a subscription and the context monitor's API-rate estimates are not useful, set `AIP_CONTEXT_MONITOR_COST_WARNINGS=off`. This only suppresses the agent-facing cost warnings; it does not disable context exhaustion, scope, or loop warnings.
 </details>
 
 <details>
@@ -1829,7 +1829,7 @@ The `strategic-compact` skill suggests `/compact` at logical breakpoints instead
 - Keep under 10 MCPs enabled per project
 - Keep under 80 tools active
 - Use `/mcp` to disable unused Claude Code MCP servers; those runtime choices persist in `~/.claude.json`
-- Use `ECC_DISABLED_MCPS` only to filter ECC-generated MCP configs during install/sync flows
+- Use `AIP_DISABLED_MCPS` only to filter AIP-generated MCP configs during install/sync flows
 - If context is getting heavy, run `/context-budget` and remove rules you do not need
 
 **Agent teams cost warning:** Agent Teams spawns multiple context windows. Each teammate consumes tokens independently. Only use for tasks where parallelism provides clear value (multi-module work, parallel reviews). For simple sequential tasks, subagents are more token-efficient.
@@ -1864,18 +1864,18 @@ Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded fil
 
 ## Security
 
-Install ECC only from official sources:
+Install AIP only from official sources:
 
 - GitHub repository: <https://github.com/reborncursed/AIP>
-- Claude Code plugin: `ecc@ecc`
-- npm packages: [`ecc-universal`](https://www.npmjs.com/package/ecc-universal) and [`ecc-agentshield`](https://www.npmjs.com/package/ecc-agentshield)
-- GitHub App: <https://github.com/apps/ecc-tools>
+- Claude Code plugin: `aip@aip`
+- npm packages: [`aip-universal`](https://www.npmjs.com/package/aip-universal) and [`aip-agentshield`](https://www.npmjs.com/package/aip-agentshield)
+- GitHub App: <https://github.com/apps/aip-tools>
 - Website: <https://bytecore.org>
 
 Scan a project with AgentShield:
 
 ```bash
-npx -y ecc-agentshield scan --path .
+npx -y aip-agentshield scan --path .
 ```
 
 - **Report a vulnerability.** Use the private process in [SECURITY.md](SECURITY.md) (GitHub private vulnerability reporting). Please do not open public issues for security reports.
@@ -1890,7 +1890,7 @@ Do not copy raw `hooks/hooks.json` into `~/.claude/settings.json` after a plugin
 
 Use `/mcp` for Claude Code runtime disables; Claude Code persists those choices in `~/.claude.json`.
 
-`ECC_DISABLED_MCPS` is an ECC install/sync filter, not a live Claude Code toggle.
+`AIP_DISABLED_MCPS` is an AIP install/sync filter, not a live Claude Code toggle.
 
 If context is getting heavy, run `/context-budget`, remove rules you do not need, and disable unused MCP servers. See the [token optimization guide](docs/token-optimization.md).
 </details>
@@ -1904,12 +1904,12 @@ Security references:
 ## Troubleshooting
 
 <details>
-<summary><strong>ECC appears twice or hooks fire twice</strong></summary>
+<summary><strong>AIP appears twice or hooks fire twice</strong></summary>
 
 The usual cause is installing the Claude plugin and then running `./install.sh --profile full` on top of it.
 
 1. Remove the Claude Code plugin install.
-2. Run `node scripts/ecc.js uninstall --dry-run` from the ECC checkout.
+2. Run `node scripts/aip.js uninstall --dry-run` from the AIP checkout.
 3. Remove extra rule folders you manually copied and no longer want.
 4. Reinstall once, using one path.
 
@@ -1925,19 +1925,19 @@ For hook-specific checks, see the [hooks README](hooks/README.md).
 <details>
 <summary><strong>Codex marketplace installs but skills do not load</strong></summary>
 
-Run the cache check from an ECC checkout:
+Run the cache check from an AIP checkout:
 
 ```bash
 node scripts/codex/check-plugin-cache.js
 ```
 
-If it reports unresolved parent references, refresh the native cache with `codex plugin marketplace upgrade ecc`, run `codex plugin add ecc@ecc` again, and restart Codex. Registration in `codex plugin list` confirms the marketplace entry, while the cache check verifies that the installed manifest can resolve its skills, MCP configuration, and assets. Use `bash scripts/sync-ecc-to-codex.sh` only when you intentionally need the legacy copied-configuration compatibility path.
+If it reports unresolved parent references, refresh the native cache with `codex plugin marketplace upgrade aip`, run `codex plugin add aip@aip` again, and restart Codex. Registration in `codex plugin list` confirms the marketplace entry, while the cache check verifies that the installed manifest can resolve its skills, MCP configuration, and assets. Use `bash scripts/sync-aip-to-codex.sh` only when you intentionally need the legacy copied-configuration compatibility path.
 </details>
 
 <details>
 <summary><strong>My context window is shrinking</strong></summary>
 
-Too many MCP servers eat your context. Each MCP tool description consumes tokens from your 200k window, potentially reducing it to ~70k. SessionStart context is capped at 8000 characters by default; lower it with `ECC_SESSION_START_MAX_CHARS=4000` or disable it with `ECC_SESSION_START_CONTEXT=off` for local-model or low-context setups.
+Too many MCP servers eat your context. Each MCP tool description consumes tokens from your 200k window, potentially reducing it to ~70k. SessionStart context is capped at 8000 characters by default; lower it with `AIP_SESSION_START_MAX_CHARS=4000` or disable it with `AIP_SESSION_START_CONTEXT=off` for local-model or low-context setups.
 
 **Fix:** Disable unused MCPs from Claude Code with `/mcp`. Claude Code writes those runtime choices to `~/.claude.json`; `.claude/settings.json` and `.claude/settings.local.json` are not reliable toggles for already-loaded MCP servers.
 
@@ -1954,8 +1954,8 @@ Yes. Use the manual component copies in [Advanced Install Options](#advanced-ins
 cp agents/*.md ~/.claude/agents/
 
 # Just rules
-mkdir -p ~/.claude/rules/ecc/
-cp -r rules/common ~/.claude/rules/ecc/
+mkdir -p ~/.claude/rules/aip/
+cp -r rules/common ~/.claude/rules/aip/
 ```
 
 Each component is fully independent.
@@ -1964,7 +1964,7 @@ Each component is fully independent.
 <details>
 <summary><strong>Does this work with Cursor / OpenCode / Codex / Antigravity / GitHub Copilot?</strong></summary>
 
-Yes. ECC is cross-platform:
+Yes. AIP is cross-platform:
 - **Cursor**: Pre-translated configs in `.cursor/`. See [Platform Support](#platform-support).
 - **Gemini CLI**: Experimental project-local support via `.gemini/GEMINI.md` and shared installer plumbing.
 - **OpenCode**: Beta plugin integration in `.opencode/`; models follow the user's OpenCode selection, while catalog parity remains limited.
@@ -2016,4 +2016,4 @@ MIT. Use it freely, adapt it to your workflow, and contribute back when you can.
 
 ---
 
-*AIP is a fork of [Everything Claude Code](https://github.com/affaan-m/everything-claude-code) by Affaan Mustafa (MIT License), maintained by ByteCore.org.*
+*AIP is a fork of the original MIT-licensed project. See [LICENSE](LICENSE). Maintained by ByteCore.org.*

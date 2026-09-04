@@ -1,7 +1,7 @@
 ---
 name: flutter-dart-code-review
 description: 库无关的Flutter/Dart代码审查清单，涵盖Widget最佳实践、状态管理模式（BLoC、Riverpod、Provider、GetX、MobX、Signals）、Dart惯用法、性能、可访问性、安全性和整洁架构。
-origin: ECC
+origin: AIP
 ---
 
 # Flutter/Dart 代码审查最佳实践

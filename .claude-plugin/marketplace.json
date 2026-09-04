@@ -1,17 +1,17 @@
 {
-  "name": "ecc",
+  "name": "aip",
   "owner": {
     "name": "ByteCore.org",
     "email": "hello@bytecore.org"
   },
   "metadata": {
-    "description": "Harness-native ECC skills, hooks, rules, MCP conventions, and operator workflows"
+    "description": "Harness-native AIP skills, hooks, rules, MCP conventions, and operator workflows"
   },
   "plugins": [
     {
-      "name": "ecc",
+      "name": "aip",
       "source": "./",
-      "description": "Harness-native ECC operator layer - 68 agents, 286 skills, 94 legacy command shims, reusable hooks, rules, selective install profiles, and production-ready workflows for Claude Code, Codex, OpenCode, Cursor, and related agent harnesses",
+      "description": "Harness-native AIP operator layer - 68 agents, 286 skills, 94 legacy command shims, reusable hooks, rules, selective install profiles, and production-ready workflows for Claude Code, Codex, OpenCode, Cursor, and related agent harnesses",
       "version": "2.2.1",
       "author": {
         "name": "ByteCore.org",

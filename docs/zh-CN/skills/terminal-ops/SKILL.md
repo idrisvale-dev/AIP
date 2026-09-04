@@ -1,7 +1,7 @@
 ---
 name: terminal-ops
-description: 基于证据优先的仓库执行工作流，适用于ECC。当用户需要运行命令、检查仓库、调试CI失败或推送带有精确执行和验证证明的窄修复时使用。
-origin: ECC
+description: 基于证据优先的仓库执行工作流，适用于AIP。当用户需要运行命令、检查仓库、调试CI失败或推送带有精确执行和验证证明的窄修复时使用。
+origin: AIP
 ---
 
 # 终端操作
@@ -12,7 +12,7 @@ origin: ECC
 
 ## 技能栈
 
-在相关时，将这些 ECC 原生技能引入工作流：
+在相关时，将这些 AIP 原生技能引入工作流：
 
 * `verification-loop` 用于更改后的精确验证步骤
 * `tdd-workflow` 当正确的修复需要回归覆盖时

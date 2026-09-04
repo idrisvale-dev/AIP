@@ -323,7 +323,7 @@ npx playwright show-report
 
 ## Agentes Relacionados
 
-Este comando invoca al agente `e2e-runner` proporcionado por ECC.
+Este comando invoca al agente `e2e-runner` proporcionado por AIP.
 
 Para instalaciones manuales, el archivo fuente se encuentra en:
 `agents/e2e-runner.md`

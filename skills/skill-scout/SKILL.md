@@ -66,7 +66,7 @@ For web search, use at most three targeted queries such as:
 ```text
 "claude code skill" keyword
 "SKILL.md" keyword
-"everything-claude-code" keyword
+"aip" keyword
 ```
 
 ### Step 4 - Vet External Matches
@@ -112,8 +112,8 @@ finds no close match.
 ```markdown
 | # | Skill | Source | Why it matches | Gap |
 | --- | --- | --- | --- | --- |
-| 1 | article-writing | Local ECC | Drafts articles and guides | Not focused on release notes |
-| 2 | content-engine | Local ECC | Multi-format content workflow | Heavier than needed |
+| 1 | article-writing | Local AIP | Drafts articles and guides | Not focused on release notes |
+| 2 | content-engine | Local AIP | Multi-format content workflow | Heavier than needed |
 | 3 | blog-writer | GitHub | Blog writing skill with recent commits | Needs security review |
 ```
 

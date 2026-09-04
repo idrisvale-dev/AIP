@@ -11,18 +11,18 @@ function getHomunculusDir() {
     if (path.isAbsolute(override)) {
       return override;
     }
-    process.stderr.write(`[ecc] CLV2_HOMUNCULUS_DIR=${override} is not absolute; ignoring\n`);
+    process.stderr.write(`[aip] CLV2_HOMUNCULUS_DIR=${override} is not absolute; ignoring\n`);
   }
 
   const xdgDataHome = process.env.XDG_DATA_HOME;
   if (xdgDataHome) {
     if (path.isAbsolute(xdgDataHome)) {
-      return path.join(xdgDataHome, 'ecc-homunculus');
+      return path.join(xdgDataHome, 'aip-homunculus');
     }
-    process.stderr.write(`[ecc] XDG_DATA_HOME=${xdgDataHome} is not absolute; ignoring\n`);
+    process.stderr.write(`[aip] XDG_DATA_HOME=${xdgDataHome} is not absolute; ignoring\n`);
   }
 
-  return path.join(os.homedir(), '.local', 'share', 'ecc-homunculus');
+  return path.join(os.homedir(), '.local', 'share', 'aip-homunculus');
 }
 
 function getProjectsDir() {

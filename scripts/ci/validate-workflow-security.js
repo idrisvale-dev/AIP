@@ -267,7 +267,7 @@ function validateWorkflowSecurity(workflowsDir = DEFAULT_WORKFLOWS_DIR) {
 }
 
 if (require.main === module) {
-  process.exit(validateWorkflowSecurity(process.env.ECC_WORKFLOWS_DIR || DEFAULT_WORKFLOWS_DIR));
+  process.exit(validateWorkflowSecurity(process.env.AIP_WORKFLOWS_DIR || DEFAULT_WORKFLOWS_DIR));
 }
 
 module.exports = {

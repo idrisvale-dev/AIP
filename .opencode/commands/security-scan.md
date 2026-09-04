@@ -22,7 +22,7 @@ Run AgentShield against the current project or a target path, then turn the find
 Prefer the packaged scanner:
 
 ```bash
-npx ecc-agentshield scan --path "${TARGET_PATH:-.}" --format text
+npx aip-agentshield scan --path "${TARGET_PATH:-.}" --format text
 ```
 
 For local AgentShield development, run from the AgentShield checkout:

@@ -4,7 +4,7 @@ description: >
   Use this skill when writing new features, fixing bugs, or refactoring code.
   Enforces test-driven development with 80%+ coverage including unit, integration, and E2E tests.
 metadata:
-  origin: ECC
+  origin: AIP
   version: "1.0"
 ---
 

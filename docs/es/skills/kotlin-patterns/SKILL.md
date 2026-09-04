@@ -1,7 +1,7 @@
 ---
 name: kotlin-patterns
 description: Patrones idiomáticos de Kotlin, buenas prácticas y convenciones para construir aplicaciones Kotlin robustas, eficientes y mantenibles con coroutines, null safety y builders de DSL.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Desarrollo Kotlin

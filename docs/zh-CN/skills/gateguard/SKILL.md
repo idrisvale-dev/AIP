@@ -88,13 +88,13 @@ LLM 的自我评估不起作用。问"你是否违反了任何策略？"答案�
 
 ## 快速开始
 
-### 选项 A：使用 ECC 钩子（零安装）
+### 选项 A：使用 AIP 钩子（零安装）
 
 `scripts/hooks/gateguard-fact-force.js` 处的钩子已包含在此插件中。通过 hooks.json 启用它。
 
 如果 GateGuard 阻止了设置或修复工作，请使用
-`ECC_GATEGUARD=off` 启动会话。如需钩子级别的控制，请继续使用
-`ECC_DISABLED_HOOKS` 配合 GateGuard 钩子 ID。
+`AIP_GATEGUARD=off` 启动会话。如需钩子级别的控制，请继续使用
+`AIP_DISABLED_HOOKS` 配合 GateGuard 钩子 ID。
 
 ### 选项 B：带配置的完整包
 

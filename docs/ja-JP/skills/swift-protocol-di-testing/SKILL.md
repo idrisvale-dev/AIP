@@ -1,7 +1,7 @@
 ---
 name: swift-protocol-di-testing
 description: テスト可能なSwiftコードのためのプロトコルベースの依存性注入——焦点を絞ったプロトコルとSwift Testingを使用してファイルシステム、ネットワーク、外部APIをモックする。
-origin: ECC
+origin: AIP
 ---
 
 # プロトコルベースのSwift依存性注入テスト

@@ -11,7 +11,7 @@ module.exports = createInstallTargetAdapter({
   target: 'zed',
   kind: 'project',
   rootSegments: ['.zed'],
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   nativeRootRelativePath: '.zed',
   planOperations(input, adapter) {
     const modules = Array.isArray(input.modules)

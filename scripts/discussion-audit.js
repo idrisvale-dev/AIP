@@ -9,13 +9,13 @@ const {
   fetchDiscussionSummary,
 } = require('./lib/github-discussions');
 
-const SCHEMA_VERSION = 'ecc.discussion-audit.v1';
+const SCHEMA_VERSION = 'aip.discussion-audit.v1';
 const DEFAULT_REPOS = Object.freeze([
   'reborncursed/AIP',
   'reborncursed/agentshield',
   'reborncursed/JARVIS',
-  'ECC-Tools/ECC-Tools',
-  'ECC-Tools/ECC-website',
+  'AIP-Tools/AIP-Tools',
+  'AIP-Tools/AIP-website',
 ]);
 
 function usage() {
@@ -183,7 +183,7 @@ function buildReport(options) {
       id: 'discussion-fetch',
       status: totals.errors === 0 ? 'pass' : 'fail',
       summary: `GitHub discussion fetch errors: ${totals.errors}`,
-      fix: 'Re-run with working gh authentication or ECC_GH_SHIM for deterministic tests.',
+      fix: 'Re-run with working gh authentication or AIP_GH_SHIM for deterministic tests.',
     },
     {
       id: 'discussion-maintainer-touch',
@@ -226,7 +226,7 @@ function markdownEscape(value) {
 
 function renderText(report) {
   const lines = [
-    `ECC Discussion Audit: ${report.ready ? 'ready' : 'attention required'}`,
+    `AIP Discussion Audit: ${report.ready ? 'ready' : 'attention required'}`,
     `Generated: ${report.generatedAt}`,
     `Repos: ${report.totals.repos}`,
     `Discussions sampled: ${report.totals.sampledDiscussions}/${report.totals.totalDiscussions}`,
@@ -255,7 +255,7 @@ function renderText(report) {
 
 function renderMarkdown(report) {
   const lines = [
-    '# ECC Discussion Audit',
+    '# AIP Discussion Audit',
     '',
     `Generated: ${report.generatedAt}`,
     `Status: ${report.ready ? 'ready' : 'attention required'}`,

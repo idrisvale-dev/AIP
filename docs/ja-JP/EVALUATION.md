@@ -28,7 +28,7 @@
 
 ---
 
-## このリポジトリ（`everything-claude-code` v1.9.0）
+## このリポジトリ（`aip` v1.9.0）
 
 | コンポーネント | リポジトリ |
 |---------------|-----------|
@@ -89,13 +89,13 @@ TypeScript、Python、Go、Java、Kotlin、Rust、C++、C#、Swift、Perl、PHP�
 ## 推奨事項
 
 ### 即座に価値を得られるもの（coreインストール）
-`ecc install --profile core` を実行して以下を取得：
+`aip install --profile core` を実行して以下を取得：
 - コアエージェント（code-reviewer、planner、tdd-guide、security-reviewer）
 - 必須スキル（tdd-workflow、coding-standards、security-review）
 - 主要コマンド（/tdd、/plan、/code-review、/build-fix）
 
 ### フルインストール
-`ecc install --profile full` を実行して全28エージェント、116スキル、59コマンドを取得。
+`aip install --profile full` を実行して全28エージェント、116スキル、59コマンドを取得。
 
 ### フックのアップグレード
 現在のStopフックは堅実です。リポジトリの`hooks.json`は以下を追加：

@@ -34,7 +34,7 @@ function writeFile(rootDir, relativePath, content) {
 
 function manifestContent() {
   return [
-    '# ECC v2.0.0-rc.1 Preview Pack Manifest',
+    '# AIP v2.0.0-rc.1 Preview Pack Manifest',
     '',
     '## Pack Contents',
     '',
@@ -73,7 +73,7 @@ function seedRepo(rootDir, overrides = {}) {
     'docs/HERMES-SETUP.md': [
       '# Hermes Setup',
       'Public Release Candidate Scope',
-      'ECC v2.0.0-rc.1 documents the Hermes surface',
+      'AIP v2.0.0-rc.1 documents the Hermes surface',
       'No raw workspace export is included.',
     ].join('\n'),
     'skills/hermes-imports/SKILL.md': [
@@ -164,7 +164,7 @@ function runTests() {
       seedRepo(rootDir);
       const report = buildReport({ root: rootDir });
 
-      assert.strictEqual(report.schema_version, 'ecc.preview-pack-smoke.v1');
+      assert.strictEqual(report.schema_version, 'aip.preview-pack-smoke.v1');
       assert.strictEqual(report.ready, true);
       assert.strictEqual(report.summary.failed, 0);
       assert.ok(report.checks.every(check => check.status === 'pass'));

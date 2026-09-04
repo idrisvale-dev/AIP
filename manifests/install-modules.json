@@ -281,7 +281,7 @@
     {
       "id": "skill-unified-memory",
       "kind": "skills",
-      "description": "Single-skill unified-memory guidance; requires the separately installed ecc-universal CLI runtime.",
+      "description": "Single-skill unified-memory guidance; requires the separately installed aip-universal CLI runtime.",
       "paths": [
         "skills/unified-memory"
       ],
@@ -312,12 +312,12 @@
     {
       "id": "workflow-quality",
       "kind": "skills",
-      "description": "Evaluation, TDD, verification, compaction, learning, and cross-harness memory skills, including the legacy continuous-learning v1 path. The unified-memory workflow requires the separately installed ecc-universal CLI runtime.",
+      "description": "Evaluation, TDD, verification, compaction, learning, and cross-harness memory skills, including the legacy continuous-learning v1 path. The unified-memory workflow requires the separately installed aip-universal CLI runtime.",
       "paths": [
         "skills/agent-sort",
         "skills/agent-introspection-debugging",
         "skills/ai-regression-testing",
-        "skills/configure-ecc",
+        "skills/configure-aip",
         "skills/code-tour",
         "skills/continuous-learning",
         "skills/continuous-learning-v2",
@@ -349,8 +349,8 @@
         "skills/config-gc",
         "skills/context-budget",
         "skills/delivery-gate",
-        "skills/ecc-guide",
-        "skills/ecc-recipes",
+        "skills/aip-guide",
+        "skills/aip-recipes",
         "skills/growth-log",
         "skills/inherit-legacy-style",
         "skills/intent-driven-development",
@@ -547,7 +547,7 @@
         "skills/cost-tracking",
         "skills/customer-billing-ops",
         "skills/dashboard-builder",
-        "skills/ecc-tools-cost-audit",
+        "skills/aip-tools-cost-audit",
         "skills/email-ops",
         "skills/finance-billing-ops",
         "skills/github-ops",

@@ -172,7 +172,7 @@ test("has valid discoverable frontmatter and trigger phrases", () => {
   const skill = read("skills/tasteforge-video/SKILL.md");
   assert.match(
     skill,
-    /^---\nname: tasteforge-video\ndescription: [^\n]+\nmetadata:\n {2}origin: ECC\n---\n/
+    /^---\nname: tasteforge-video\ndescription: [^\n]+\nmetadata:\n {2}origin: AIP\n---\n/
   );
   for (const trigger of [
     /interview .*video taste|video .*taste interview/i,
@@ -199,7 +199,7 @@ test("distinguishes local deterministic operations from provider generation", ()
   assert.match(skill, /provider generation/i);
   assert.match(skill, /must fail closed/i);
   assert.match(skill, /explicit separately authorized execution/i);
-  assert.match(skill, /ECC never calls Fal/i);
+  assert.match(skill, /AIP never calls Fal/i);
   assert.match(
     skill,
     /never\s+reads\s+any\s+API\s+key\s+or\s+other\s+credentials/i,
@@ -406,11 +406,11 @@ test("passes the curated skill validator", () => {
 });
 
 // Opt-in slow path: verifies the real npm tarball contents. Enabled with
-// ECC_TEST_NPM_PACK=1 (release/CI verification); the default suite relies on
+// AIP_TEST_NPM_PACK=1 (release/CI verification); the default suite relies on
 // the files-array assertions above.
 test("ships inside the real npm tarball (opt-in)", () => {
-  if (process.env.ECC_TEST_NPM_PACK !== "1") {
-    return { skipped: "set ECC_TEST_NPM_PACK=1 to run real npm pack inclusion" };
+  if (process.env.AIP_TEST_NPM_PACK !== "1") {
+    return { skipped: "set AIP_TEST_NPM_PACK=1 to run real npm pack inclusion" };
   }
   const result = spawnSync("npm", ["pack", "--dry-run", "--ignore-scripts"], {
     cwd: REPO_ROOT,

@@ -1,7 +1,7 @@
 ---
 name: investor-materials
 description: 投資家向けマテリアル、ピッチデック、財務プレゼンテーション、およびビジネス概要。
-origin: ECC
+origin: AIP
 ---
 
 # Investor Materials

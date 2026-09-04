@@ -140,7 +140,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 3. Upgrade de plano → Stripe checkout → assinatura ativa
 4. Webhook: assinatura cancelada → downgrade para free tier
 
-## Workflow ECC
+## Workflow AIP
 
 ```bash
 # Planning a feature

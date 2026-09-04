@@ -52,7 +52,7 @@ async function asyncTest(name, fn) {
 }
 
 function createTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-signal-race-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-signal-race-'));
 }
 
 function cleanupDir(dir) {
@@ -104,7 +104,7 @@ function buildSandbox() {
     path.join(scriptsLibDir, 'homunculus-dir.sh'),
     [
       '#!/bin/bash',
-      '_clv2_resolve_homunculus_dir() { printf "%s\\n" "$HOME/.local/share/ecc-homunculus"; }',
+      '_clv2_resolve_homunculus_dir() { printf "%s\\n" "$HOME/.local/share/aip-homunculus"; }',
       ''
     ].join('\n')
   );
@@ -142,12 +142,12 @@ function runObserve(testObserve, projectDir) {
         ...process.env,
         HOME: projectDir,
         CLAUDE_CODE_ENTRYPOINT: 'cli',
-        ECC_HOOK_PROFILE: 'standard',
-        ECC_SKIP_OBSERVE: '0',
+        AIP_HOOK_PROFILE: 'standard',
+        AIP_SKIP_OBSERVE: '0',
         CLAUDE_PROJECT_DIR: projectDir,
         // Reset threshold far above the invocation count, so no reset fires and
         // the final counter equals the number of invocations.
-        ECC_OBSERVER_SIGNAL_EVERY_N: '100000'
+        AIP_OBSERVER_SIGNAL_EVERY_N: '100000'
       },
       stdio: ['pipe', 'ignore', 'pipe']
     });

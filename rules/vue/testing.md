@@ -49,5 +49,5 @@ expect(wrapper.emitted('bid')).toBeTruthy()
 
 ## Reference
 
-- ECC skills: `frontend-patterns`, `vite-patterns`.
+- AIP skills: `frontend-patterns`, `vite-patterns`.
 - Docs: <https://test-utils.vuejs.org/api/> · <https://pinia.vuejs.org/cookbook/testing.html> · <https://vitest.dev/>

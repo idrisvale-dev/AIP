@@ -31,7 +31,7 @@ function test(name, fn) {
 }
 
 function createTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-observer-test-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-observer-test-'));
 }
 
 function cleanupDir(dir) {
@@ -73,7 +73,7 @@ test('observe.sh only signals when counter reaches threshold', () => {
 
 test('observe.sh default throttle is 20 observations per signal', () => {
   const content = fs.readFileSync(observeShPath, 'utf8');
-  assert.ok(content.includes('ECC_OBSERVER_SIGNAL_EVERY_N:-20'), 'Default signal frequency should be every 20 observations');
+  assert.ok(content.includes('AIP_OBSERVER_SIGNAL_EVERY_N:-20'), 'Default signal frequency should be every 20 observations');
 });
 
 test('observe.sh touches observer activity marker on each observation', () => {
@@ -147,13 +147,13 @@ test('on_usr1 enforces cooldown between analyses', () => {
 
 test('default cooldown is 60 seconds', () => {
   const content = fs.readFileSync(observerLoopPath, 'utf8');
-  assert.ok(content.includes('ECC_OBSERVER_ANALYSIS_COOLDOWN:-60'), 'Default cooldown should be 60 seconds');
+  assert.ok(content.includes('AIP_OBSERVER_ANALYSIS_COOLDOWN:-60'), 'Default cooldown should be 60 seconds');
 });
 
 test('observer-loop.sh defines idle timeout fallback', () => {
   const content = fs.readFileSync(observerLoopPath, 'utf8');
   assert.ok(content.includes('IDLE_TIMEOUT_SECONDS'), 'observer-loop.sh should define an idle timeout');
-  assert.ok(content.includes('ECC_OBSERVER_IDLE_TIMEOUT_SECONDS:-1800'), 'Default idle timeout should be 30 minutes');
+  assert.ok(content.includes('AIP_OBSERVER_IDLE_TIMEOUT_SECONDS:-1800'), 'Default idle timeout should be 30 minutes');
 });
 
 test('observer-loop.sh checks session lease directory before self-termination', () => {
@@ -176,12 +176,12 @@ test('analyze_observations uses tail to sample recent observations', () => {
 
 test('default max analysis lines is 500', () => {
   const content = fs.readFileSync(observerLoopPath, 'utf8');
-  assert.ok(content.includes('ECC_OBSERVER_MAX_ANALYSIS_LINES:-500'), 'Default should sample last 500 lines');
+  assert.ok(content.includes('AIP_OBSERVER_MAX_ANALYSIS_LINES:-500'), 'Default should sample last 500 lines');
 });
 
 test('analysis temp file is created and cleaned up', () => {
   const content = fs.readFileSync(observerLoopPath, 'utf8');
-  assert.ok(content.includes('ecc-observer-analysis'), 'Should create a temp analysis file');
+  assert.ok(content.includes('aip-observer-analysis'), 'Should create a temp analysis file');
   assert.ok(content.includes('rm -f "$prompt_file"'), 'Should clean up the prompt temp file after loading it');
   assert.ok(content.includes('rm -f "$analysis_file"'), 'Should clean up the analysis temp file');
 });
@@ -189,8 +189,8 @@ test('analysis temp file is created and cleaned up', () => {
 test('observer-loop uses project-local temp directory for analysis artifacts', () => {
   const content = fs.readFileSync(observerLoopPath, 'utf8');
   assert.ok(content.includes('observer_tmp_dir="${PROJECT_DIR}/.observer-tmp"'), 'Should keep observer temp files inside the project');
-  assert.ok(content.includes('mktemp "${observer_tmp_dir}/ecc-observer-analysis.'), 'Analysis temp file should use the project temp dir');
-  assert.ok(content.includes('mktemp "${observer_tmp_dir}/ecc-observer-prompt.'), 'Prompt temp file should use the project temp dir');
+  assert.ok(content.includes('mktemp "${observer_tmp_dir}/aip-observer-analysis.'), 'Analysis temp file should use the project temp dir');
+  assert.ok(content.includes('mktemp "${observer_tmp_dir}/aip-observer-prompt.'), 'Prompt temp file should use the project temp dir');
 });
 
 test('observer-loop loads prompt content before invoking claude', () => {
@@ -355,7 +355,7 @@ test('observe.sh creates counter file and increments on each call', () => {
 
   // This test runs observe.sh with minimal input to verify counter behavior.
   // We need python3, bash, and a valid project dir to test the full flow.
-  // We use ECC_SKIP_OBSERVE=0 and minimal JSON so observe.sh processes but
+  // We use AIP_SKIP_OBSERVE=0 and minimal JSON so observe.sh processes but
   // exits before signaling (no observer PID running).
 
   const testDir = createTempDir();
@@ -388,7 +388,7 @@ test('observe.sh creates counter file and increments on each call', () => {
     path.join(scriptsLibDir, 'homunculus-dir.sh'),
     [
       '#!/bin/bash',
-      '_clv2_resolve_homunculus_dir() { printf "%s\\n" "$HOME/.local/share/ecc-homunculus"; }',
+      '_clv2_resolve_homunculus_dir() { printf "%s\\n" "$HOME/.local/share/aip-homunculus"; }',
       ''
     ].join('\n')
   );
@@ -414,8 +414,8 @@ test('observe.sh creates counter file and increments on each call', () => {
         ...process.env,
         HOME: testDir,
         CLAUDE_CODE_ENTRYPOINT: 'cli',
-        ECC_HOOK_PROFILE: 'standard',
-        ECC_SKIP_OBSERVE: '0',
+        AIP_HOOK_PROFILE: 'standard',
+        AIP_SKIP_OBSERVE: '0',
         CLAUDE_PROJECT_DIR: projectDir
       },
       timeout: 5000
@@ -463,22 +463,22 @@ test('allowedTools includes Write permission', () => {
   assert.ok(match[1].includes('Write'), `allowedTools should include Write, got: ${match[1]}`);
 });
 
-test('claude invocation still includes ECC_SKIP_OBSERVE and ECC_HOOK_PROFILE guards', () => {
+test('claude invocation still includes AIP_SKIP_OBSERVE and AIP_HOOK_PROFILE guards', () => {
   const content = fs.readFileSync(observerLoopPath, 'utf8');
   // Find the claude execution line(s)
   const lines = content.split('\n');
   const claudeLine = lines.find(l => l.includes('claude --model'));
   assert.ok(claudeLine, 'Should find claude --model invocation line');
-  // Model is configurable via ECC_OBSERVER_MODEL but must still default to haiku.
+  // Model is configurable via AIP_OBSERVER_MODEL but must still default to haiku.
   assert.ok(
-    claudeLine.includes('${ECC_OBSERVER_MODEL:-haiku}'),
-    `claude --model should default to haiku and honor ECC_OBSERVER_MODEL, got: ${claudeLine}`
+    claudeLine.includes('${AIP_OBSERVER_MODEL:-haiku}'),
+    `claude --model should default to haiku and honor AIP_OBSERVER_MODEL, got: ${claudeLine}`
   );
   // The env vars are on the same line as the claude command
   const claudeLineIndex = lines.indexOf(claudeLine);
   const fullCommand = lines.slice(Math.max(0, claudeLineIndex - 1), claudeLineIndex + 3).join(' ');
-  assert.ok(fullCommand.includes('ECC_SKIP_OBSERVE=1'), 'claude invocation should include ECC_SKIP_OBSERVE=1 guard');
-  assert.ok(fullCommand.includes('ECC_HOOK_PROFILE=minimal'), 'claude invocation should include ECC_HOOK_PROFILE=minimal guard');
+  assert.ok(fullCommand.includes('AIP_SKIP_OBSERVE=1'), 'claude invocation should include AIP_SKIP_OBSERVE=1 guard');
+  assert.ok(fullCommand.includes('AIP_HOOK_PROFILE=minimal'), 'claude invocation should include AIP_HOOK_PROFILE=minimal guard');
 });
 
 // ──────────────────────────────────────────────────────

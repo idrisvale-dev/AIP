@@ -4,7 +4,7 @@ description: 为离散和批量制造中的生产调度、作业排序、产线�
 license: Apache-2.0
 version: 1.0.0
 homepage: https://github.com/reborncursed/AIP
-origin: ECC
+origin: AIP
 metadata:
   author: evos
   clawdbot:

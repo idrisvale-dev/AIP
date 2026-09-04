@@ -1,7 +1,7 @@
 ---
 name: kotlin-exposed-patterns
 description: JetBrains Exposed ORM パターン（DSL クエリ、DAO パターン、トランザクション、HikariCP 接続プーリング、Flyway マイグレーション、リポジトリパターンを含む）。
-origin: ECC
+origin: AIP
 ---
 
 # Kotlin Exposed パターン

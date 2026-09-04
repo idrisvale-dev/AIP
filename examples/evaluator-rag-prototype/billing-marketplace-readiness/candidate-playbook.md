@@ -1,6 +1,6 @@
 # Billing Marketplace Readiness Playbook
 
-Use this playbook when release copy or roadmap text mentions ECC Tools
+Use this playbook when release copy or roadmap text mentions AIP Tools
 billing, Marketplace availability, account recovery, plans, seats,
 entitlements, or subscription state.
 
@@ -8,8 +8,8 @@ entitlements, or subscription state.
 
 1. Start from `docs/releases/2.0.0-rc.1/publication-readiness.md`.
 2. Check the current repo and public listing surfaces:
-   - `gh api repos/ECC-Tools/ECC-Tools`
-   - `https://github.com/marketplace/ecc-tools`
+   - `gh api repos/AIP-Tools/AIP-Tools`
+   - `https://github.com/marketplace/aip-tools`
 3. Classify every billing or Marketplace claim as:
    - `verified`
    - `blocked`
@@ -32,10 +32,10 @@ their own approval path.
 
 ## Validation Gates
 
-- `rg -n "billing|Billing|Marketplace|marketplace|subscription|seat|entitlement|plan" README.md docs/releases/2.0.0-rc.1 docs/ECC-2.0-GA-ROADMAP.md`
-- `gh api repos/ECC-Tools/ECC-Tools`
-- Manual live check of `https://github.com/marketplace/ecc-tools`
-- `npx --yes markdownlint-cli docs/releases/2.0.0-rc.1/*.md docs/ECC-2.0-GA-ROADMAP.md`
+- `rg -n "billing|Billing|Marketplace|marketplace|subscription|seat|entitlement|plan" README.md docs/releases/2.0.0-rc.1 docs/AIP-2.0-GA-ROADMAP.md`
+- `gh api repos/AIP-Tools/AIP-Tools`
+- Manual live check of `https://github.com/marketplace/aip-tools`
+- `npx --yes markdownlint-cli docs/releases/2.0.0-rc.1/*.md docs/AIP-2.0-GA-ROADMAP.md`
 - `git diff --check`
 
 Record the evidence in a maintainer-owned PR before release copy is published.

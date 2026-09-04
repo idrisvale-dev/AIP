@@ -1,7 +1,7 @@
 ---
 name: golang-patterns
 description: 견고하고 효율적이며 유지보수 가능한 Go 애플리케이션 구축을 위한 관용적 Go 패턴, 모범 사례 및 규칙.
-origin: ECC
+origin: AIP
 ---
 
 # Go 개발 패턴

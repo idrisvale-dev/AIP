@@ -1,7 +1,7 @@
 ---
 name: laravel-security
 description: Buenas prácticas de seguridad en Laravel para autenticación/autorización, validación, CSRF, asignación masiva, subida de archivos, secretos, limitación de velocidad y despliegue seguro.
-origin: ECC
+origin: AIP
 ---
 
 # Buenas Prácticas de Seguridad en Laravel

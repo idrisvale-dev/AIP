@@ -260,7 +260,7 @@ cargo clippy -- -D warnings
 cargo fmt -- --check
 ```
 
-## ECC Workflow
+## AIP Workflow
 
 ```bash
 # Planning

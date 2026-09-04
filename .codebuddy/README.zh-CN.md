@@ -1,6 +1,6 @@
-# Everything Claude Code for CodeBuddy
+# AIP for CodeBuddy
 
-为 CodeBuddy IDE 带来 Everything Claude Code (ECC) 工作流。此仓库提供自定义命令、智能体、技能和规则，可以通过统一的 Target Adapter 架构安装到任何 CodeBuddy 项目中。
+为 CodeBuddy IDE 带来 AIP (AIP) 工作流。此仓库提供自定义命令、智能体、技能和规则，可以通过统一的 Target Adapter 架构安装到任何 CodeBuddy 项目中。
 
 ## 快速开始（推荐）
 
@@ -69,7 +69,7 @@ cd /path/to/your/project
 ├── agents/             # 智能体文件（复用自项目根目录）
 ├── skills/             # 技能文件（复用自 skills/）
 ├── rules/              # 规则文件（从 rules/ 扁平化）
-├── ecc-install-state.json  # 安装状态跟踪
+├── aip-install-state.json  # 安装状态跟踪
 ├── install.sh          # 旧版安装脚本
 ├── uninstall.sh        # 旧版卸载脚本
 └── README.zh-CN.md     # 此文件
@@ -77,7 +77,7 @@ cd /path/to/your/project
 
 ## Target Adapter 安装的优势
 
-- **安装状态跟踪**：安全卸载，仅删除 ECC 管理的文件
+- **安装状态跟踪**：安全卸载，仅删除 AIP 管理的文件
 - **Doctor 检查**：验证安装健康状态并检测偏移
 - **修复**：自动修复损坏的安装
 - **选择性安装**：通过配置文件选择特定模块
@@ -95,4 +95,4 @@ cd /path/to/your/project
 
 - 在 CodeBuddy 中打开您的项目
 - 输入 `/` 以查看可用命令
-- 享受 ECC 工作流！
+- 享受 AIP 工作流！

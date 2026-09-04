@@ -37,8 +37,8 @@ function test(name, fn) {
 }
 
 function writeOpencodeFixture({ title = 'rebuild the basket trader rebalancer', updatedAgoMs = 0 } = {}) {
-  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-opencode-store-'));
-  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-opencode-repo-'));
+  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-opencode-store-'));
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-opencode-repo-'));
   const projectHash = 'b43c6d2f5bbf6e71bc3d139c1656bf3afe1935aa';
   const sessionId = 'ses_66d5468bdffeVlx1Hy2KkdIshB';
 
@@ -70,7 +70,7 @@ function writeOpencodeFixture({ title = 'rebuild the basket trader rebalancer', 
   return { storageDir, repoRoot, sessionId, sessionInfoPath: path.join(sessionDir, `${sessionId}.json`) };
 }
 
-test('normalizeOpencodeSession produces a valid ecc.session.v1 snapshot', () => {
+test('normalizeOpencodeSession produces a valid aip.session.v1 snapshot', () => {
   const snapshot = normalizeOpencodeSession({
     sessionId: 'ses_x', sessionPath: '/tmp/s.json', cwd: '/repo', branch: 'main',
     objective: 'do the thing', title: 'do the thing', model: 'claude-sonnet-4-5-20250929',
@@ -93,7 +93,7 @@ test('parseOpencodeTarget strips the opencode prefix', () => {
 
 test('adapter reads latest session, extracts model from messages, derives objective from title', () => {
   const { storageDir, repoRoot, sessionInfoPath } = writeOpencodeFixture({ updatedAgoMs: 0 });
-  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-opencode-rec-'));
+  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-opencode-rec-'));
 
   assert.strictEqual(findLatestSessionInfo(storageDir), sessionInfoPath);
 
@@ -117,7 +117,7 @@ test('auto-title "New session - ..." yields empty objective; stale session is re
     title: 'New session - 2025-09-28T23:32:22.978Z',
     updatedAgoMs: 60 * 60 * 1000
   });
-  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-opencode-rec2-'));
+  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-opencode-rec2-'));
 
   const adapter = createOpencodeAdapter({
     storageDir, recordingDir, loadStateStoreImpl: () => null, resolveBranchImpl: () => null
@@ -131,7 +131,7 @@ test('auto-title "New session - ..." yields empty objective; stale session is re
 
 test('registry routes structured opencode target and lists the adapter', () => {
   const { storageDir, repoRoot } = writeOpencodeFixture();
-  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-opencode-reg-'));
+  const recordingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-opencode-reg-'));
 
   const registry = createAdapterRegistry({
     recordingDir,
@@ -166,7 +166,7 @@ test('parseOpencodeTarget handles non-string and unprefixed input', () => {
 });
 
 test('adapter throws for empty store and unknown id; findLatest on empty => null', () => {
-  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-oc-empty-'));
+  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-oc-empty-'));
   assert.strictEqual(findLatestSessionInfo(storageDir), null);
   const adapter = createOpencodeAdapter({ storageDir, loadStateStoreImpl: () => null });
   assert.throws(() => adapter.open('opencode:latest', { cwd: os.tmpdir() }).getSnapshot(), /No OpenCode sessions found/);
@@ -174,7 +174,7 @@ test('adapter throws for empty store and unknown id; findLatest on empty => null
 });
 
 test('findSessionInfoById + direct file target + isOpencodeSessionFileTarget', () => {
-  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-oc-byid-'));
+  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-oc-byid-'));
   const now = Date.now();
   const fp = writeSession(storageDir, 'projhash', 'ses_UNIQUE001', {
     id: 'ses_UNIQUE001', directory: storageDir, title: 'real title', time: { created: now - 5000, updated: now - 5000 }
@@ -192,7 +192,7 @@ test('findSessionInfoById + direct file target + isOpencodeSessionFileTarget', (
 });
 
 test('parseOpencodeSession: model from later assistant message, missing-time => recorded', () => {
-  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-oc-parse-'));
+  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-oc-parse-'));
   const fp = writeSession(storageDir, 'ph', 'ses_MODEL01', {
     id: 'ses_MODEL01', directory: storageDir, title: 'do work'
     // no time block => updatedMs null => recorded/inactive
@@ -207,7 +207,7 @@ test('parseOpencodeSession: model from later assistant message, missing-time => 
 });
 
 test('resolveGitBranch real path returns null outside a repo', () => {
-  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-oc-nogit-'));
+  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-oc-nogit-'));
   const fp = writeSession(storageDir, 'ph', 'ses_NOGIT01', {
     id: 'ses_NOGIT01', directory: storageDir, title: 't', time: { created: 1, updated: 1 }
   }, []);

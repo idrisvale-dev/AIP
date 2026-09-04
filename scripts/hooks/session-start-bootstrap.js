@@ -4,7 +4,7 @@
 /**
  * session-start-bootstrap.js
  *
- * Bootstrap loader for the ECC SessionStart hook.
+ * Bootstrap loader for the AIP SessionStart hook.
  *
  * Problem this solves: the previous approach embedded this logic as an inline
  * `node -e "..."` string inside hooks.json. Characters like `!` (used in
@@ -17,7 +17,7 @@
  *
  * How it works:
  *   1. Reads the raw JSON event from stdin (passed by Claude Code).
- *   2. Resolves the ECC plugin root directory (via CLAUDE_PLUGIN_ROOT env var
+ *   2. Resolves the AIP plugin root directory (via CLAUDE_PLUGIN_ROOT env var
  *      or a set of well-known fallback paths).
  *   3. Delegates to `scripts/hooks/run-with-flags.js` with the `session:start`
  *      event, which applies hook-profile gating and then runs session-start.js.
@@ -29,7 +29,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { resolveEccRoot } = require('../lib/resolve-ecc-root');
+const { resolveAipRoot } = require('../lib/resolve-aip-root');
 
 // Read the raw JSON event from stdin
 const raw = fs.readFileSync(0, 'utf8');
@@ -37,9 +37,9 @@ const raw = fs.readFileSync(0, 'utf8');
 // Path (relative to plugin root) to the hook runner
 const rel = path.join('scripts', 'hooks', 'run-with-flags.js');
 
-// Resolve the ECC plugin root via the shared resolver, probing for the runner
+// Resolve the AIP plugin root via the shared resolver, probing for the runner
 // so a valid root is one that actually contains run-with-flags.js.
-const root = resolveEccRoot({ probe: rel });
+const root = resolveAipRoot({ probe: rel });
 const script = path.join(root, rel);
 
 if (fs.existsSync(script)) {
@@ -80,6 +80,6 @@ if (fs.existsSync(script)) {
 }
 
 process.stderr.write(
-  '[SessionStart] WARNING: could not resolve ECC plugin root; skipping session-start hook\n'
+  '[SessionStart] WARNING: could not resolve AIP plugin root; skipping session-start hook\n'
 );
 process.stdout.write(raw);

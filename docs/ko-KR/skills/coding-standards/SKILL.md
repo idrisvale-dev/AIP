@@ -1,7 +1,7 @@
 ---
 name: coding-standards
 description: TypeScript, JavaScript, React, Node.js 개발을 위한 범용 코딩 표준, 모범 사례 및 패턴.
-origin: ECC
+origin: AIP
 ---
 
 # 코딩 표준 및 모범 사례

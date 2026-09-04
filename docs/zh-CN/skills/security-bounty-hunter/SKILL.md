@@ -1,7 +1,7 @@
 ---
 name: security-bounty-hunter
 description: 在仓库中寻找可利用、值得赏金的安全问题。专注于远程可访问的漏洞，这些漏洞符合实际报告的条件，而不是嘈杂的仅本地发现。
-origin: ECC direct-port adaptation
+origin: AIP direct-port adaptation
 version: "1.0.0"
 ---
 

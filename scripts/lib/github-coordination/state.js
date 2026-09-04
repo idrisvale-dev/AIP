@@ -136,7 +136,7 @@ function findIssueByNumber(issues, issueNumber) {
 
 function buildIssueComment(action, repo, issueNumber, state, extra = {}) {
   const summary = [
-    `ECC coordination ${action}`,
+    `AIP coordination ${action}`,
     `Repo: ${repo}`,
     `Issue: #${issueNumber}`,
     `Status: ${state.status}`,

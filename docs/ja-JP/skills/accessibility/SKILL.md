@@ -1,7 +1,7 @@
 ---
 name: accessibility
 description: WCAG 2.2 レベル AA 標準を用いてインクルーシブなデジタルプロダクトを設計・実装・監査します。Web 用のセマンティック ARIA および Web・ネイティブプラットフォーム（iOS/Android）のアクセシビリティトレイトを生成するために使用します。
-origin: ECC
+origin: AIP
 ---
 
 # アクセシビリティ（WCAG 2.2）

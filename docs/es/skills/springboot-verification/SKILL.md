@@ -1,7 +1,7 @@
 ---
 name: springboot-verification
 description: "Bucle de verificación para proyectos Spring Boot: build, análisis estático, pruebas con cobertura, escaneos de seguridad y revisión de diff antes del lanzamiento o PR."
-origin: ECC
+origin: AIP
 ---
 
 # Bucle de Verificación Spring Boot

@@ -1,7 +1,7 @@
 ---
 name: continuous-learning-v2
 description: Sistema de aprendizaje basado en instintos que observa sesiones mediante hooks, crea instintos atómicos con puntuación de confianza y los evoluciona en skills/comandos/agentes. v2.1 agrega instintos con alcance de proyecto para prevenir contaminación entre proyectos.
-origin: ECC
+origin: AIP
 version: 2.1.0
 ---
 
@@ -25,7 +25,7 @@ Un sistema de aprendizaje avanzado que convierte tus sesiones de Claude Code en 
 
 | Característica | v2.0 | v2.1 |
 |----------------|------|------|
-| Almacenamiento | Global (`~/.claude/homunculus/`) | Con alcance de proyecto (`${XDG_DATA_HOME:-~/.local/share}/ecc-homunculus/projects/<hash>/`) |
+| Almacenamiento | Global (`~/.claude/homunculus/`) | Con alcance de proyecto (`${XDG_DATA_HOME:-~/.local/share}/aip-homunculus/projects/<hash>/`) |
 | Alcance | Todos los instintos aplican en todas partes | Con alcance de proyecto + global |
 | Detección | Ninguna | URL remota de git / ruta del repositorio |
 | Promoción | N/A | Proyecto → global cuando se ve en 2+ proyectos |
@@ -131,15 +131,15 @@ El sistema detecta automáticamente tu proyecto actual:
 3. **`git rev-parse --show-toplevel`** — respaldo usando la ruta del repo (específica de la máquina)
 4. **Respaldo global** — si no se detecta ningún proyecto, los instintos van al alcance global
 
-Cada proyecto obtiene un ID hash de 12 caracteres (ej. `a1b2c3d4e5f6`). Un archivo de registro en `${XDG_DATA_HOME:-~/.local/share}/ecc-homunculus/projects.json` mapea IDs a nombres legibles.
+Cada proyecto obtiene un ID hash de 12 caracteres (ej. `a1b2c3d4e5f6`). Un archivo de registro en `${XDG_DATA_HOME:-~/.local/share}/aip-homunculus/projects.json` mapea IDs a nombres legibles.
 
 ### Directorio de Datos
 
 Continuous-learning-v2 almacena los datos del observador fuera de `~/.claude` para que el guard de rutas sensibles de Claude Code no bloquee las escrituras de instintos en segundo plano:
 
 1. `CLV2_HOMUNCULUS_DIR` cuando se establece a una ruta absoluta
-2. `$XDG_DATA_HOME/ecc-homunculus`
-3. `$HOME/.local/share/ecc-homunculus`
+2. `$XDG_DATA_HOME/aip-homunculus`
+3. `$HOME/.local/share/aip-homunculus`
 
 Los usuarios existentes con datos en `~/.claude/homunculus` pueden migrar una vez:
 

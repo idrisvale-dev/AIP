@@ -11,7 +11,7 @@ description: 電気とガス調達、料金最適化、需要料金管理、再�
 license: Apache-2.0
 version: 1.0.0
 homepage: https://github.com/reborncursed/AIP
-origin: ECC
+origin: AIP
 metadata:
   author: evos
   clawdbot:

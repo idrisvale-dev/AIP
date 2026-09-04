@@ -3,7 +3,7 @@ name: latency-critical-systems
 description: Use for latency-sensitive systems such as realtime dashboards, market data, streaming agents, execution gateways, queues, caches, or HFT-like infrastructure where freshness and p95 latency matter. Use when p95 latency or data freshness matters — realtime dashboards, market data, streaming agents, queues, or caches.
 license: MIT
 metadata:
-  origin: ECC
+  origin: AIP
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

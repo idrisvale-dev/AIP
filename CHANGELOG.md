@@ -14,13 +14,13 @@
 ### Changed
 
 - Default MCP connector set reduced to a single connector (`chrome-devtools`) per the new connector policy (`docs/MCP-CONNECTOR-POLICY.md`). The six previous defaults (`github`, `context7`, `exa`, `memory`, `playwright`, `sequential-thinking`) were retired after the June 2026 audit: their jobs are covered by skills wrapping CLIs/REST APIs (`github-ops`, `documentation-lookup`, `exa-search`, e2e skills) or by harness-native features (memory, extended thinking, web search). All six remain opt-in via `mcp-configs/mcp-servers.json`.
-- OpenCode home installs now use its canonical `~/.config/opencode` location, safely discover and migrate unchanged ECC-managed files from legacy `~/.opencode` installs, and preserve modified legacy files for review. Bundled agents inherit the model selected by the user instead of pinning an Anthropic provider.
+- OpenCode home installs now use its canonical `~/.config/opencode` location, safely discover and migrate unchanged AIP-managed files from legacy `~/.opencode` installs, and preserve modified legacy files for review. Bundled agents inherit the model selected by the user instead of pinning an Anthropic provider.
 - `skill-comply` is now part of the install manifest and npm distribution, with generated Python caches excluded from both install and package surfaces.
 - Release automation now verifies the tag is exactly on `origin/main`, fails closed on npm registry errors, tests the exact packed artifact across Linux, macOS, and Windows, publishes stable versions to a staging dist-tag, verifies registry bytes before promoting `latest`, creates the GitHub Release after promotion, and uses reviewed release notes.
 
 ### Fixed
 
-- `ecc memory` writes and `--body-file` reads failed on Windows under Node 22.12-22.16 and 24.0-24.1. libuv resolved path-based `stat()`/`lstat()` through `GetFileInformationByName` without setting the volume serial, while `fstat()` reported it, so the memory vault's TOCTOU guard rejected every operation. Fixed upstream in libuv 1.51.0; the guard no longer depends on the runtime's patch level. The guard's stat calls now request `BigInt` values, so Windows file IDs past `Number.MAX_SAFE_INTEGER` can no longer collapse two distinct files into one identity.
+- `aip memory` writes and `--body-file` reads failed on Windows under Node 22.12-22.16 and 24.0-24.1. libuv resolved path-based `stat()`/`lstat()` through `GetFileInformationByName` without setting the volume serial, while `fstat()` reported it, so the memory vault's TOCTOU guard rejected every operation. Fixed upstream in libuv 1.51.0; the guard no longer depends on the runtime's patch level. The guard's stat calls now request `BigInt` values, so Windows file IDs past `Number.MAX_SAFE_INTEGER` can no longer collapse two distinct files into one identity.
 - Selective reinstall now merges the prior ownership ledger, so later module additions do not orphan files from earlier installs and uninstall removes the complete managed surface.
 - Legacy Codex sync uninstall now uses ownership evidence, preserves user files, and requires an explicit opt-in for weaker marker-only cleanup.
 - The experimental Nasiko CLI lifecycle bridge now recovers locks only after confirming the recorded owner is dead, preserves replacement locks, strictly rejects malformed tar sizes, padding, terminators, and trailing data, and fails uninstall when staged files remain.
@@ -35,9 +35,9 @@
 
 ### Added
 
-- Discord community launch: server + GitHub PR/issue/release feed, `release-announce.yml` workflow (announce + pin + Discussions cross-post), and a dependency-free community bot (`scripts/discord/ecc-bot.mjs`) with `/ecc`, `/help`, `/skill`, `/docs`, `/release`.
+- Discord community launch: server + GitHub PR/issue/release feed, `release-announce.yml` workflow (announce + pin + Discussions cross-post), and a dependency-free community bot (`scripts/discord/aip-bot.mjs`) with `/aip`, `/help`, `/skill`, `/docs`, `/release`.
 - `orch-*` orchestrator skill family and dynamic workflow team orchestration.
-- `kubernetes-patterns` skill, worktree-lifecycle service, MCP inventory (`ecc.mcp.v1`), codex-worktree and opencode session adapters.
+- `kubernetes-patterns` skill, worktree-lifecycle service, MCP inventory (`aip.mcp.v1`), codex-worktree and opencode session adapters.
 
 ### Fixed
 
@@ -54,20 +54,20 @@
 
 ### Highlights
 
-- Adds the public ECC 2.0 release-candidate surface for the Hermes operator story.
-- Documents ECC as the reusable cross-harness substrate across Claude Code, Codex, Cursor, OpenCode, and Gemini.
+- Adds the public AIP 2.0 release-candidate surface for the Hermes operator story.
+- Documents AIP as the reusable cross-harness substrate across Claude Code, Codex, Cursor, OpenCode, and Gemini.
 - Adds a sanitized Hermes import skill surface instead of publishing private operator state.
 
 ### Release Surface
 
 - Updated package, plugin, marketplace, OpenCode, agent, and README metadata to `2.0.0-rc.1`.
 - Added `docs/releases/2.0.0-rc.1/` with release notes, social drafts, launch checklist, handoff notes, and demo prompts.
-- Added `docs/architecture/cross-harness.md` and regression coverage for the ECC/Hermes boundary.
-- Kept `ecc2/` versioning independent for now; it remains an alpha control-plane scaffold unless release engineering decides otherwise.
+- Added `docs/architecture/cross-harness.md` and regression coverage for the AIP/Hermes boundary.
+- Kept `aip2/` versioning independent for now; it remains an alpha control-plane scaffold unless release engineering decides otherwise.
 
 ### Notes
 
-- This is a release candidate, not a GA claim for the full ECC 2.0 control-plane roadmap.
+- This is a release candidate, not a GA claim for the full AIP 2.0 control-plane roadmap.
 - Prerelease npm publishing should use the `next` dist-tag unless release engineering explicitly chooses otherwise.
 
 ## 1.10.0 - 2026-04-05
@@ -77,7 +77,7 @@
 - Public release surface synced to the live repo after multiple weeks of OSS growth and backlog merges.
 - Operator workflow lane expanded with voice, graph-ranking, billing, workspace, and outbound skills.
 - Media generation lane expanded with Manim and Remotion-first launch tooling.
-- ECC 2.0 alpha control-plane binary now builds locally from `ecc2/` and exposes the first usable CLI/TUI surface.
+- AIP 2.0 alpha control-plane binary now builds locally from `aip2/` and exposes the first usable CLI/TUI surface.
 
 ### Release Surface
 
@@ -93,16 +93,16 @@
 - `customer-billing-ops`, `google-workspace-ops`, `project-flow-ops`, `workspace-surface-audit`.
 - `manim-video`, `remotion-video-creation`, `nestjs-patterns`.
 
-### ECC 2.0 Alpha
+### AIP 2.0 Alpha
 
-- `cargo build --manifest-path ecc2/Cargo.toml` passes on the repository baseline.
-- `ecc-tui` currently exposes `dashboard`, `start`, `sessions`, `status`, `stop`, `resume`, and `daemon`.
+- `cargo build --manifest-path aip2/Cargo.toml` passes on the repository baseline.
+- `aip-tui` currently exposes `dashboard`, `start`, `sessions`, `status`, `stop`, `resume`, and `daemon`.
 - The alpha is real and usable for local experimentation, but the broader control-plane roadmap remains incomplete and should not be treated as GA.
 
 ### Notes
 
 - The Claude plugin remains limited by platform-level rules distribution constraints; the selective install / OSS path is still the most reliable full install.
-- This release is a repo-surface correction and ecosystem sync, not a claim that the full ECC 2.0 roadmap is complete.
+- This release is a repo-surface correction and ecosystem sync, not a claim that the full AIP 2.0 roadmap is complete.
 
 ## 1.9.0 - 2026-03-20
 
@@ -137,7 +137,7 @@
 - `ai-regression-testing` — AI regression test workflows (#433)
 - `claude-devfleet` — Multi-agent orchestration (#505)
 - `blueprint` — Multi-session construction planning
-- `everything-claude-code` — Self-referential ECC skill (#335)
+- `aip` — Self-referential AIP skill (#335)
 - `prompt-optimizer` — Prompt optimization skill (#418)
 - 8 Evos operational domain skills (#290)
 - 3 Laravel skills (#420)
@@ -236,7 +236,7 @@
 - Moved session summary persistence to `Stop` where transcript payload is available.
 - Added quality-gate and cost-tracker hooks.
 - Replaced fragile inline hook one-liners with dedicated script files.
-- Added `ECC_HOOK_PROFILE` and `ECC_DISABLED_HOOKS` controls.
+- Added `AIP_HOOK_PROFILE` and `AIP_DISABLED_HOOKS` controls.
 
 ### Cross-Platform
 

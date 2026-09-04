@@ -1,6 +1,6 @@
-# ECC for GitHub Copilot
+# AIP for GitHub Copilot
 
-Everything Claude Code (ECC) baseline rules for GitHub Copilot Chat in VS Code.
+AIP (AIP) baseline rules for GitHub Copilot Chat in VS Code.
 These instructions are always active. Use the prompts in `.github/prompts/` for deeper workflows.
 
 ## Core Workflow
@@ -100,7 +100,7 @@ Before marking work complete:
 - [ ] No hardcoded values (use constants or env config)
 - [ ] No in-place mutation
 
-## ECC Prompt Library
+## AIP Prompt Library
 
 Use these prompts in Copilot Chat for deeper workflows:
 

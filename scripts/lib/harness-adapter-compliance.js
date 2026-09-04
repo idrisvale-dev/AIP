@@ -7,10 +7,10 @@ const MATRIX_BLOCK_START = '<!-- harness-adapter-compliance:matrix-start -->';
 const MATRIX_BLOCK_END = '<!-- harness-adapter-compliance:matrix-end -->';
 
 const COMPLIANCE_STATES = Object.freeze({
-  Native: 'ECC can install or verify the surface directly for this harness.',
-  'Adapter-backed': 'ECC has a thin adapter, plugin, or package surface, but parity differs by harness.',
-  'Instruction-backed': 'ECC can provide the guidance and files, but the harness does not expose the runtime hook/session surface ECC needs for enforcement.',
-  'Reference-only': 'The tool is useful as a design pressure or external runtime, but ECC does not yet ship a direct installer or adapter for it.',
+  Native: 'AIP can install or verify the surface directly for this harness.',
+  'Adapter-backed': 'AIP has a thin adapter, plugin, or package surface, but parity differs by harness.',
+  'Instruction-backed': 'AIP can provide the guidance and files, but the harness does not expose the runtime hook/session surface AIP needs for enforcement.',
+  'Reference-only': 'The tool is useful as a design pressure or external runtime, but AIP does not yet ship a direct installer or adapter for it.',
 });
 
 const REQUIRED_FIELDS = Object.freeze([
@@ -64,7 +64,7 @@ const ADAPTER_RECORDS = Object.freeze([
     ],
     risk_notes: ['Avoid loading every skill by default; keep hooks opt-in and inspectable.'],
     last_verified_at: '2026-05-12',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: [
       '.claude-plugin/plugin.json',
       'docs/architecture/cross-harness.md',
@@ -90,7 +90,7 @@ const ADAPTER_RECORDS = Object.freeze([
     verification_commands: ['`npm run harness:audit -- --format json`'],
     risk_notes: ['Treat hooks as policy text unless a native Codex hook surface exists.'],
     last_verified_at: '2026-05-12',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: [
       '.codex-plugin/plugin.json',
       'AGENTS.md',
@@ -115,10 +115,10 @@ const ADAPTER_RECORDS = Object.freeze([
     ],
     risk_notes: ['Keep hook logic in shared scripts and adapt only event shape at the edge.'],
     last_verified_at: '2026-05-12',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: [
       '.opencode/package.json',
-      '.opencode/plugins/ecc-hooks.ts',
+      '.opencode/plugins/aip-hooks.ts',
       'scripts/build-opencode.js',
     ],
   },
@@ -128,17 +128,17 @@ const ADAPTER_RECORDS = Object.freeze([
     state: 'Adapter-backed',
     supported_assets: [
       'Pi package manifest',
-      'canonical ECC skills (skills/)',
-      'canonical ECC commands as prompt templates (commands/)',
-      'canonical ECC engineering rules (rules/common/) injected into the system prompt',
+      'canonical AIP skills (skills/)',
+      'canonical AIP commands as prompt templates (commands/)',
+      'canonical AIP engineering rules (rules/common/) injected into the system prompt',
       'session lifecycle hook adapter',
-      '/ecc-doctor diagnostics command',
+      '/aip-doctor diagnostics command',
     ],
     unsupported_surfaces: [
       'Subagents, chains, approval prompts, and persistent todos require companion Pi packages and are not part of this adapter',
-      'Pi core has no MCP surface, though ECC MCP configs load verbatim through the community pi-mcp-adapter package, which ECC neither installs nor depends on',
+      'Pi core has no MCP surface, though AIP MCP configs load verbatim through the community pi-mcp-adapter package, which AIP neither installs nor depends on',
     ],
-    install_or_onramp: ['`pi install git:github.com/reborncursed/AIP`', '`pi install /path/to/ECC` from a local checkout'],
+    install_or_onramp: ['`pi install git:github.com/reborncursed/AIP`', '`pi install /path/to/AIP` from a local checkout'],
     verification_commands: [
       '`node tests/pi/pi-package-manifest.test.js`',
       '`node tests/pi/pi-extension-adapter.test.js`',
@@ -149,7 +149,7 @@ const ADAPTER_RECORDS = Object.freeze([
       'Keep canonical skills and commands as the single source of truth, and never generate copies under .pi/',
     ],
     last_verified_at: '2026-08-10',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: [
       '.pi/extensions/index.ts',
       '.pi/README.md',
@@ -174,7 +174,7 @@ const ADAPTER_RECORDS = Object.freeze([
     ],
     risk_notes: ['Cursor adapters must preserve existing project rules and avoid silent overwrite.'],
     last_verified_at: '2026-05-12',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: [
       '.cursor/',
       'scripts/lib/install-targets/cursor-project.js',
@@ -191,12 +191,12 @@ const ADAPTER_RECORDS = Object.freeze([
       'rules',
       'compatibility docs',
     ],
-    unsupported_surfaces: ['No full ECC hook parity; ecosystem ports must document drift from upstream ECC'],
+    unsupported_surfaces: ['No full AIP hook parity; ecosystem ports must document drift from upstream AIP'],
     install_or_onramp: ['`./install.sh --profile minimal --target gemini`'],
     verification_commands: ['`node tests/lib/install-targets.test.js`'],
     risk_notes: ['Treat Gemini ports as ecosystem adapters until validated end to end inside Gemini CLI.'],
     last_verified_at: '2026-05-12',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: [
       '.gemini/',
       'scripts/lib/install-targets/gemini-project.js',
@@ -222,7 +222,7 @@ const ADAPTER_RECORDS = Object.freeze([
     ],
     risk_notes: ['Keep project settings conservative and do not copy BYOK/OpenRouter secrets into `.zed/`.'],
     last_verified_at: '2026-05-17',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: [
       '.zed/settings.json',
       'scripts/lib/install-targets/zed-project.js',
@@ -247,7 +247,7 @@ const ADAPTER_RECORDS = Object.freeze([
     verification_commands: ['`node tests/lib/session-adapters.test.js`'],
     risk_notes: ['Treat dmux events as session/runtime signals, not as a replacement for repo validation.'],
     last_verified_at: '2026-05-12',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: [
       'scripts/lib/session-adapters/dmux-tmux.js',
       'scripts/orchestration-status.js',
@@ -264,12 +264,12 @@ const ADAPTER_RECORDS = Object.freeze([
       'notification',
       'provider-identity design pressure',
     ],
-    unsupported_surfaces: ['No ECC installer or direct adapter today'],
+    unsupported_surfaces: ['No AIP installer or direct adapter today'],
     install_or_onramp: ['Use as a comparison target for worktree/session state requirements'],
     verification_commands: ['`npm run observability:ready`'],
-    risk_notes: ['Do not import product-specific assumptions; convert lessons into ECC event fields.'],
+    risk_notes: ['Do not import product-specific assumptions; convert lessons into AIP event fields.'],
     last_verified_at: '2026-05-12',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: ['docs/architecture/cross-harness.md'],
   },
   {
@@ -281,12 +281,12 @@ const ADAPTER_RECORDS = Object.freeze([
       'parallel-agent review loops',
       'worktree isolation design pressure',
     ],
-    unsupported_surfaces: ['No ECC installer or direct adapter today'],
+    unsupported_surfaces: ['No AIP installer or direct adapter today'],
     install_or_onramp: ['Use as a comparison target for workspace preset taxonomy'],
     verification_commands: ['`npm run observability:ready`'],
-    risk_notes: ['Keep ECC portable; do not require a desktop workspace to get basic value.'],
+    risk_notes: ['Keep AIP portable; do not require a desktop workspace to get basic value.'],
     last_verified_at: '2026-05-12',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: ['docs/architecture/cross-harness.md'],
   },
   {
@@ -299,12 +299,12 @@ const ADAPTER_RECORDS = Object.freeze([
       'search',
       'notifications',
     ],
-    unsupported_surfaces: ['No ECC installer or direct adapter today'],
+    unsupported_surfaces: ['No AIP installer or direct adapter today'],
     install_or_onramp: ['Use as a comparison target for terminal-first session grouping'],
     verification_commands: ['`node scripts/session-inspect.js --list-adapters`'],
     risk_notes: ['Preserve terminal ergonomics before adding visual UI assumptions.'],
     last_verified_at: '2026-05-12',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: ['docs/architecture/cross-harness.md'],
   },
   {
@@ -332,7 +332,7 @@ const ADAPTER_RECORDS = Object.freeze([
     ],
     risk_notes: ['This is the fallback contract; every higher-level adapter should degrade to it.'],
     last_verified_at: '2026-05-12',
-    owner: 'ECC maintainers',
+    owner: 'AIP maintainers',
     source_docs: [
       'scripts/harness-audit.js',
       'scripts/observability-readiness.js',

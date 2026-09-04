@@ -110,8 +110,8 @@ async function main() {
     }],
     ['cleans an exclusively created lifecycle lock when initialization fails', () => {
       const { acquireLifecycleLock } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-lock-'));
-      const lockPath = path.join(installRoot, '.ecc-nasiko-lifecycle.lock');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-lock-'));
+      const lockPath = path.join(installRoot, '.aip-nasiko-lifecycle.lock');
       try {
         const failingFileSystem = {
           ...fs,
@@ -127,8 +127,8 @@ async function main() {
     }],
     ['recovers only locks whose recorded owner is confirmed dead', () => {
       const { acquireLifecycleLock } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-stale-lock-'));
-      const lockPath = path.join(installRoot, '.ecc-nasiko-lifecycle.lock');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-stale-lock-'));
+      const lockPath = path.join(installRoot, '.aip-nasiko-lifecycle.lock');
       try {
         fs.writeFileSync(lockPath, `${JSON.stringify({
           pid: 424242,
@@ -147,8 +147,8 @@ async function main() {
     }],
     ['refuses to recover malformed lifecycle-lock ownership', () => {
       const { acquireLifecycleLock } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-malformed-lock-'));
-      const lockPath = path.join(installRoot, '.ecc-nasiko-lifecycle.lock');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-malformed-lock-'));
+      const lockPath = path.join(installRoot, '.aip-nasiko-lifecycle.lock');
       try {
         fs.writeFileSync(lockPath, '{"pid":"unknown"}\n', { mode: 0o600 });
         assert.throws(
@@ -159,8 +159,8 @@ async function main() {
     }],
     ['recovers a lock abandoned by a finished process', () => {
       const { acquireLifecycleLock } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-dead-process-lock-'));
-      const lockPath = path.join(installRoot, '.ecc-nasiko-lifecycle.lock');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-dead-process-lock-'));
+      const lockPath = path.join(installRoot, '.aip-nasiko-lifecycle.lock');
       const modulePath = path.join(REPO_ROOT, 'scripts', 'lib', 'nasiko-release.js');
       try {
         const child = spawnSync(process.execPath, ['-e',
@@ -175,8 +175,8 @@ async function main() {
     }],
     ['a prior release callback never removes a replacement lifecycle lock', () => {
       const { acquireLifecycleLock } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-replaced-lock-'));
-      const lockPath = path.join(installRoot, '.ecc-nasiko-lifecycle.lock');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-replaced-lock-'));
+      const lockPath = path.join(installRoot, '.aip-nasiko-lifecycle.lock');
       const displacedPath = `${lockPath}.displaced`;
       try {
         const releaseLock = acquireLifecycleLock(installRoot);
@@ -188,8 +188,8 @@ async function main() {
     }],
     ['uses descriptor identity when Windows path stats disagree', () => {
       const { acquireLifecycleLock } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-windows-identity-'));
-      const lockPath = path.join(installRoot, '.ecc-nasiko-lifecycle.lock');
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-windows-identity-'));
+      const lockPath = path.join(installRoot, '.aip-nasiko-lifecycle.lock');
       const windowsLikeFileSystem = {
         ...fs,
         lstatSync: target => {
@@ -211,7 +211,7 @@ async function main() {
     }],
     ['verifies manifest and blob digests before an atomic install', async () => {
       const { installNasiko } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-green-'));
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-green-'));
       const binary = Buffer.from('#!/bin/sh\necho nasiko 0.1.0\n');
       const manifest = Buffer.from(JSON.stringify({
         schemaVersion: 2,
@@ -242,7 +242,7 @@ async function main() {
         assert.strictEqual(result.installed, true);
         assert.strictEqual(result.version, 'v0.1.0');
         assert.strictEqual(fs.existsSync(path.join(installRoot, 'nasiko')), true);
-        assert.strictEqual(fs.existsSync(path.join(installRoot, '.ecc-nasiko-install.json')), true);
+        assert.strictEqual(fs.existsSync(path.join(installRoot, '.aip-nasiko-install.json')), true);
         const { getQualifiedRelease, inspectInstalledNasiko, uninstallNasiko } = require('../../scripts/lib/nasiko-release');
         const fakeRelease = {
           ...getQualifiedRelease('v0.1.0', 'darwin', 'arm64'),
@@ -266,20 +266,20 @@ async function main() {
           },
         }), /metadata staging unavailable/i);
         assert.strictEqual(fs.existsSync(path.join(installRoot, 'nasiko')), true);
-        assert.strictEqual(fs.existsSync(path.join(installRoot, '.ecc-nasiko-install.json')), true);
+        assert.strictEqual(fs.existsSync(path.join(installRoot, '.aip-nasiko-install.json')), true);
         await uninstallNasiko({ installDir: installRoot, yes: true }, {
           platform: 'darwin', arch: 'arm64',
           inspectInstalled: destination => inspectInstalledNasiko(destination, () => fakeRelease),
         });
         assert.strictEqual(fs.existsSync(path.join(installRoot, 'nasiko')), false);
-        assert.strictEqual(fs.existsSync(path.join(installRoot, '.ecc-nasiko-install.json')), false);
+        assert.strictEqual(fs.existsSync(path.join(installRoot, '.aip-nasiko-install.json')), false);
       } finally {
         fs.rmSync(installRoot, { recursive: true, force: true });
       }
     }],
     ['rejects digest mismatch and unsafe archive entries without installing', async () => {
       const { extractQualifiedTarGzip, installNasiko } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-reject-'));
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-reject-'));
       const manifest = Buffer.from('{"schemaVersion":2,"layers":[]}');
       try {
         await assert.rejects(
@@ -321,19 +321,19 @@ async function main() {
       );
     }],
     ['read-only status never executes an unqualified explicit executable', () => {
-      const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-status-'));
+      const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-status-'));
       const executable = path.join(fixtureRoot, 'nasiko');
       const marker = path.join(fixtureRoot, 'executed');
       fs.writeFileSync(executable, `#!/bin/sh\ntouch ${JSON.stringify(marker)}\nprintf "nasiko 0.1.0\\n"\n`, { mode: 0o755 });
       try {
         const result = spawnSync(process.execPath, [
-          path.join(REPO_ROOT, 'scripts', 'ecc.js'),
+          path.join(REPO_ROOT, 'scripts', 'aip.js'),
           'nasiko',
           'status',
           '--json',
         ], {
           encoding: 'utf8',
-          env: { ...process.env, ECC_NASIKO_CLI_EXECUTABLE: executable },
+          env: { ...process.env, AIP_NASIKO_CLI_EXECUTABLE: executable },
         });
         assert.strictEqual(result.status, 0, result.stderr);
         const status = JSON.parse(result.stdout);
@@ -349,7 +349,7 @@ async function main() {
     ['read-only status has a stable absent result shape', () => {
       const { readStatus } = require('../../scripts/nasiko');
       const { normalizePlatform } = require('../../scripts/lib/nasiko-release');
-      const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-absent-'));
+      const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-absent-'));
       try {
         assert.deepStrictEqual(readStatus({ installDir: fixtureRoot }), {
           installed: false,
@@ -361,7 +361,7 @@ async function main() {
     }],
     ['rejects and never executes an unqualified pre-existing binary', async () => {
       const { installNasiko } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-existing-'));
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-existing-'));
       const executable = path.join(installRoot, 'nasiko');
       const marker = path.join(installRoot, 'executed');
       fs.writeFileSync(executable, `#!/bin/sh\ntouch ${JSON.stringify(marker)}\necho nasiko 0.1.0\n`, { mode: 0o755 });
@@ -379,7 +379,7 @@ async function main() {
     }],
     ['rolls back a published binary when metadata persistence fails', async () => {
       const { installNasiko } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-rollback-'));
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-rollback-'));
       const binary = Buffer.from('qualified binary');
       const archive = Buffer.from('verified archive');
       const manifest = Buffer.from(JSON.stringify({
@@ -409,7 +409,7 @@ async function main() {
     }],
     ['never overwrites or deletes a destination created during publication', async () => {
       const { installNasiko } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-race-'));
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-race-'));
       const binary = Buffer.from('qualified binary');
       const intruder = Buffer.from('concurrent owner');
       const archive = Buffer.from('verified archive');
@@ -427,9 +427,9 @@ async function main() {
     }],
     ['fails uninstall when staged tombstones cannot be removed', () => {
       const { uninstallNasiko } = require('../../scripts/lib/nasiko-release');
-      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-nasiko-cleanup-failure-'));
+      const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-nasiko-cleanup-failure-'));
       const executable = path.join(installRoot, 'nasiko');
-      const metadataPath = path.join(installRoot, '.ecc-nasiko-install.json');
+      const metadataPath = path.join(installRoot, '.aip-nasiko-install.json');
       fs.writeFileSync(executable, 'qualified binary', { mode: 0o700 });
       fs.writeFileSync(metadataPath, '{}', { mode: 0o600 });
       try {
@@ -445,13 +445,13 @@ async function main() {
     ['ships a canonical opt-in skill without silently bundling Nasiko', () => {
       const skill = read('skills/nasiko-control-plane/SKILL.md');
       assert.match(skill, /^name: nasiko-control-plane$/m);
-      assert.match(skill, /ecc nasiko status/i);
+      assert.match(skill, /aip nasiko status/i);
       assert.match(skill, /explicit.*consent|explicit.*--yes/i);
       assert.match(skill, /pinned.*v0\.1\.0/i);
       assert.match(skill, /telemetry.*opt-in/i);
       assert.match(skill, /never.*secrets|never.*credentials/i);
       assert.match(skill, /install.*does not prove/i);
-      assert.match(skill, /ecc nasiko uninstall/i);
+      assert.match(skill, /aip nasiko uninstall/i);
       assert.doesNotMatch(skill, /curl[^\n]*\|[^\n]*bash|irm[^\n]*\|[^\n]*iex/i);
 
       const modules = readJson('manifests/install-modules.json').modules;

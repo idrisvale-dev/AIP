@@ -28,7 +28,7 @@ function upsertCoordinationWorkItem(store, repo, issue, state, action, options =
     projectProjection: summarizeProjectProjection(state, options.policy || DEFAULT_POLICY),
     action,
     actionAt: now,
-    syncedBy: 'ecc-github-coordination',
+    syncedBy: 'aip-github-coordination',
   };
 
   return store.upsertWorkItem({

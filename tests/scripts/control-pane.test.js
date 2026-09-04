@@ -62,7 +62,7 @@ async function writeMinimalDatabase(dbPath) {
       id, task, agent_type, harness, detected_harnesses_json, working_dir, state,
       created_at, updated_at, last_heartbeat_at
     ) VALUES (
-      'session-a', 'Build the control pane', 'codex', 'codex', '["codex"]', '/repo/ecc',
+      'session-a', 'Build the control pane', 'codex', 'codex', '["codex"]', '/repo/aip',
       'running', '2026-06-03T10:00:00Z', '2026-06-03T10:05:00Z', '2026-06-03T10:05:00Z'
     );
   `);
@@ -84,7 +84,7 @@ function waitForCliReady(child) {
 
     child.stdout.on('data', chunk => {
       stdout += chunk.toString('utf8');
-      if (!settled && stdout.includes('ECC Control Pane:') && stdout.includes('Actions:')) {
+      if (!settled && stdout.includes('AIP Control Pane:') && stdout.includes('Actions:')) {
         settled = true;
         clearTimeout(timer);
         resolve({ stdout, stderr });
@@ -143,9 +143,9 @@ async function runTests() {
         '--port',
         '8788',
         '--db',
-        '/tmp/ecc2.db',
+        '/tmp/aip2.db',
         '--state-db',
-        '/tmp/ecc-state.db',
+        '/tmp/aip-state.db',
         '--query',
         'Hermes memory',
         '--no-open'
@@ -153,8 +153,8 @@ async function runTests() {
 
       assert.strictEqual(parsed.host, '127.0.0.1');
       assert.strictEqual(parsed.port, 8788);
-      assert.strictEqual(parsed.dbPath, '/tmp/ecc2.db');
-      assert.strictEqual(parsed.stateDbPath, '/tmp/ecc-state.db');
+      assert.strictEqual(parsed.dbPath, '/tmp/aip2.db');
+      assert.strictEqual(parsed.stateDbPath, '/tmp/aip-state.db');
       assert.strictEqual(parsed.query, 'Hermes memory');
       assert.strictEqual(parsed.openBrowser, false);
     })
@@ -181,9 +181,9 @@ async function runTests() {
   else failed++;
 
   if (
-    await test('serves HTML and snapshot JSON from a temp ECC2 database', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-server-'));
-      const dbPath = path.join(tempDir, 'ecc2.db');
+    await test('serves HTML and snapshot JSON from a temp AIP2 database', async () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-server-'));
+      const dbPath = path.join(tempDir, 'aip2.db');
 
       try {
         await writeMinimalDatabase(dbPath);
@@ -199,7 +199,7 @@ async function runTests() {
         await app.listen();
         try {
           const html = await fetchLocal(`${app.url}/`).then(response => response.text());
-          assert.ok(html.includes('ECC Control Pane'));
+          assert.ok(html.includes('AIP Control Pane'));
           assert.ok(html.includes('id="app"'));
           assert.ok(html.includes('id="work-items"'));
           assert.ok(html.includes('function renderWorkItems'));
@@ -208,10 +208,10 @@ async function runTests() {
           // Board controls must use escaped data-* attributes + delegated
           // listeners, never ids concatenated into inline onclick JS (XSS).
           assert.ok(html.includes('data-wi-action'));
-          assert.ok(!/onclick="ecc(Claim|Move)Item\(/.test(html), 'no inline onclick handlers with interpolated ids');
+          assert.ok(!/onclick="aip(Claim|Move)Item\(/.test(html), 'no inline onclick handlers with interpolated ids');
 
           const snapshot = await fetchLocal(`${app.url}/api/snapshot?query=control`).then(response => response.json());
-          assert.strictEqual(snapshot.schemaVersion, 'ecc.control-pane.snapshot.v1');
+          assert.strictEqual(snapshot.schemaVersion, 'aip.control-pane.snapshot.v1');
           assert.strictEqual(snapshot.summary.totalSessions, 1);
           assert.strictEqual(snapshot.workItems.totalCount, 0);
           assert.strictEqual(snapshot.sessions[0].id, 'session-a');
@@ -228,8 +228,8 @@ async function runTests() {
 
   if (
     await test('serves the 3D agent-airspace page and the proximity JSON feed', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-proximity-'));
-      const dbPath = path.join(tempDir, 'ecc2.db');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-proximity-'));
+      const dbPath = path.join(tempDir, 'aip2.db');
 
       try {
         await writeMinimalDatabase(dbPath);
@@ -271,7 +271,7 @@ async function runTests() {
 
   if (
     await test('serves health, asset, not-found, invalid body, and read-only action responses', async () => {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-routes-'));
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-routes-'));
 
       try {
         const app = await createControlPaneServer({
@@ -297,14 +297,14 @@ async function runTests() {
           });
           await realAssetApp.listen();
           try {
-            const realAsset = await fetchLocal(`${realAssetApp.url}/assets/ecc-icon.svg`);
+            const realAsset = await fetchLocal(`${realAssetApp.url}/assets/aip-icon.svg`);
             assert.strictEqual(realAsset.status, 200);
             assert.match(await realAsset.text(), /<svg/);
           } finally {
             await realAssetApp.close();
           }
 
-          const missingAsset = await fetchLocal(`${app.url}/assets/ecc-icon.svg`);
+          const missingAsset = await fetchLocal(`${app.url}/assets/aip-icon.svg`);
           assert.strictEqual(missingAsset.status, 404);
           assert.strictEqual(await missingAsset.text(), 'not found');
 
@@ -496,7 +496,7 @@ async function runTests() {
 
       const spawnError = await runAction({
         id: 'spawn-error',
-        command: 'definitely-not-ecc-control-pane-command',
+        command: 'definitely-not-aip-control-pane-command',
         args: [],
         cwd: repoRoot
       });
@@ -580,14 +580,14 @@ async function runTests() {
         stdio: ['ignore', 'pipe', 'pipe'],
         env: {
           ...process.env,
-          ECC2_DB_PATH: path.join(os.tmpdir(), 'missing-ecc2-cli.db')
+          AIP2_DB_PATH: path.join(os.tmpdir(), 'missing-aip2-cli.db')
         }
       });
       const exitPromise = waitForExit(child);
 
       try {
         const ready = await waitForCliReady(child);
-        assert.match(ready.stdout, /ECC Control Pane: http:\/\/127\.0\.0\.1:\d+/);
+        assert.match(ready.stdout, /AIP Control Pane: http:\/\/127\.0\.0\.1:\d+/);
         assert.match(ready.stdout, /Actions: read-only/);
       } finally {
         if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
@@ -602,7 +602,7 @@ async function runTests() {
   if (
     await test('interactive board: claim and move work items via POST endpoints', async () => {
       const { createStateStore } = require('../../scripts/lib/state-store');
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-control-pane-board-'));
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-control-pane-board-'));
       const stateDbPath = path.join(tempDir, 'state.db');
 
       try {

@@ -1,7 +1,7 @@
 ---
 name: git-workflow
 description: Gitワークフロー、ブランチ戦略、コミットメッセージ規約、およびプルリクエストプロセス。
-origin: ECC
+origin: AIP
 ---
 
 # Git Workflow Patterns

@@ -1,7 +1,7 @@
 ---
 name: bun-runtime
 description: Bun 作为运行时、包管理器、打包器和测试运行器。何时选择 Bun 而非 Node、迁移注意事项以及 Vercel 支持。
-origin: ECC
+origin: AIP
 ---
 
 # Bun 运行时

@@ -45,7 +45,7 @@ test('animator advances frames and exits when its parent disconnects', () => {
   let exitCode;
   const timer = Symbol('timer');
 
-  runAnimator('Applying ECC setup...', {
+  runAnimator('Applying AIP setup...', {
     clearSchedule: value => { cleared = value; },
     exit: code => { exitCode = code; },
     onDisconnect: handler => { disconnect = handler; },
@@ -60,8 +60,8 @@ test('animator advances frames and exits when its parent disconnects', () => {
   tick();
   tick();
   assert.deepStrictEqual(writes, [
-    `\r${FRAMES[1]} Applying ECC setup...`,
-    `\r${FRAMES[2]} Applying ECC setup...`,
+    `\r${FRAMES[1]} Applying AIP setup...`,
+    `\r${FRAMES[2]} Applying AIP setup...`,
   ]);
   disconnect();
   assert.strictEqual(cleared, timer);
@@ -82,7 +82,7 @@ test('spinner renders immediately and clears again after animator termination', 
     },
     once: (event, handler) => { handlers[event] = handler; },
   };
-  const spinner = startTerminalSpinner('Applying ECC setup...', {
+  const spinner = startTerminalSpinner('Applying AIP setup...', {
     onAnimatorError: error => animatorErrors.push(error.message),
     output: { write: value => writes.push(value) },
     spawnProcess: (...args) => {
@@ -91,12 +91,12 @@ test('spinner renders immediately and clears again after animator termination', 
     },
   });
 
-  assert.strictEqual(writes[0], `${FRAMES[0]} Applying ECC setup...`);
+  assert.strictEqual(writes[0], `${FRAMES[0]} Applying AIP setup...`);
   assert.strictEqual(spawnCalls.length, 1);
   assert.strictEqual(spawnCalls[0][0], process.execPath);
   assert.deepStrictEqual(spawnCalls[0][1].slice(1), [
     '--animate',
-    'Applying ECC setup...',
+    'Applying AIP setup...',
   ]);
   assert.strictEqual(typeof handlers.error, 'function');
   handlers.error(new Error('animation unavailable'));
@@ -117,14 +117,14 @@ test('spinner renders immediately and clears again after animator termination', 
 
 test('spinner keeps a visible first frame when the animator cannot launch', () => {
   const writes = [];
-  const spinner = startTerminalSpinner('Applying ECC setup...', {
+  const spinner = startTerminalSpinner('Applying AIP setup...', {
     output: { write: value => writes.push(value) },
     spawnProcess: () => { throw new Error('spawn unavailable'); },
   });
 
   spinner.stop();
   assert.deepStrictEqual(writes, [
-    `${FRAMES[0]} Applying ECC setup...`,
+    `${FRAMES[0]} Applying AIP setup...`,
     CLEAR_LINE,
   ]);
 });
@@ -132,7 +132,7 @@ test('spinner keeps a visible first frame when the animator cannot launch', () =
 test('real animator advances independently and cannot write after cleanup', () => {
   const source = `
     const { startTerminalSpinner } = require(${JSON.stringify(spinnerModule)});
-    const spinner = startTerminalSpinner('Applying ECC setup...');
+    const spinner = startTerminalSpinner('Applying AIP setup...');
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
     spinner.stop();
   `;
@@ -143,13 +143,13 @@ test('real animator advances independently and cannot write after cleanup', () =
 
   assert.ifError(result.error);
   assert.strictEqual(result.status, 0, result.stderr);
-  assert.match(result.stdout, new RegExp(`${FRAMES[0]} Applying ECC setup`));
-  assert.match(result.stdout, new RegExp(`${FRAMES[1]} Applying ECC setup`));
+  assert.match(result.stdout, new RegExp(`${FRAMES[0]} Applying AIP setup`));
+  assert.match(result.stdout, new RegExp(`${FRAMES[1]} Applying AIP setup`));
   const clearIndex = result.stdout.lastIndexOf(CLEAR_LINE);
   assert.ok(clearIndex > 0, 'real animator should clear its line');
   assert.doesNotMatch(
     result.stdout.slice(clearIndex + CLEAR_LINE.length),
-    /Applying ECC setup/,
+    /Applying AIP setup/,
     'real animator should not render after cleanup'
   );
 });
@@ -157,7 +157,7 @@ test('real animator advances independently and cannot write after cleanup', () =
 test('real animator exits when its parent process disappears', () => {
   const source = `
     const { startTerminalSpinner } = require(${JSON.stringify(spinnerModule)});
-    startTerminalSpinner('Applying ECC setup...');
+    startTerminalSpinner('Applying AIP setup...');
     process.exit(0);
   `;
   const result = spawnSync(process.execPath, ['-e', source], {
@@ -167,7 +167,7 @@ test('real animator exits when its parent process disappears', () => {
 
   assert.ifError(result.error);
   assert.strictEqual(result.status, 0, result.stderr);
-  assert.match(result.stdout, new RegExp(`${FRAMES[0]} Applying ECC setup`));
+  assert.match(result.stdout, new RegExp(`${FRAMES[0]} Applying AIP setup`));
 });
 
 console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);

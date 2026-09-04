@@ -1,7 +1,7 @@
 ---
 name: quarkus-tdd
 description: JUnit 5、Mockito、REST Assured、Camelテスト、JaCoCoを使用したQuarkus 3.xのテスト駆動開発。機能追加、バグ修正、またはイベント駆動サービスのリファクタリング時に使用。
-origin: ECC
+origin: AIP
 ---
 
 # Quarkus TDD Workflow

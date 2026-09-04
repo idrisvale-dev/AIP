@@ -3,7 +3,7 @@ name: continuous-learning-v2
 description: Instinct-based learning system that observes sessions via hooks, creates atomic instincts with confidence scoring, and evolves them into skills/commands/agents. v2.1 adds project-scoped instincts to prevent cross-project contamination. Use when capturing lessons from a session, managing instincts, or promoting them into skills, commands, or agents.
 metadata:
   version: 2.1.0
-  origin: ECC
+  origin: AIP
 ---
 
 # Continuous Learning v2.1 - Instinct
@@ -27,7 +27,7 @@ An advanced learning system that turns your Claude Code sessions into reusable k
 
 | Feature | v2.0 | v2.1 |
 |---------|------|------|
-| Storage | Global (`~/.claude/homunculus/`) | Project-scoped (`${XDG_DATA_HOME:-~/.local/share}/ecc-homunculus/projects/<hash>/`) |
+| Storage | Global (`~/.claude/homunculus/`) | Project-scoped (`${XDG_DATA_HOME:-~/.local/share}/aip-homunculus/projects/<hash>/`) |
 | Scope | All instincts apply everywhere | Project-scoped + global |
 | Detection | None | git remote URL / repo path |
 | Promotion | N/A | Project → global when seen in 2+ projects |
@@ -133,15 +133,15 @@ The system automatically detects your current project:
 3. **`git rev-parse --show-toplevel`** -- fallback using repo path (machine-specific)
 4. **Global fallback** -- if no project is detected, instincts go to global scope
 
-Each project gets a 12-character hash ID (e.g., `a1b2c3d4e5f6`). A registry file at `${XDG_DATA_HOME:-~/.local/share}/ecc-homunculus/projects.json` maps IDs to human-readable names.
+Each project gets a 12-character hash ID (e.g., `a1b2c3d4e5f6`). A registry file at `${XDG_DATA_HOME:-~/.local/share}/aip-homunculus/projects.json` maps IDs to human-readable names.
 
 ### Data Directory
 
 Continuous-learning-v2 stores observer data outside `~/.claude` so Claude Code's sensitive-path guard does not block background instinct writes:
 
 1. `CLV2_HOMUNCULUS_DIR` when set to an absolute path
-2. `$XDG_DATA_HOME/ecc-homunculus`
-3. `$HOME/.local/share/ecc-homunculus`
+2. `$XDG_DATA_HOME/aip-homunculus`
+3. `$HOME/.local/share/aip-homunculus`
 
 Existing users with data at `~/.claude/homunculus` can migrate once:
 
@@ -188,7 +188,7 @@ The system creates directories automatically on first use, but you can also crea
 
 ```bash
 # Global directories
-mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/ecc-homunculus"/{instincts/{personal,inherited},evolved/{agents,skills,commands},projects}
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/aip-homunculus"/{instincts/{personal,inherited},evolved/{agents,skills,commands},projects}
 
 # Project directories are auto-created when the hook first runs in a git repo
 ```
@@ -252,12 +252,12 @@ survive several times in a row.
 
 | Env var | Default | Description |
 |---------|---------|-------------|
-| `ECC_OBSERVER_NOSURVIVE_WARN_AFTER` | `3` | Consecutive non-survivals before the warning is logged |
+| `AIP_OBSERVER_NOSURVIVE_WARN_AFTER` | `3` | Consecutive non-survivals before the warning is logged |
 
 ## File Structure
 
 ```
-${XDG_DATA_HOME:-~/.local/share}/ecc-homunculus/
+${XDG_DATA_HOME:-~/.local/share}/aip-homunculus/
 +-- identity.json           # Your profile, technical level
 +-- projects.json           # Registry: project hash -> name/path/remote
 +-- observations.jsonl      # Global observations (fallback)
@@ -368,7 +368,7 @@ v2.1 is fully compatible with v2.0 and v1:
 
 ## Related
 
-- [ECC-Tools GitHub App](https://github.com/apps/ecc-tools) - Generate instincts from repo history
+- [AIP-Tools GitHub App](https://github.com/apps/aip-tools) - Generate instincts from repo history
 - Homunculus - Community project that inspired the v2 instinct-based architecture (atomic observations, confidence scoring, instinct evolution pipeline)
 - [The Longform Guide](https://bytecore.org/status/2014040193557471352) - Continuous learning section
 

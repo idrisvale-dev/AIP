@@ -1,7 +1,7 @@
 ---
 name: python-patterns
 description: Pythonic idiomlar, PEP 8 standartları, type hint'ler ve sağlam, verimli ve bakımı kolay Python uygulamaları oluşturmak için en iyi uygulamalar.
-origin: ECC
+origin: AIP
 ---
 
 # Python Geliştirme Desenleri

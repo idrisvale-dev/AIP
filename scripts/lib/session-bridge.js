@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Shared session bridge utilities for ECC hooks.
+ * Shared session bridge utilities for AIP hooks.
  *
  * The bridge file is a small JSON aggregate in /tmp that allows
  * statusline, metrics-bridge, and context-monitor to share state
@@ -34,7 +34,7 @@ function sanitizeSessionId(raw) {
  * @returns {string}
  */
 function getBridgePath(sessionId) {
-  return path.join(os.tmpdir(), `ecc-metrics-${sessionId}.json`);
+  return path.join(os.tmpdir(), `aip-metrics-${sessionId}.json`);
 }
 
 /**
@@ -55,8 +55,8 @@ function readBridge(sessionId) {
  * Write bridge data atomically (write unique-suffix tmp then rename).
  *
  * The tmp path includes `process.pid` plus a random nonce so concurrent
- * writers (e.g. PostToolUse `ecc-metrics-bridge` and the background
- * `ecc-statusline`, both writing to the same session bridge) do not
+ * writers (e.g. PostToolUse `aip-metrics-bridge` and the background
+ * `aip-statusline`, both writing to the same session bridge) do not
  * clobber each other's tmp file mid-write. With a fixed `.tmp` suffix
  * two writers could both call `writeFileSync` against the same path
  * before either reaches `renameSync`, causing one writer's payload to
@@ -64,7 +64,7 @@ function readBridge(sessionId) {
  * ENOENT once the rename consumes the file.
  *
  * Same pattern already used by `writeCostWarningIfChanged` in
- * `scripts/hooks/ecc-metrics-bridge.js` (commit 9b1d8918) for the
+ * `scripts/hooks/aip-metrics-bridge.js` (commit 9b1d8918) for the
  * cost-warning cache; this commit applies it to the session-bridge
  * primitive too.
  *
@@ -133,7 +133,7 @@ function renameWithRetry(tmp, target) {
  * @returns {string|null} Sanitized session ID or null
  */
 function resolveSessionId() {
-  const raw = process.env.ECC_SESSION_ID || process.env.CLAUDE_SESSION_ID || '';
+  const raw = process.env.AIP_SESSION_ID || process.env.CLAUDE_SESSION_ID || '';
   return sanitizeSessionId(raw);
 }
 

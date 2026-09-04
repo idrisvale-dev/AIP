@@ -15,7 +15,7 @@ permissions:
   discussions: write
 
 concurrency:
-  group: ecc-discord-announcement-delivery
+  group: aip-discord-announcement-delivery
   cancel-in-progress: false
 
 jobs:

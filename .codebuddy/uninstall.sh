@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# ECC CodeBuddy Uninstaller
-# Uninstalls Everything Claude Code workflows from a CodeBuddy project.
+# AIP CodeBuddy Uninstaller
+# Uninstalls AIP workflows from a CodeBuddy project.
 #
 # Usage:
 #   ./uninstall.sh              # Uninstall from current directory
@@ -55,7 +55,7 @@ do_uninstall() {
         codebuddy_full_path="$target_dir/$CODEBUDDY_DIR"
     fi
 
-    echo "ECC CodeBuddy Uninstaller"
+    echo "AIP CodeBuddy Uninstaller"
     echo "=========================="
     echo ""
     echo "Target:  $codebuddy_full_path/"
@@ -69,13 +69,13 @@ do_uninstall() {
     codebuddy_root_resolved="$(resolve_path "$codebuddy_full_path")"
 
     # Manifest file path
-    MANIFEST="$codebuddy_full_path/.ecc-manifest"
+    MANIFEST="$codebuddy_full_path/.aip-manifest"
 
     if [ ! -f "$MANIFEST" ]; then
-        echo "Warning: No manifest file found (.ecc-manifest)"
+        echo "Warning: No manifest file found (.aip-manifest)"
         echo ""
         echo "This could mean:"
-        echo "  1. ECC was installed with an older version without manifest support"
+        echo "  1. AIP was installed with an older version without manifest support"
         echo "  2. The manifest file was manually deleted"
         echo ""
         read -p "Do you want to remove the entire $CODEBUDDY_DIR directory? (y/N) " -n 1 -r
@@ -91,9 +91,9 @@ do_uninstall() {
         exit 0
     fi
 
-    echo "Found manifest file - will only remove files installed by ECC"
+    echo "Found manifest file - will only remove files installed by AIP"
     echo ""
-    read -p "Are you sure you want to uninstall ECC from $CODEBUDDY_DIR? (y/N) " -n 1 -r
+    read -p "Are you sure you want to uninstall AIP from $CODEBUDDY_DIR? (y/N) " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         echo "Uninstall cancelled."

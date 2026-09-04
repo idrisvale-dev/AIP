@@ -29,7 +29,7 @@ function test(name, fn) {
 }
 
 function withFixture(files, fn) {
-  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-supply-chain-ioc-'));
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-supply-chain-ioc-'));
   try {
     for (const [relativePath, contents] of Object.entries(files)) {
       const fullPath = path.join(rootDir, relativePath);

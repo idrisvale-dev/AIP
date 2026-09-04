@@ -1,7 +1,7 @@
 ---
 name: api-connector-builder
 description: 通过匹配目标仓库现有的集成模式，构建一个新的API连接器或提供者。适用于在不发明第二种架构的情况下添加一个集成。
-origin: ECC direct-port adaptation
+origin: AIP direct-port adaptation
 version: "1.0.0"
 ---
 

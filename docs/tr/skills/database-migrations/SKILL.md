@@ -1,7 +1,7 @@
 ---
 name: database-migrations
 description: Şema değişiklikleri, veri migration'ları, rollback'ler ve PostgreSQL, MySQL ve yaygın ORM'ler (Prisma, Drizzle, Django, TypeORM, golang-migrate) arasında sıfır kesinti deployment'ları için veritabanı migration en iyi uygulamaları.
-origin: ECC
+origin: AIP
 ---
 
 # Veritabanı Migration Kalıpları

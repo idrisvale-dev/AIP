@@ -23,7 +23,7 @@ const childEnv = Object.fromEntries(
   Object.entries(process.env).filter(([key]) => !excludedGitEnvKeys.has(key))
 );
 
-console.log(`Running ECC install tests on ${process.platform}/${process.arch}`);
+console.log(`Running AIP install tests on ${process.platform}/${process.arch}`);
 
 for (const testFile of testFiles) {
   const result = spawnSync(process.execPath, [path.join(repoRoot, testFile)], {

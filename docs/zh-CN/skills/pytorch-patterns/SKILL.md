@@ -1,7 +1,7 @@
 ---
 name: pytorch-patterns
 description: PyTorch深度学习模式与最佳实践，用于构建稳健、高效且可复现的训练流程、模型架构和数据加载。
-origin: ECC
+origin: AIP
 ---
 
 # PyTorch 开发模式

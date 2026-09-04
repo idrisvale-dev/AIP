@@ -1,7 +1,7 @@
 ---
 name: rust-testing
 description: Patrones de pruebas en Rust incluyendo pruebas unitarias, de integración, async, basadas en propiedades, mocking y cobertura. Sigue la metodología TDD.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Pruebas Rust

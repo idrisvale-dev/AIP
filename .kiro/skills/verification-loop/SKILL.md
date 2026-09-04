@@ -3,7 +3,7 @@ name: verification-loop
 description: >
   A comprehensive verification system for Kiro sessions.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Verification Loop Skill

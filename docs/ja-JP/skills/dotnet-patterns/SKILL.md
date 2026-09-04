@@ -1,7 +1,7 @@
 ---
 name: dotnet-patterns
 description: C#と.NET言語固有のパターン、規約、依存性注入、async/await、およびロバストで保守可能な.NETアプリケーション構築のためのベストプラクティス。
-origin: ECC
+origin: AIP
 ---
 
 # .NET Development Patterns

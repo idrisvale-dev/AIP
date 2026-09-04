@@ -1,4 +1,4 @@
-# ECC v2.0.0-rc.1 Publication Evidence - 2026-05-17
+# AIP v2.0.0-rc.1 Publication Evidence - 2026-05-17
 
 This is release-readiness evidence only. It does not create a GitHub release,
 npm publication, plugin tag, marketplace submission, or announcement post.
@@ -9,7 +9,7 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 | --- | --- |
 | Upstream main | `e6c16b40b80b3b323586c9e8341faa87c01a728c` |
 | Git remote | `https://github.com/reborncursed/AIP.git` |
-| Evidence scope | Current `main` after the Japanese and Thai localization merge batch, post-merge ja-JP markdown anchor repair, Zed install-target support, Mini Shai-Hulud/TanStack protection recheck, `gh-token-monitor` token-store IOC coverage, AgentShield policy-promotion Action output mirror, ECC-Tools hosted promotion judge audit-trace mirror, ECC-Tools billing announcement preflight mirror, ECC-Tools production Marketplace readback-state mirror, legacy-tail dashboard routing, Linear progress readiness, and the deterministic preview-pack smoke gate |
+| Evidence scope | Current `main` after the Japanese and Thai localization merge batch, post-merge ja-JP markdown anchor repair, Zed install-target support, Mini Shai-Hulud/TanStack protection recheck, `gh-token-monitor` token-store IOC coverage, AgentShield policy-promotion Action output mirror, AIP-Tools hosted promotion judge audit-trace mirror, AIP-Tools billing announcement preflight mirror, AIP-Tools production Marketplace readback-state mirror, legacy-tail dashboard routing, Linear progress readiness, and the deterministic preview-pack smoke gate |
 | Local status caveat | `git status --short --branch` showed `## main...origin/main` plus unrelated untracked `docs/drafts/`; generated evidence files are committed after the source snapshot they describe |
 
 The actual release operator should repeat all publish-facing checks from the
@@ -29,8 +29,8 @@ Tracked repositories in the platform audit were:
 - `reborncursed/AIP`
 - `reborncursed/agentshield`
 - `reborncursed/JARVIS`
-- `ECC-Tools/ECC-Tools`
-- `ECC-Tools/ECC-website`
+- `AIP-Tools/AIP-Tools`
+- `AIP-Tools/AIP-website`
 
 ## Merge And Triage Batch
 
@@ -46,7 +46,7 @@ Tracked repositories in the platform audit were:
 | Issue #1951 | Closed automatically as completed when PR #1953 merged |
 | Zed adapter commit | Pushed `2371a3cf0543365c1c18e84eba786b1abcb28941` to add project-local Zed support through the selective install target, README Zed guidance, and `.zed/settings.json` planning coverage |
 | Zed Windows CI fix | Pushed `744f4169972fd81618c3114ea1ca5ffb85ef4c82` to normalize the Zed install-plan source-path assertion across Windows path separators |
-| Discussion #1896 | Added a maintainer update confirming Zed support on `main`, documenting the dry-run command, and clarifying that BYOK/OpenRouter secrets stay in Zed/local user settings rather than ECC-managed project files |
+| Discussion #1896 | Added a maintainer update confirming Zed support on `main`, documenting the dry-run command, and clarifying that BYOK/OpenRouter secrets stay in Zed/local user settings rather than AIP-managed project files |
 | PR #1967 | Merged Thai localization as `6b282aaa4389e9411e86bfe09d8f4de8018dcf8e` after applying the two maintainer cleanup comments, validating markdownlint and language-switcher coverage, and approving after CodeRabbit, GitGuardian, Greptile, and cubic passed on current head |
 | Supply-chain token-store scanner slice | Pushed `36d390aa7d733d458963a203b91998d3aec477b2` to detect the Mini Shai-Hulud `~/.config/gh-token-monitor/token` dead-man-switch token store, update the incident-response runbook, and add fixture coverage; local sweeps stayed clean and GitHub Actions `26003629550` passed |
 | Legacy-tail dashboard slice | Pushed `f397216aee5a0ca7d168726d3cc41eb47f728b37` and dashboard regeneration commits to keep localization-tail evidence attached to ITO-55 and prevent stale legacy work from being treated as release-current |
@@ -54,11 +54,11 @@ Tracked repositories in the platform audit were:
 | Preview-pack smoke slice | Pushed `3215e655eff70b9fea5382ce5996666a1f48d1af` to add `npm run preview-pack:smoke`, covering preview-pack artifacts, Hermes import boundaries, verification commands, and approval-gated publication blockers; lint and dashboard follow-up commits landed through `27dc2918a24a50b8dd5e23dba2aa6a05bd17c0d7` |
 | AgentShield hardening-output slice | Pushed AgentShield `1124535345d7040242ecd3803f65bcd4dcaf6ec2` to expose package-manager hardening status/count outputs and redacted GitHub Action job-summary evidence for registry credentials, lifecycle-script drift, and release-age gate drift |
 | AgentShield policy-promotion Action slice | Pushed AgentShield `1593925dca025632dd8a6454509fce3fe7517cdf` to expose policy-promotion status/count/digest outputs plus GitHub Action job-summary review items for owner approval, protected rollout, and runtime smoke; the same Action job marks runtime smoke verified when it scans with the promoted policy |
-| ECC-Tools policy-promotion telemetry slice | Pushed ECC-Tools `86589517b11b95f1b0216ae7737563fb67ee1604` to route AgentShield policy-promotion Action outputs into hosted security review findings and Hosted Promotion Readiness scoring |
-| ECC-Tools policy-promotion operator UX slice | Pushed ECC-Tools `16c537fd385458c438ff32fb4211079b2f8ea1c4` to render policy-promotion Action output status, pack, review item count, remaining action count, and digest in hosted security job comments and check-runs |
-| ECC-Tools hosted promotion judge audit trace slice | Pushed ECC-Tools `05d4e8296e37ba72e471beaa23ea4c81eb2aa31f` to render hosted promotion judge request fingerprints and allowed-citation audit traces without exposing raw provider output |
-| ECC-Tools billing announcement preflight slice | Pushed ECC-Tools `91a441b92342b842832ac28b018ee46f0c4a906f` to add `npm run billing:announcement-gate -- --preflight` for safe Marketplace readback input and endpoint verification before privileged API calls |
-| ECC-Tools production Marketplace readback-state slice | Pushed ECC-Tools `eb6941290b2fa70db01a51084e9e79a160238468` to record that production Cloudflare secret names include `INTERNAL_API_SECRET`, but production KV currently has no `account-billing:*` or `billing-state:*` records |
+| AIP-Tools policy-promotion telemetry slice | Pushed AIP-Tools `86589517b11b95f1b0216ae7737563fb67ee1604` to route AgentShield policy-promotion Action outputs into hosted security review findings and Hosted Promotion Readiness scoring |
+| AIP-Tools policy-promotion operator UX slice | Pushed AIP-Tools `16c537fd385458c438ff32fb4211079b2f8ea1c4` to render policy-promotion Action output status, pack, review item count, remaining action count, and digest in hosted security job comments and check-runs |
+| AIP-Tools hosted promotion judge audit trace slice | Pushed AIP-Tools `05d4e8296e37ba72e471beaa23ea4c81eb2aa31f` to render hosted promotion judge request fingerprints and allowed-citation audit traces without exposing raw provider output |
+| AIP-Tools billing announcement preflight slice | Pushed AIP-Tools `91a441b92342b842832ac28b018ee46f0c4a906f` to add `npm run billing:announcement-gate -- --preflight` for safe Marketplace readback input and endpoint verification before privileged API calls |
+| AIP-Tools production Marketplace readback-state slice | Pushed AIP-Tools `eb6941290b2fa70db01a51084e9e79a160238468` to record that production Cloudflare secret names include `INTERNAL_API_SECRET`, but production KV currently has no `account-billing:*` or `billing-state:*` records |
 
 ## Release Gate Commands
 
@@ -72,15 +72,15 @@ Tracked repositories in the platform audit were:
 | Workflow security | `node scripts/ci/validate-workflow-security.js` | Validated 8 workflow files |
 | Supply-chain IOC scan | `node scripts/ci/scan-supply-chain-iocs.js --root ~/GitHub --home --json`; `node scripts/ci/scan-supply-chain-iocs.js --root ~/Documents/GitHub --home --json` | Passed; each workspace sweep inspected 1,879 files with 0 findings, including user-level persistence targets |
 | npm audit | `npm audit --audit-level=high` | 0 vulnerabilities |
-| npm signatures | `npm audit signatures` across `agentshield`, `everything-claude-code`, `ECC-Tools`, `ECC-website`, and `JARVIS/frontend` | Passed across the primary ECC Node package roots |
+| npm signatures | `npm audit signatures` across `agentshield`, `aip`, `AIP-Tools`, `AIP-website`, and `JARVIS/frontend` | Passed across the primary AIP Node package roots |
 | Preview-pack smoke | `npm run preview-pack:smoke` | Passed; ready yes; digest `dfb1ed014607`; 5 checks passed and 0 failed |
 | AgentShield enterprise CI output slice | AgentShield local `npm run build`, focused action tests, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25994354007`, `25994354011`, `25994354026` | Local gates passed; remote CI, Test GitHub Action, and Self-Scan completed successfully for `1124535` |
 | AgentShield policy-promotion Action output slice | AgentShield local `npm run build`, `npx vitest run tests/action-promotion.test.ts tests/action.test.ts`, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25995929182`, `25995929190`, `25995929161` | Local gates passed; remote CI, Test GitHub Action, and Self-Scan completed successfully for `1593925` |
-| ECC-Tools policy-promotion hosted telemetry slice | ECC-Tools local focused vitest checks for policy-promotion Action-output routing and hosted-promotion readiness, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25996758218` | Local gates passed; remote CI completed successfully for `8658951` |
-| ECC-Tools policy-promotion operator UX slice | ECC-Tools local focused vitest checks for policy-promotion Action output values in hosted findings/comments/checks, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25997300046` | Local gates passed; remote CI completed successfully for `16c537f` |
-| ECC-Tools hosted promotion judge audit trace slice | ECC-Tools local focused vitest checks for hosted model-judge audit traces, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25997840703` | Local gates passed; remote CI completed successfully for `05d4e82` |
-| ECC-Tools billing announcement preflight slice | ECC-Tools local focused vitest preflight tests, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25998238507` | Local gates passed; remote CI completed successfully for `91a441b` |
-| ECC-Tools production Marketplace readback-state slice | ECC-Tools local `npm test` and `git diff --check`; Cloudflare `wrangler secret list` confirmed `INTERNAL_API_SECRET` exists by name; `wrangler kv key list` for `account-billing:` and `billing-state:` both returned empty lists; GitHub Actions `25998610438` | Local gates passed; remote CI completed successfully for `eb69412`; live announcement remains blocked until Marketplace purchase/webhook records populate KV |
+| AIP-Tools policy-promotion hosted telemetry slice | AIP-Tools local focused vitest checks for policy-promotion Action-output routing and hosted-promotion readiness, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25996758218` | Local gates passed; remote CI completed successfully for `8658951` |
+| AIP-Tools policy-promotion operator UX slice | AIP-Tools local focused vitest checks for policy-promotion Action output values in hosted findings/comments/checks, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25997300046` | Local gates passed; remote CI completed successfully for `16c537f` |
+| AIP-Tools hosted promotion judge audit trace slice | AIP-Tools local focused vitest checks for hosted model-judge audit traces, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25997840703` | Local gates passed; remote CI completed successfully for `05d4e82` |
+| AIP-Tools billing announcement preflight slice | AIP-Tools local focused vitest preflight tests, `npm run typecheck`, `npm run lint`, full `npm test`, and `git diff --check`; GitHub Actions `25998238507` | Local gates passed; remote CI completed successfully for `91a441b` |
+| AIP-Tools production Marketplace readback-state slice | AIP-Tools local `npm test` and `git diff --check`; Cloudflare `wrangler secret list` confirmed `INTERNAL_API_SECRET` exists by name; `wrangler kv key list` for `account-billing:` and `billing-state:` both returned empty lists; GitHub Actions `25998610438` | Local gates passed; remote CI completed successfully for `eb69412`; live announcement remains blocked until Marketplace purchase/webhook records populate KV |
 | GitHub queues | `gh pr list`; `gh issue list`; `node scripts/platform-audit.js --json --allow-untracked docs/drafts/` | 0 open PRs, 0 open issues, 0 discussion maintainer-touch gaps, 0 answerable Q&A missing accepted answers, 0 GitHub fetch errors, and platform audit ready across the tracked repo set after generated evidence is committed |
 | Operator dashboard | `npm run operator:dashboard -- --markdown --allow-untracked docs/drafts/ --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-17.md` | Dashboard generated for `e6c16b40b80b3b323586c9e8341faa87c01a728c` with platform ready true, dashboard ready true, and macro publication gates still incomplete |
 | GitHub Actions CI | `gh run watch 26003629550 --repo reborncursed/AIP --exit-status` | Completed successfully for `36d390aa7d733d458963a203b91998d3aec477b2`, including Validate Components, Lint, Security Scan, Coverage, and the full OS/Node/package-manager matrix |
@@ -88,13 +88,13 @@ Tracked repositories in the platform audit were:
 ## Current Publication Blockers
 
 - GitHub prerelease `v2.0.0-rc.1` is still not created in this pass.
-- npm `ecc-universal@2.0.0-rc.1` is still not published to the `next`
+- npm `aip-universal@2.0.0-rc.1` is still not published to the `next`
   dist-tag.
 - Claude plugin tag and marketplace propagation remain approval-gated.
 - Codex repo-marketplace distribution is verified for rc.1, but official
   Plugin Directory publishing remains blocked on OpenAI's self-serve publishing
   surface.
-- ECC Tools billing/native-payments copy remains blocked until a Marketplace
+- AIP Tools billing/native-payments copy remains blocked until a Marketplace
   purchase/webhook path writes production `account-billing:*` and
   `billing-state:*` records, then `npm run billing:announcement-gate --
   --account <github-login>` returns an announcement-ready gate.

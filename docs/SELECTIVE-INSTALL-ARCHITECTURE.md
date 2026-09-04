@@ -1,9 +1,9 @@
-# ECC 2.0 Selective Install Discovery
+# AIP 2.0 Selective Install Discovery
 
 ## Purpose
 
 This document turns the March 11 mega-plan selective-install requirement into a
-concrete ECC 2.0 discovery design.
+concrete AIP 2.0 discovery design.
 
 The goal is not just "fewer files copied during install." The actual target is
 an install system that can answer, deterministically:
@@ -12,9 +12,9 @@ an install system that can answer, deterministically:
 - what was resolved
 - what was copied or generated
 - what target-specific transforms were applied
-- what ECC owns and may safely remove or repair later
+- what AIP owns and may safely remove or repair later
 
-That is the missing contract between ECC 1.x installation and an ECC 2.0
+That is the missing contract between AIP 1.x installation and an AIP 2.0
 control plane.
 
 ## Current Implemented Foundation
@@ -35,7 +35,7 @@ The first selective-install substrate already exists in-repo:
 - `scripts/lib/install-state.js`
 - `scripts/lib/install-executor.js`
 - `scripts/lib/install-lifecycle.js`
-- `scripts/ecc.js`
+- `scripts/aip.js`
 - `scripts/install-apply.js`
 - `scripts/install-plan.js`
 - `scripts/list-installed.js`
@@ -51,14 +51,14 @@ Current capabilities:
 - explicit runtime dispatch from normalized requests into plan creation
 - legacy and manifest installs both write durable install-state
 - read-only inspection of install plans before any mutation
-- unified `ecc` CLI routing install, planning, and lifecycle commands
+- unified `aip` CLI routing install, planning, and lifecycle commands
 - lifecycle inspection and mutation via `list-installed`, `doctor`, `repair`,
   and `uninstall`
 
 Current limitation:
 
 - target-specific merge/remove semantics are still scaffold-level for some modules
-- legacy `ecc-install` compatibility still points at `install.sh`
+- legacy `aip-install` compatibility still points at `install.sh`
 - publish surface is still broad in `package.json`
 
 ## Current Code Review
@@ -100,7 +100,7 @@ the installer architecture feel settled.
 - request parsing and request normalization are now split from the CLI shell
 - target root resolution is already adapterized
 - lifecycle commands now use durable install-state instead of guessing
-- the repo already has a unified Node entrypoint through `ecc` and
+- the repo already has a unified Node entrypoint through `aip` and
   `install-apply.js`
 
 ### Current Coupling Still Present
@@ -168,7 +168,7 @@ Should not own:
 Suggested files:
 
 ```text
-scripts/ecc.js
+scripts/aip.js
 scripts/install-apply.js
 scripts/install-plan.js
 scripts/doctor.js
@@ -296,7 +296,7 @@ Responsibility:
 This is the missing architectural seam in the current installer.
 
 Today, operations are partly scaffold-level and partly executor-specific.
-ECC 2.0 should make operation planning a standalone phase so that:
+AIP 2.0 should make operation planning a standalone phase so that:
 
 - `plan` becomes a true preview of execution
 - `doctor` can validate intended behavior, not just current files
@@ -353,7 +353,7 @@ Responsibility:
 - `list-installed`: inspect state only
 - `doctor`: compare desired/install-state view against current filesystem
 - `repair`: regenerate a plan from state and reapply safe operations
-- `uninstall`: remove only ECC-owned outputs
+- `uninstall`: remove only AIP-owned outputs
 
 Current nearest file:
 
@@ -403,7 +403,7 @@ The lowest-risk migration path is evolutionary, not a rewrite.
 ### Keep
 
 - `install.sh` as the public compatibility shim
-- `scripts/ecc.js` as the unified CLI
+- `scripts/aip.js` as the unified CLI
 - `scripts/lib/install-state.js` as the starting point for the state store
 - current target adapter IDs and state locations
 
@@ -425,7 +425,7 @@ The lowest-risk migration path is evolutionary, not a rewrite.
 
 ## Immediate Architecture Changes To Make Next
 
-If the goal is ECC 2.0 and not just “working enough,” the next modularization
+If the goal is AIP 2.0 and not just “working enough,” the next modularization
 steps should be:
 
 1. split `install-executor.js` into request normalization, operation planning,
@@ -440,7 +440,7 @@ steps should be:
 
 ## Why The Current Model Is Not Enough
 
-Today ECC still behaves like a broad payload copier:
+Today AIP still behaves like a broad payload copier:
 
 - `install.sh` is language-first and target-branch-heavy
 - targets are partly implicit in directory layout
@@ -456,7 +456,7 @@ That creates the problems already called out in the mega plan:
 - future targets like Codex or OpenCode require more special-case logic instead
   of reusing a stable install contract
 
-## ECC 2.0 Design Thesis
+## AIP 2.0 Design Thesis
 
 Selective install should be modeled as:
 
@@ -465,7 +465,7 @@ Selective install should be modeled as:
 3. execute a deterministic install operation set
 4. write install-state as the durable source of truth
 
-That means ECC 2.0 needs two contracts, not one:
+That means AIP 2.0 needs two contracts, not one:
 
 - a content contract
   what modules exist and how they depend on each other
@@ -478,7 +478,7 @@ target-specific semantics.
 
 ## Design Constraints
 
-1. Keep `everything-claude-code` as the canonical source repo.
+1. Keep `aip` as the canonical source repo.
 2. Preserve existing `install.sh` flows during migration.
 3. Support home-scoped and project-scoped targets from the same planner.
 4. Make uninstall/repair/doctor possible without guessing.
@@ -503,12 +503,12 @@ Current fields already implemented:
 - `cost`
 - `stability`
 
-Fields still needed for ECC 2.0:
+Fields still needed for AIP 2.0:
 
 - `installStrategy`
   for example `copy`, `flatten-rules`, `generate`, `merge-config`
 - `ownership`
-  whether ECC fully owns the target path or only generated files under it
+  whether AIP fully owns the target path or only generated files under it
 - `pathMode`
   for example `preserve`, `flatten`, `target-template`
 - `conflicts`
@@ -555,7 +555,7 @@ Fields still needed:
 - `excludes`
 - `requiresConfirmation`
 
-That lets ECC 2.0 say things like:
+That lets AIP 2.0 say things like:
 
 - `developer` is the recommended default for Claude and Cursor
 - `research` may be heavy for narrow local installs
@@ -607,7 +607,7 @@ doc: canonical contract first, harness-specific adapter second.
 The current `scripts/install-plan.js` CLI proves the repo can resolve requested
 modules into a filtered module set.
 
-ECC 2.0 needs the next layer: operation planning.
+AIP 2.0 needs the next layer: operation planning.
 
 Suggested phases:
 
@@ -640,7 +640,7 @@ Suggested operation shape:
   "kind": "copy",
   "moduleId": "rules-core",
   "source": "rules/common/coding-style.md",
-  "destination": "/Users/example/.claude/rules/ecc/common/coding-style.md",
+  "destination": "/Users/example/.claude/rules/aip/common/coding-style.md",
   "ownership": "managed",
   "overwritePolicy": "replace"
 }
@@ -659,24 +659,24 @@ Other operation kinds:
 
 ## Install-State Contract
 
-Install-state is the durable contract that ECC 1.x is missing.
+Install-state is the durable contract that AIP 1.x is missing.
 
 Suggested path conventions:
 
 - Claude target:
-  `~/.claude/ecc/install-state.json`
+  `~/.claude/aip/install-state.json`
 - Cursor target:
-  `./.cursor/ecc-install-state.json`
+  `./.cursor/aip-install-state.json`
 - Antigravity target:
-  `./.agents/ecc-install-state.json`
+  `./.agents/aip-install-state.json`
 - future Codex target:
-  `~/.codex/ecc-install-state.json`
+  `~/.codex/aip-install-state.json`
 
 Suggested payload:
 
 ```json
 {
-  "schemaVersion": "ecc.install.v1",
+  "schemaVersion": "aip.install.v1",
   "installedAt": "2026-03-13T00:00:00Z",
   "lastValidatedAt": "2026-03-13T00:00:00Z",
   "target": {
@@ -711,7 +711,7 @@ Suggested payload:
     {
       "kind": "copy",
       "moduleId": "rules-core",
-      "destination": "/Users/example/.claude/rules/ecc/common/coding-style.md",
+      "destination": "/Users/example/.claude/rules/aip/common/coding-style.md",
       "digest": "sha256:..."
     }
   ]
@@ -720,7 +720,7 @@ Suggested payload:
 
 State requirements:
 
-- enough detail for uninstall to remove only ECC-managed outputs
+- enough detail for uninstall to remove only AIP-managed outputs
 - enough detail for repair to compare desired versus actual installed files
 - enough detail for doctor to explain drift instead of guessing
 
@@ -728,17 +728,17 @@ State requirements:
 
 The following commands are the lifecycle surface for install-state:
 
-1. `ecc list-installed`
-2. `ecc uninstall`
-3. `ecc doctor`
-4. `ecc repair`
+1. `aip list-installed`
+2. `aip uninstall`
+3. `aip doctor`
+4. `aip repair`
 
 Current implementation status:
 
-- `ecc list-installed` routes to `node scripts/list-installed.js`
-- `ecc uninstall` routes to `node scripts/uninstall.js`
-- `ecc doctor` routes to `node scripts/doctor.js`
-- `ecc repair` routes to `node scripts/repair.js`
+- `aip list-installed` routes to `node scripts/list-installed.js`
+- `aip uninstall` routes to `node scripts/uninstall.js`
+- `aip doctor` routes to `node scripts/doctor.js`
+- `aip repair` routes to `node scripts/repair.js`
 - legacy script entrypoints remain available during migration
 
 ### `list-installed`
@@ -755,7 +755,7 @@ Responsibilities:
 Responsibilities:
 
 - load install-state
-- remove only ECC-managed destinations recorded in state
+- remove only AIP-managed destinations recorded in state
 - leave user-authored unrelated files untouched
 - delete install-state only after successful cleanup
 
@@ -786,7 +786,7 @@ Current `install.sh` accepts:
 
 That behavior cannot disappear in one cut because users already depend on it.
 
-ECC 2.0 should translate legacy language arguments into a compatibility request.
+AIP 2.0 should translate legacy language arguments into a compatibility request.
 
 Suggested approach:
 
@@ -815,7 +815,7 @@ contract.
 
 The current npm package still publishes a broad payload through `package.json`.
 
-ECC 2.0 should improve this carefully.
+AIP 2.0 should improve this carefully.
 
 Recommended sequence:
 
@@ -848,7 +848,7 @@ scripts/lib/install-targets/
   antigravity-project.js
   registry.js
 scripts/lib/install-state.js
-scripts/ecc.js
+scripts/aip.js
 scripts/install-apply.js
 scripts/list-installed.js
 scripts/uninstall.js
@@ -869,7 +869,7 @@ keep growing per-target shell branches.
 
 1. keep current manifest schema and resolver
 2. add operation planning on top of resolved modules
-3. define `ecc.install.v1` state schema
+3. define `aip.install.v1` state schema
 4. write install-state on successful install
 
 ### Phase 2: Target Adapters
@@ -884,7 +884,7 @@ keep growing per-target shell branches.
 1. add stronger target-specific merge/remove semantics
 2. extend repair/uninstall coverage for non-copy operations
 3. reduce package shipping surface to the module graph instead of broad folders
-4. decide when `ecc-install` should become a thin alias for `ecc install`
+4. decide when `aip-install` should become a thin alias for `aip install`
 
 ### Phase 4: Publish And Future Targets
 
@@ -900,11 +900,11 @@ The highest-signal next implementation moves in this repo are:
 1. add target-specific merge/remove semantics for config-like modules
 2. extend repair and uninstall beyond simple copy-file operations
 3. reduce package shipping surface to the module graph instead of broad folders
-4. decide whether `ecc-install` remains separate or becomes `ecc install`
+4. decide whether `aip-install` remains separate or becomes `aip install`
 5. add tests that lock down:
    - target-specific merge/remove behavior
    - repair and uninstall safety for non-copy operations
-   - unified `ecc` CLI routing and compatibility guarantees
+   - unified `aip` CLI routing and compatibility guarantees
 
 ## Open Questions
 
@@ -929,5 +929,5 @@ Treat the current manifest resolver as adapter `0` for installs:
 4. make uninstall, doctor, and repair depend only on install-state
 5. only then shrink packaging or add more targets
 
-That is the shortest path from ECC 1.x installer sprawl to an ECC 2.0
+That is the shortest path from AIP 1.x installer sprawl to an AIP 2.0
 install/control contract that is deterministic, supportable, and extensible.

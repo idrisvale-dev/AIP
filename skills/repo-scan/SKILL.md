@@ -1,6 +1,6 @@
 ---
 name: repo-scan
-description: Bootstrap pointer that installs the external repo-scan skill from a pinned, reviewable commit. Use when repo-scan must be installed before running its cross-stack source-code asset audit; this ECC pointer does not perform the audit itself.
+description: Bootstrap pointer that installs the external repo-scan skill from a pinned, reviewable commit. Use when repo-scan must be installed before running its cross-stack source-code asset audit; this AIP pointer does not perform the audit itself.
 metadata:
   origin: community
 ---
@@ -120,7 +120,7 @@ fi
 
 > Review the source before installing any agent skill.
 
-Installation completes only the bootstrap. Reload your agent harness, then invoke `repo-scan` again. This ECC pointer installs the external skill but does not run a scan itself.
+Installation completes only the bootstrap. Reload your agent harness, then invoke `repo-scan` again. This AIP pointer installs the external skill but does not run a scan itself.
 
 ## Core Capabilities
 

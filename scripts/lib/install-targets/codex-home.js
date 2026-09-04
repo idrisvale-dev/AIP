@@ -5,6 +5,6 @@ module.exports = createInstallTargetAdapter({
   target: 'codex',
   kind: 'home',
   rootSegments: ['.codex'],
-  installStatePathSegments: ['ecc-install-state.json'],
+  installStatePathSegments: ['aip-install-state.json'],
   nativeRootRelativePath: '.codex',
 });

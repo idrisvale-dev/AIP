@@ -5,7 +5,7 @@
  * This is the regression guard for PR #2352, which generated ~440 copied
  * files (skills/agents/prompts/commands) under `.pi/`. The Pi integration
  * must stay a thin adapter: `.pi/` holds only adapter code, and the `pi`
- * manifest points directly at ECC's canonical `skills/` and `commands/`
+ * manifest points directly at AIP's canonical `skills/` and `commands/`
  * directories rather than at duplicated copies.
  */
 
@@ -124,7 +124,7 @@ function main() {
       )
     }],
 
-    ["pi.extensions is exactly the single ECC adapter entry file, and it exists on disk", () => {
+    ["pi.extensions is exactly the single AIP adapter entry file, and it exists on disk", () => {
       assert.deepStrictEqual(
         packageJson.pi.extensions,
         ["./.pi/extensions/index.ts"],
@@ -137,21 +137,21 @@ function main() {
       )
     }],
 
-    ["pi.skills and pi.prompts point at ECC's canonical top-level directories, never at .pi/", () => {
+    ["pi.skills and pi.prompts point at AIP's canonical top-level directories, never at .pi/", () => {
       assert.deepStrictEqual(
         packageJson.pi.skills,
         ["./skills"],
-        `pi.skills must be exactly ["./skills"] (ECC's canonical skills directory) — got ${JSON.stringify(packageJson.pi.skills)}`
+        `pi.skills must be exactly ["./skills"] (AIP's canonical skills directory) — got ${JSON.stringify(packageJson.pi.skills)}`
       )
       assert.deepStrictEqual(
         packageJson.pi.prompts,
         ["./commands"],
-        `pi.prompts must be exactly ["./commands"] (ECC's canonical commands directory) — got ${JSON.stringify(packageJson.pi.prompts)}`
+        `pi.prompts must be exactly ["./commands"] (AIP's canonical commands directory) — got ${JSON.stringify(packageJson.pi.prompts)}`
       )
       for (const entry of [...packageJson.pi.skills, ...packageJson.pi.prompts]) {
         assert.ok(
           !entry.startsWith("./.pi") && !entry.includes(".pi/"),
-          `pi.skills/pi.prompts entry "${entry}" must not point under .pi/ — Pi must mount ECC's canonical assets directly, never a copy generated into the adapter directory`
+          `pi.skills/pi.prompts entry "${entry}" must not point under .pi/ — Pi must mount AIP's canonical assets directly, never a copy generated into the adapter directory`
         )
       }
     }],

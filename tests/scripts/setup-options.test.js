@@ -21,7 +21,7 @@ function test(name, fn) {
   }
 }
 
-console.log('\n=== ECC setup option contract tests ===\n');
+console.log('\n=== AIP setup option contract tests ===\n');
 
 test('rejects interactive JSON when wizard choices are missing', () => {
   assert.throws(

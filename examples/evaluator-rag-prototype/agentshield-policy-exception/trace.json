@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.trace.v1",
+  "schema_version": "aip.evaluator-rag.trace.v1",
   "scenario_id": "agentshield-policy-exception",
   "run_id": "2026-05-12-agentshield-policy-exception-prototype",
   "read_only": true,
@@ -8,7 +8,7 @@
       "phase": "observation",
       "summary": "A policy finding or exception request references AgentShield organization-policy output. The evaluator records the affected finding without editing AgentShield code, policy packs, or enforcement settings.",
       "evidence": [
-        "docs/ECC-2.0-GA-ROADMAP.md",
+        "docs/AIP-2.0-GA-ROADMAP.md",
         "commands/security-scan.md"
       ]
     },

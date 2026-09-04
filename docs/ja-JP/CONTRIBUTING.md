@@ -1,4 +1,4 @@
-# Everything Claude Codeに貢献する
+# AIPに貢献する
 
 貢献いただきありがとうございます！このリポジトリはClaude Codeユーザーのためのコミュニティリソースです。
 
@@ -54,7 +54,7 @@
 ```bash
 # 1. Fork とクローン
 gh repo fork reborncursed/AIP --clone
-cd everything-claude-code
+cd aip
 
 # 2. ブランチを作成
 git checkout -b feat/my-contribution

@@ -67,7 +67,7 @@ function stateOperationFrom(operation) {
 }
 
 function managedPlan(root, operations, owned = []) {
-  const installStatePath = path.join(root, '.kimi-code', 'ecc-install-state.json');
+  const installStatePath = path.join(root, '.kimi-code', 'aip-install-state.json');
   const plan = {
     adapter: { id: 'kimi-project', target: 'kimi', kind: 'project' },
     installStatePath,
@@ -144,7 +144,7 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('classifies missing, identical, managed, and JSON merge destinations', () => {
-    const root = tempDir('ecc-guided-preflight-');
+    const root = tempDir('aip-guided-preflight-');
     try {
       const sourceSame = path.join(root, 'sources', 'same.md');
       const sourceManaged = path.join(root, 'sources', 'managed.md');
@@ -159,7 +159,7 @@ function writeManagedState(plan, overrides = {}) {
       const plan = managedPlan(root, [
         { kind: 'copy-file', sourcePath: sourceSame, destinationPath: destinationSame },
         stateOperation(destinationManaged, { sourcePath: sourceManaged }),
-        { kind: 'merge-json', destinationPath: destinationJson, mergePayload: { ecc: true } },
+        { kind: 'merge-json', destinationPath: destinationJson, mergePayload: { aip: true } },
         { kind: 'copy-file', sourcePath: sourceSame, destinationPath: path.join(root, 'new.md') },
       ], [destinationManaged]);
 
@@ -176,10 +176,10 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('rejects managed preflight plans without an install-state path', () => {
-    const root = tempDir('ecc-guided-missing-state-');
+    const root = tempDir('aip-guided-missing-state-');
     try {
       const source = path.join(root, 'source.md');
-      writeFile(source, 'ecc\n');
+      writeFile(source, 'aip\n');
       const plan = managedPlan(root, [{
         kind: 'copy-file',
         sourcePath: source,
@@ -198,7 +198,7 @@ function writeManagedState(plan, overrides = {}) {
 
   await test('rejects an identical copy source that is a symbolic link', () => {
     if (process.platform === 'win32') return;
-    const root = tempDir('ecc-guided-source-symlink-');
+    const root = tempDir('aip-guided-source-symlink-');
     try {
       const realSource = path.join(root, 'real-source.md');
       const linkedSource = path.join(root, 'linked-source.md');
@@ -222,11 +222,11 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('rejects valid install-state from a different managed target identity', () => {
-    const root = tempDir('ecc-guided-forged-target-');
+    const root = tempDir('aip-guided-forged-target-');
     try {
       const source = path.join(root, 'source.md');
       const destination = path.join(root, 'AGENTS.md');
-      writeFile(source, 'ecc\n');
+      writeFile(source, 'aip\n');
       writeFile(destination, 'user\n');
       const plan = managedPlan(root, [
         stateOperation(destination, { sourcePath: source }),
@@ -247,12 +247,12 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('rejects install-state with mismatched canonical root or state path', () => {
-    const root = tempDir('ecc-guided-forged-paths-');
-    const otherRoot = tempDir('ecc-guided-forged-other-');
+    const root = tempDir('aip-guided-forged-paths-');
+    const otherRoot = tempDir('aip-guided-forged-other-');
     try {
       const source = path.join(root, 'source.md');
       const destination = path.join(root, 'AGENTS.md');
-      writeFile(source, 'ecc\n');
+      writeFile(source, 'aip\n');
       writeFile(destination, 'user\n');
       const plan = managedPlan(root, [
         stateOperation(destination, { sourcePath: source }),
@@ -260,7 +260,7 @@ function writeManagedState(plan, overrides = {}) {
 
       for (const target of [
         { root: otherRoot },
-        { installStatePath: path.join(otherRoot, 'ecc-install-state.json') },
+        { installStatePath: path.join(otherRoot, 'aip-install-state.json') },
       ]) {
         writeManagedState(plan, {
           target,
@@ -278,12 +278,12 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('rejects install-state ownership claims outside the canonical target root', () => {
-    const root = tempDir('ecc-guided-forged-containment-');
-    const outside = tempDir('ecc-guided-forged-outside-');
+    const root = tempDir('aip-guided-forged-containment-');
+    const outside = tempDir('aip-guided-forged-outside-');
     try {
       const source = path.join(root, 'source.md');
       const destination = path.join(root, 'AGENTS.md');
-      writeFile(source, 'ecc\n');
+      writeFile(source, 'aip\n');
       writeFile(destination, 'user\n');
       const plan = managedPlan(root, [
         stateOperation(destination, { sourcePath: source }),
@@ -303,11 +303,11 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('refuses an unowned differing managed-target file', () => {
-    const root = tempDir('ecc-guided-collision-');
+    const root = tempDir('aip-guided-collision-');
     try {
       const source = path.join(root, 'source.md');
       const destination = path.join(root, 'AGENTS.md');
-      writeFile(source, 'ecc\n');
+      writeFile(source, 'aip\n');
       writeFile(destination, 'user\n');
       assert.throws(
         () => preflightManagedPlan(managedPlan(root, [
@@ -321,11 +321,11 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('same-target state without a content digest cannot claim a user file', () => {
-    const root = tempDir('ecc-guided-forged-same-target-');
+    const root = tempDir('aip-guided-forged-same-target-');
     try {
       const source = path.join(root, 'source.md');
       const destination = path.join(root, 'AGENTS.md');
-      writeFile(source, 'ecc\n');
+      writeFile(source, 'aip\n');
       writeFile(destination, 'user\n');
       const operation = stateOperation(destination, { sourcePath: source });
       const plan = managedPlan(root, [operation]);
@@ -342,18 +342,18 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('managed ownership requires an exact operation identity and content digest', () => {
-    const root = tempDir('ecc-guided-managed-digest-');
+    const root = tempDir('aip-guided-managed-digest-');
     try {
       const source = path.join(root, 'source.md');
       const destination = path.join(root, 'AGENTS.md');
-      writeFile(source, 'new ecc\n');
-      writeFile(destination, 'old ecc\n');
+      writeFile(source, 'new aip\n');
+      writeFile(destination, 'old aip\n');
       const operation = stateOperation(destination, { sourcePath: source });
       const plan = managedPlan(root, [operation]);
 
       writeManagedState(plan, {
         operations: [stateOperation(destination, {
-          contentSha256: sha256('old ecc\n'),
+          contentSha256: sha256('old aip\n'),
         })],
       });
       assert.strictEqual(
@@ -363,7 +363,7 @@ function writeManagedState(plan, overrides = {}) {
 
       writeManagedState(plan, {
         operations: [stateOperation(destination, {
-          contentSha256: sha256('old ecc\n'),
+          contentSha256: sha256('old aip\n'),
           sourceRelativePath: 'rules/other.md',
         })],
       });
@@ -387,7 +387,7 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('refuses a conflicting key in an unowned JSON merge destination', () => {
-    const root = tempDir('ecc-guided-json-collision-');
+    const root = tempDir('aip-guided-json-collision-');
     try {
       const destination = path.join(root, 'mcp.json');
       writeFile(destination, JSON.stringify({
@@ -398,7 +398,7 @@ function writeManagedState(plan, overrides = {}) {
           {
             kind: 'merge-json',
             destinationPath: destination,
-            mergePayload: { mcpServers: { github: { command: 'ecc-server' } } },
+            mergePayload: { mcpServers: { github: { command: 'aip-server' } } },
           },
         ])),
         /unowned JSON.*mcpServers\.github\.command/i
@@ -409,12 +409,12 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('rejects symlinked managed ancestors during batch preflight', () => {
-    const root = tempDir('ecc-guided-symlink-root-');
-    const outside = tempDir('ecc-guided-symlink-outside-');
+    const root = tempDir('aip-guided-symlink-root-');
+    const outside = tempDir('aip-guided-symlink-outside-');
     try {
       const source = path.join(root, 'source.md');
       const linkedDirectory = path.join(root, 'rules');
-      writeFile(source, 'ecc\n');
+      writeFile(source, 'aip\n');
       fs.symlinkSync(outside, linkedDirectory, process.platform === 'win32' ? 'junction' : 'dir');
       assert.throws(
         () => preflightManagedPlan(managedPlan(root, [
@@ -434,7 +434,7 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('rejects an unwritable Kimi destination during preflight', () => {
-    const root = tempDir('ecc-guided-unwritable-');
+    const root = tempDir('aip-guided-unwritable-');
     try {
       const destination = path.join(root, '.kimi-code', 'rules', 'security.md');
       const accessChecks = [];
@@ -467,7 +467,7 @@ function writeManagedState(plan, overrides = {}) {
     if (process.platform === 'win32' || (typeof process.getuid === 'function' && process.getuid() === 0)) {
       return;
     }
-    const root = tempDir('ecc-guided-real-permissions-');
+    const root = tempDir('aip-guided-real-permissions-');
     const projectRoot = path.join(root, 'project');
     fs.mkdirSync(projectRoot, { mode: 0o755 });
     try {
@@ -512,11 +512,11 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('refuses a copy-file destination created after preview but before apply', async () => {
-    const root = tempDir('ecc-guided-late-copy-collision-');
+    const root = tempDir('aip-guided-late-copy-collision-');
     try {
       const source = path.join(root, 'source.md');
       const destination = path.join(root, '.kimi-code', 'rules', 'security.md');
-      writeFile(source, 'ecc\n');
+      writeFile(source, 'aip\n');
       const plan = managedPlan(root, [stateOperation(destination, { sourcePath: source })]);
       const preview = preflightManagedPlan(plan);
 
@@ -540,12 +540,12 @@ function writeManagedState(plan, overrides = {}) {
     }
   });
 
-  await test('refuses a late unowned copy even when its bytes match the ECC source', async () => {
-    const root = tempDir('ecc-guided-late-identical-copy-');
+  await test('refuses a late unowned copy even when its bytes match the AIP source', async () => {
+    const root = tempDir('aip-guided-late-identical-copy-');
     try {
       const source = path.join(root, 'source.md');
       const destination = path.join(root, '.kimi-code', 'rules', 'security.md');
-      writeFile(source, 'ecc\n');
+      writeFile(source, 'aip\n');
       const plan = managedPlan(root, [stateOperation(destination, { sourcePath: source })]);
       const preview = preflightManagedPlan(plan);
 
@@ -555,7 +555,7 @@ function writeManagedState(plan, overrides = {}) {
       }, {
         preflightManaged(candidatePlan) {
           const latestPreview = preflightManagedPlan(candidatePlan);
-          writeFile(destination, 'ecc\n');
+          writeFile(destination, 'aip\n');
           return latestPreview;
         },
       });
@@ -563,19 +563,19 @@ function writeManagedState(plan, overrides = {}) {
       assert.strictEqual(result.status, 'failed');
       assert.match(result.failure.message, /destination changed after Kimi preflight/i);
       assert.deepStrictEqual(result.retryHarnesses, ['kimi']);
-      assert.strictEqual(fs.readFileSync(destination, 'utf8'), 'ecc\n');
+      assert.strictEqual(fs.readFileSync(destination, 'utf8'), 'aip\n');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
 
   await test('refuses conflicting JSON created after preview but before apply', async () => {
-    const root = tempDir('ecc-guided-late-json-collision-');
+    const root = tempDir('aip-guided-late-json-collision-');
     try {
       const destination = path.join(root, '.kimi-code', 'mcp.json');
       const operation = stateOperation(destination, {
         kind: 'merge-json',
-        mergePayload: { mcpServers: { github: { command: 'ecc-server' } } },
+        mergePayload: { mcpServers: { github: { command: 'aip-server' } } },
         sourceRelativePath: '.mcp.json',
         strategy: 'merge-json',
       });
@@ -607,11 +607,11 @@ function writeManagedState(plan, overrides = {}) {
   });
 
   await test('refuses an install-state file created after preview instead of overwriting it', async () => {
-    const root = tempDir('ecc-guided-late-state-collision-');
+    const root = tempDir('aip-guided-late-state-collision-');
     try {
       const source = path.join(root, 'source.md');
       const destination = path.join(root, '.kimi-code', 'rules', 'security.md');
-      writeFile(source, 'ecc\n');
+      writeFile(source, 'aip\n');
       const plan = managedPlan(root, [stateOperation(destination, { sourcePath: source })]);
       const preview = preflightManagedPlan(plan);
       const unexpectedState = '{"user":"owned"}\n';

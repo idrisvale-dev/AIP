@@ -1,7 +1,7 @@
 ---
 name: continuous-learning
 description: Claude Code oturumlarından yeniden kullanılabilir kalıpları otomatik olarak çıkarın ve gelecekte kullanmak üzere öğrenilmiş skill'ler olarak kaydedin.
-origin: ECC
+origin: AIP
 ---
 
 # Sürekli Öğrenme Skill'i

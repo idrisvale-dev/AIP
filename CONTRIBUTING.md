@@ -1,4 +1,4 @@
-# Contributing to Everything Claude Code
+# Contributing to AIP
 
 Thanks for wanting to contribute! This repo is a community resource for Claude Code users.
 
@@ -53,7 +53,7 @@ Slash commands that invoke useful workflows:
 ```bash
 # 1. Fork and clone
 gh repo fork reborncursed/AIP --clone
-cd ECC
+cd AIP
 
 # 2. Create a branch
 git checkout -b feat/my-contribution
@@ -95,7 +95,7 @@ skills/
 ---
 name: your-skill-name
 description: Brief description shown in skill list and used for auto-activation
-origin: ECC
+origin: AIP
 ---
 
 # Your Skill Title
@@ -152,8 +152,8 @@ If you are porting an idea from another repo, plugin, harness, or personal promp
 Short version:
 
 - copy the underlying idea, not the external product identity
-- rename the skill when ECC materially changes or expands the surface
-- prefer ECC-native rules, skills, scripts, and MCPs over new default third-party dependencies
+- rename the skill when AIP materially changes or expands the surface
+- prefer AIP-native rules, skills, scripts, and MCPs over new default third-party dependencies
 - do not ship a skill whose main value is telling users to install an unvetted package
 
 ### Skill Checklist
@@ -411,7 +411,7 @@ Skills and agents can use **MCP (Model Context Protocol)** tools to pull in up-t
 
 ### Skill subsets (Codex and Cursor)
 
-ECC ships skill subsets for other harnesses:
+AIP ships skill subsets for other harnesses:
 
 - **Codex:** `.agents/skills/` — skills listed in `agents/openai.yaml` are loaded by Codex.
 - **Cursor:** `.cursor/skills/` — a subset of skills is bundled for Cursor.

@@ -117,7 +117,7 @@ const problemHomes = ['/home/user.name', '/home/c++dev', '/home/user (work)', '/
 for (const home of problemHomes) {
   test(`escaped pattern matches the literal home ${home}`, () => {
     const pattern = buildPattern(home);
-    const cmdline = `/bin/bash ${home}/.local/share/ecc-homunculus/observer-loop.sh`;
+    const cmdline = `/bin/bash ${home}/.local/share/aip-homunculus/observer-loop.sh`;
     assert.ok(
       ereMatches(pattern, cmdline),
       `expected escaped pattern to match the literal observer cmdline for HOME=${home}`

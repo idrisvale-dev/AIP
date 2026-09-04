@@ -24,7 +24,7 @@ function runWrapper(input, env = {}) {
   const result = spawnSync('node', [wrapper], {
     input: rawInput,
     encoding: 'utf8',
-    env: { ...process.env, ECC_HOOK_PROFILE: 'standard', ...env },
+    env: { ...process.env, AIP_HOOK_PROFILE: 'standard', ...env },
     timeout: 15000,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
@@ -129,12 +129,12 @@ if (test('handles malformed JSON gracefully (treats raw as command string)', () 
   assert.strictEqual(r.code, 0, `expected 0, got ${r.code}: ${r.stderr}`);
 })) passed++; else failed++;
 
-// --- Disable via ECC_DISABLED_HOOKS ---
+// --- Disable via AIP_DISABLED_HOOKS ---
 
-if (test('respects ECC_DISABLED_HOOKS=pre:bash:block-no-verify', () => {
+if (test('respects AIP_DISABLED_HOOKS=pre:bash:block-no-verify', () => {
   const r = runWrapper(
     { command: 'git commit --no-verify -m "msg"' },
-    { ECC_DISABLED_HOOKS: 'pre:bash:block-no-verify' }
+    { AIP_DISABLED_HOOKS: 'pre:bash:block-no-verify' }
   );
   // When the hook is disabled, the wrapper should pass through (exit 0)
   // even on a real bypass attempt.

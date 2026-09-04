@@ -1,7 +1,7 @@
 ---
 name: swift-actor-persistence
 description: Swiftでactorを使用してスレッドセーフなデータ永続化を実装する——メモリキャッシュとファイルバックドストレージを組み合わせ、設計によってデータ競合を排除する。
-origin: ECC
+origin: AIP
 ---
 
 # スレッドセーフな永続化のための Swift Actor

@@ -48,15 +48,15 @@ function envNumber(name, fallback) {
 }
 
 function stateFilePath() {
-  if (process.env.ECC_MCP_HEALTH_STATE_PATH) {
-    return path.resolve(process.env.ECC_MCP_HEALTH_STATE_PATH);
+  if (process.env.AIP_MCP_HEALTH_STATE_PATH) {
+    return path.resolve(process.env.AIP_MCP_HEALTH_STATE_PATH);
   }
   return path.join(os.homedir(), '.claude', 'mcp-health-cache.json');
 }
 
 function configPaths() {
-  if (process.env.ECC_MCP_CONFIG_PATH) {
-    return process.env.ECC_MCP_CONFIG_PATH
+  if (process.env.AIP_MCP_CONFIG_PATH) {
+    return process.env.AIP_MCP_CONFIG_PATH
       .split(path.delimiter)
       .map(entry => entry.trim())
       .filter(Boolean)
@@ -107,7 +107,7 @@ function saveState(filePath, state) {
 function readRawStdin() {
   return new Promise(resolve => {
     let raw = '';
-    let truncated = /^(1|true|yes)$/i.test(String(process.env.ECC_HOOK_INPUT_TRUNCATED || ''));
+    let truncated = /^(1|true|yes)$/i.test(String(process.env.AIP_HOOK_INPUT_TRUNCATED || ''));
     process.stdin.setEncoding('utf8');
     process.stdin.on('data', chunk => {
       if (raw.length < MAX_STDIN) {
@@ -203,7 +203,7 @@ function markHealthy(state, serverName, now, details = {}) {
   state.servers[serverName] = {
     status: 'healthy',
     checkedAt: now,
-    expiresAt: now + envNumber('ECC_MCP_HEALTH_TTL_MS', DEFAULT_TTL_MS),
+    expiresAt: now + envNumber('AIP_MCP_HEALTH_TTL_MS', DEFAULT_TTL_MS),
     failureCount: 0,
     lastError: null,
     lastFailureCode: null,
@@ -216,7 +216,7 @@ function markHealthy(state, serverName, now, details = {}) {
 function markUnhealthy(state, serverName, now, failureCode, errorMessage) {
   const previous = state.servers[serverName] || {};
   const failureCount = Number(previous.failureCount || 0) + 1;
-  const backoffBase = envNumber('ECC_MCP_HEALTH_BACKOFF_MS', DEFAULT_BACKOFF_MS);
+  const backoffBase = envNumber('AIP_MCP_HEALTH_BACKOFF_MS', DEFAULT_BACKOFF_MS);
   const nextRetryDelay = Math.min(backoffBase * (2 ** Math.max(failureCount - 1, 0)), MAX_BACKOFF_MS);
 
   state.servers[serverName] = {
@@ -305,7 +305,7 @@ function probeCommandServer(serverName, config) {
   return new Promise(resolve => {
     const command = config.command;
     const args = Array.isArray(config.args) ? config.args.map(arg => String(arg)) : [];
-    const timeoutMs = envNumber('ECC_MCP_HEALTH_TIMEOUT_MS', DEFAULT_TIMEOUT_MS);
+    const timeoutMs = envNumber('AIP_MCP_HEALTH_TIMEOUT_MS', DEFAULT_TIMEOUT_MS);
     const mergedEnv = {
       ...process.env,
       ...(config.env && typeof config.env === 'object' && !Array.isArray(config.env) ? config.env : {})
@@ -516,7 +516,7 @@ async function probeServer(serverName, resolvedConfig) {
   const config = resolvedConfig.config;
 
   if (config.type === 'http' || config.url) {
-    const result = await requestHttp(config.url, config.headers || {}, envNumber('ECC_MCP_HEALTH_TIMEOUT_MS', DEFAULT_TIMEOUT_MS));
+    const result = await requestHttp(config.url, config.headers || {}, envNumber('AIP_MCP_HEALTH_TIMEOUT_MS', DEFAULT_TIMEOUT_MS));
 
     return {
       ok: result.ok,
@@ -546,8 +546,8 @@ async function probeServer(serverName, resolvedConfig) {
 }
 
 function reconnectCommand(serverName) {
-  const key = `ECC_MCP_RECONNECT_${String(serverName).toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
-  const command = process.env[key] || process.env.ECC_MCP_RECONNECT_COMMAND || '';
+  const key = `AIP_MCP_RECONNECT_${String(serverName).toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
+  const command = process.env[key] || process.env.AIP_MCP_RECONNECT_COMMAND || '';
   if (!command.trim()) {
     return null;
   }
@@ -568,7 +568,7 @@ function attemptReconnect(serverName) {
     env: process.env,
     cwd: process.cwd(),
     encoding: 'utf8',
-    timeout: envNumber('ECC_MCP_RECONNECT_TIMEOUT_MS', DEFAULT_TIMEOUT_MS)
+    timeout: envNumber('AIP_MCP_RECONNECT_TIMEOUT_MS', DEFAULT_TIMEOUT_MS)
   });
 
   if (result.error) {
@@ -587,7 +587,7 @@ function attemptReconnect(serverName) {
 }
 
 function shouldFailOpen() {
-  return /^(1|true|yes)$/i.test(String(process.env.ECC_MCP_HEALTH_FAIL_OPEN || ''));
+  return /^(1|true|yes)$/i.test(String(process.env.AIP_MCP_HEALTH_FAIL_OPEN || ''));
 }
 
 function emitLogs(logs) {
@@ -721,7 +721,7 @@ async function main() {
   }
 
   if (truncated) {
-    const limit = Number(process.env.ECC_HOOK_INPUT_MAX_BYTES) || MAX_STDIN;
+    const limit = Number(process.env.AIP_HOOK_INPUT_MAX_BYTES) || MAX_STDIN;
     const logs = [
       shouldFailOpen()
         ? `[MCPHealthCheck] Hook input exceeded ${limit} bytes while checking ${target.server}; allowing ${target.tool || 'tool'} because fail-open mode is enabled`

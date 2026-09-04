@@ -1,4 +1,4 @@
-# Everything Claude Code'a Katkıda Bulunma
+# AIP'a Katkıda Bulunma
 
 Katkıda bulunmak istediğiniz için teşekkürler! Bu repo, Claude Code kullanıcıları için bir topluluk kaynağıdır.
 
@@ -52,7 +52,7 @@ Faydalı workflow'ları çağıran slash command'lar:
 ```bash
 # 1. Fork ve clone
 gh repo fork reborncursed/AIP --clone
-cd everything-claude-code
+cd aip
 
 # 2. Branch oluştur
 git checkout -b feat/my-contribution
@@ -87,7 +87,7 @@ skills/
 ---
 name: your-skill-name
 description: Skill listesinde gösterilen kısa açıklama
-origin: ECC
+origin: AIP
 ---
 
 # Skill Başlığınız
@@ -365,7 +365,7 @@ Skill'ler ve agent'lar, sadece eğitim verilerine güvenmek yerine güncel veril
 
 ### Skill alt kümeleri (Codex ve Cursor)
 
-ECC, diğer harness'ler için skill alt kümeleri içerir:
+AIP, diğer harness'ler için skill alt kümeleri içerir:
 
 - **Codex:** `.agents/skills/` — `agents/openai.yaml` içinde listelenen skill'ler Codex tarafından yüklenir.
 - **Cursor:** `.cursor/skills/` — Cursor için bir skill alt kümesi paketlenmiştir.

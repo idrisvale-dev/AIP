@@ -30,9 +30,9 @@ function runTests() {
 
   console.log('isDryRun():');
 
-  if (test('returns false when ECC_DRY_RUN is unset', () => {
+  if (test('returns false when AIP_DRY_RUN is unset', () => {
     const env = { ...process.env };
-    delete env.ECC_DRY_RUN;
+    delete env.AIP_DRY_RUN;
     const result = spawnSync(process.execPath, [
       '-e',
       'const { isDryRun } = require("./scripts/lib/hook-flags"); process.exit(isDryRun() ? 1 : 0)',
@@ -40,8 +40,8 @@ function runTests() {
     assert.strictEqual(result.status, 0);
   })) passed++; else failed++;
 
-  if (test('returns true when ECC_DRY_RUN=1', () => {
-    const env = { ...process.env, ECC_DRY_RUN: '1' };
+  if (test('returns true when AIP_DRY_RUN=1', () => {
+    const env = { ...process.env, AIP_DRY_RUN: '1' };
     const result = spawnSync(process.execPath, [
       '-e',
       'const { isDryRun } = require("./scripts/lib/hook-flags"); process.exit(isDryRun() ? 1 : 0)',
@@ -49,8 +49,8 @@ function runTests() {
     assert.strictEqual(result.status, 1);
   })) passed++; else failed++;
 
-  if (test('returns false when ECC_DRY_RUN=0', () => {
-    const env = { ...process.env, ECC_DRY_RUN: '0' };
+  if (test('returns false when AIP_DRY_RUN=0', () => {
+    const env = { ...process.env, AIP_DRY_RUN: '0' };
     const result = spawnSync(process.execPath, [
       '-e',
       'const { isDryRun } = require("./scripts/lib/hook-flags"); process.exit(isDryRun() ? 1 : 0)',
@@ -60,7 +60,7 @@ function runTests() {
 
   console.log('\nrun-with-flags.js dry-run gating:');
 
-  if (test('skips hook execution and logs preview when ECC_DRY_RUN=1', () => {
+  if (test('skips hook execution and logs preview when AIP_DRY_RUN=1', () => {
     const runWithFlags = path.resolve(__dirname, '..', '..', 'scripts', 'hooks', 'run-with-flags.js');
     const hookScript = 'scripts/hooks/doc-file-warning.js';
     const input = JSON.stringify({ tool: 'Write', tool_input: { file_path: '/tmp/test.md' } });
@@ -73,7 +73,7 @@ function runTests() {
     ], {
       input,
       encoding: 'utf8',
-      env: { ...process.env, ECC_DRY_RUN: '1' },
+      env: { ...process.env, AIP_DRY_RUN: '1' },
       cwd: path.resolve(__dirname, '..', '..'),
     });
 
@@ -112,7 +112,7 @@ function runTests() {
     ], {
       input,
       encoding: 'utf8',
-      env: { ...process.env, ECC_DRY_RUN: '1' },
+      env: { ...process.env, AIP_DRY_RUN: '1' },
       cwd: path.resolve(__dirname, '..', '..'),
       maxBuffer: 4 * 1024 * 1024,
     });
@@ -138,7 +138,7 @@ function runTests() {
     ], {
       input,
       encoding: 'utf8',
-      env: { ...process.env, ECC_DRY_RUN: '1' },
+      env: { ...process.env, AIP_DRY_RUN: '1' },
       cwd: path.resolve(__dirname, '..', '..'),
     });
 
@@ -167,7 +167,7 @@ function runTests() {
     ], {
       input,
       encoding: 'utf8',
-      env: { ...process.env, ECC_DRY_RUN: '1' },
+      env: { ...process.env, AIP_DRY_RUN: '1' },
       cwd: path.resolve(__dirname, '..', '..'),
     });
 
@@ -195,7 +195,7 @@ function runTests() {
     ], {
       input: '',
       encoding: 'utf8',
-      env: { ...process.env, ECC_DRY_RUN: '1' },
+      env: { ...process.env, AIP_DRY_RUN: '1' },
       cwd: path.resolve(__dirname, '..', '..'),
     });
 
@@ -210,13 +210,13 @@ function runTests() {
     );
   })) passed++; else failed++;
 
-  if (test('executes hook normally when ECC_DRY_RUN is not set', () => {
+  if (test('executes hook normally when AIP_DRY_RUN is not set', () => {
     const runWithFlags = path.resolve(__dirname, '..', '..', 'scripts', 'hooks', 'run-with-flags.js');
     const hookScript = 'scripts/hooks/doc-file-warning.js';
     const input = JSON.stringify({ tool: 'Write', tool_input: { file_path: '/tmp/test.txt' } });
 
     const env = { ...process.env };
-    delete env.ECC_DRY_RUN;
+    delete env.AIP_DRY_RUN;
 
     const result = spawnSync(process.execPath, [
       runWithFlags,
@@ -237,11 +237,11 @@ function runTests() {
     );
   })) passed++; else failed++;
 
-  console.log('\necc.js --dry-run flag parsing:');
+  console.log('\naip.js --dry-run flag parsing:');
 
-  if (test('--dry-run sets ECC_DRY_RUN env var for child commands', () => {
-    const eccJs = path.resolve(__dirname, '..', '..', 'scripts', 'ecc.js');
-    const result = spawnSync(process.execPath, [eccJs, '--dry-run', '--help'], {
+  if (test('--dry-run sets AIP_DRY_RUN env var for child commands', () => {
+    const aipJs = path.resolve(__dirname, '..', '..', 'scripts', 'aip.js');
+    const result = spawnSync(process.execPath, [aipJs, '--dry-run', '--help'], {
       encoding: 'utf8',
       env: { ...process.env },
     });
@@ -250,8 +250,8 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('--dry-run is stripped from args so command routing works', () => {
-    const eccJs = path.resolve(__dirname, '..', '..', 'scripts', 'ecc.js');
-    const result = spawnSync(process.execPath, [eccJs, '--dry-run', 'doctor'], {
+    const aipJs = path.resolve(__dirname, '..', '..', 'scripts', 'aip.js');
+    const result = spawnSync(process.execPath, [aipJs, '--dry-run', 'doctor'], {
       encoding: 'utf8',
       env: { ...process.env },
     });
@@ -262,10 +262,10 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('--dry-run works with implicit install routing', () => {
-    const eccJs = path.resolve(__dirname, '..', '..', 'scripts', 'ecc.js');
-    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-dry-run-home-'));
+    const aipJs = path.resolve(__dirname, '..', '..', 'scripts', 'aip.js');
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-dry-run-home-'));
     try {
-      const result = spawnSync(process.execPath, [eccJs, '--dry-run', '--json', 'typescript'], {
+      const result = spawnSync(process.execPath, [aipJs, '--dry-run', '--json', 'typescript'], {
         encoding: 'utf8',
         env: {
           ...process.env,

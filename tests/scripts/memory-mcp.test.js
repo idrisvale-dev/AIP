@@ -31,7 +31,7 @@ async function test(name, fn) {
 }
 
 function createFixture(extraEnv = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-mcp-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-mcp-'));
   const projectRoot = path.join(root, 'project');
   const homeDir = path.join(root, 'home');
   fs.mkdirSync(path.join(projectRoot, '.git'), { recursive: true });
@@ -44,9 +44,9 @@ function createFixture(extraEnv = {}) {
         ...process.env,
         HOME: homeDir,
         USERPROFILE: homeDir,
-        ECC_MEMORY_PROJECT_ROOT: path.join(projectRoot, '.ecc', 'memory'),
-        ECC_MEMORY_USER_ROOT: path.join(homeDir, '.ecc', 'memory'),
-        ECC_MEMORY_HARNESS: 'claude',
+        AIP_MEMORY_PROJECT_ROOT: path.join(projectRoot, '.aip', 'memory'),
+        AIP_MEMORY_USER_ROOT: path.join(homeDir, '.aip', 'memory'),
+        AIP_MEMORY_HARNESS: 'claude',
         ...extraEnv,
       }).filter(([, value]) => typeof value === 'string')
     ),
@@ -125,7 +125,7 @@ async function withClient(fn, options = {}) {
   const initialized = await request('initialize', {
     protocolVersion: '2025-11-25',
     capabilities: {},
-    clientInfo: { name: 'ecc-memory-test', version: '1.0.0' },
+    clientInfo: { name: 'aip-memory-test', version: '1.0.0' },
   });
   assert.strictEqual(initialized.protocolVersion, '2025-11-25');
   send({ jsonrpc: '2.0', method: 'notifications/initialized', params: {} });
@@ -163,7 +163,7 @@ async function withClient(fn, options = {}) {
 }
 
 async function main() {
-  console.log('\n=== Testing ECC memory MCP server ===\n');
+  console.log('\n=== Testing AIP memory MCP server ===\n');
 
   await test('registers the bounded read/write/search/doctor tool surface', async () => {
     await withClient(async client => {
@@ -262,8 +262,8 @@ async function main() {
   });
 
   await test('starts when the npm bin invokes the server through a symlink', async () => {
-    const binRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-memory-bin-'));
-    const binPath = path.join(binRoot, 'ecc-memory-mcp');
+    const binRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-memory-bin-'));
+    const binPath = path.join(binRoot, 'aip-memory-mcp');
     fs.symlinkSync(SERVER, binPath);
     try {
       await withClient(async client => {
@@ -543,17 +543,17 @@ async function main() {
         },
       }));
       assert.strictEqual(userRead.memory.id, saved.memory.id);
-    }, { env: { ECC_MEMORY_ALLOW_USER_SCOPE: '1' } });
+    }, { env: { AIP_MEMORY_ALLOW_USER_SCOPE: '1' } });
   });
 
   await test('requires server identity and strictly validates JSON-RPC envelopes', async () => {
     const { createMemoryMcpService } = await import(pathToFileURL(SERVER).href);
     assert.throws(
       () => createMemoryMcpService({ env: {} }),
-      /ECC_MEMORY_HARNESS/
+      /AIP_MEMORY_HARNESS/
     );
 
-    const fixture = createFixture({ ECC_MEMORY_HARNESS: undefined });
+    const fixture = createFixture({ AIP_MEMORY_HARNESS: undefined });
     try {
       const started = spawnSync(process.execPath, [SERVER], {
         cwd: fixture.projectRoot,
@@ -562,7 +562,7 @@ async function main() {
       });
       assert.strictEqual(started.error, undefined);
       assert.strictEqual(started.status, 1);
-      assert.match(started.stderr, /ECC_MEMORY_HARNESS/);
+      assert.match(started.stderr, /AIP_MEMORY_HARNESS/);
       assert.ok(!started.stderr.includes('\n    at '));
     } finally {
       fs.rmSync(fixture.root, { recursive: true, force: true });

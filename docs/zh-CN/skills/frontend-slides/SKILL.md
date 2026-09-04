@@ -1,7 +1,7 @@
 ---
 name: frontend-slides
 description: 从零开始或通过转换PowerPoint文件创建令人惊艳、动画丰富的HTML演示文稿。当用户想要构建演示文稿、将PPT/PPTX转换为网页格式，或为演讲/推介创建幻灯片时使用。帮助非设计师通过视觉探索而非抽象选择发现他们的美学。
-origin: ECC
+origin: AIP
 ---
 
 # 前端幻灯片
@@ -56,7 +56,7 @@ origin: ECC
 否则：
 
 1. 询问文稿应营造何种感觉：印象深刻、充满活力、专注、激发灵感。
-2. 在 `.ecc-design/slide-previews/` 中生成 **3 个单幻灯片预览文件**。
+2. 在 `.aip-design/slide-previews/` 中生成 **3 个单幻灯片预览文件**。
 3. 每个预览必须是自包含的，清晰地展示排版/色彩/动效，并且幻灯片内容大约保持在 100 行以内。
 4. 询问用户保留哪个预览或混合哪些元素。
 
@@ -179,7 +179,7 @@ origin: ECC
 * 在短屏幕上会损坏的固定高度内容框
 * 无效的否定 CSS 函数，如 `-clamp(...)`
 
-## 相关 ECC 技能
+## 相关 AIP 技能
 
 * `frontend-patterns` 用于围绕文稿的组件和交互模式
 * `liquid-glass-design` 当演示文稿有意借鉴苹果玻璃美学时

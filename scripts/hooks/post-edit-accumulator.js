@@ -28,7 +28,7 @@ function getAccumFile() {
   // Strip path separators and traversal sequences so the value is safe to embed
   // directly in a filename regardless of what CLAUDE_SESSION_ID contains.
   const sessionId = raw.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
-  return path.join(os.tmpdir(), `ecc-edited-${sessionId}.txt`);
+  return path.join(os.tmpdir(), `aip-edited-${sessionId}.txt`);
 }
 
 /**

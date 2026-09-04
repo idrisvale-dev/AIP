@@ -35,12 +35,12 @@ function main() {
     ["documents only the real CLI commands and MCP tools", () => {
       const skill = read("skills/ito-compute/SKILL.md");
       for (const command of [
-        "ecc ito login",
-        "ecc ito logout",
-        "ecc ito auth",
-        "ecc ito find",
-        "ecc ito status",
-        "ecc ito evals",
+        "aip ito login",
+        "aip ito logout",
+        "aip ito auth",
+        "aip ito find",
+        "aip ito status",
+        "aip ito evals",
       ]) {
         assert.match(skill, new RegExp(command.replace(" ", "\\s+")));
       }
@@ -56,10 +56,10 @@ function main() {
       assert.match(skill, /Ito-Markets\/ito-cloud-runtime/);
       assert.match(skill, /cli\/ito-compute-cli/);
       assert.match(skill, /npm run check/);
-      assert.match(skill, /ECC_ITO_CLI_EXECUTABLE/);
+      assert.match(skill, /AIP_ITO_CLI_EXECUTABLE/);
       assert.match(skill, /explicit absolute built entry/);
       assert.match(skill, /never discovers[^\n]*through `PATH`/);
-      assert.match(skill, /ecc ito login --no-browser/);
+      assert.match(skill, /aip ito login --no-browser/);
       assert.match(skill, /return to the originating (?:agent|task)/i);
       assert.match(skill, /revok/i);
       assert.match(skill, /rent or purchase/i);
@@ -68,7 +68,7 @@ function main() {
       assert.match(skill, /macOS Keychain/i);
       assert.match(skill, /(?:auth|find|status).*ITO_API_KEY/i);
       assert.match(skill, /ITO_AUTH_MODE=legacy[^.]*not required/i);
-      assert.match(skill, /ECC (?:itself )?(?:does|performs) no browser automation/i);
+      assert.match(skill, /AIP (?:itself )?(?:does|performs) no browser automation/i);
       assert.match(skill, /ITO_ENABLE_SIXTYTWO_LIVE/);
       assert.match(skill, /sixtytwo-cli==0\.3\.33/);
       assert.match(skill, /explicit node/i);
@@ -83,14 +83,14 @@ function main() {
     ["keeps README and integration docs aligned with the separated auth contract", () => {
       for (const relativePath of [
         "README.md",
-        "docs/design/ecc-ito-compute-integration.md",
+        "docs/design/aip-ito-compute-integration.md",
       ]) {
         const source = read(relativePath);
-        assert.match(source, /ecc ito login \[?--no-browser\]?/i, relativePath);
-        assert.match(source, /ecc ito auth/i, relativePath);
+        assert.match(source, /aip ito login \[?--no-browser\]?/i, relativePath);
+        assert.match(source, /aip ito auth/i, relativePath);
         assert.match(source, /auth.*validat/i, relativePath);
         assert.match(source, /login.*(?:Keychain|device authorization)/is, relativePath);
-        assert.doesNotMatch(source, /ecc ito auth --no-browser/i, relativePath);
+        assert.doesNotMatch(source, /aip ito auth --no-browser/i, relativePath);
         assert.match(source, /ITO_API_KEY.*(?:auth|find|status)/is, relativePath);
         assert.match(source, /ITO_AUTH_MODE=legacy[^.]*not required/i, relativePath);
       }

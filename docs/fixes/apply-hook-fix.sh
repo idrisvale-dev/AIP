@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply ECC hook fix to ~/.claude/settings.local.json.
+# Apply AIP hook fix to ~/.claude/settings.local.json.
 #
 # - Creates a timestamped backup next to the original.
 # - Rewrites the file as UTF-8 (no BOM), LF line endings.
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 TARGET="${1:-$HOME/.claude/settings.local.json}"
-WRAPPER="${ECC_OBSERVE_WRAPPER:-$HOME/.claude/skills/continuous-learning/hooks/observe-wrapper.sh}"
+WRAPPER="${AIP_OBSERVE_WRAPPER:-$HOME/.claude/skills/continuous-learning/hooks/observe-wrapper.sh}"
 
 if [ ! -f "$WRAPPER" ]; then
   echo "[hook-fix] wrapper not found: $WRAPPER" >&2

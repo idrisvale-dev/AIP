@@ -5,7 +5,7 @@ argument-hint: "[path/to/artifact.plan.md | path/to/artifact.html]"
 
 # Plan Canvas Command
 
-Opens a local artifact in the Plan Canvas — ECC's browser review surface —
+Opens a local artifact in the Plan Canvas — AIP's browser review surface —
 where the user annotates elements, chats with you, and approves the plan or
 requests changes without leaving the page.
 
@@ -16,8 +16,8 @@ skill for the full workflow and rules.
 
 1. Resolve the artifact: the given path, else the most recently modified
    `.claude/plans/*.plan.md`, else ask what to review.
-2. `ecc-plan-canvas open <artifact>` — opens the user's browser.
-3. `ecc-plan-canvas await <artifact>` — block until feedback,
+2. `aip-plan-canvas open <artifact>` — opens the user's browser.
+3. `aip-plan-canvas await <artifact>` — block until feedback,
    verdict, or session end; leave it running.
 4. Apply feedback to the artifact file (the canvas live-reloads), answer with
    `await <artifact> --reply "..."`, and repeat until the user approves or

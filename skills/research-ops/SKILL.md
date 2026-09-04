@@ -1,8 +1,8 @@
 ---
 name: research-ops
-description: Evidence-first current-state research workflow for ECC. Use when the user wants fresh facts, comparisons, enrichment, or a recommendation built from current public evidence and any supplied local context.
+description: Evidence-first current-state research workflow for AIP. Use when the user wants fresh facts, comparisons, enrichment, or a recommendation built from current public evidence and any supplied local context.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Research Ops
@@ -13,7 +13,7 @@ This is the operator wrapper around the repo's research stack. It is not a repla
 
 ## Skill Stack
 
-Pull these ECC-native skills into the workflow when relevant:
+Pull these AIP-native skills into the workflow when relevant:
 
 - `exa-search` for fast current-web discovery
 - `deep-research` for multi-source synthesis with citations

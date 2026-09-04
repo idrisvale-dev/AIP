@@ -266,7 +266,7 @@ cargo clippy -- -D warnings
 cargo fmt -- --check
 ```
 
-## ECC 워크플로우
+## AIP 워크플로우
 
 ```bash
 # 계획 수립

@@ -1,7 +1,7 @@
 ---
 name: eval-harness
 description: Framework formal de evaluación para sesiones de Claude Code que implementa principios de desarrollo orientado a evals (EDD)
-origin: ECC
+origin: AIP
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

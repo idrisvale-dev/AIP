@@ -88,11 +88,11 @@ function runTests() {
 
   if (test('hooks default enabled when no preference source exists', () => {
     withEnv({
-      ECC_HOOKS_ENABLED: undefined,
+      AIP_HOOKS_ENABLED: undefined,
       CLAUDE_PLUGIN_OPTION_HOOKS_ENABLED: undefined,
-      ECC_HOOK_CONFIG: undefined,
+      AIP_HOOK_CONFIG: undefined,
       CLAUDE_PLUGIN_ROOT: undefined,
-      ECC_PLUGIN_ROOT: undefined,
+      AIP_PLUGIN_ROOT: undefined,
     }, () => {
       assert.strictEqual(areHooksEnabled(), true);
     });
@@ -100,11 +100,11 @@ function runTests() {
 
   if (test('Claude plugin options control enabled state and profile', () => {
     withEnv({
-      ECC_HOOKS_ENABLED: undefined,
-      ECC_HOOK_PROFILE: undefined,
+      AIP_HOOKS_ENABLED: undefined,
+      AIP_HOOK_PROFILE: undefined,
       CLAUDE_PLUGIN_OPTION_HOOKS_ENABLED: 'false',
       CLAUDE_PLUGIN_OPTION_HOOK_PROFILE: 'minimal',
-      ECC_HOOK_CONFIG: undefined,
+      AIP_HOOK_CONFIG: undefined,
     }, () => {
       assert.strictEqual(areHooksEnabled(), false);
       assert.strictEqual(getHookProfile(), 'minimal');
@@ -115,10 +115,10 @@ function runTests() {
     });
   })) passed++; else failed++;
 
-  if (test('explicit ECC environment overrides Claude plugin options', () => {
+  if (test('explicit AIP environment overrides Claude plugin options', () => {
     withEnv({
-      ECC_HOOKS_ENABLED: 'true',
-      ECC_HOOK_PROFILE: 'strict',
+      AIP_HOOKS_ENABLED: 'true',
+      AIP_HOOK_PROFILE: 'strict',
       CLAUDE_PLUGIN_OPTION_HOOKS_ENABLED: 'false',
       CLAUDE_PLUGIN_OPTION_HOOK_PROFILE: 'minimal',
     }, () => {
@@ -127,28 +127,28 @@ function runTests() {
     });
     assert.strictEqual(
       getHookProfile({
-        ECC_HOOK_PROFILE: '',
+        AIP_HOOK_PROFILE: '',
         CLAUDE_PLUGIN_OPTION_HOOK_PROFILE: 'minimal',
       }),
       'standard',
-      'an explicit empty ECC profile must not fall through to plugin config'
+      'an explicit empty AIP profile must not fall through to plugin config'
     );
   })) passed++; else failed++;
 
   if (test('managed hook config is used after explicit and plugin preferences', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-hook-flags-'));
-    const configPath = path.join(root, 'ecc', 'setup.json');
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-hook-flags-'));
+    const configPath = path.join(root, 'aip', 'setup.json');
     try {
       fs.mkdirSync(path.dirname(configPath), { recursive: true });
       fs.writeFileSync(configPath, JSON.stringify({
         hooks: { enabled: false, profile: 'minimal' },
       }));
       withEnv({
-        ECC_HOOKS_ENABLED: undefined,
-        ECC_HOOK_PROFILE: undefined,
+        AIP_HOOKS_ENABLED: undefined,
+        AIP_HOOK_PROFILE: undefined,
         CLAUDE_PLUGIN_OPTION_HOOKS_ENABLED: undefined,
         CLAUDE_PLUGIN_OPTION_HOOK_PROFILE: undefined,
-        ECC_HOOK_CONFIG: configPath,
+        AIP_HOOK_CONFIG: configPath,
       }, () => {
         assert.deepStrictEqual(readManagedHookConfig(), {
           enabled: false,
@@ -163,7 +163,7 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('a hook evaluation reads managed config only once', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-hook-flags-read-once-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-hook-flags-read-once-'));
     const configPath = path.join(root, 'setup.json');
     const originalReadFileSync = fs.readFileSync;
     let configReadCount = 0;
@@ -176,7 +176,7 @@ function runTests() {
         return originalReadFileSync(...args);
       };
       assert.strictEqual(isHookEnabled('pre:test', {
-        env: { ECC_HOOK_CONFIG: configPath },
+        env: { AIP_HOOK_CONFIG: configPath },
         profiles: ['minimal'],
       }), true);
       assert.strictEqual(configReadCount, 1);
@@ -187,7 +187,7 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('malformed managed config emits one sanitized diagnostic', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-hook-flags-invalid-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-hook-flags-invalid-'));
     const configPath = path.join(root, 'setup.json');
     const originalWrite = process.stderr.write;
     const diagnostics = [];
@@ -197,9 +197,9 @@ function runTests() {
         diagnostics.push(String(value));
         return true;
       };
-      assert.deepStrictEqual(readManagedHookConfig({ ECC_HOOK_CONFIG: configPath }), {});
+      assert.deepStrictEqual(readManagedHookConfig({ AIP_HOOK_CONFIG: configPath }), {});
       assert.strictEqual(diagnostics.length, 1);
-      assert.match(diagnostics[0], /Warning: unable to read managed ECC hook config/);
+      assert.match(diagnostics[0], /Warning: unable to read managed AIP hook config/);
       assert.strictEqual(diagnostics[0].includes('\u001b'), false);
       assert.match(diagnostics[0], /setup\.json/);
     } finally {
@@ -219,7 +219,7 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('run-with-flags suppresses wrapper hooks when plugin hooks are off', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-hook-wrapper-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-hook-wrapper-'));
     const markerPath = path.join(root, 'ran.txt');
     const hookPath = path.join(root, 'marker.js');
     const runner = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'run-with-flags.js');
@@ -234,7 +234,7 @@ function runTests() {
         CLAUDE_PLUGIN_ROOT: root,
         CLAUDE_PLUGIN_OPTION_HOOKS_ENABLED: 'false',
       };
-      delete env.ECC_HOOKS_ENABLED;
+      delete env.AIP_HOOKS_ENABLED;
       const result = spawnSync(process.execPath, [
         runner,
         'pre:test:marker',
@@ -294,54 +294,54 @@ function runTests() {
 
   if (test('defaults to standard when env var not set', () => {
     withEnv({
-      ECC_HOOK_PROFILE: undefined,
+      AIP_HOOK_PROFILE: undefined,
       CLAUDE_PLUGIN_OPTION_HOOK_PROFILE: undefined,
-      ECC_HOOK_CONFIG: undefined,
+      AIP_HOOK_CONFIG: undefined,
       CLAUDE_PLUGIN_ROOT: undefined,
-      ECC_PLUGIN_ROOT: undefined,
+      AIP_PLUGIN_ROOT: undefined,
     }, () => {
       assert.strictEqual(getHookProfile(), 'standard');
     });
   })) passed++; else failed++;
 
   if (test('returns minimal when set to minimal', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'minimal' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'minimal' }, () => {
       assert.strictEqual(getHookProfile(), 'minimal');
     });
   })) passed++; else failed++;
 
   if (test('returns standard when set to standard', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'standard' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'standard' }, () => {
       assert.strictEqual(getHookProfile(), 'standard');
     });
   })) passed++; else failed++;
 
   if (test('returns strict when set to strict', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'strict' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'strict' }, () => {
       assert.strictEqual(getHookProfile(), 'strict');
     });
   })) passed++; else failed++;
 
   if (test('is case-insensitive', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'STRICT' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'STRICT' }, () => {
       assert.strictEqual(getHookProfile(), 'strict');
     });
   })) passed++; else failed++;
 
   if (test('trims whitespace from env var', () => {
-    withEnv({ ECC_HOOK_PROFILE: '  minimal  ' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: '  minimal  ' }, () => {
       assert.strictEqual(getHookProfile(), 'minimal');
     });
   })) passed++; else failed++;
 
   if (test('defaults to standard for invalid value', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'invalid' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'invalid' }, () => {
       assert.strictEqual(getHookProfile(), 'standard');
     });
   })) passed++; else failed++;
 
   if (test('defaults to standard for empty string', () => {
-    withEnv({ ECC_HOOK_PROFILE: '' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: '' }, () => {
       assert.strictEqual(getHookProfile(), 'standard');
     });
   })) passed++; else failed++;
@@ -350,7 +350,7 @@ function runTests() {
   console.log('\ngetDisabledHookIds:');
 
   if (test('returns empty Set when env var not set', () => {
-    withEnv({ ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_DISABLED_HOOKS: undefined }, () => {
       const result = getDisabledHookIds();
       assert.ok(result instanceof Set);
       assert.strictEqual(result.size, 0);
@@ -358,19 +358,19 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('returns empty Set for empty string', () => {
-    withEnv({ ECC_DISABLED_HOOKS: '' }, () => {
+    withEnv({ AIP_DISABLED_HOOKS: '' }, () => {
       assert.strictEqual(getDisabledHookIds().size, 0);
     });
   })) passed++; else failed++;
 
   if (test('returns empty Set for whitespace-only string', () => {
-    withEnv({ ECC_DISABLED_HOOKS: '   ' }, () => {
+    withEnv({ AIP_DISABLED_HOOKS: '   ' }, () => {
       assert.strictEqual(getDisabledHookIds().size, 0);
     });
   })) passed++; else failed++;
 
   if (test('parses single hook id', () => {
-    withEnv({ ECC_DISABLED_HOOKS: 'my-hook' }, () => {
+    withEnv({ AIP_DISABLED_HOOKS: 'my-hook' }, () => {
       const result = getDisabledHookIds();
       assert.strictEqual(result.size, 1);
       assert.ok(result.has('my-hook'));
@@ -378,7 +378,7 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('parses multiple comma-separated hook ids', () => {
-    withEnv({ ECC_DISABLED_HOOKS: 'hook-a,hook-b,hook-c' }, () => {
+    withEnv({ AIP_DISABLED_HOOKS: 'hook-a,hook-b,hook-c' }, () => {
       const result = getDisabledHookIds();
       assert.strictEqual(result.size, 3);
       assert.ok(result.has('hook-a'));
@@ -388,7 +388,7 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('trims whitespace around hook ids', () => {
-    withEnv({ ECC_DISABLED_HOOKS: ' hook-a , hook-b ' }, () => {
+    withEnv({ AIP_DISABLED_HOOKS: ' hook-a , hook-b ' }, () => {
       const result = getDisabledHookIds();
       assert.strictEqual(result.size, 2);
       assert.ok(result.has('hook-a'));
@@ -397,7 +397,7 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('normalizes hook ids to lowercase', () => {
-    withEnv({ ECC_DISABLED_HOOKS: 'MyHook,ANOTHER' }, () => {
+    withEnv({ AIP_DISABLED_HOOKS: 'MyHook,ANOTHER' }, () => {
       const result = getDisabledHookIds();
       assert.ok(result.has('myhook'));
       assert.ok(result.has('another'));
@@ -405,7 +405,7 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('filters out empty entries from trailing commas', () => {
-    withEnv({ ECC_DISABLED_HOOKS: 'hook-a,,hook-b,' }, () => {
+    withEnv({ AIP_DISABLED_HOOKS: 'hook-a,,hook-b,' }, () => {
       const result = getDisabledHookIds();
       assert.strictEqual(result.size, 2);
       assert.ok(result.has('hook-a'));
@@ -490,85 +490,85 @@ function runTests() {
   console.log('\nisHookEnabled:');
 
   if (test('returns true by default for a hook (standard profile)', () => {
-    withEnv({ ECC_HOOK_PROFILE: undefined, ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_HOOK_PROFILE: undefined, AIP_DISABLED_HOOKS: undefined }, () => {
       assert.strictEqual(isHookEnabled('my-hook'), true);
     });
   })) passed++; else failed++;
 
   if (test('returns true for empty hookId', () => {
-    withEnv({ ECC_HOOK_PROFILE: undefined, ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_HOOK_PROFILE: undefined, AIP_DISABLED_HOOKS: undefined }, () => {
       assert.strictEqual(isHookEnabled(''), true);
     });
   })) passed++; else failed++;
 
   if (test('returns true for null hookId', () => {
-    withEnv({ ECC_HOOK_PROFILE: undefined, ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_HOOK_PROFILE: undefined, AIP_DISABLED_HOOKS: undefined }, () => {
       assert.strictEqual(isHookEnabled(null), true);
     });
   })) passed++; else failed++;
 
   if (test('returns false when hook is in disabled list', () => {
-    withEnv({ ECC_HOOK_PROFILE: undefined, ECC_DISABLED_HOOKS: 'my-hook' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: undefined, AIP_DISABLED_HOOKS: 'my-hook' }, () => {
       assert.strictEqual(isHookEnabled('my-hook'), false);
     });
   })) passed++; else failed++;
 
   if (test('disabled check is case-insensitive', () => {
-    withEnv({ ECC_HOOK_PROFILE: undefined, ECC_DISABLED_HOOKS: 'MY-HOOK' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: undefined, AIP_DISABLED_HOOKS: 'MY-HOOK' }, () => {
       assert.strictEqual(isHookEnabled('my-hook'), false);
     });
   })) passed++; else failed++;
 
   if (test('returns true when hook is not in disabled list', () => {
-    withEnv({ ECC_HOOK_PROFILE: undefined, ECC_DISABLED_HOOKS: 'other-hook' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: undefined, AIP_DISABLED_HOOKS: 'other-hook' }, () => {
       assert.strictEqual(isHookEnabled('my-hook'), true);
     });
   })) passed++; else failed++;
 
   if (test('returns false when current profile is not in allowed profiles', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'minimal', ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'minimal', AIP_DISABLED_HOOKS: undefined }, () => {
       assert.strictEqual(isHookEnabled('my-hook', { profiles: 'strict' }), false);
     });
   })) passed++; else failed++;
 
   if (test('returns true when current profile is in allowed profiles', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'strict', ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'strict', AIP_DISABLED_HOOKS: undefined }, () => {
       assert.strictEqual(isHookEnabled('my-hook', { profiles: 'standard,strict' }), true);
     });
   })) passed++; else failed++;
 
   if (test('returns true when current profile matches single allowed profile', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'minimal', ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'minimal', AIP_DISABLED_HOOKS: undefined }, () => {
       assert.strictEqual(isHookEnabled('my-hook', { profiles: 'minimal' }), true);
     });
   })) passed++; else failed++;
 
   if (test('disabled hooks take precedence over profile match', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'strict', ECC_DISABLED_HOOKS: 'my-hook' }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'strict', AIP_DISABLED_HOOKS: 'my-hook' }, () => {
       assert.strictEqual(isHookEnabled('my-hook', { profiles: 'strict' }), false);
     });
   })) passed++; else failed++;
 
   if (test('uses default profiles (standard, strict) when none specified', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'minimal', ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'minimal', AIP_DISABLED_HOOKS: undefined }, () => {
       assert.strictEqual(isHookEnabled('my-hook'), false);
     });
   })) passed++; else failed++;
 
   if (test('allows standard profile by default', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'standard', ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'standard', AIP_DISABLED_HOOKS: undefined }, () => {
       assert.strictEqual(isHookEnabled('my-hook'), true);
     });
   })) passed++; else failed++;
 
   if (test('allows strict profile by default', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'strict', ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'strict', AIP_DISABLED_HOOKS: undefined }, () => {
       assert.strictEqual(isHookEnabled('my-hook'), true);
     });
   })) passed++; else failed++;
 
   if (test('accepts array profiles option', () => {
-    withEnv({ ECC_HOOK_PROFILE: 'minimal', ECC_DISABLED_HOOKS: undefined }, () => {
+    withEnv({ AIP_HOOK_PROFILE: 'minimal', AIP_DISABLED_HOOKS: undefined }, () => {
       assert.strictEqual(isHookEnabled('my-hook', { profiles: ['minimal', 'standard'] }), true);
     });
   })) passed++; else failed++;

@@ -1,7 +1,7 @@
 ---
 name: product-lens
 description: 使用此技能在构建前验证“为什么”，运行产品诊断，并在请求成为实施合同之前对产品方向进行压力测试。
-origin: ECC
+origin: AIP
 ---
 
 # 产品透镜 —— 先思考，再构建

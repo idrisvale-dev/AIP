@@ -126,4 +126,4 @@ This command invokes:
 
 ---
 
-*Part of [Everything Claude Code](https://github.com/reborncursed/AIP)*
+*Part of [AIP](https://github.com/reborncursed/AIP)*

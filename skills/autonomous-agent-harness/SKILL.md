@@ -2,7 +2,7 @@
 name: autonomous-agent-harness
 description: Transform Claude Code into a fully autonomous agent system with persistent memory, scheduled operations, computer use, and task queuing. Replaces standalone agent frameworks (Hermes, AutoGPT) by leveraging Claude Code's native crons, dispatch, MCP tools, and memory. Use when the user wants continuous autonomous operation, scheduled tasks, or a self-directing agent loop.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Autonomous Agent Harness
@@ -13,7 +13,7 @@ Turn Claude Code into a persistent, self-directing agent system using only nativ
 
 Autonomous operation must be explicitly requested and scoped by the user. Do not create schedules, dispatch remote agents, write persistent memory, use computer control, post externally, modify third-party resources, or act on private communications unless the user has approved that capability and the target workspace for the current setup.
 
-Prefer dry-run plans and local queue files before enabling recurring or event-driven actions. Keep credentials, private workspace exports, personal datasets, and account-specific automations out of reusable ECC artifacts.
+Prefer dry-run plans and local queue files before enabling recurring or event-driven actions. Keep credentials, private workspace exports, personal datasets, and account-specific automations out of reusable AIP artifacts.
 
 ## When to Activate
 
@@ -38,7 +38,7 @@ Prefer dry-run plans and local queue files before enabling recurring or event-dr
 │       │              │             │                │        │
 │       ▼              ▼             ▼                ▼        │
 │  ┌──────────────────────────────────────────────────────┐    │
-│  │              ECC Skill + Agent Layer                  │    │
+│  │              AIP Skill + Agent Layer                  │    │
 │  │                                                      │    │
 │  │  skills/     agents/     commands/     hooks/        │    │
 │  └──────────────────────────────────────────────────────┘    │
@@ -174,14 +174,14 @@ description: Persistent task queue for autonomous operation
 
 ## Replacing Hermes
 
-| Hermes Component | ECC Equivalent | How |
+| Hermes Component | AIP Equivalent | How |
 |------------------|---------------|-----|
 | Gateway/Router | Claude Code dispatch + crons | Scheduled tasks trigger agent sessions |
 | Memory System | Claude memory + MCP memory server | Built-in persistence + knowledge graph |
 | Tool Registry | MCP servers | Dynamically loaded tool providers |
-| Orchestration | ECC skills + agents | Skill definitions direct agent behavior |
+| Orchestration | AIP skills + agents | Skill definitions direct agent behavior |
 | Computer Use | computer-use MCP | Native browser and desktop control |
-| Context Manager | Session management + memory | ECC 2.0 session lifecycle |
+| Context Manager | Session management + memory | AIP 2.0 session lifecycle |
 | Task Queue | Memory-persisted task list | TodoWrite + memory files |
 
 ## Setup Guide

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Agent-space distance metric + collision avoidance (ECC 2.0, Layer 4 v0).
+ * Agent-space distance metric + collision avoidance (AIP 2.0, Layer 4 v0).
  *
  * Two agents editing the same codebase are like two aircraft sharing airspace:
  * we want a continuous notion of "how close are they" so that, as they approach,

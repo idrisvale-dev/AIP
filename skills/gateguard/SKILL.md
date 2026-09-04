@@ -91,13 +91,13 @@ Triggers on: `rm -rf`, `git reset --hard`, `git push --force`, `drop table`, etc
 
 ## Quick Start
 
-### Option A: Use the ECC hook (zero install)
+### Option A: Use the AIP hook (zero install)
 
 The hook at `scripts/hooks/gateguard-fact-force.js` is included in this plugin. Enable it via hooks.json.
 
 If GateGuard blocks setup or repair work, start the session with
-`ECC_GATEGUARD=off`. For hook-level control, keep using
-`ECC_DISABLED_HOOKS` with the GateGuard hook ID.
+`AIP_GATEGUARD=off`. For hook-level control, keep using
+`AIP_DISABLED_HOOKS` with the GateGuard hook ID.
 
 In long sessions, only the first `GATEGUARD_FACT_FORCE_FULL_DENIALS`
 fact-force denials (default 3) emit the full four-fact block; later
@@ -108,7 +108,7 @@ command after presenting facts never re-triggers the gate.
 
 #### Graduated controls
 
-`ECC_GATEGUARD=off` (or `GATEGUARD_DISABLED=1`) turns the gate off entirely.
+`AIP_GATEGUARD=off` (or `GATEGUARD_DISABLED=1`) turns the gate off entirely.
 The variables in this table do **not** — each narrows one behaviour while the
 load-bearing destructive-Bash checks keep running:
 
@@ -128,10 +128,10 @@ leaves the gate on.
 
 | Variable | Effect |
 |---|---|
-| `ECC_GATEGUARD=off` | Disables GateGuard for the session. Accepts `0`, `false`, `off`, `disabled`, or `disable`. |
+| `AIP_GATEGUARD=off` | Disables GateGuard for the session. Accepts `0`, `false`, `off`, `disabled`, or `disable`. |
 | `GATEGUARD_DISABLED=1` | Same effect. Recognises `1` only — the spellings above do **not** apply here. |
 
-For hook-level control, keep using `ECC_DISABLED_HOOKS` with the GateGuard hook ID.
+For hook-level control, keep using `AIP_DISABLED_HOOKS` with the GateGuard hook ID.
 
 #### Glob semantics for `GATEGUARD_EXEMPT_GLOBS`
 

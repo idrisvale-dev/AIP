@@ -1,7 +1,7 @@
 ---
 name: quarkus-security
 description: Buenas prácticas de seguridad en Quarkus para autenticación, autorización, JWT/OIDC, RBAC, validación de entrada, CSRF, gestión de secretos y seguridad de dependencias.
-origin: ECC
+origin: AIP
 ---
 
 # Revisión de Seguridad Quarkus

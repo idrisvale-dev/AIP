@@ -105,7 +105,7 @@ test('scorecard onramp names the local verification commands', () => {
     'npm run harness:audit -- --format json',
     'npm run observability:ready',
     'node scripts/session-inspect.js --list-adapters',
-    'node scripts/loop-status.js --json --write-dir .ecc/loop-status'
+    'node scripts/loop-status.js --json --write-dir .aip/loop-status'
   ]) {
     assert.ok(source.includes(command), `Expected onramp to include ${command}`);
   }
@@ -128,7 +128,7 @@ test('adapter compliance CLI emits machine-readable scorecard data', () => {
   });
   const parsed = JSON.parse(output);
 
-  assert.strictEqual(parsed.schema_version, 'ecc.harness-adapter-compliance.v1');
+  assert.strictEqual(parsed.schema_version, 'aip.harness-adapter-compliance.v1');
   assert.strictEqual(parsed.valid, true);
   assert.strictEqual(parsed.adapter_count, ADAPTER_RECORDS.length);
   assert.ok(parsed.adapters.some(record => record.id === 'terminal-only'));
@@ -140,7 +140,7 @@ test('cross-harness architecture links to the adapter compliance matrix', () => 
 });
 
 test('GA roadmap records the matrix and validator as current evidence', () => {
-  const source = read('docs/ECC-2.0-GA-ROADMAP.md');
+  const source = read('docs/AIP-2.0-GA-ROADMAP.md');
   assert.ok(source.includes('docs/architecture/harness-adapter-compliance.md'));
   assert.ok(source.includes('npm run harness:adapters -- --check'));
   assert.ok(source.includes('scripts/lib/harness-adapter-compliance.js'));

@@ -47,11 +47,11 @@ function passthrough(result) {
       ? result.stdout
       : Buffer.alloc(0);
   if (stdout.length > 0) {
-    // Most ECC hook scripts follow a `run(rawInput) -> rawInput` passthrough
+    // Most AIP hook scripts follow a `run(rawInput) -> rawInput` passthrough
     // pattern: they do their work, then return the original input so the hook
     // chain's tool result is preserved. The harness then writes the verbatim
     // raw input (tool_input + tool_response, often 1-275 KB) into the session
-    // transcript as a hook_success attachment -- ~89% of every ECC session's
+    // transcript as a hook_success attachment -- ~89% of every AIP session's
     // transcript is this bloat. Detect the passthrough and emit empty stdout
     // instead; the harness falls back to the tool_use's original result, the
     // same path #2240 established for bash-hook-dispatcher.
@@ -188,7 +188,7 @@ function spawnNode(rootDir, relPath, raw, args) {
   const hookEnv = {
     ...process.env,
     CLAUDE_PLUGIN_ROOT: rootDir,
-    ECC_PLUGIN_ROOT: rootDir,
+    AIP_PLUGIN_ROOT: rootDir,
   };
   const result = spawnSync(process.execPath, [resolveTarget(rootDir, relPath), ...args], {
     input: raw,
@@ -218,7 +218,7 @@ function spawnShell(rootDir, relPath, raw, args) {
   const hookEnv = {
     ...process.env,
     CLAUDE_PLUGIN_ROOT: rootDir,
-    ECC_PLUGIN_ROOT: rootDir,
+    AIP_PLUGIN_ROOT: rootDir,
   };
   const scriptPath = resolveTarget(rootDir, relPath);
   const isPs = isPowerShellBin(shell);
@@ -264,7 +264,7 @@ function main() {
   const [, , mode, relPath, ...args] = process.argv;
   const raw = readStdinRaw();
   const rootDir = normalizePluginRootForPlatform(
-    process.env.CLAUDE_PLUGIN_ROOT || process.env.ECC_PLUGIN_ROOT
+    process.env.CLAUDE_PLUGIN_ROOT || process.env.AIP_PLUGIN_ROOT
   );
 
   if (!mode || !relPath || !rootDir) {

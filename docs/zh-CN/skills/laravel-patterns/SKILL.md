@@ -1,7 +1,7 @@
 ---
 name: laravel-patterns
 description: Laravel架构模式、路由/控制器、Eloquent ORM、服务层、队列、事件、缓存以及用于生产应用的API资源。
-origin: ECC
+origin: AIP
 ---
 
 # Laravel 开发模式

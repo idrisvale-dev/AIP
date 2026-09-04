@@ -14,7 +14,7 @@ let failed = 0;
 
 function makePlan(root, moduleId, fileName) {
   const targetRoot = path.join(root, '.cursor');
-  const installStatePath = path.join(targetRoot, 'ecc-install-state.json');
+  const installStatePath = path.join(targetRoot, 'aip-install-state.json');
   const sourcePath = path.join(root, 'source', moduleId, fileName);
   const destinationPath = path.join(targetRoot, 'skills', moduleId, fileName);
   fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
@@ -38,7 +38,7 @@ function makePlan(root, moduleId, fileName) {
     installStatePath,
     operations: [operation],
     statePreview: {
-      schemaVersion: 'ecc.install.v1',
+      schemaVersion: 'aip.install.v1',
       installedAt: new Date().toISOString(),
       target: {
         id: 'cursor-project',
@@ -63,7 +63,7 @@ function makePlan(root, moduleId, fileName) {
   };
 }
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-selective-reinstall-'));
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-selective-reinstall-'));
 try {
   const first = makePlan(root, 'first-module', 'FIRST.md');
   const second = makePlan(root, 'second-module', 'SECOND.md');
@@ -95,7 +95,7 @@ try {
   fs.rmSync(root, { recursive: true, force: true });
 }
 
-const partialRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-partial-non-claude-'));
+const partialRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-partial-non-claude-'));
 try {
   const copied = makePlan(partialRoot, 'copied-module', 'COPIED.md');
   const missing = makePlan(partialRoot, 'missing-module', 'MISSING.md');

@@ -20,7 +20,7 @@ const path = require('path');
 const os = require('os');
 
 function stateDir() {
-  const override = process.env.ECC_PLAN_CANVAS_STATE_DIR;
+  const override = process.env.AIP_PLAN_CANVAS_STATE_DIR;
   if (override && override.trim()) return path.resolve(override.trim());
   return path.join(os.homedir(), '.claude', 'plan-canvas');
 }

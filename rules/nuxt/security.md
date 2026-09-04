@@ -43,6 +43,6 @@ paths:
 
 ## Reference
 
-- ECC skills: `security-review`, `nuxt4-patterns`.
+- AIP skills: `security-review`, `nuxt4-patterns`.
 - [Nuxt runtime config](https://nuxt.com/docs/guide/going-further/runtime-config)
 - [h3 request utils](https://v1.h3.dev/utils/request)

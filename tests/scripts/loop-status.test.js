@@ -50,7 +50,7 @@ function run(args = [], options = {}) {
 }
 
 function createTempHome() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-loop-status-home-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-loop-status-home-'));
 }
 
 function writeTranscript(homeDir, projectSlug, fileName, entries) {
@@ -156,7 +156,7 @@ function runTests() {
 
       assert.strictEqual(result.code, 0, result.stderr);
       const payload = parsePayload(result.stdout);
-      assert.strictEqual(payload.schemaVersion, 'ecc.loop-status.v1');
+      assert.strictEqual(payload.schemaVersion, 'aip.loop-status.v1');
       assert.strictEqual(payload.sessions.length, 1);
       assert.strictEqual(payload.sessions[0].sessionId, 'session-a');
       assert.strictEqual(payload.sessions[0].transcriptPath, transcriptPath);
@@ -422,10 +422,10 @@ function runTests() {
       'node',
       'scripts/loop-status.js',
       '--write-dir',
-      '/tmp/ecc-loop-snapshots',
+      '/tmp/aip-loop-snapshots',
     ]);
 
-    assert.strictEqual(options.writeDir, '/tmp/ecc-loop-snapshots');
+    assert.strictEqual(options.writeDir, '/tmp/aip-loop-snapshots');
   })) passed++; else failed++;
 
   if (test('exit-code mode returns 2 when attention signals are present', () => {
@@ -449,7 +449,7 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('exit-code mode returns 1 for scan errors without attention signals', () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-loop-status-missing-'));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-loop-status-missing-'));
     const missingTranscript = path.join(tempDir, 'missing.jsonl');
     const result = run(['--transcript', missingTranscript, '--now', NOW, '--json', '--exit-code']);
 
@@ -506,8 +506,8 @@ function runTests() {
       assert.strictEqual(result.code, 0, result.stderr);
       const frames = result.stdout.trim().split(/\r?\n/).map(line => JSON.parse(line));
       assert.strictEqual(frames.length, 2);
-      assert.strictEqual(frames[0].schemaVersion, 'ecc.loop-status.v1');
-      assert.strictEqual(frames[1].schemaVersion, 'ecc.loop-status.v1');
+      assert.strictEqual(frames[0].schemaVersion, 'aip.loop-status.v1');
+      assert.strictEqual(frames[1].schemaVersion, 'aip.loop-status.v1');
       assert.strictEqual(frames[0].sessions[0].sessionId, 'session-watch');
       assert.strictEqual(frames[1].sessions[0].sessionId, 'session-watch');
     } finally {
@@ -550,7 +550,7 @@ function runTests() {
 
   if (test('writes per-session status snapshots and index when write-dir is set', () => {
     const homeDir = createTempHome();
-    const snapshotDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-loop-status-snapshots-'));
+    const snapshotDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-loop-status-snapshots-'));
 
     try {
       writeTranscript(homeDir, '-Users-affoon-project-snapshot', 'session-snapshot.jsonl', [
@@ -572,7 +572,7 @@ function runTests() {
 
       assert.strictEqual(result.code, 0, result.stderr);
       const stdoutPayload = parsePayload(result.stdout);
-      assert.strictEqual(stdoutPayload.schemaVersion, 'ecc.loop-status.v1');
+      assert.strictEqual(stdoutPayload.schemaVersion, 'aip.loop-status.v1');
 
       const indexPath = path.join(snapshotDir, 'index.json');
       const snapshotPath = path.join(snapshotDir, 'session-snapshot.json');
@@ -580,14 +580,14 @@ function runTests() {
       assert.ok(fs.existsSync(snapshotPath), 'write-dir should include a per-session snapshot');
 
       const indexPayload = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-      assert.strictEqual(indexPayload.schemaVersion, 'ecc.loop-status.index.v1');
+      assert.strictEqual(indexPayload.schemaVersion, 'aip.loop-status.index.v1');
       assert.strictEqual(indexPayload.sessions.length, 1);
       assert.strictEqual(indexPayload.sessions[0].sessionId, 'session-snapshot');
       assert.strictEqual(indexPayload.sessions[0].state, 'attention');
       assert.strictEqual(indexPayload.sessions[0].snapshotPath, snapshotPath);
 
       const snapshotPayload = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
-      assert.strictEqual(snapshotPayload.schemaVersion, 'ecc.loop-status.session.v1');
+      assert.strictEqual(snapshotPayload.schemaVersion, 'aip.loop-status.session.v1');
       assert.strictEqual(snapshotPayload.generatedAt, NOW);
       assert.strictEqual(snapshotPayload.session.sessionId, 'session-snapshot');
       assert.ok(snapshotPayload.session.signals.some(signal => signal.type === 'schedule_wakeup_overdue'));
@@ -599,7 +599,7 @@ function runTests() {
 
   if (test('keeps index.json reserved when session id sanitizes to index', () => {
     const homeDir = createTempHome();
-    const snapshotDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-loop-status-index-collision-'));
+    const snapshotDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-loop-status-index-collision-'));
 
     try {
       writeTranscript(homeDir, '-Users-affoon-project-index-collision', 'index.jsonl', [
@@ -620,13 +620,13 @@ function runTests() {
 
       const indexPath = path.join(snapshotDir, 'index.json');
       const indexPayload = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-      assert.strictEqual(indexPayload.schemaVersion, 'ecc.loop-status.index.v1');
+      assert.strictEqual(indexPayload.schemaVersion, 'aip.loop-status.index.v1');
       assert.strictEqual(indexPayload.sessions.length, 1);
       assert.strictEqual(indexPayload.sessions[0].sessionId, 'index');
       assert.notStrictEqual(indexPayload.sessions[0].snapshotPath, indexPath);
 
       const snapshotPayload = JSON.parse(fs.readFileSync(indexPayload.sessions[0].snapshotPath, 'utf8'));
-      assert.strictEqual(snapshotPayload.schemaVersion, 'ecc.loop-status.session.v1');
+      assert.strictEqual(snapshotPayload.schemaVersion, 'aip.loop-status.session.v1');
       assert.strictEqual(snapshotPayload.session.sessionId, 'index');
     } finally {
       fs.rmSync(homeDir, { recursive: true, force: true });
@@ -636,7 +636,7 @@ function runTests() {
 
   if (test('avoids Windows reserved basenames for session snapshots', () => {
     const homeDir = createTempHome();
-    const snapshotDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-loop-status-windows-name-'));
+    const snapshotDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-loop-status-windows-name-'));
 
     try {
       writeTranscript(homeDir, '-Users-affoon-project-windows-name', 'con.jsonl', [
@@ -668,7 +668,7 @@ function runTests() {
         assert.ok(!/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(snapshotName.split('.')[0]));
 
         const snapshotPayload = JSON.parse(fs.readFileSync(sessionIndex.snapshotPath, 'utf8'));
-        assert.strictEqual(snapshotPayload.schemaVersion, 'ecc.loop-status.session.v1');
+        assert.strictEqual(snapshotPayload.schemaVersion, 'aip.loop-status.session.v1');
         assert.strictEqual(snapshotPayload.session.sessionId, sessionIndex.sessionId);
       }
     } finally {
@@ -678,7 +678,7 @@ function runTests() {
   })) passed++; else failed++;
 
   if (test('cleans temporary snapshot files when atomic rename fails', () => {
-    const snapshotDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-loop-status-rename-failure-'));
+    const snapshotDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-loop-status-rename-failure-'));
     const originalRenameSync = fs.renameSync;
 
     try {
@@ -734,7 +734,7 @@ function runTests() {
 
       assert.strictEqual(result.code, 0, result.stderr);
       const payload = parsePayload(result.stdout);
-      assert.strictEqual(payload.schemaVersion, 'ecc.loop-status.v1');
+      assert.strictEqual(payload.schemaVersion, 'aip.loop-status.v1');
       assert.strictEqual(payload.sessions[0].sessionId, 'session-write-error');
       assert.match(result.stderr, /\[loop-status\] WARNING: could not write status snapshots:/);
     } finally {

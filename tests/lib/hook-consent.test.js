@@ -75,8 +75,8 @@ function runTests() {
     assert.strictEqual(
       isHookRuntimeOperation({
         moduleId: 'platform-configs',
-        sourceRelativePath: '.opencode/plugins/ecc-hooks.ts',
-        destinationPath: '/root/.config/opencode/plugins/ecc-hooks.ts',
+        sourceRelativePath: '.opencode/plugins/aip-hooks.ts',
+        destinationPath: '/root/.config/opencode/plugins/aip-hooks.ts',
       }),
       false
     );

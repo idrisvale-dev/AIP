@@ -1,6 +1,6 @@
 # トラブルシューティングガイド
 
-Everything Claude Code (ECC) プラグインの一般的な問題と解決策。
+AIP (AIP) プラグインの一般的な問題と解決策。
 
 ## 目次
 
@@ -249,10 +249,10 @@ tmux attach -t dev
 
 **解決策：**
 ```bash
-# まずECCがこのマシンについて認識している情報を確認
-ecc list-installed
-ecc doctor
-ecc repair
+# まずAIPがこのマシンについて認識している情報を確認
+aip list-installed
+aip doctor
+aip repair
 
 # doctor/repairで不足ファイルを復元できない場合のみ再インストール
 
@@ -264,10 +264,10 @@ mv ~/.claude/plugins/cache ~/.claude/plugins/cache.backup.$(date +%Y%m%d-%H%M%S)
 mkdir -p ~/.claude/plugins/cache
 
 # Marketplaceから再インストール
-# Claude Code → Extensions → Everything Claude Code → Uninstall
+# Claude Code → Extensions → AIP → Uninstall
 # その後Marketplaceから再インストール
 
-# 問題がMarketplace/アカウントアクセスの場合、ECC Toolsのbilling/アカウントリカバリーを別途使用
+# 問題がMarketplace/アカウントアクセスの場合、AIP Toolsのbilling/アカウントリカバリーを別途使用
 # 再インストールをアカウントリカバリーの代替として使用しない
 
 # Claude Codeバージョンを確認
@@ -276,7 +276,7 @@ claude --version
 
 # 手動インストール（Marketplaceが失敗する場合）
 git clone https://github.com/reborncursed/AIP.git
-cp -r everything-claude-code ~/.claude/plugins/ecc
+cp -r aip ~/.claude/plugins/aip
 ```
 
 ### パッケージマネージャー検出の失敗
@@ -381,11 +381,11 @@ chmod -R u+rwX,go+rX ~/.claude/homunculus
 
 ```bash
 # プラグインの依存関係をインストール
-cd ~/.claude/plugins/cache/ecc
+cd ~/.claude/plugins/cache/aip
 npm install
 
 # または手動インストールの場合
-cd ~/.claude/plugins/ecc
+cd ~/.claude/plugins/aip
 npm install
 ```
 

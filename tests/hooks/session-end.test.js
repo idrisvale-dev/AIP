@@ -12,8 +12,8 @@ const { spawnSync } = require('child_process');
 const { getDateString, sanitizeSessionId } = require('../../scripts/lib/utils');
 
 const script = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'session-end.js');
-const START = '<!-- ECC:SUMMARY:START -->';
-const END = '<!-- ECC:SUMMARY:END -->';
+const START = '<!-- AIP:SUMMARY:START -->';
+const END = '<!-- AIP:SUMMARY:END -->';
 
 function test(name, fn) {
   try {
@@ -64,7 +64,7 @@ function runTests() {
   // (e.g. $& injects the entire matched old block, duplicating the markers).
   (test('preserves $-sequences in user messages when rewriting the summary block', () => {
     // Isolate HOME so getSessionsDir() resolves under a temp dir.
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-end-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-end-'));
     try {
       const sessionsDir = path.join(home, '.claude', 'session-data');
       fs.mkdirSync(sessionsDir, { recursive: true });
@@ -113,7 +113,7 @@ function runTests() {
   }) ? passed++ : failed++);
 
   (test('writes a session for a multi-message transcript', () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-end-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-end-'));
     try {
       const uuid = '11111111-2222-4333-8444-555555555555';
       const transcript = path.join(home, `${uuid}.jsonl`);
@@ -140,7 +140,7 @@ function runTests() {
   }) ? passed++ : failed++);
 
   (test('writes a session for one user message with tool activity', () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-end-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-end-'));
     try {
       const uuid = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
       const transcript = path.join(home, `${uuid}.jsonl`);
@@ -161,7 +161,7 @@ function runTests() {
   }) ? passed++ : failed++);
 
   (test('writes a session for a normal one-message prompt without tool activity', () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-end-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-end-'));
     try {
       const uuid = '12345678-1234-4234-8234-123456789abc';
       const transcript = path.join(home, `${uuid}.jsonl`);
@@ -176,7 +176,7 @@ function runTests() {
   }) ? passed++ : failed++);
 
   (test('skips a one-message summarizer-style transcript without prompt matching', () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-end-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-end-'));
     try {
       const uuid = 'fedcba98-7654-4321-8765-fedcba987654';
       const transcript = path.join(home, `${uuid}.jsonl`);
@@ -188,7 +188,7 @@ function runTests() {
         ].join('\n') + '\n'
       );
 
-      const res = runHook(home, transcript, { ECC_LLM_SUMMARY_SUBPROCESS: '1' });
+      const res = runHook(home, transcript, { AIP_LLM_SUMMARY_SUBPROCESS: '1' });
       assert.strictEqual(res.status || 0, 0, `hook exited ${res.status}: ${res.stderr}`);
       assert.ok(!fs.existsSync(sessionFileFor(home, uuid)), 'Summarizer subprocess should not create a session file');
     } finally {
@@ -197,7 +197,7 @@ function runTests() {
   }) ? passed++ : failed++);
 
   (test('does not rewrite an existing session for a rejected transcript', () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-end-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-end-'));
     try {
       const uuid = '99999999-8888-4777-8666-555555555555';
       const transcript = path.join(home, `${uuid}.jsonl`);
@@ -210,7 +210,7 @@ function runTests() {
       fs.utimesSync(sessionFile, originalTime, originalTime);
       fs.writeFileSync(transcript, JSON.stringify({ type: 'user', content: 'Internal summary request' }) + '\n');
 
-      const res = runHook(home, transcript, { ECC_LLM_SUMMARY_SUBPROCESS: '1' });
+      const res = runHook(home, transcript, { AIP_LLM_SUMMARY_SUBPROCESS: '1' });
       assert.strictEqual(res.status || 0, 0, `hook exited ${res.status}: ${res.stderr}`);
       assert.strictEqual(fs.readFileSync(sessionFile, 'utf8'), original, 'Internal summarizer should not change existing content');
       assert.strictEqual(fs.statSync(sessionFile).mtimeMs, originalTime.getTime(), 'Internal summarizer should not advance mtime');
@@ -220,7 +220,7 @@ function runTests() {
   }) ? passed++ : failed++);
 
   (test('keeps fallback behavior when transcript metadata is malformed', () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-session-end-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-session-end-'));
     try {
       const res = spawnSync('node', [script], {
         encoding: 'utf8',

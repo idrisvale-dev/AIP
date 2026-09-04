@@ -1,7 +1,7 @@
 ---
 name: api-design
 description: リソース命名、ステータス コード、ページネーション、フィルタリング、エラー応答、バージョン管理、およびレート制限を含む REST API デザイン パターン。
-origin: ECC
+origin: AIP
 ---
 
 # API デザイン パターン

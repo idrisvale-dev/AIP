@@ -59,12 +59,12 @@ const CONTENT_TYPES = {
 };
 
 function resolvePort(env = process.env) {
-  const value = Number.parseInt(env.ECC_PLAN_CANVAS_PORT || '', 10);
+  const value = Number.parseInt(env.AIP_PLAN_CANVAS_PORT || '', 10);
   return Number.isInteger(value) && value >= 0 && value <= 65535 ? value : DEFAULT_PORT;
 }
 
 function resolveIdleTimeoutMs(env = process.env) {
-  const raw = String(env.ECC_PLAN_CANVAS_IDLE_MS || '').trim().toLowerCase();
+  const raw = String(env.AIP_PLAN_CANVAS_IDLE_MS || '').trim().toLowerCase();
   if (raw === '0' || raw === 'off') return 0;
   const value = Number.parseInt(raw, 10);
   return Number.isInteger(value) && value > 0 ? value : DEFAULT_IDLE_TIMEOUT_MS;
@@ -541,7 +541,7 @@ function createPlanCanvasServer({
     Promise.resolve()
       .then(() => {
         if (req.method === 'GET' && pathname === '/health') {
-          return sendJson(res, 200, { ok: true, app: 'ecc-plan-canvas', version });
+          return sendJson(res, 200, { ok: true, app: 'aip-plan-canvas', version });
         }
         if (req.method === 'POST' && pathname === '/shutdown') {
           sendJson(res, 200, { status: 'stopping' });

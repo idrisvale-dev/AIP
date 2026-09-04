@@ -12,7 +12,7 @@ const DEFAULT_READERS = Object.freeze({
 });
 
 // Collect MCP server configs from every harness reader, normalize each raw
-// entry to ecc.mcp.v1, then merge into a single deduplicated inventory with a
+// entry to aip.mcp.v1, then merge into a single deduplicated inventory with a
 // fragmentation report. Secrets are stripped during normalization (only env
 // key names survive), so the returned inventory is safe to print or persist.
 function collectMcpInventory(options = {}) {

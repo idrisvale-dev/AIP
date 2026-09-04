@@ -1,5 +1,5 @@
 /**
- * End-to-end contract tests for ECC's real local Itô CLI bridge.
+ * End-to-end contract tests for AIP's real local Itô CLI bridge.
  *
  * The executable used here is a process-boundary probe. It never contacts an
  * Itô API, submits an RFQ, opens a browser, or reaches a GPU node.
@@ -12,7 +12,7 @@ const path = require("path");
 const { spawn, spawnSync } = require("child_process");
 
 const REPO_ROOT = path.join(__dirname, "..", "..");
-const ECC_SCRIPT = path.join(REPO_ROOT, "scripts", "ecc.js");
+const AIP_SCRIPT = path.join(REPO_ROOT, "scripts", "aip.js");
 const ITO_SCRIPT = path.join(REPO_ROOT, "scripts", "ito.js");
 const CANONICAL_PACKAGE = "Ito-Markets/ito-cloud-runtime/cli/ito-compute-cli";
 const {
@@ -25,7 +25,7 @@ const {
 } = require("../../scripts/lib/ito-environment");
 
 function runCli(args, environment = {}) {
-  return spawnSync(process.execPath, [ECC_SCRIPT, ...args], {
+  return spawnSync(process.execPath, [AIP_SCRIPT, ...args], {
     cwd: REPO_ROOT,
     encoding: "utf8",
     env: {
@@ -38,7 +38,7 @@ function runCli(args, environment = {}) {
 
 function runCliAndObserveFirstOutput(args, environment = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [ECC_SCRIPT, ...args], {
+    const child = spawn(process.execPath, [AIP_SCRIPT, ...args], {
       cwd: REPO_ROOT,
       env: { ...process.env, NODE_ENV: "test", ...environment },
       stdio: ["ignore", "pipe", "pipe"],
@@ -65,7 +65,7 @@ function runCliAndObserveFirstOutput(args, environment = {}) {
 }
 
 function makeItoProbe(exitCode = 0) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "ecc-ito-cli-"));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "aip-ito-cli-"));
   const log = path.join(directory, "invocation.json");
   const script = path.join(
     directory,
@@ -114,7 +114,7 @@ async function runTest(name, fn) {
 }
 
 async function main() {
-  console.log("\n=== Testing ECC × Itô real CLI bridge ===\n");
+  console.log("\n=== Testing AIP × Itô real CLI bridge ===\n");
 
   const tests = [
     ["forwards only the reviewed RFQ CLI surface to an explicit local executable", () => {
@@ -122,7 +122,7 @@ async function main() {
         const probe = makeItoProbe();
         try {
           const result = runCli(["ito", command], {
-            ECC_ITO_CLI_EXECUTABLE: probe.executable,
+            AIP_ITO_CLI_EXECUTABLE: probe.executable,
           });
           assert.strictEqual(result.status, 0, result.stderr);
           assert.deepStrictEqual(readInvocation(probe).argv, [command]);
@@ -136,7 +136,7 @@ async function main() {
       const probe = makeItoProbe();
       try {
         const result = runCli(["ito", "logout", "--json"], {
-          ECC_ITO_CLI_EXECUTABLE: probe.executable,
+          AIP_ITO_CLI_EXECUTABLE: probe.executable,
           ITO_API_KEY: "must-not-cross-into-device-revocation",
           ITO_ALLOW_FILE_TOKEN: "1",
           ITO_TOKEN_FILE: "/tmp/ito-device-token",
@@ -157,7 +157,7 @@ async function main() {
       const probe = makeItoProbe();
       try {
         const result = runCli(["ito", "login", "--no-browser"], {
-          ECC_ITO_CLI_EXECUTABLE: probe.executable,
+          AIP_ITO_CLI_EXECUTABLE: probe.executable,
         });
         assert.strictEqual(result.status, 0, result.stderr);
         assert.deepStrictEqual(readInvocation(probe).argv, ["login", "--no-browser"]);
@@ -169,7 +169,7 @@ async function main() {
       const probe = makeItoProbe();
       try {
         const result = runCli(["ito", "auth", "--no-browser"], {
-          ECC_ITO_CLI_EXECUTABLE: probe.executable,
+          AIP_ITO_CLI_EXECUTABLE: probe.executable,
         });
         assert.notStrictEqual(result.status, 0);
         assert.match(result.stderr, /--no-browser.*only.*login/i);
@@ -199,7 +199,7 @@ async function main() {
           "--json",
         ];
         const result = runCli(args, {
-          ECC_ITO_CLI_EXECUTABLE: probe.executable,
+          AIP_ITO_CLI_EXECUTABLE: probe.executable,
         });
         assert.strictEqual(result.status, 0, result.stderr);
         assert.deepStrictEqual(readInvocation(probe).argv, [
@@ -214,7 +214,7 @@ async function main() {
       const probe = makeItoProbe();
       try {
         const result = runCli(["ito", "login"], {
-          ECC_ITO_CLI_EXECUTABLE: probe.executable,
+          AIP_ITO_CLI_EXECUTABLE: probe.executable,
           ITO_API_KEY: "must-not-cross-without-legacy-mode",
           ITO_AUTH_MODE: "device",
           ITO_ALLOW_FILE_TOKEN: "1",
@@ -236,7 +236,7 @@ async function main() {
         assert.strictEqual(childEnvironment.AWS_SECRET_ACCESS_KEY, undefined);
         assert.strictEqual(childEnvironment.OPENAI_API_KEY, undefined);
         assert.strictEqual(childEnvironment.TEST_PASSWORD, undefined);
-        assert.strictEqual(childEnvironment.ECC_ITO_CLI_EXECUTABLE, undefined);
+        assert.strictEqual(childEnvironment.AIP_ITO_CLI_EXECUTABLE, undefined);
       } finally {
         fs.rmSync(probe.directory, { recursive: true, force: true });
       }
@@ -246,7 +246,7 @@ async function main() {
         const probe = makeItoProbe();
         try {
           const result = runCli(["ito", command], {
-            ECC_ITO_CLI_EXECUTABLE: probe.executable,
+            AIP_ITO_CLI_EXECUTABLE: probe.executable,
             ITO_API_KEY: "ito_test_key",
           });
           assert.strictEqual(result.status, 0, result.stderr);
@@ -269,7 +269,7 @@ async function main() {
           ].join("\n")
         );
         const result = await runCliAndObserveFirstOutput(["ito", "login"], {
-          ECC_ITO_CLI_EXECUTABLE: probe.executable,
+          AIP_ITO_CLI_EXECUTABLE: probe.executable,
         });
         assert.strictEqual(result.status, 7, result.stderr);
         assert.match(result.stdout, /device-code-now/);
@@ -295,7 +295,7 @@ async function main() {
           "--nodes", "gpu-01,gpu-02",
           "--config-dir", configDirectory,
         ], {
-          ECC_ITO_CLI_EXECUTABLE: probe.executable,
+          AIP_ITO_CLI_EXECUTABLE: probe.executable,
           ITO_API_KEY: "must-not-cross-into-node-qualification",
           ITO_AUTH_MODE: "legacy",
           ITO_ALLOW_FILE_TOKEN: "1",
@@ -305,7 +305,7 @@ async function main() {
           ITO_ENABLE_SIXTYTWO_LIVE: "1",
           SIXTYTWO_API_TOKEN: "sixtytwo-test-token",
           SIXTYTWO_TOKEN: "sixtytwo-legacy-test-token",
-          SSH_AUTH_SOCK: "/tmp/ecc-test-agent.sock",
+          SSH_AUTH_SOCK: "/tmp/aip-test-agent.sock",
           ITO_CLI_DEMO: "1",
           ITO_CLI_STATE_DIR: "/tmp/forbidden-paper-state",
           AWS_SECRET_ACCESS_KEY: "must-not-cross",
@@ -323,7 +323,7 @@ async function main() {
         assert.strictEqual(invocation.env.ITO_ENABLE_SIXTYTWO_LIVE, "1");
         assert.strictEqual(invocation.env.SIXTYTWO_API_TOKEN, "sixtytwo-test-token");
         assert.strictEqual(invocation.env.SIXTYTWO_TOKEN, "sixtytwo-legacy-test-token");
-        assert.strictEqual(invocation.env.SSH_AUTH_SOCK, "/tmp/ecc-test-agent.sock");
+        assert.strictEqual(invocation.env.SSH_AUTH_SOCK, "/tmp/aip-test-agent.sock");
         assert.strictEqual(invocation.env.ITO_API_KEY, undefined);
         assert.strictEqual(invocation.env.ITO_AUTH_MODE, undefined);
         assert.strictEqual(invocation.env.ITO_ALLOW_FILE_TOKEN, undefined);
@@ -422,7 +422,7 @@ async function main() {
                 : value
           ));
           const result = runCli(args, {
-            ECC_ITO_CLI_EXECUTABLE: probe.executable,
+            AIP_ITO_CLI_EXECUTABLE: probe.executable,
             ...testCase.env,
           });
           assert.notStrictEqual(result.status, 0, testCase.label);
@@ -448,14 +448,14 @@ async function main() {
       const safe = createSafeItoInvocationEnvironment(
         {
           PATH: process.env.PATH,
-          ECC_ITO_CLI_EXECUTABLE: "/operator/canonical/ito.js",
+          AIP_ITO_CLI_EXECUTABLE: "/operator/canonical/ito.js",
           ITO_API_KEY: "must-not-cross",
           SIXTYTWO_TOKEN: "must-not-cross",
         },
-        ["--future-ecc-flag", "evals"],
+        ["--future-aip-flag", "evals"],
         { includeControls: true },
       );
-      assert.strictEqual(safe.ECC_ITO_CLI_EXECUTABLE, "/operator/canonical/ito.js");
+      assert.strictEqual(safe.AIP_ITO_CLI_EXECUTABLE, "/operator/canonical/ito.js");
       assert.strictEqual(safe.ITO_API_KEY, undefined);
       assert.strictEqual(safe.SIXTYTWO_TOKEN, undefined);
     }],
@@ -477,7 +477,7 @@ async function main() {
         const probe = makeItoProbe();
         try {
           const result = runCli(["ito", command], {
-            ECC_ITO_CLI_EXECUTABLE: probe.executable,
+            AIP_ITO_CLI_EXECUTABLE: probe.executable,
           });
           assert.notStrictEqual(result.status, 0, command);
           assert.match(result.stderr, /only login, logout, auth, find, status, and evals/i);
@@ -491,7 +491,7 @@ async function main() {
       const probe = makeItoProbe();
       try {
         const result = runCli(["--dry-run", "ito", "find"], {
-          ECC_ITO_CLI_EXECUTABLE: probe.executable,
+          AIP_ITO_CLI_EXECUTABLE: probe.executable,
         });
         assert.notStrictEqual(result.status, 0);
         assert.match(result.stderr, /no paper or dry-run success mode/i);
@@ -501,17 +501,17 @@ async function main() {
       }
     }],
     ["fails closed with exact local install guidance when the explicit CLI is absent", () => {
-      const emptyPath = fs.mkdtempSync(path.join(os.tmpdir(), "ecc-empty-path-"));
+      const emptyPath = fs.mkdtempSync(path.join(os.tmpdir(), "aip-empty-path-"));
       try {
         const result = runCli(["ito", "status"], {
-          ECC_ITO_CLI_EXECUTABLE: "",
+          AIP_ITO_CLI_EXECUTABLE: "",
           PATH: emptyPath,
         });
         assert.notStrictEqual(result.status, 0);
         assert.match(result.stderr, /canonical ito-compute-cli is unpublished/i);
         assert.match(result.stderr, new RegExp(CANONICAL_PACKAGE.replaceAll("/", "\\/")));
         assert.match(result.stderr, /npm run check/);
-        assert.match(result.stderr, /ECC_ITO_CLI_EXECUTABLE/);
+        assert.match(result.stderr, /AIP_ITO_CLI_EXECUTABLE/);
         assert.match(result.stderr, /explicit absolute/i);
         assert.match(result.stderr, /unpublished/i);
         assert.doesNotMatch(result.stderr, /npx|npm exec|npm link|install -g/i);
@@ -521,7 +521,7 @@ async function main() {
     }],
     ["never forwards Itô credentials to an unverified PATH collision", () => {
       const collisionDirectory = fs.mkdtempSync(
-        path.join(os.tmpdir(), "ecc-hostile-ito-path-")
+        path.join(os.tmpdir(), "aip-hostile-ito-path-")
       );
       const stolenEnvironment = path.join(collisionDirectory, "stolen.json");
       const executable = path.join(
@@ -544,13 +544,13 @@ async function main() {
         }
 
         const result = runCli(["ito", "auth"], {
-          ECC_ITO_CLI_EXECUTABLE: "",
+          AIP_ITO_CLI_EXECUTABLE: "",
           ITO_API_KEY: "must-never-reach-path-collision",
           PATH: collisionDirectory,
         });
 
         assert.notStrictEqual(result.status, 0);
-        assert.match(result.stderr, /explicit absolute|ECC_ITO_CLI_EXECUTABLE/i);
+        assert.match(result.stderr, /explicit absolute|AIP_ITO_CLI_EXECUTABLE/i);
         assert.ok(
           !fs.existsSync(stolenEnvironment),
           "an unverified PATH executable must never receive the Itô credential"
@@ -561,7 +561,7 @@ async function main() {
     }],
     ["rejects an absolute POSIX shim before it can resolve an interpreter through PATH", () => {
       if (process.platform === "win32") return;
-      const directory = fs.mkdtempSync(path.join(os.tmpdir(), "ecc-hostile-ito-shim-"));
+      const directory = fs.mkdtempSync(path.join(os.tmpdir(), "aip-hostile-ito-shim-"));
       const shim = path.join(directory, "ito");
       const hostileNode = path.join(directory, "node");
       const stolenEnvironment = path.join(directory, "stolen.json");
@@ -579,7 +579,7 @@ async function main() {
         fs.chmodSync(hostileNode, 0o755);
 
         const result = runCli(["ito", "auth"], {
-          ECC_ITO_CLI_EXECUTABLE: shim,
+          AIP_ITO_CLI_EXECUTABLE: shim,
           ITO_API_KEY: "must-never-reach-shim-interpreter",
           PATH: directory,
         });
@@ -595,7 +595,7 @@ async function main() {
       }
     }],
     ["rejects a readable JavaScript decoy outside the canonical package entry", () => {
-      const directory = fs.mkdtempSync(path.join(os.tmpdir(), "ecc-hostile-ito-js-"));
+      const directory = fs.mkdtempSync(path.join(os.tmpdir(), "aip-hostile-ito-js-"));
       const decoy = path.join(directory, "ito.js");
       const stolenEnvironment = path.join(directory, "stolen.json");
       try {
@@ -610,7 +610,7 @@ async function main() {
         );
 
         const result = runCli(["ito", "auth"], {
-          ECC_ITO_CLI_EXECUTABLE: decoy,
+          AIP_ITO_CLI_EXECUTABLE: decoy,
           ITO_API_KEY: "must-never-reach-js-decoy",
         });
 
@@ -626,7 +626,7 @@ async function main() {
     }],
     ["rejects a relative executable override instead of searching or guessing", () => {
       const result = runCli(["ito", "status"], {
-        ECC_ITO_CLI_EXECUTABLE: "ito",
+        AIP_ITO_CLI_EXECUTABLE: "ito",
       });
       assert.notStrictEqual(result.status, 0);
       assert.match(result.stderr, /must be an absolute path/i);
@@ -635,7 +635,7 @@ async function main() {
       const probe = makeItoProbe(7);
       try {
         const result = runCli(["ito", "status"], {
-          ECC_ITO_CLI_EXECUTABLE: probe.executable,
+          AIP_ITO_CLI_EXECUTABLE: probe.executable,
         });
         assert.strictEqual(result.status, 7);
         assert.match(result.stdout, /ito-probe:status/);
@@ -649,15 +649,15 @@ async function main() {
       const probe = makeItoProbe();
       try {
         const result = runCli(["ito", "--help"], {
-          ECC_ITO_CLI_EXECUTABLE: probe.executable,
+          AIP_ITO_CLI_EXECUTABLE: probe.executable,
         });
         assert.strictEqual(result.status, 0, result.stderr);
-        assert.match(result.stdout, /ecc ito login \[--no-browser\]/);
-        assert.match(result.stdout, /ecc ito logout/);
-        assert.match(result.stdout, /ecc ito auth/);
-        assert.match(result.stdout, /ecc ito find/);
-        assert.match(result.stdout, /ecc ito status/);
-        assert.match(result.stdout, /ecc ito evals/);
+        assert.match(result.stdout, /aip ito login \[--no-browser\]/);
+        assert.match(result.stdout, /aip ito logout/);
+        assert.match(result.stdout, /aip ito auth/);
+        assert.match(result.stdout, /aip ito find/);
+        assert.match(result.stdout, /aip ito status/);
+        assert.match(result.stdout, /aip ito evals/);
         assert.match(result.stdout, /sixtytwo/i);
         assert.match(result.stdout, /ito_auth/);
         assert.match(result.stdout, /ito_find/);
@@ -668,7 +668,7 @@ async function main() {
         assert.match(result.stdout, /device authorization/i);
         assert.match(result.stdout, /opens the Itô verification page by default/i);
         assert.match(result.stdout, /macOS Keychain/i);
-        assert.match(result.stdout, /ECC itself performs no browser automation/i);
+        assert.match(result.stdout, /AIP itself performs no browser automation/i);
         assert.match(result.stdout, /auth.*validat/i);
         assert.match(result.stdout, /ITO_AUTH_MODE=legacy is not\s+required/i);
         assert.doesNotMatch(

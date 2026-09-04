@@ -1,12 +1,12 @@
-# ECC 2.2 launch and rollback runbook
+# AIP 2.2 launch and rollback runbook
 
-ByteCore is the only release operator for ECC 2.2. Everyone else may prepare,
+ByteCore is the only release operator for AIP 2.2. Everyone else may prepare,
 review, and verify the release candidate, but must not merge the release PR,
 create or push `v2.2.0`, change npm dist-tags, or publish the GitHub Release.
 
 ## Availability model
 
-The default npm install remains `ecc-universal@2.1.0` until the final promotion
+The default npm install remains `aip-universal@2.1.0` until the final promotion
 step succeeds. The release workflow publishes 2.2.0 under the `staged` tag,
 reads its registry integrity back, compares those bytes with the exact archive
 that passed the three-platform lifecycle, and only then moves `latest` to
@@ -17,7 +17,7 @@ throughout the npm rollout:
 
 ```text
 /plugin marketplace add https://github.com/reborncursed/AIP
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 Never unpublish 2.1.0 or 2.2.0. npm dist-tags provide the reversible switch.
@@ -27,9 +27,9 @@ Never unpublish 2.1.0 or 2.2.0. npm dist-tags provide the reversible switch.
 Before merge, confirm all of these:
 
 ```bash
-npm view ecc-universal dist-tags --json
-npm view ecc-universal@2.1.0 dist.integrity
-curl -fsSIL https://registry.npmjs.org/ecc-universal/-/ecc-universal-2.1.0.tgz
+npm view aip-universal dist-tags --json
+npm view aip-universal@2.1.0 dist.integrity
+curl -fsSIL https://registry.npmjs.org/aip-universal/-/aip-universal-2.1.0.tgz
 gh release view v2.1.0 --repo reborncursed/AIP
 ```
 
@@ -37,11 +37,11 @@ Expected:
 
 - `latest` is `2.1.0`.
 - The 2.1.0 tarball returns HTTP 200 and immutable caching headers.
-- A clean `npm install ecc-universal@2.1.0` succeeds.
+- A clean `npm install aip-universal@2.1.0` succeeds.
 - A disposable managed install and uninstall succeed.
 
 The published 2.1 Cursor adapter can report one non-blocking doctor warning for
-an adapted Markdown link. This does not prevent installation or uninstall. ECC
+an adapted Markdown link. This does not prevent installation or uninstall. AIP
 2.2 corrects the packed lifecycle and doctor behavior.
 
 ## Preflight before ByteCore merges
@@ -52,9 +52,9 @@ an adapted Markdown link. This does not prevent installation or uninstall. ECC
 3. The packed README must describe 2.2 as available and contain no unpublished
    2.2 warning.
 4. The Nasiko surface must say experimental CLI lifecycle bridge.
-5. `npm view ecc-universal@2.2.0 version` must return E404. Any other registry
+5. `npm view aip-universal@2.2.0 version` must return E404. Any other registry
    error blocks the release.
-6. `npm view ecc-universal dist-tags --json` must still show `latest: 2.1.0`.
+6. `npm view aip-universal dist-tags --json` must still show `latest: 2.1.0`.
 
 ## The release switch
 
@@ -74,7 +74,7 @@ The two commit IDs must match and `git status --short` must print nothing.
 ByteCore then creates and pushes the signed release tag:
 
 ```bash
-git tag -s v2.2.0 -m "ECC 2.2.0" HEAD
+git tag -s v2.2.0 -m "AIP 2.2.0" HEAD
 git tag -v v2.2.0
 git push origin refs/tags/v2.2.0
 ```
@@ -94,11 +94,11 @@ That tag push is the only launch switch. The workflow then:
 After the workflow succeeds:
 
 ```bash
-npm view ecc-universal dist-tags --json
-npm view ecc-universal@2.2.0 version dist.integrity
+npm view aip-universal dist-tags --json
+npm view aip-universal@2.2.0 version dist.integrity
 gh release view v2.2.0 --repo reborncursed/AIP
-npx --yes ecc-universal@2.2.0 setup --help
-npx --yes ecc-universal@latest setup --help
+npx --yes aip-universal@2.2.0 setup --help
+npx --yes aip-universal@latest setup --help
 ```
 
 Expected:
@@ -119,11 +119,11 @@ If 2.2.0 has an install-critical regression, ByteCore or another authorized npm
 owner restores the known installable fallback immediately:
 
 ```bash
-npm dist-tag add ecc-universal@2.1.0 latest
-npm view ecc-universal dist-tags --json
-ECC_ROLLBACK_ROOT=$(mktemp -d)
-npm install --ignore-scripts --prefix "$ECC_ROLLBACK_ROOT" ecc-universal@2.1.0
-node "$ECC_ROLLBACK_ROOT/node_modules/ecc-universal/scripts/ecc.js" --help
+npm dist-tag add aip-universal@2.1.0 latest
+npm view aip-universal dist-tags --json
+AIP_ROLLBACK_ROOT=$(mktemp -d)
+npm install --ignore-scripts --prefix "$AIP_ROLLBACK_ROOT" aip-universal@2.1.0
+node "$AIP_ROLLBACK_ROOT/node_modules/aip-universal/scripts/aip.js" --help
 gh release edit v2.1.0 --repo reborncursed/AIP --latest
 ```
 

@@ -1,12 +1,12 @@
 'use strict';
 
-const { version: ECC_VERSION } = require('../../package.json');
+const { version: AIP_VERSION } = require('../../package.json');
 
 const COMMUNITY_LINKS = Object.freeze({
   github: 'https://github.com/reborncursed/AIP',
   discord: 'https://discord.gg/36yGMHGFbR',
   documentation: 'https://github.com/reborncursed/AIP#readme',
-  githubApp: 'https://github.com/apps/ecc-tools',
+  githubApp: 'https://github.com/apps/aip-tools',
 });
 
 const SUCCESS_ACTIONS = Object.freeze([
@@ -18,15 +18,15 @@ const SUCCESS_ACTIONS = Object.freeze([
   'configured',
 ]);
 const SUCCESS_MESSAGES = Object.freeze({
-  installed: 'Welcome to ECC!',
-  updated: 'ECC is updated — thank you for using ECC!',
-  migrated: 'ECC is configured — thank you for using ECC!',
-  resumed: 'ECC is configured — thank you for using ECC!',
-  'already-migrated': 'ECC is configured — thank you for using ECC!',
-  configured: 'ECC is configured — thank you for using ECC!',
+  installed: 'Welcome to AIP!',
+  updated: 'AIP is updated — thank you for using AIP!',
+  migrated: 'AIP is configured — thank you for using AIP!',
+  resumed: 'AIP is configured — thank you for using AIP!',
+  'already-migrated': 'AIP is configured — thank you for using AIP!',
+  configured: 'AIP is configured — thank you for using AIP!',
 });
 // CFonts' default "block" face: https://github.com/dominikwilkowski/cfonts
-const ECC_WORDMARK = Object.freeze([
+const AIP_WORDMARK = Object.freeze([
   ' ███████╗  ██████╗  ██████╗',
   ' ██╔════╝ ██╔════╝ ██╔════╝',
   ' █████╗   ██║      ██║',
@@ -34,14 +34,14 @@ const ECC_WORDMARK = Object.freeze([
   ' ███████╗ ╚██████╗ ╚██████╗',
   ' ╚══════╝  ╚═════╝  ╚═════╝',
 ]);
-const ECC_GRADIENT = Object.freeze({
+const AIP_GRADIENT = Object.freeze({
   start: Object.freeze({ red: 215, green: 151, blue: 107 }),
   end: Object.freeze({ red: 100, green: 131, blue: 160 }),
 });
-const ECC_VERSION_PATTERN = /^[0-9]+(?:\.[0-9]+){2}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
-const WORDMARK_START_COLUMN = Math.min(...ECC_WORDMARK.map(line => line.search(/\S/)));
+const AIP_VERSION_PATTERN = /^[0-9]+(?:\.[0-9]+){2}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+const WORDMARK_START_COLUMN = Math.min(...AIP_WORDMARK.map(line => line.search(/\S/)));
 const WORDMARK_END_COLUMN = Math.max(
-  ...ECC_WORDMARK.map(line => line.trimEnd().length - 1)
+  ...AIP_WORDMARK.map(line => line.trimEnd().length - 1)
 );
 
 function colorize(value, code, enabled) {
@@ -56,16 +56,16 @@ function gradientColorAt(column) {
   const span = WORDMARK_END_COLUMN - WORDMARK_START_COLUMN;
   const ratio = span === 0 ? 0 : (column - WORDMARK_START_COLUMN) / span;
   return {
-    red: interpolateChannel(ECC_GRADIENT.start.red, ECC_GRADIENT.end.red, ratio),
-    green: interpolateChannel(ECC_GRADIENT.start.green, ECC_GRADIENT.end.green, ratio),
-    blue: interpolateChannel(ECC_GRADIENT.start.blue, ECC_GRADIENT.end.blue, ratio),
+    red: interpolateChannel(AIP_GRADIENT.start.red, AIP_GRADIENT.end.red, ratio),
+    green: interpolateChannel(AIP_GRADIENT.start.green, AIP_GRADIENT.end.green, ratio),
+    blue: interpolateChannel(AIP_GRADIENT.start.blue, AIP_GRADIENT.end.blue, ratio),
   };
 }
 
 function renderWordmark(color) {
-  if (!color) return ECC_WORDMARK.join('\n');
+  if (!color) return AIP_WORDMARK.join('\n');
 
-  return ECC_WORDMARK.map(line => (
+  return AIP_WORDMARK.map(line => (
     [...line].map((character, column) => {
       if (character === ' ') return character;
       const value = gradientColorAt(column);
@@ -93,9 +93,9 @@ function renderCommunityLinks() {
 
 function renderTerminalWelcome(options = {}) {
   const color = options.color === true;
-  const installedVersion = options.version || ECC_VERSION;
-  if (!ECC_VERSION_PATTERN.test(installedVersion)) {
-    throw new Error(`Invalid ECC version: ${installedVersion}`);
+  const installedVersion = options.version || AIP_VERSION;
+  if (!AIP_VERSION_PATTERN.test(installedVersion)) {
+    throw new Error(`Invalid AIP version: ${installedVersion}`);
   }
   const graphic = renderWordmark(color);
   const successMessage = SUCCESS_MESSAGES[options.action] || SUCCESS_MESSAGES.installed;
@@ -140,7 +140,7 @@ function showTerminalWelcome(options = {}) {
 
 module.exports = {
   COMMUNITY_LINKS,
-  ECC_VERSION_PATTERN,
+  AIP_VERSION_PATTERN,
   renderTerminalWelcome,
   showTerminalWelcome,
 };

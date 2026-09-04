@@ -1,6 +1,6 @@
 # Architecture Improvement Recommendations
 
-This document captures architect-level improvements for the Everything Claude Code (ECC) project. It is written from the perspective of a Claude Code coding architect aiming to improve maintainability, consistency, and long-term quality.
+This document captures architect-level improvements for the AIP (AIP) project. It is written from the perspective of a Claude Code coding architect aiming to improve maintainability, consistency, and long-term quality.
 
 ---
 
@@ -115,7 +115,7 @@ This document captures architect-level improvements for the Everything Claude Co
 **Recommendation:**
 
 - Prefer Node for new hooks when possible (cross-platform, single runtime). If shell is required, document why and keep the surface small.
-- Ensure `ECC_HOOK_PROFILE` and `ECC_DISABLED_HOOKS` are respected in all code paths (including shell) so behavior is consistent.
+- Ensure `AIP_HOOK_PROFILE` and `AIP_DISABLED_HOOKS` are respected in all code paths (including shell) so behavior is consistent.
 
 **Impact:** Low — maintains current design; improves if more hooks migrate to Node.
 

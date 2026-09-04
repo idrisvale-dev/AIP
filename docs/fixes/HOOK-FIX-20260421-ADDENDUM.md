@@ -50,7 +50,7 @@ spawn('C:/Users/sugig/.claude/skills/continuous-learning/hooks/observe-wrapper.s
 }
 ```
 
-この形式は `~/.claude/hooks/hooks.json` 内の ECC 正規 observer 登録と
+この形式は `~/.claude/hooks/hooks.json` 内の AIP 正規 observer 登録と
 同じパターンで、現実にエラーなく動作している実績あり。
 
 ### Node spawn 検証
@@ -104,6 +104,6 @@ hook command が `"C:\Program Files\Git\bin\bash.exe" "C:\Users\...\wrapper.sh"`
 - 朝 fix commit: 527c18b
 - 朝 fix doc: docs/fixes/HOOK-FIX-20260421.md
 - 朝 apply script: docs/fixes/apply-hook-fix.sh
-- 夜 fix 記録（ローカル）: C:\Users\sugig\Documents\Claude\Projects\ECC作成\hook-fix-report-20260421.md
+- 夜 fix 記録（ローカル）: C:\Users\sugig\Documents\Claude\Projects\AIP作成\hook-fix-report-20260421.md
 - 夜 fix 適用ファイル: C:\Users\sugig\.claude\settings.local.json
 - 夜 backup: C:\Users\sugig\.claude\settings.local.json.bak-hook-fix-20260421

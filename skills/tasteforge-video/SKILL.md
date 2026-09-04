@@ -2,7 +2,7 @@
 name: tasteforge-video
 description: Use for file-driven multimodal image, video, and 3D-asset discovery; taste interviews; distill or apply workflows; style-pack validation; editable EDL/FCPXML export; provenance audits; and offline planning that must fail closed before provider generation.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # TasteForge Video
@@ -11,7 +11,7 @@ TasteForge turns "make it feel like this reference" into a repeatable,
 inspectable workflow: interview taste, distill it into a structured style
 pack, validate the pack, apply its measured cadence and look to local media,
 and export an editable timeline. The canonical implementation is the
-`tasteforge` package in the Itô video repository; ECC orchestrates and
+`tasteforge` package in the Itô video repository; AIP orchestrates and
 explains it and does not vendor or duplicate its code.
 
 ## When to Use
@@ -38,10 +38,10 @@ explains it and does not vendor or duplicate its code.
 
 ## Local Deterministic Operations vs Provider Generation
 
-This boundary is the core of the skill. Everything ECC can actually run is
+This boundary is the core of the skill. Everything AIP can actually run is
 **local, deterministic, and offline**:
 
-| Operation | Deterministic? | ECC may run |
+| Operation | Deterministic? | AIP may run |
 |---|---|---|
 | Taste interview → profile | yes (offline) | yes |
 | Pack inspect / validate against schemas | yes | yes |
@@ -52,10 +52,10 @@ This boundary is the core of the skill. Everything ECC can actually run is
 | Vision-model distillation of stills | **provider generation** | **no** |
 | Reference-to-video, image-to-3D, hosted compose | **provider generation** | **no** |
 
-**Provider generation must fail closed in ECC.** Any live Fal (or other
+**Provider generation must fail closed in AIP.** Any live Fal (or other
 provider) call — generating shots, minting prop meshes, hosted VLM
 distillation — requires explicit separately authorized execution under a
-separate lane with its own review. ECC never calls Fal, never reads any API
+separate lane with its own review. AIP never calls Fal, never reads any API
 key or other credentials (`FAL_KEY` included), uploads no media, and mutates
 no provider account state. When a request needs provider generation, state
 exactly that boundary, run the local half (interview, pack validation,
@@ -83,7 +83,7 @@ dry-run/dry_run semantics — say "dry-run spec" or "deterministic plan", never
   `PROVENANCE.md`. Run `python3 -m tasteforge provenance` for the machine-
   readable version.
 
-ECC's job is to route here, run the local deterministic commands, and
+AIP's job is to route here, run the local deterministic commands, and
 interpret their JSON — not to reimplement cadence planning, LUT/grade
 statistics, or timeline emission. If the canonical package is absent, say so
 and stop; do not reconstruct its logic inline.

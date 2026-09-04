@@ -61,11 +61,11 @@ function runExistingHook(scriptName, stdinData) {
 }
 
 function hookEnabled(hookId, allowedProfiles = ['standard', 'strict']) {
-  const rawProfile = String(process.env.ECC_HOOK_PROFILE || 'standard').toLowerCase();
+  const rawProfile = String(process.env.AIP_HOOK_PROFILE || 'standard').toLowerCase();
   const profile = ['minimal', 'standard', 'strict'].includes(rawProfile) ? rawProfile : 'standard';
 
   const disabled = new Set(
-    String(process.env.ECC_DISABLED_HOOKS || '')
+    String(process.env.AIP_DISABLED_HOOKS || '')
       .split(',')
       .map(v => v.trim().toLowerCase())
       .filter(Boolean)

@@ -9,7 +9,7 @@
 
 Types: feat, fix, refactor, docs, test, chore, perf, ci
 
-Not: ECC tarafından yönetilen kurulumlar `~/.claude/settings.json` içinde `"includeCoAuthoredBy": false` ayarlar, bu nedenle commitler varsayılan olarak `Co-Authored-By` içermez. Claude atfını korumak için `"includeCoAuthoredBy": true` veya `attribution` ayarlayın; ECC açık bir tercihin üzerine asla yazmaz.
+Not: AIP tarafından yönetilen kurulumlar `~/.claude/settings.json` içinde `"includeCoAuthoredBy": false` ayarlar, bu nedenle commitler varsayılan olarak `Co-Authored-By` içermez. Claude atfını korumak için `"includeCoAuthoredBy": true` veya `attribution` ayarlayın; AIP açık bir tercihin üzerine asla yazmaz.
 
 ## Pull Request İş Akışı
 

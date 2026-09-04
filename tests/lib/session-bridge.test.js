@@ -94,9 +94,9 @@ function runTests() {
   console.log('\ngetBridgePath:');
 
   if (
-    test('returns path containing ecc-metrics-', () => {
+    test('returns path containing aip-metrics-', () => {
       const p = getBridgePath('test-session');
-      assert.ok(p.includes('ecc-metrics-'), `Expected ecc-metrics- in path, got: ${p}`);
+      assert.ok(p.includes('aip-metrics-'), `Expected aip-metrics- in path, got: ${p}`);
     })
   )
     passed++;
@@ -263,17 +263,17 @@ function runTests() {
   console.log('\nresolveSessionId:');
 
   if (
-    test('resolveSessionId uses ECC_SESSION_ID env var', () => {
-      const original = process.env.ECC_SESSION_ID;
+    test('resolveSessionId uses AIP_SESSION_ID env var', () => {
+      const original = process.env.AIP_SESSION_ID;
       try {
-        process.env.ECC_SESSION_ID = 'env-session-42';
+        process.env.AIP_SESSION_ID = 'env-session-42';
         const result = resolveSessionId();
         assert.strictEqual(result, 'env-session-42');
       } finally {
         if (original === undefined) {
-          delete process.env.ECC_SESSION_ID;
+          delete process.env.AIP_SESSION_ID;
         } else {
-          process.env.ECC_SESSION_ID = original;
+          process.env.AIP_SESSION_ID = original;
         }
       }
     })

@@ -68,7 +68,7 @@ function printHelp() {
   console.log([
     'Usage: node scripts/harness-adapter-compliance.js [options]',
     '',
-    'Validate or render the ECC harness adapter compliance scorecard.',
+    'Validate or render the AIP harness adapter compliance scorecard.',
     '',
     'Options:',
     '  --check                 Fail if adapter records or docs are out of sync',
@@ -83,7 +83,7 @@ function buildPayload(root) {
   const documentationErrors = validateDocumentation({ repoRoot: root });
 
   return {
-    schema_version: 'ecc.harness-adapter-compliance.v1',
+    schema_version: 'aip.harness-adapter-compliance.v1',
     generated_from: 'scripts/lib/harness-adapter-compliance.js',
     adapter_count: ADAPTER_RECORDS.length,
     valid: recordErrors.length === 0 && documentationErrors.length === 0,

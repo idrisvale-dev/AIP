@@ -5,7 +5,7 @@ description: >
   checks, rollback strategies, and production readiness checklists for web
   applications. Use when setting up deployment infrastructure or planning releases.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Deployment Patterns

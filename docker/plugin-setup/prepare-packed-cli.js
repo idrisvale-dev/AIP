@@ -6,11 +6,11 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const EXPECTED_NAME = 'ecc-universal';
-const EXPECTED_BIN = 'scripts/ecc.js';
+const EXPECTED_NAME = 'aip-universal';
+const EXPECTED_BIN = 'scripts/aip.js';
 const CHILD_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;
 const REQUIRED_FILES = Object.freeze([
-  'scripts/ecc.js',
+  'scripts/aip.js',
   'manifests/install-components.json',
   'manifests/install-modules.json',
   'manifests/install-profiles.json',
@@ -57,17 +57,17 @@ function validatePackedPackage(packageRoot) {
   if (typeof manifest.version !== 'string' || manifest.version.length === 0) {
     fail('Packed package version is missing.');
   }
-  if (!manifest.bin || manifest.bin.ecc !== EXPECTED_BIN) {
-    fail(`Packed package bin.ecc must map to ${EXPECTED_BIN}.`);
+  if (!manifest.bin || manifest.bin.aip !== EXPECTED_BIN) {
+    fail(`Packed package bin.aip must map to ${EXPECTED_BIN}.`);
   }
 
   for (const requiredFile of REQUIRED_FILES) {
     requireRegularFile(resolvedRoot, requiredFile);
   }
 
-  const binTarget = path.resolve(resolvedRoot, manifest.bin.ecc);
+  const binTarget = path.resolve(resolvedRoot, manifest.bin.aip);
   if (!isWithin(resolvedRoot, binTarget)) {
-    fail('Packed package bin.ecc escapes the extracted package root.');
+    fail('Packed package bin.aip escapes the extracted package root.');
   }
   if (process.platform !== 'win32') {
     fs.accessSync(binTarget, fs.constants.X_OK);
@@ -95,8 +95,8 @@ function run(executable, argv, options = {}) {
 function preparePackedCli(sourceRoot, outputRoot) {
   const resolvedSource = path.resolve(sourceRoot);
   const resolvedOutput = path.resolve(outputRoot);
-  if (resolvedSource !== '/ecc') {
-    fail('Package source must be the read-only /ecc checkout.');
+  if (resolvedSource !== '/aip') {
+    fail('Package source must be the read-only /aip checkout.');
   }
   if (resolvedOutput !== '/tmp' && !resolvedOutput.startsWith('/tmp/')) {
     fail('Packed CLI output must remain under /tmp.');
@@ -147,7 +147,7 @@ function preparePackedCli(sourceRoot, outputRoot) {
   const binTarget = validatePackedPackage(path.join(extractRoot, 'package'));
   const binRoot = path.join(workRoot, 'bin');
   fs.mkdirSync(binRoot, { mode: 0o700 });
-  const publicBin = path.join(binRoot, 'ecc');
+  const publicBin = path.join(binRoot, 'aip');
   fs.symlinkSync(binTarget, publicBin);
   return publicBin;
 }

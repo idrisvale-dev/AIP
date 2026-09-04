@@ -4,9 +4,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const SESSION_SCHEMA_VERSION = 'ecc.session.v1';
-const SESSION_RECORDING_SCHEMA_VERSION = 'ecc.session.recording.v1';
-const DEFAULT_RECORDING_DIR = path.join(os.tmpdir(), 'ecc-session-recordings');
+const SESSION_SCHEMA_VERSION = 'aip.session.v1';
+const SESSION_RECORDING_SCHEMA_VERSION = 'aip.session.recording.v1';
+const DEFAULT_RECORDING_DIR = path.join(os.tmpdir(), 'aip-session-recordings');
 
 function isObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -267,8 +267,8 @@ function resolveRecordingDir(options = {}) {
     return path.resolve(options.recordingDir);
   }
 
-  if (typeof process.env.ECC_SESSION_RECORDING_DIR === 'string' && process.env.ECC_SESSION_RECORDING_DIR.length > 0) {
-    return path.resolve(process.env.ECC_SESSION_RECORDING_DIR);
+  if (typeof process.env.AIP_SESSION_RECORDING_DIR === 'string' && process.env.AIP_SESSION_RECORDING_DIR.length > 0) {
+    return path.resolve(process.env.AIP_SESSION_RECORDING_DIR);
   }
 
   return DEFAULT_RECORDING_DIR;

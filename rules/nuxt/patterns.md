@@ -48,7 +48,7 @@ Load-bearing. Pick by render timing, not habit.
 
 ## Reference
 
-- ECC skills: `nuxt4-patterns`, `vite-patterns`, `frontend-patterns`.
+- AIP skills: `nuxt4-patterns`, `vite-patterns`, `frontend-patterns`.
 - [Nuxt data fetching](https://nuxt.com/docs/getting-started/data-fetching)
 - [Nuxt state management](https://nuxt.com/docs/getting-started/state-management)
 - [Nuxt server engine (Nitro)](https://nuxt.com/docs/guide/directory-structure/server)

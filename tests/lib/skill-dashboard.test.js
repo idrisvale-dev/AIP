@@ -314,7 +314,7 @@ function runTests() {
         warnThreshold: 0.1,
       });
 
-      assert.ok(result.text.includes('ECC Skill Health Dashboard'));
+      assert.ok(result.text.includes('AIP Skill Health Dashboard'));
       assert.ok(result.text.includes('Success Rate'));
       assert.ok(result.text.includes('Failure Patterns'));
       assert.ok(result.text.includes('Pending Amendments'));
@@ -425,7 +425,7 @@ function runTests() {
         now,
       });
 
-      assert.ok(result.text.includes('ECC Skill Health Dashboard'));
+      assert.ok(result.text.includes('AIP Skill Health Dashboard'));
       assert.ok(result.text.includes('No failure patterns detected'));
       assert.strictEqual(result.data.summary.total_skills, 0);
     })) passed++; else failed++;

@@ -6,12 +6,12 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const SCHEMA = 'ecc.codex-legacy-sync.v1';
-const BEGIN_MARKER = '<!-- BEGIN ECC -->';
-const END_MARKER = '<!-- END ECC -->';
+const SCHEMA = 'aip.codex-legacy-sync.v1';
+const BEGIN_MARKER = '<!-- BEGIN AIP -->';
+const END_MARKER = '<!-- END AIP -->';
 
 function getStatePath(codexHome) {
-  return path.join(codexHome, 'ecc', 'legacy-sync-state.json');
+  return path.join(codexHome, 'aip', 'legacy-sync-state.json');
 }
 
 function openRegularFileNoFollow(filePath, writable = false) {
@@ -103,7 +103,7 @@ function createRegularFileNoFollow(filePath, content, mode = 0o600) {
 }
 
 function removeOpenedRegularFile(filePath, opened) {
-  const quarantineDir = fs.mkdtempSync(path.join(path.dirname(filePath), '.ecc-remove-'));
+  const quarantineDir = fs.mkdtempSync(path.join(path.dirname(filePath), '.aip-remove-'));
   const quarantinePath = path.join(quarantineDir, path.basename(filePath));
   fs.renameSync(filePath, quarantinePath);
   const quarantined = openRegularFileNoFollow(quarantinePath);
@@ -455,7 +455,7 @@ function listLegacyCandidates(codexHome) {
   const promptsDir = path.join(codexHome, 'prompts');
   if (fs.existsSync(promptsDir)) {
     for (const entry of fs.readdirSync(promptsDir)) {
-      if (entry.startsWith('ecc-') || entry.startsWith('ecc_') || entry.includes('ecc-rules-pack')) {
+      if (entry.startsWith('aip-') || entry.startsWith('aip_') || entry.includes('aip-rules-pack')) {
         candidates.push(path.join(promptsDir, entry));
       }
     }
@@ -466,8 +466,8 @@ function listLegacyCandidates(codexHome) {
     'COMMANDS-QUICK-REF.md',
     'CONTRIBUTING.md',
     '.github/PULL_REQUEST_TEMPLATE.md',
-    'ecc-prompts-manifest.txt',
-    'ecc-extension-prompts-manifest.txt',
+    'aip-prompts-manifest.txt',
+    'aip-extension-prompts-manifest.txt',
   ]) {
     const candidate = path.join(codexHome, relativePath);
     if (fs.existsSync(candidate)) candidates.push(candidate);
@@ -529,7 +529,7 @@ function uninstallLegacyCodexSync(options = {}) {
         const content = fs.readFileSync(openedAgents.descriptor, 'utf8');
         const stripped = stripMarkerBlock(content);
         if (stripped !== content) {
-          plannedRemovals.push(`${agentsPath}#ecc-marker-block`);
+          plannedRemovals.push(`${agentsPath}#aip-marker-block`);
           if (!dryRun) {
             replaceOpenedRegularFile(openedAgents, stripped, openedAgents.stat.mode & 0o777);
             removedPaths.push(agentsPath);

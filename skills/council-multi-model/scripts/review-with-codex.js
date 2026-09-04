@@ -195,7 +195,7 @@ function runReview(prompt, options, dependencies = {}) {
   const makeTemp = dependencies.mkdtempSync || fs.mkdtempSync;
   const readFile = dependencies.readFileSync || fs.readFileSync;
   const remove = dependencies.rmSync || fs.rmSync;
-  const tempDir = makeTemp(path.join(os.tmpdir(), 'ecc-council-review-'));
+  const tempDir = makeTemp(path.join(os.tmpdir(), 'aip-council-review-'));
   const outputFile = path.join(tempDir, 'last-message.txt');
 
   try {

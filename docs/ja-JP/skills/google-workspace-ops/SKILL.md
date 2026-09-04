@@ -1,7 +1,7 @@
 ---
 name: google-workspace-ops
 description: Google Workspace API操作、Sheets自動化、Gmail統合、およびドキュメント管理。
-origin: ECC
+origin: AIP
 ---
 
 # Google Workspace Ops

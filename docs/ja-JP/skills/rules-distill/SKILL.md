@@ -1,7 +1,7 @@
 ---
 name: rules-distill
 description: "スキルをスキャンしてドメイン横断的な原則を抽出し、ルールに蒸留する——既存のルールファイルへの追記、修正、または新規作成"
-origin: ECC
+origin: AIP
 ---
 
 # ルール蒸留

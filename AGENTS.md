@@ -1,4 +1,4 @@
-# Everything Claude Code (ECC) — Agent Instructions
+# AIP (AIP) — Agent Instructions
 
 This is a **production-ready AI coding plugin** providing 68 specialized agents, 286 skills, 94 commands, and automated hook workflows for software development.
 

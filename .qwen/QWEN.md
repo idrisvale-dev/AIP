@@ -1,6 +1,6 @@
 # Qwen CLI Configuration
 
-This directory contains ECC's Qwen CLI install template.
+This directory contains AIP's Qwen CLI install template.
 
 ## Runtime Location
 
@@ -10,7 +10,7 @@ The source `.qwen/` directory in this repository is copied into a user's home-le
 ./install.sh --target qwen --profile minimal
 ```
 
-The managed install also writes `~/.qwen/ecc-install-state.json` so future ECC updates and uninstalls can distinguish ECC-owned files from user-owned Qwen configuration.
+The managed install also writes `~/.qwen/aip-install-state.json` so future AIP updates and uninstalls can distinguish AIP-owned files from user-owned Qwen configuration.
 
 ## Installed Surface
 

@@ -96,7 +96,7 @@ AgentShield is already more than a static lint tool:
   `agentshield evidence-pack fleet <dirs...> [--json]` aggregates multiple
   inspected bundles into ready, security-blocker, policy-review,
   baseline-regression, supply-chain-review, and invalid routes.
-- ECC-Tools now consumes that fleet primitive in hosted security review:
+- AIP-Tools now consumes that fleet primitive in hosted security review:
   `agentshield-evidence/fleet-summary.json` routes invalid packs, security
   blockers, policy reviews, baseline regressions, and supply-chain reviews into
   hosted findings.
@@ -125,7 +125,7 @@ temporary lockfile breadcrumb, with local typecheck, lint, full tests,
 `git diff --check`, and GitHub CI/Self-Scan/Action-test evidence.
 
 The next iteration after fleet routing should not be "add more regex rules" by
-default. ECC-Tools follow-up routing now consumes fleet summaries and surfaces
+default. AIP-Tools follow-up routing now consumes fleet summaries and surfaces
 source evidence paths in hosted findings, and the first cross-harness policy
 slice now links AgentShield fleet route target paths to harness-owner review.
 AgentShield fleet output now also emits `reviewItems` with source evidence paths
@@ -245,7 +245,7 @@ Target capability:
 
 ### 8. Commercial And Team Controls
 
-AgentShield is already connected conceptually to the ECC Tools GitHub App.
+AgentShield is already connected conceptually to the AIP Tools GitHub App.
 Native GitHub payments make the product path more concrete: free local scans,
 paid org policy gates, paid evidence bundles, and paid drift/history.
 
@@ -254,7 +254,7 @@ Target capability:
 - Tier-aware GitHub App checks: free static scan, paid org policy enforcement,
   paid evidence packs, paid historical drift, and paid deep analysis.
 - Seat/team mapping for policy owners and exception approvers.
-- Billing readiness checks shared with ECC-Tools so payment state never changes
+- Billing readiness checks shared with AIP-Tools so payment state never changes
   enforcement behavior silently.
 
 ## Recommended Build Order
@@ -308,7 +308,7 @@ Artifacts:
 
 Why third:
 
-- It aligns AgentShield with ECC's harness-agnostic positioning.
+- It aligns AgentShield with AIP's harness-agnostic positioning.
 - It creates a stable surface for future Zed, Orca, Superset, and Hermes
   integration without pretending all harnesses share Claude's config model.
 
@@ -331,11 +331,11 @@ Why fourth:
 
 ### Slice 5: GitHub App And Linear Sync Wiring
 
-Connect AgentShield findings to ECC-Tools follow-up routing.
+Connect AgentShield findings to AIP-Tools follow-up routing.
 
 Artifacts:
 
-- Finding fingerprints compatible with ECC-Tools issue caps.
+- Finding fingerprints compatible with AIP-Tools issue caps.
 - Linear-ready backlog export for baseline drift and policy violations.
 - Check-run annotations grouped by owner/risk.
 - Tests that ensure repeated scans do not spam duplicate issues.
@@ -368,6 +368,6 @@ The AgentShield enterprise iteration is not complete until these are true:
 - Runtime-confidence changes include live scan evidence proving lower-confidence
   plugin/package surfaces stay visible instead of being suppressed.
 - Evidence produced by the feature is deterministic enough for CI diffing.
-- ECC-Tools can consume the finding fingerprints or backlog export without
+- AIP-Tools can consume the finding fingerprints or backlog export without
   exceeding GitHub/Linear object caps.
 - The GA roadmap and Linear project status link to the merged AgentShield PRs.

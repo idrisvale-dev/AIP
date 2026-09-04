@@ -1,7 +1,7 @@
 ---
 name: quarkus-verification
 description: "Bucle de verificación para proyectos Quarkus: build, análisis estático, pruebas con cobertura, escaneos de seguridad, compilación nativa y revisión de diff antes del lanzamiento o PR."
-origin: ECC
+origin: AIP
 ---
 
 # Bucle de Verificación Quarkus

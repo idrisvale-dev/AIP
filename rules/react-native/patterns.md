@@ -57,7 +57,7 @@ The rule is to keep these concerns separate and not duplicate server data into c
 Use a server-cache library (TanStack Query, SWR) instead of ad-hoc fetch-in-`useEffect`. The examples use TanStack Query.
 
 - Route server reads through the cache (e.g. `useQuery`) and mutations through it (e.g. `useMutation`) with cache invalidation.
-- Validate API responses with Zod at the boundary; infer types from the schema. (Zod is already the validation default in ECC's `typescript/` rules.)
+- Validate API responses with Zod at the boundary; infer types from the schema. (Zod is already the validation default in AIP's `typescript/` rules.)
 - Handle the three states explicitly in UI: loading, error, empty.
 - Use optimistic updates for fast interactions: snapshot, apply, roll back on failure with visible feedback.
 - Fetch independent data in parallel; avoid request waterfalls between parent and child.

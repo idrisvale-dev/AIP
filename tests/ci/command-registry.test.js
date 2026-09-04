@@ -19,7 +19,7 @@ const {
 } = require('../../scripts/ci/generate-command-registry');
 
 function createTestDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-command-registry-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'aip-command-registry-'));
 }
 
 function cleanupTestDir(testDir) {

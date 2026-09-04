@@ -1,7 +1,7 @@
 ---
 name: error-handling
 description: TypeScript、Python、Goにわたる堅牢なエラー処理のパターン。型付きエラー、エラー境界、リトライ、サーキットブレーカー、ユーザー向けエラーメッセージをカバーします。
-origin: ECC
+origin: AIP
 ---
 
 # エラー処理パターン

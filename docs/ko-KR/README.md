@@ -1,13 +1,13 @@
 **언어:** [English](../../README.md) | [Português (Brasil)](../pt-BR/README.md) | [简体中文](../../README.zh-CN.md) | [繁體中文](../zh-TW/README.md) | [日本語](../ja-JP/README.md) | 한국어 | [Türkçe](../tr/README.md) | [Русский](../ru/README.md) | [Tiếng Việt](../vi-VN/README.md) | [ไทย](../th/README.md) | [Deutsch](../de-DE/README.md) | [Українська](../uk-UA/README.md)
 
-# Everything Claude Code
+# AIP
 
 [![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
 [![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
 [![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
-[![npm ecc-universal](https://img.shields.io/npm/dw/ecc-universal?label=ecc-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-universal)
-[![npm ecc-agentshield](https://img.shields.io/npm/dw/ecc-agentshield?label=ecc-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/ecc-agentshield)
-[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/ecc-tools)
+[![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-universal)
+[![npm aip-agentshield](https://img.shields.io/npm/dw/aip-agentshield?label=aip-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-agentshield)
+[![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/aip-tools)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 ![Shell](https://img.shields.io/badge/-Shell-4EAA25?logo=gnu-bash&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -46,12 +46,12 @@
 <tr>
 <td width="50%">
 <a href="https://bytecore.org/status/2012378465664745795">
-<img src="https://github.com/user-attachments/assets/1a471488-59cc-425b-8345-5245c7efbcef" alt="The Shorthand Guide to Everything Claude Code" />
+<img src="https://github.com/user-attachments/assets/1a471488-59cc-425b-8345-5245c7efbcef" alt="The Shorthand Guide to AIP" />
 </a>
 </td>
 <td width="50%">
 <a href="https://bytecore.org/status/2014040193557471352">
-<img src="https://github.com/user-attachments/assets/c9ca43bc-b149-427f-b551-af6840c368f0" alt="The Longform Guide to Everything Claude Code" />
+<img src="https://github.com/user-attachments/assets/c9ca43bc-b149-427f-b551-af6840c368f0" alt="The Longform Guide to AIP" />
 </a>
 </td>
 </tr>
@@ -76,9 +76,9 @@
 
 ### v1.8.0 — 하네스 성능 시스템 (2026년 3월)
 
-- **하네스 중심 릴리스** — ECC는 이제 단순 설정 모음이 아닌, 에이전트 하네스 성능 시스템으로 명시됩니다.
+- **하네스 중심 릴리스** — AIP는 이제 단순 설정 모음이 아닌, 에이전트 하네스 성능 시스템으로 명시됩니다.
 - **훅 안정성 개선** — SessionStart 루트 폴백, Stop 단계 세션 요약, 취약한 인라인 원라이너를 스크립트 기반 훅으로 교체.
-- **훅 런타임 제어** — `ECC_HOOK_PROFILE=minimal|standard|strict`와 `ECC_DISABLED_HOOKS=...`로 훅 파일 수정 없이 런타임 제어.
+- **훅 런타임 제어** — `AIP_HOOK_PROFILE=minimal|standard|strict`와 `AIP_DISABLED_HOOKS=...`로 훅 파일 수정 없이 런타임 제어.
 - **새 하네스 커맨드** — `/harness-audit`, `/loop-start`, `/loop-status`, `/quality-gate`, `/model-route`.
 - **NanoClaw v2** — 모델 라우팅, 스킬 핫로드, 세션 분기/검색/내보내기/압축/메트릭.
 - **크로스 하네스 호환성** — Claude Code, Cursor, OpenCode, Codex 간 동작 일관성 강화.
@@ -96,7 +96,7 @@
 - **Codex CLI 지원** — OpenAI Codex CLI 호환성을 위한 `/codex-setup` 커맨드
 - **7개 신규 스킬** — `search-first`, `swift-actor-persistence`, `swift-protocol-di-testing` 등
 - **AgentShield 통합** — `/security-scan`으로 Claude Code에서 직접 AgentShield 실행; 1282개 테스트, 102개 규칙
-- **GitHub 마켓플레이스** — [github.com/marketplace/ecc-tools](https://github.com/marketplace/ecc-tools)에서 무료/프로/엔터프라이즈 티어 제공
+- **GitHub 마켓플레이스** — [github.com/marketplace/aip-tools](https://github.com/marketplace/aip-tools)에서 무료/프로/엔터프라이즈 티어 제공
 - **30명 이상의 커뮤니티 기여** — 6개 언어에 걸친 30명의 기여자
 - **978개 내부 테스트** — 에이전트, 스킬, 커맨드, 훅, 룰 전반에 걸친 검증
 
@@ -115,7 +115,7 @@
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # 플러그인 설치
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 ### 2단계: 룰 설치 (필수)
@@ -125,7 +125,7 @@
 ```bash
 # 먼저 저장소 클론
 git clone https://github.com/reborncursed/AIP.git
-cd everything-claude-code
+cd aip
 
 # 권장: 설치 스크립트 사용 (common + 언어별 룰을 안전하게 처리)
 ./install.sh typescript    # 또는 python, golang
@@ -141,13 +141,13 @@ cd everything-claude-code
 
 ```bash
 # 커맨드 실행 (플러그인 설치 시 네임스페이스 형태 사용)
-/ecc:plan "사용자 인증 추가"
+/aip:plan "사용자 인증 추가"
 
 # 수동 설치(옵션 2) 시에는 짧은 형태를 사용:
 # /plan "사용자 인증 추가"
 
 # 사용 가능한 커맨드 확인
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
 **끝!** 이제 16개 에이전트, 65개 스킬, 40개 커맨드를 사용할 수 있습니다.
@@ -193,10 +193,10 @@ node scripts/setup-package-manager.js --detect
 
 ```bash
 # 훅 엄격도 프로필 (기본값: standard)
-export ECC_HOOK_PROFILE=standard
+export AIP_HOOK_PROFILE=standard
 
 # 비활성화할 훅 ID (쉼표로 구분)
-export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
+export AIP_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 ```
 
 ---
@@ -206,7 +206,7 @@ export ECC_DISABLED_HOOKS="pre:bash:tmux-reminder,post:edit:typecheck"
 이 저장소는 **Claude Code 플러그인**입니다 - 직접 설치하거나 컴포넌트를 수동으로 복사할 수 있습니다.
 
 ```
-everything-claude-code/
+aip/
 |-- .claude-plugin/   # 플러그인 및 마켓플레이스 매니페스트
 |   |-- plugin.json         # 플러그인 메타데이터와 컴포넌트 경로
 |   |-- marketplace.json    # /plugin marketplace add용 마켓플레이스 카탈로그
@@ -294,16 +294,16 @@ Claude Code 설정에서 취약점, 잘못된 구성, 인젝션 위험을 스캔
 
 ```bash
 # 빠른 스캔 (설치 불필요)
-npx ecc-agentshield scan
+npx aip-agentshield scan
 
 # 안전한 문제 자동 수정
-npx ecc-agentshield scan --fix
+npx aip-agentshield scan --fix
 
 # 3개의 Opus 4.6 에이전트로 정밀 분석
-npx ecc-agentshield scan --opus --stream
+npx aip-agentshield scan --opus --stream
 
 # 안전한 설정을 처음부터 생성
-npx ecc-agentshield init
+npx aip-agentshield init
 ```
 
 **스캔 대상:** CLAUDE.md, settings.json, MCP 설정, 훅, 에이전트 정의, 스킬 — 시크릿 감지(14개 패턴), 권한 감사, 훅 인젝션 분석, MCP 서버 위험 프로파일링, 에이전트 설정 검토의 5가지 카테고리.
@@ -312,7 +312,7 @@ npx ecc-agentshield init
 
 Claude Code에서 `/security-scan`을 사용하거나, [GitHub Action](https://github.com/reborncursed/agentshield)으로 CI에 추가하세요.
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/ecc-agentshield)
+[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 
 ### 지속적 학습 v2
 
@@ -359,7 +359,7 @@ Claude Code v2.1+는 설치된 플러그인의 `hooks/hooks.json`을 **자동으
 /plugin marketplace add https://github.com/reborncursed/AIP
 
 # 플러그인 설치
-/plugin install ecc@ecc
+/plugin install aip@aip
 ```
 
 또는 `~/.claude/settings.json`에 직접 추가:
@@ -367,7 +367,7 @@ Claude Code v2.1+는 설치된 플러그인의 `hooks/hooks.json`을 **자동으
 ```json
 {
   "extraKnownMarketplaces": {
-    "ecc": {
+    "aip": {
       "source": {
         "source": "github",
         "repo": "reborncursed/AIP"
@@ -375,7 +375,7 @@ Claude Code v2.1+는 설치된 플러그인의 `hooks/hooks.json`을 **자동으
     }
   },
   "enabledPlugins": {
-    "ecc@ecc": true
+    "aip@aip": true
   }
 }
 ```
@@ -387,12 +387,12 @@ Claude Code v2.1+는 설치된 플러그인의 `hooks/hooks.json`을 **자동으
 >
 > # 옵션 A: 사용자 레벨 룰 (모든 프로젝트에 적용)
 > mkdir -p ~/.claude/rules
-> cp -r everything-claude-code/rules/common ~/.claude/rules/common
-> cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript   # 사용하는 스택 선택
+> cp -r aip/rules/common ~/.claude/rules/common
+> cp -r aip/rules/typescript ~/.claude/rules/typescript   # 사용하는 스택 선택
 >
 > # 옵션 B: 프로젝트 레벨 룰 (현재 프로젝트에만 적용)
 > mkdir -p .claude/rules
-> cp -r everything-claude-code/rules/common .claude/rules/common
+> cp -r aip/rules/common .claude/rules/common
 > ```
 
 ---
@@ -406,18 +406,18 @@ Claude Code v2.1+는 설치된 플러그인의 `hooks/hooks.json`을 **자동으
 git clone https://github.com/reborncursed/AIP.git
 
 # 에이전트 복사
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp aip/agents/*.md ~/.claude/agents/
 
 # 룰 복사 (common + 언어별)
-cp -r everything-claude-code/rules/common ~/.claude/rules/common
-cp -r everything-claude-code/rules/typescript ~/.claude/rules/typescript   # 사용하는 스택 선택
+cp -r aip/rules/common ~/.claude/rules/common
+cp -r aip/rules/typescript ~/.claude/rules/typescript   # 사용하는 스택 선택
 
 # 커맨드 복사
-cp everything-claude-code/commands/*.md ~/.claude/commands/
+cp aip/commands/*.md ~/.claude/commands/
 
 # 스킬 복사
-cp -r everything-claude-code/skills/* ~/.claude/skills/
-cp -r everything-claude-code/skills/search-first ~/.claude/skills/
+cp -r aip/skills/* ~/.claude/skills/
+cp -r aip/skills/search-first ~/.claude/skills/
 ```
 
 ---
@@ -489,8 +489,8 @@ rules/
 
 | 하고 싶은 것 | 사용할 커맨드 | 사용되는 에이전트 |
 |-------------|-------------|-----------------|
-| 새 기능 계획하기 | `/ecc:plan "인증 추가"` | planner |
-| 시스템 아키텍처 설계 | `/ecc:plan` + architect 에이전트 | architect |
+| 새 기능 계획하기 | `/aip:plan "인증 추가"` | planner |
+| 시스템 아키텍처 설계 | `/aip:plan` + architect 에이전트 | architect |
 | 테스트를 먼저 작성하며 코딩 | `/tdd` | tdd-guide |
 | 방금 작성한 코드 리뷰 | `/code-review` | code-reviewer |
 | 빌드 실패 수정 | `/build-fix` | build-error-resolver |
@@ -507,7 +507,7 @@ rules/
 
 **새로운 기능 시작:**
 ```
-/ecc:plan "OAuth를 사용한 사용자 인증 추가"
+/aip:plan "OAuth를 사용한 사용자 인증 추가"
                                               → planner가 구현 청사진 작성
 /tdd                                          → tdd-guide가 테스트 먼저 작성 강제
 /code-review                                  → code-reviewer가 코드 검토
@@ -535,7 +535,7 @@ rules/
 <summary><b>설치된 에이전트/커맨드 확인은 어떻게 하나요?</b></summary>
 
 ```bash
-/plugin list ecc@ecc
+/plugin list aip@aip
 ```
 
 플러그인에서 사용할 수 있는 모든 에이전트, 커맨드, 스킬을 보여줍니다.
@@ -570,10 +570,10 @@ MCP 서버가 너무 많으면 컨텍스트를 잡아먹습니다. 각 MCP 도�
 
 ```bash
 # 에이전트만
-cp everything-claude-code/agents/*.md ~/.claude/agents/
+cp aip/agents/*.md ~/.claude/agents/
 
 # 룰만
-cp -r everything-claude-code/rules/common ~/.claude/rules/common
+cp -r aip/rules/common ~/.claude/rules/common
 ```
 
 각 컴포넌트는 완전히 독립적입니다.
@@ -582,7 +582,7 @@ cp -r everything-claude-code/rules/common ~/.claude/rules/common
 <details>
 <summary><b>Cursor / OpenCode / Codex / Antigravity에서도 작동하나요?</b></summary>
 
-네. ECC는 크로스 플랫폼입니다:
+네. AIP는 크로스 플랫폼입니다:
 - **Cursor**: `.cursor/`에 변환된 설정 제공
 - **OpenCode**: `.opencode/`에 전체 플러그인 지원
 - **Codex**: macOS 앱과 CLI 모두 퍼스트클래스 지원
@@ -715,8 +715,8 @@ Claude Code 사용 비용이 부담된다면 토큰 소비를 관리해야 합�
 
 ## 링크
 
-- **요약 가이드 (여기서 시작):** [The Shorthand Guide to Everything Claude Code](https://bytecore.org/status/2012378465664745795)
-- **상세 가이드 (고급):** [The Longform Guide to Everything Claude Code](https://bytecore.org/status/2014040193557471352)
+- **요약 가이드 (여기서 시작):** [The Shorthand Guide to AIP](https://bytecore.org/status/2012378465664745795)
+- **상세 가이드 (고급):** [The Longform Guide to AIP](https://bytecore.org/status/2014040193557471352)
 - **팔로우:** [@bytecore](https://bytecore.org)
 - **bytecore.org:** [bytecore.org](https://bytecore.org)
 

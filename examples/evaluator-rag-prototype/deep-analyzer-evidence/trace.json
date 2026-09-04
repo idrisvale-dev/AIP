@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.trace.v1",
+  "schema_version": "aip.evaluator-rag.trace.v1",
   "scenario_id": "deep-analyzer-evidence",
   "run_id": "2026-05-12-deep-analyzer-evidence-prototype",
   "read_only": true,
@@ -8,17 +8,17 @@
       "phase": "observation",
       "summary": "A deep-analysis PR changes repository, commit, architecture, workflow, pattern, or risk-taxonomy behavior. The evaluator records the touched analyzer surface and remains read-only.",
       "evidence": [
-        "../ECC-Tools/src/lib/analyzer.ts",
-        "../ECC-Tools/src/lib/pr-risk-taxonomy.ts"
+        "../AIP-Tools/src/lib/analyzer.ts",
+        "../AIP-Tools/src/lib/pr-risk-taxonomy.ts"
       ]
     },
     {
       "phase": "retrieval",
       "summary": "Retrieved the maintained analyzer corpus, corpus regression test, and follow-up tests that distinguish corpus-backed analyzer changes from no-evidence analyzer rewrites.",
       "evidence": [
-        "../ECC-Tools/src/analyzers/fixtures/deep-analyzer-corpus.ts",
-        "../ECC-Tools/src/analyzers/deep-analyzer-corpus.test.ts",
-        "../ECC-Tools/src/lib/analyzer.compare.test.ts"
+        "../AIP-Tools/src/analyzers/fixtures/deep-analyzer-corpus.ts",
+        "../AIP-Tools/src/analyzers/deep-analyzer-corpus.test.ts",
+        "../AIP-Tools/src/lib/analyzer.compare.test.ts"
       ]
     },
     {

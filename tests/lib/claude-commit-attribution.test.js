@@ -37,7 +37,7 @@ if (test('treats either includeCoAuthoredBy boolean as an explicit choice', () =
 
 if (test('treats a configured attribution as an explicit choice', () => {
   // `attribution` supersedes `includeCoAuthoredBy` in Claude Code, so a user who
-  // set it has already decided and ECC must not write a key that loses to it.
+  // set it has already decided and AIP must not write a key that loses to it.
   assert.strictEqual(hasExplicitCommitAttributionPreference({ attribution: { commit: '' } }), true);
   assert.strictEqual(hasExplicitCommitAttributionPreference({ attribution: { pr: '' } }), true);
   assert.strictEqual(

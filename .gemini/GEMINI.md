@@ -1,10 +1,10 @@
-# ECC for Gemini CLI
+# AIP for Gemini CLI
 
-This file provides Gemini CLI with the baseline ECC workflow, review standards, and security checks for repositories that install the Gemini target.
+This file provides Gemini CLI with the baseline AIP workflow, review standards, and security checks for repositories that install the Gemini target.
 
 ## Overview
 
-Everything Claude Code (ECC) is a cross-harness coding system with 36 specialized agents, 142 skills, and 68 commands.
+AIP (AIP) is a cross-harness coding system with 36 specialized agents, 142 skills, and 68 commands.
 
 Gemini support is currently focused on a strong project-local instruction layer via `.gemini/GEMINI.md`, plus the shared MCP catalog and package-manager setup assets shipped by the installer.
 
@@ -40,7 +40,7 @@ Before any commit:
 - Run targeted verification for touched areas before shipping
 - Prefer contained local implementations over adding new third-party runtime dependencies
 
-## ECC Areas To Reuse
+## AIP Areas To Reuse
 
 - `AGENTS.md` for repo-wide operating rules
 - `skills/` for deep workflow guidance

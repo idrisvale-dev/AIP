@@ -2,7 +2,7 @@
 name: perl-security
 description: Comprehensive Perl security covering taint mode, input validation, safe process execution, DBI parameterized queries, web security (XSS/SQLi/CSRF), and perlcritic security policies. Use when reviewing Perl input handling, process execution, DBI queries, or web-facing code.
 metadata:
-  origin: ECC
+  origin: AIP
 ---
 
 # Perl Security Patterns

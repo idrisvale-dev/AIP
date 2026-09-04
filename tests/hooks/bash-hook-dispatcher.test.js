@@ -47,7 +47,7 @@ function runTests() {
 
   if (test('pre dispatcher blocks --no-verify before other Bash checks', () => {
     const input = { tool_input: { command: 'git commit --no-verify -m "x"' } };
-    const result = runScript(preDispatcher, input, { ECC_HOOK_PROFILE: 'strict' });
+    const result = runScript(preDispatcher, input, { AIP_HOOK_PROFILE: 'strict' });
     assert.strictEqual(result.status, 2, 'Expected dispatcher to block git hook bypass');
     assert.ok(result.stderr.includes('--no-verify'), 'Expected block-no-verify reason in stderr');
     assert.strictEqual(result.stdout, '', 'Blocking hook should not pass through stdout');
@@ -58,7 +58,7 @@ function runTests() {
     // input event back to stdout — Claude Code validates hook stdout against
     // the hook-output schema and the input event fails as "(root): Invalid input".
     const input = { tool_input: { command: 'ls -la' } };
-    const result = runScript(preDispatcher, input, { ECC_HOOK_PROFILE: 'standard' });
+    const result = runScript(preDispatcher, input, { AIP_HOOK_PROFILE: 'standard' });
     assert.strictEqual(result.status, 0);
     assert.strictEqual(result.stdout, '', `Pass-through must emit empty stdout, got: ${result.stdout}`);
   })) passed++; else failed++;
@@ -66,7 +66,7 @@ function runTests() {
   if (test('pre dispatcher still honors per-hook disable flags', () => {
     const input = { tool_input: { command: 'git push origin main' } };
 
-    const enabled = runScript(preDispatcher, input, { ECC_HOOK_PROFILE: 'strict' });
+    const enabled = runScript(preDispatcher, input, { AIP_HOOK_PROFILE: 'strict' });
     assert.strictEqual(enabled.status, 0);
     assert.strictEqual(enabled.stderr, '', `Expected visible reminder via stdout JSON, got stderr: ${enabled.stderr}`);
     assert.ok(
@@ -75,8 +75,8 @@ function runTests() {
     );
 
     const disabled = runScript(preDispatcher, input, {
-      ECC_HOOK_PROFILE: 'strict',
-      ECC_DISABLED_HOOKS: 'pre:bash:git-push-reminder',
+      AIP_HOOK_PROFILE: 'strict',
+      AIP_DISABLED_HOOKS: 'pre:bash:git-push-reminder',
     });
     assert.strictEqual(disabled.status, 0);
     assert.strictEqual(disabled.stdout, '', 'Disabled hook should emit no stdout (echoing the input event fails hook-output schema validation)');
@@ -85,14 +85,14 @@ function runTests() {
 
   if (test('pre dispatcher respects hook profiles inside the consolidated path', () => {
     const input = { tool_input: { command: 'git push origin main' } };
-    const result = runScript(preDispatcher, input, { ECC_HOOK_PROFILE: 'minimal' });
+    const result = runScript(preDispatcher, input, { AIP_HOOK_PROFILE: 'minimal' });
     assert.strictEqual(result.status, 0);
     assert.strictEqual(result.stderr, '', 'Strict-only reminders should stay disabled in minimal profile');
     assert.strictEqual(result.stdout, '', 'Pass-through must emit no stdout, not echo the input event');
   })) passed++; else failed++;
 
   if (test('post dispatcher writes both bash audit and cost logs in one pass', () => {
-    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-bash-dispatcher-'));
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-bash-dispatcher-'));
     const payload = { tool_input: { command: 'npm publish --token=$PUBLISH_TOKEN' } };
 
     try {

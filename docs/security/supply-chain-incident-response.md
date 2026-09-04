@@ -1,6 +1,6 @@
 # Supply-Chain Incident Response
 
-This playbook is the ECC operator runbook for npm, GitHub Actions, and
+This playbook is the AIP operator runbook for npm, GitHub Actions, and
 cross-ecosystem package-registry incidents. It is intentionally conservative:
 registry signatures, provenance, and trusted publishing are useful signals, but
 they do not prove that the workflow executed the intended code path.
@@ -8,7 +8,7 @@ they do not prove that the workflow executed the intended code path.
 ## Current External Trigger
 
 As of 2026-05-15, the active incident class is the May 2026 TanStack npm
-supply-chain compromise and broader Mini Shai-Hulud campaign. ECC keeps the
+supply-chain compromise and broader Mini Shai-Hulud campaign. AIP keeps the
 same IOC sweep for the related npm/PyPI waves because these incidents target
 package install/publish paths, AI developer-tool configs, and developer
 credentials:
@@ -23,7 +23,7 @@ credentials:
   OpenSearch, Guardrails AI, Squawk, and other npm/PyPI packages.
 - Socket's 2026-05-14 `node-ipc` report describes a separate active npm
   compromise affecting `node-ipc` versions `9.1.6`, `9.2.3`, and `12.0.1`,
-  with historical malicious `node-ipc` versions also blocked by ECC because
+  with historical malicious `node-ipc` versions also blocked by AIP because
   they carried destructive or unauthorized file-writing behavior.
 - The live IOC set includes persistence through Claude Code
   `.claude/settings.json`, VS Code `.vscode/tasks.json`, Zed
@@ -63,7 +63,7 @@ Primary references:
 - <https://docs.npmjs.com/trusted-publishers/>
 - <https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem>
 
-## ECC Exposure Check
+## AIP Exposure Check
 
 Run this before a release candidate, after a broad dependency bump, and after
 any package-registry incident.
@@ -85,7 +85,7 @@ evidence but do not rotate credentials for a docs-only reference.
 
 ## Durable Watch Workflow
 
-ECC also runs `.github/workflows/supply-chain-watch.yml` every six hours and on
+AIP also runs `.github/workflows/supply-chain-watch.yml` every six hours and on
 manual dispatch. The workflow is read-only, disables checkout credential
 persistence, installs with `npm ci --ignore-scripts`, verifies npm registry
 signatures, runs the IOC scanner fixtures, runs
@@ -108,7 +108,7 @@ status update after each significant merge batch.
 
 ## Immediate Response
 
-If ECC or a maintainer machine installed a known-bad package version:
+If AIP or a maintainer machine installed a known-bad package version:
 
 1. Stop the host from publishing or deploying.
 2. Preserve evidence before cleanup:
@@ -146,7 +146,7 @@ If ECC or a maintainer machine installed a known-bad package version:
 
 ## GitHub Actions Rules
 
-ECC enforces these rules through `scripts/ci/validate-workflow-security.js`:
+AIP enforces these rules through `scripts/ci/validate-workflow-security.js`:
 
 - privileged workflows must not checkout untrusted PR refs;
 - all workflow dependency installs must disable lifecycle scripts;
@@ -162,7 +162,7 @@ Treat any violation as a release blocker.
 
 ## Publication Rules
 
-Before tagging or publishing ECC:
+Before tagging or publishing AIP:
 
 1. Verify there is no unexpected dependency on packages in the active advisory.
 2. Use a clean checkout or throwaway worktree for release commands.

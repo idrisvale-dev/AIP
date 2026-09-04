@@ -1,7 +1,7 @@
 ---
 name: quarkus-tdd
 description: Desarrollo guiado por pruebas para Quarkus 3.x LTS usando JUnit 5, Mockito, REST Assured, pruebas Camel y JaCoCo. Usar al agregar funcionalidades, corregir bugs o refactorizar servicios orientados a eventos.
-origin: ECC
+origin: AIP
 ---
 
 # Flujo de Trabajo TDD en Quarkus

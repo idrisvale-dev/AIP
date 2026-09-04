@@ -1,7 +1,7 @@
 ---
 name: frontend-patterns
 description: Patrones de desarrollo frontend para React, Next.js, gestión de estado, optimización de rendimiento y buenas prácticas de UI.
-origin: ECC
+origin: AIP
 ---
 
 # Patrones de Desarrollo Frontend

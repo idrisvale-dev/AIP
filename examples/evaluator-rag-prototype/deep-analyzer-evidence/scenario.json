@@ -1,5 +1,5 @@
 {
-  "schema_version": "ecc.evaluator-rag.scenario.v1",
+  "schema_version": "aip.evaluator-rag.scenario.v1",
   "scenario_id": "deep-analyzer-evidence",
   "title": "Require analyzer corpus evidence before promoting deep-analysis changes",
   "mode": "read_only_prototype",
@@ -7,22 +7,22 @@
   "sources": [
     {
       "kind": "sibling_repo_doc",
-      "path": "../ECC-Tools/README.md",
+      "path": "../AIP-Tools/README.md",
       "purpose": "Public description of deep-analyzer predictive follow-ups and the Deep Analyzer Evidence PR-risk bucket"
     },
     {
       "kind": "sibling_repo_source",
-      "path": "../ECC-Tools/src/lib/analyzer.ts",
+      "path": "../AIP-Tools/src/lib/analyzer.ts",
       "purpose": "Predictive follow-up logic that flags analyzer changes without corpus, snapshot, fixture, or benchmark evidence"
     },
     {
       "kind": "sibling_repo_source",
-      "path": "../ECC-Tools/src/lib/pr-risk-taxonomy.ts",
+      "path": "../AIP-Tools/src/lib/pr-risk-taxonomy.ts",
       "purpose": "Non-blocking PR-risk taxonomy bucket for deep-analyzer evidence"
     },
     {
       "kind": "sibling_repo_fixture",
-      "path": "../ECC-Tools/src/analyzers/fixtures/deep-analyzer-corpus.ts",
+      "path": "../AIP-Tools/src/analyzers/fixtures/deep-analyzer-corpus.ts",
       "purpose": "Maintained corpus cases for representative repository shapes, commit histories, and expected analyzer outputs"
     },
     {

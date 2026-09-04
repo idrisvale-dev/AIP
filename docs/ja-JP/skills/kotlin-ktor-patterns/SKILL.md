@@ -1,7 +1,7 @@
 ---
 name: kotlin-ktor-patterns
 description: Ktor サーバーパターン（ルーティング DSL、プラグイン、認証、Koin DI、kotlinx.serialization、WebSocket、testApplication テストを含む）。
-origin: ECC
+origin: AIP
 ---
 
 # Ktor サーバーパターン

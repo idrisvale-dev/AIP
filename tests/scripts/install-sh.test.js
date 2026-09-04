@@ -101,7 +101,7 @@ function runTests() {
       fs.copyFileSync(SCRIPT, fixtureScript);
       fs.writeFileSync(
         path.join(binDir, 'npm'),
-        `#!/usr/bin/env bash\nset -euo pipefail\nmkdir -p "$PWD/node_modules"\nprintf '%s\\n' "$PWD" > "$ECC_TEST_NPM_CWD"\n`,
+        `#!/usr/bin/env bash\nset -euo pipefail\nmkdir -p "$PWD/node_modules"\nprintf '%s\\n' "$PWD" > "$AIP_TEST_NPM_CWD"\n`,
         { mode: 0o755 }
       );
       fs.writeFileSync(
@@ -113,7 +113,7 @@ function runTests() {
         cwd: projectDir,
         scriptPath: fixtureScript,
         env: {
-          ECC_TEST_NPM_CWD: npmCwdPath,
+          AIP_TEST_NPM_CWD: npmCwdPath,
           PATH: `${binDir}${path.delimiter}${process.env.PATH}`,
         },
       });
@@ -134,7 +134,7 @@ function runTests() {
     const result = run(['--help']);
     assert.strictEqual(result.code, 0, result.stderr);
     assert.ok(
-      result.stdout.includes('claude       (default) - Install ECC into ~/.claude/'),
+      result.stdout.includes('claude       (default) - Install AIP into ~/.claude/'),
       'help text should describe the Claude target as a full ~/.claude install surface'
     );
   })) passed++; else failed++;

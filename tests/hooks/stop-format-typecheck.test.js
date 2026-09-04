@@ -36,7 +36,7 @@ const origSessionId = process.env.CLAUDE_SESSION_ID;
 process.env.CLAUDE_SESSION_ID = TEST_SESSION_ID;
 
 function getAccumFile() {
-  return path.join(os.tmpdir(), `ecc-edited-${TEST_SESSION_ID}.txt`);
+  return path.join(os.tmpdir(), `aip-edited-${TEST_SESSION_ID}.txt`);
 }
 
 function cleanAccumFile() {

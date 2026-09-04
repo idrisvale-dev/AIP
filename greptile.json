@@ -48,14 +48,14 @@
       },
       {
         "scope": ["SECURITY.md", "docs/security/**", "README.md"],
-        "rule": "Ensure package and distribution claims only list official ECC surfaces. Flag unofficial npm packages, stale historical repo paths, and misleading install instructions."
+        "rule": "Ensure package and distribution claims only list official AIP surfaces. Flag unofficial npm packages, stale historical repo paths, and misleading install instructions."
       }
     ],
     "files": [
       {
         "scope": ["**/*"],
         "path": "SECURITY.md",
-        "description": "ECC disclosure policy, official package surfaces, out-of-scope rules, and supply-chain guardrails."
+        "description": "AIP disclosure policy, official package surfaces, out-of-scope rules, and supply-chain guardrails."
       },
       {
         "scope": ["**/*"],

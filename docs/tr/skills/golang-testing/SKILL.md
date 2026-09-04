@@ -1,7 +1,7 @@
 ---
 name: golang-testing
 description: Table-driven testler, subtestler, benchmark'lar, fuzzing ve test coverage içeren Go test desenleri. TDD metodolojisi ile idiomatic Go uygulamalarını takip eder.
-origin: ECC
+origin: AIP
 ---
 
 # Go Test Desenleri

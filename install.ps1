@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# install.ps1 — Windows-native entrypoint for the ECC installer.
+# install.ps1 — Windows-native entrypoint for the AIP installer.
 #
 # This wrapper resolves the real repo/package root when invoked through a
 # symlinked path, then delegates to the Node-based installer runtime.
@@ -37,7 +37,7 @@ $installerScript = Join-Path -Path (Join-Path -Path $scriptDir -ChildPath 'scrip
 # Auto-install Node dependencies when running from a git clone
 $nodeModules = Join-Path -Path $scriptDir -ChildPath 'node_modules'
 if (-not (Test-Path -LiteralPath $nodeModules)) {
-    Write-Host '[ECC] Installing dependencies...'
+    Write-Host '[AIP] Installing dependencies...'
     Push-Location $scriptDir
     try {
         & npm install --no-audit --no-fund --loglevel=error

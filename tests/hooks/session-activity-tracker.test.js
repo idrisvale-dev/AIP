@@ -83,7 +83,7 @@ function runTests() {
     const inputStr = JSON.stringify(input);
     const result = runScript(input, {
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'sess-123',
+      AIP_SESSION_ID: 'sess-123',
     });
     assert.strictEqual(result.code, 0);
     assert.strictEqual(result.stdout, inputStr);
@@ -101,7 +101,7 @@ function runTests() {
     const result = runScript(input, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'ecc-session-1234',
+      AIP_SESSION_ID: 'aip-session-1234',
     });
     assert.strictEqual(result.code, 0);
 
@@ -109,7 +109,7 @@ function runTests() {
     assert.ok(fs.existsSync(metricsFile), `Expected metrics file at ${metricsFile}`);
 
     const row = JSON.parse(fs.readFileSync(metricsFile, 'utf8').trim());
-    assert.strictEqual(row.session_id, 'ecc-session-1234');
+    assert.strictEqual(row.session_id, 'aip-session-1234');
     assert.strictEqual(row.tool_name, 'Write');
     assert.strictEqual(row.input_params_json, '{"file_path":"src/app.rs"}');
     assert.deepStrictEqual(row.file_paths, ['src/app.rs']);
@@ -133,7 +133,7 @@ function runTests() {
     const result = runScript(input, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'ecc-session-5678',
+      AIP_SESSION_ID: 'aip-session-5678',
     });
     assert.strictEqual(result.code, 0);
 
@@ -162,7 +162,7 @@ function runTests() {
     const result = runScript(input, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'ecc-session-edit',
+      AIP_SESSION_ID: 'aip-session-edit',
     });
     assert.strictEqual(result.code, 0);
 
@@ -203,7 +203,7 @@ function runTests() {
     const result = runScript(input, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'ecc-session-multiedit',
+      AIP_SESSION_ID: 'aip-session-multiedit',
     });
     assert.strictEqual(result.code, 0);
 
@@ -233,8 +233,8 @@ function runTests() {
     const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'session-activity-tracker-repo-'));
 
     spawnSync('git', ['init'], { cwd: repoDir, encoding: 'utf8' });
-    spawnSync('git', ['config', 'user.email', 'ecc@example.com'], { cwd: repoDir, encoding: 'utf8' });
-    spawnSync('git', ['config', 'user.name', 'ECC Tests'], { cwd: repoDir, encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.email', 'aip@example.com'], { cwd: repoDir, encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.name', 'AIP Tests'], { cwd: repoDir, encoding: 'utf8' });
 
     const srcDir = path.join(repoDir, 'src');
     fs.mkdirSync(srcDir, { recursive: true });
@@ -256,7 +256,7 @@ function runTests() {
     const result = runScript(input, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'ecc-session-write-modify',
+      AIP_SESSION_ID: 'aip-session-write-modify',
     }, {
       cwd: repoDir,
     });
@@ -282,8 +282,8 @@ function runTests() {
     const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'session-activity-tracker-delete-repo-'));
 
     spawnSync('git', ['init'], { cwd: repoDir, encoding: 'utf8' });
-    spawnSync('git', ['config', 'user.email', 'ecc@example.com'], { cwd: repoDir, encoding: 'utf8' });
-    spawnSync('git', ['config', 'user.name', 'ECC Tests'], { cwd: repoDir, encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.email', 'aip@example.com'], { cwd: repoDir, encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.name', 'AIP Tests'], { cwd: repoDir, encoding: 'utf8' });
 
     const srcDir = path.join(repoDir, 'src');
     fs.mkdirSync(srcDir, { recursive: true });
@@ -304,7 +304,7 @@ function runTests() {
     const result = runScript(input, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'ecc-session-delete',
+      AIP_SESSION_ID: 'aip-session-delete',
     }, {
       cwd: repoDir,
     });
@@ -330,8 +330,8 @@ function runTests() {
     const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'session-activity-tracker-nested-repo-'));
 
     spawnSync('git', ['init'], { cwd: repoDir, encoding: 'utf8' });
-    spawnSync('git', ['config', 'user.email', 'ecc@example.com'], { cwd: repoDir, encoding: 'utf8' });
-    spawnSync('git', ['config', 'user.name', 'ECC Tests'], { cwd: repoDir, encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.email', 'aip@example.com'], { cwd: repoDir, encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.name', 'AIP Tests'], { cwd: repoDir, encoding: 'utf8' });
 
     const srcDir = path.join(repoDir, 'src');
     const nestedCwd = path.join(repoDir, 'subdir');
@@ -356,7 +356,7 @@ function runTests() {
     const result = runScript(input, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'ecc-session-nested-cwd',
+      AIP_SESSION_ID: 'aip-session-nested-cwd',
     }, {
       cwd: nestedCwd,
     });
@@ -377,7 +377,7 @@ function runTests() {
     fs.rmSync(repoDir, { recursive: true, force: true });
   }) ? passed++ : failed++);
 
-  (test('prefers ECC_SESSION_ID over CLAUDE_SESSION_ID and redacts bash summaries', () => {
+  (test('prefers AIP_SESSION_ID over CLAUDE_SESSION_ID and redacts bash summaries', () => {
     const tmpHome = makeTempDir();
     const input = {
       tool_name: 'Bash',
@@ -389,14 +389,14 @@ function runTests() {
     const result = runScript(input, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'ecc-session-1',
+      AIP_SESSION_ID: 'aip-session-1',
       CLAUDE_SESSION_ID: 'claude-session-2',
     });
     assert.strictEqual(result.code, 0);
 
     const metricsFile = path.join(tmpHome, '.claude', 'metrics', 'tool-usage.jsonl');
     const row = JSON.parse(fs.readFileSync(metricsFile, 'utf8').trim());
-    assert.strictEqual(row.session_id, 'ecc-session-1');
+    assert.strictEqual(row.session_id, 'aip-session-1');
     assert.ok(row.input_summary.includes('<REDACTED>'));
     assert.ok(!row.input_summary.includes('abc123'));
     assert.ok(!row.input_summary.includes('topsecret'));
@@ -413,7 +413,7 @@ function runTests() {
     const result = runScript(invalidInput, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'sess-123',
+      AIP_SESSION_ID: 'sess-123',
     });
     assert.strictEqual(result.code, 0);
     assert.strictEqual(result.stdout, invalidInput);
@@ -424,7 +424,7 @@ function runTests() {
   (test('skips non-PostToolUse events and rows without required identifiers', () => {
     assert.strictEqual(buildActivityRow(
       { tool_name: 'Read', tool_input: { file_path: 'README.md' } },
-      { CLAUDE_HOOK_EVENT_NAME: 'PreToolUse', ECC_SESSION_ID: 'sess' }
+      { CLAUDE_HOOK_EVENT_NAME: 'PreToolUse', AIP_SESSION_ID: 'sess' }
     ), null);
     assert.strictEqual(buildActivityRow(
       { tool_name: 'Read', tool_input: { file_path: 'README.md' } },
@@ -432,7 +432,7 @@ function runTests() {
     ), null);
     assert.strictEqual(buildActivityRow(
       { tool_input: { file_path: 'README.md' } },
-      { CLAUDE_HOOK_EVENT_NAME: 'PostToolUse', ECC_SESSION_ID: 'sess' }
+      { CLAUDE_HOOK_EVENT_NAME: 'PostToolUse', AIP_SESSION_ID: 'sess' }
     ), null);
   }) ? passed++ : failed++);
 
@@ -591,7 +591,7 @@ function runTests() {
     const result = runScript(input, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'ecc-session-non-git-create',
+      AIP_SESSION_ID: 'aip-session-non-git-create',
     }, {
       cwd: tmpCwd,
     });
@@ -628,7 +628,7 @@ function runTests() {
     const result = runScript(input, {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'ecc-session-absolute-outside',
+      AIP_SESSION_ID: 'aip-session-absolute-outside',
     });
 
     assert.strictEqual(result.code, 0);
@@ -647,7 +647,7 @@ function runTests() {
     const result = runScript('', {
       ...withTempHome(tmpHome),
       CLAUDE_HOOK_EVENT_NAME: 'PostToolUse',
-      ECC_SESSION_ID: 'sess-empty',
+      AIP_SESSION_ID: 'sess-empty',
     });
 
     assert.strictEqual(result.code, 0);

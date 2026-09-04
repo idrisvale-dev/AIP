@@ -1,6 +1,6 @@
 # Sorun Giderme Rehberi
 
-Everything Claude Code (ECC) eklentisi için yaygın sorunlar ve çözümler.
+AIP (AIP) eklentisi için yaygın sorunlar ve çözümler.
 
 ## İçindekiler
 
@@ -256,7 +256,7 @@ mv ~/.claude/plugins/cache ~/.claude/plugins/cache.backup.$(date +%Y%m%d-%H%M%S)
 mkdir -p ~/.claude/plugins/cache
 
 # Marketplace'ten yeniden kur
-# Claude Code → Extensions → Everything Claude Code → Uninstall
+# Claude Code → Extensions → AIP → Uninstall
 # Ardından marketplace'ten yeniden kur
 
 # Claude Code sürümünü kontrol et
@@ -265,7 +265,7 @@ claude --version
 
 # Manuel kurulum (marketplace başarısız olursa)
 git clone https://github.com/reborncursed/AIP.git
-cp -r everything-claude-code ~/.claude/plugins/ecc
+cp -r aip ~/.claude/plugins/aip
 ```
 
 ### Paket Yöneticisi Algılama Başarısız
@@ -370,11 +370,11 @@ chmod -R u+rwX,go+rX ~/.claude/homunculus
 
 ```bash
 # Eklenti bağımlılıklarını kur
-cd ~/.claude/plugins/cache/ecc
+cd ~/.claude/plugins/cache/aip
 npm install
 
 # Veya manuel kurulum için
-cd ~/.claude/plugins/ecc
+cd ~/.claude/plugins/aip
 npm install
 ```
 

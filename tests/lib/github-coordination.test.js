@@ -83,19 +83,19 @@ const DESCRIPTORS = [
     group: 'extractCoordinationState',
     name: 'extractCoordinationState returns parsed state from a proper coordination JSON block',
     fn: () => {
-      const state = { schemaVersion: 'ecc.github.coordination.v1', kind: 'epic', status: 'available' };
+      const state = { schemaVersion: 'aip.github.coordination.v1', kind: 'epic', status: 'available' };
       const body = [
-        '<!-- ecc-coordination:start -->',
+        '<!-- aip-coordination:start -->',
         '```json',
         JSON.stringify(state, null, 2),
         '```',
-        '<!-- ecc-coordination:end -->',
+        '<!-- aip-coordination:end -->',
       ].join('\n');
       const result = extractCoordinationState(body);
       assert.ok(result !== null);
       assert.strictEqual(result.status, 'available');
       assert.strictEqual(result.kind, 'epic');
-      assert.strictEqual(result.schemaVersion, 'ecc.github.coordination.v1');
+      assert.strictEqual(result.schemaVersion, 'aip.github.coordination.v1');
     },
   },
   {
@@ -103,11 +103,11 @@ const DESCRIPTORS = [
     name: 'extractCoordinationState throws SyntaxError when JSON block is malformed',
     fn: () => {
       const body = [
-        '<!-- ecc-coordination:start -->',
+        '<!-- aip-coordination:start -->',
         '```json',
         '{ not valid json }',
         '```',
-        '<!-- ecc-coordination:end -->',
+        '<!-- aip-coordination:end -->',
       ].join('\n');
       assert.throws(() => extractCoordinationState(body), SyntaxError);
     },
@@ -255,7 +255,7 @@ const DESCRIPTORS = [
     name: 'renderCoordinationState returns a string containing the section marker',
     fn: () => {
       const state = {
-        schemaVersion: 'ecc.github.coordination.v1', kind: 'epic', status: 'available',
+        schemaVersion: 'aip.github.coordination.v1', kind: 'epic', status: 'available',
         owner: null, branch: null, validation: 'pending', review: 'not-requested',
         project: { state: 'backlog', fields: {} }, dependencies: [], tasks: [], labels: [],
         lastAction: 'sync', lastActionAt: '2026-01-01T00:00:00.000Z',
@@ -263,8 +263,8 @@ const DESCRIPTORS = [
       };
       const rendered = renderCoordinationState(state);
       assert.ok(typeof rendered === 'string');
-      assert.ok(rendered.includes('<!-- ecc-coordination:start -->'), 'Missing start marker');
-      assert.ok(rendered.includes('<!-- ecc-coordination:end -->'), 'Missing end marker');
+      assert.ok(rendered.includes('<!-- aip-coordination:start -->'), 'Missing start marker');
+      assert.ok(rendered.includes('<!-- aip-coordination:end -->'), 'Missing end marker');
       assert.ok(rendered.includes('```json'), 'Missing json code fence');
     },
   },
@@ -273,7 +273,7 @@ const DESCRIPTORS = [
     name: 'renderCoordinationState output round-trips through extractCoordinationState',
     fn: () => {
       const state = {
-        schemaVersion: 'ecc.github.coordination.v1', kind: 'epic', status: 'claimed',
+        schemaVersion: 'aip.github.coordination.v1', kind: 'epic', status: 'claimed',
         owner: 'carol', branch: 'feat/my-feature', validation: 'pending', review: 'requested',
         project: { state: 'in-progress', fields: {} }, dependencies: [5, 6],
         tasks: [{ title: 'Write tests', done: false }], labels: ['coordination:claimed'],

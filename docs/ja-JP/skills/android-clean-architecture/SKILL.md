@@ -1,7 +1,7 @@
 ---
 name: android-clean-architecture
 description: Android と Kotlin Multiplatform プロジェクトのクリーンアーキテクチャパターン — モジュール構造、依存関係ルール、UseCase、Repository、データ層パターン。
-origin: ECC
+origin: AIP
 ---
 
 # Android クリーンアーキテクチャ

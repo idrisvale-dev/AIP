@@ -337,7 +337,7 @@ PMX için bu E2E testlerine öncelik verin:
 
 ## İlgili Agent'lar
 
-Bu komut, ECC tarafından sağlanan `e2e-runner` agent'ını çağırır.
+Bu komut, AIP tarafından sağlanan `e2e-runner` agent'ını çağırır.
 
 Manuel kurulumlar için, kaynak dosya şurada bulunur:
 `agents/e2e-runner.md`

@@ -319,9 +319,9 @@ Nunca pule a fase RED. Nunca escreva código antes dos testes.
 
 ## Agentes Relacionados
 
-Este comando invoca o agente `tdd-guide` fornecido pelo ECC.
+Este comando invoca o agente `tdd-guide` fornecido pelo AIP.
 
-A skill relacionada `tdd-workflow` também é distribuída com o ECC.
+A skill relacionada `tdd-workflow` também é distribuída com o AIP.
 
 Para instalações manuais, os arquivos fonte ficam em:
 - `agents/tdd-guide.md`

@@ -1,7 +1,7 @@
 ---
 name: csharp-testing
 description: xUnit、FluentAssertions、モッキング、統合テスト、テスト組織のベストプラクティスを使用したC#と.NETのテストパターン。
-origin: ECC
+origin: AIP
 ---
 
 # C#テストパターン

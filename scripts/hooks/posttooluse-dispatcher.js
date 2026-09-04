@@ -17,8 +17,8 @@ const { run: runConsoleWarn } = require('./post-edit-console-warn');
 const { run: runGovernanceCapture } = require('./governance-capture');
 const { run: runSessionActivityTracker } = require('./session-activity-tracker');
 const { run: runObserve } = require('./observe-runner');
-const { run: runMetricsBridge } = require('./ecc-metrics-bridge');
-const { run: runContextMonitor } = require('./ecc-context-monitor');
+const { run: runMetricsBridge } = require('./aip-metrics-bridge');
+const { run: runContextMonitor } = require('./aip-context-monitor');
 const { run: runSkillRunTracker } = require('./skill-run-tracker');
 
 const MAX_STDIN = 1024 * 1024;
@@ -29,8 +29,8 @@ const SYNC_HOOKS = [
   { id: 'post:edit:console-warn', matcher: 'Edit', profiles: 'standard,strict', script: 'scripts/hooks/post-edit-console-warn.js', run: runConsoleWarn },
   { id: 'post:governance-capture', matcher: 'Bash|Write|Edit|MultiEdit', profiles: 'standard,strict', script: 'scripts/hooks/governance-capture.js', run: runGovernanceCapture },
   { id: 'post:session-activity-tracker', matcher: '*', profiles: 'standard,strict', script: 'scripts/hooks/session-activity-tracker.js', run: runSessionActivityTracker },
-  { id: 'post:ecc-metrics-bridge', matcher: '*', profiles: 'minimal,standard,strict', script: 'scripts/hooks/ecc-metrics-bridge.js', run: runMetricsBridge },
-  { id: 'post:ecc-context-monitor', matcher: '*', profiles: 'standard,strict', script: 'scripts/hooks/ecc-context-monitor.js', run: runContextMonitor }
+  { id: 'post:aip-metrics-bridge', matcher: '*', profiles: 'minimal,standard,strict', script: 'scripts/hooks/aip-metrics-bridge.js', run: runMetricsBridge },
+  { id: 'post:aip-context-monitor', matcher: '*', profiles: 'standard,strict', script: 'scripts/hooks/aip-context-monitor.js', run: runContextMonitor }
 ];
 
 const ASYNC_HOOKS = [
@@ -51,7 +51,7 @@ const ASYNC_HOOKS = [
 ];
 
 function getPluginRoot(env = process.env) {
-  return env.CLAUDE_PLUGIN_ROOT || env.ECC_PLUGIN_ROOT || path.resolve(__dirname, '..', '..');
+  return env.CLAUDE_PLUGIN_ROOT || env.AIP_PLUGIN_ROOT || path.resolve(__dirname, '..', '..');
 }
 
 function matchesTool(matcher, toolName) {
@@ -176,7 +176,7 @@ function runHooks(raw, hooks, options = {}) {
 
   for (const hook of hooks) {
     if (!matchesTool(hook.matcher, toolName) || !isEnabled(hook, env)) continue;
-    if (env.ECC_DRY_RUN === '1') {
+    if (env.AIP_DRY_RUN === '1') {
       stderr += buildDryRunPreview(hook, raw);
       continue;
     }
@@ -260,7 +260,7 @@ async function main() {
   }
   if (result.stderr) process.stderr.write(result.stderr);
   const stdout = resolveMainStdout(raw, result, {
-    passthrough: process.env.ECC_POSTTOOLUSE_PASSTHROUGH === '1',
+    passthrough: process.env.AIP_POSTTOOLUSE_PASSTHROUGH === '1',
     truncated
   });
   if (stdout) process.stdout.write(stdout);

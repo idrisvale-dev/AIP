@@ -1,7 +1,7 @@
 ---
 name: docker-patterns
 description: Yerel geliştirme, konteyner güvenliği, ağ, volume stratejileri ve multi-servis orkestrasyon için Docker ve Docker Compose kalıpları.
-origin: ECC
+origin: AIP
 ---
 
 # Docker Kalıpları

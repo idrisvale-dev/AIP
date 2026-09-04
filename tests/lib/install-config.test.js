@@ -46,15 +46,15 @@ function runTests() {
 
   if (test('resolves relative config paths from the provided cwd', () => {
     const cwd = '/workspace/app';
-    const resolved = resolveInstallConfigPath('configs/ecc-install.json', { cwd });
-    assert.strictEqual(resolved, path.join(cwd, 'configs', 'ecc-install.json'));
+    const resolved = resolveInstallConfigPath('configs/aip-install.json', { cwd });
+    assert.strictEqual(resolved, path.join(cwd, 'configs', 'aip-install.json'));
   })) passed++; else failed++;
 
   if (test('finds the default project install config in the provided cwd', () => {
     const cwd = createTempDir('install-config-');
 
     try {
-      const configPath = path.join(cwd, 'ecc-install.json');
+      const configPath = path.join(cwd, 'aip-install.json');
       writeJson(configPath, {
         version: 1,
         profile: 'core',
@@ -80,7 +80,7 @@ function runTests() {
     const cwd = createTempDir('install-config-');
 
     try {
-      const configPath = path.join(cwd, 'ecc-install.json');
+      const configPath = path.join(cwd, 'aip-install.json');
       writeJson(configPath, {
         version: 1,
         target: 'cursor',
@@ -93,7 +93,7 @@ function runTests() {
         },
       });
 
-      const config = loadInstallConfig('ecc-install.json', { cwd });
+      const config = loadInstallConfig('aip-install.json', { cwd });
       assert.strictEqual(config.path, configPath);
       assert.strictEqual(config.target, 'cursor');
       assert.strictEqual(config.profileId, 'developer');
@@ -110,13 +110,13 @@ function runTests() {
     const cwd = createTempDir('install-config-');
 
     try {
-      writeJson(path.join(cwd, 'ecc-install.json'), {
+      writeJson(path.join(cwd, 'aip-install.json'), {
         version: 2,
         target: 'ghost-target',
       });
 
       assert.throws(
-        () => loadInstallConfig('ecc-install.json', { cwd }),
+        () => loadInstallConfig('aip-install.json', { cwd }),
         /Invalid install config/
       );
     } finally {
@@ -129,7 +129,7 @@ function runTests() {
 
     try {
       assert.throws(
-        () => loadInstallConfig('ecc-install.json', { cwd }),
+        () => loadInstallConfig('aip-install.json', { cwd }),
         /Install config not found/
       );
     } finally {

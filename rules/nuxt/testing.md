@@ -44,6 +44,6 @@ Import from `@nuxt/test-utils/e2e`.
 
 ## Reference
 
-- ECC skills: `nuxt4-patterns`, `e2e-testing`, `vite-patterns`.
+- AIP skills: `nuxt4-patterns`, `e2e-testing`, `vite-patterns`.
 - [Nuxt testing docs](https://nuxt.com/docs/getting-started/testing)
 - [@nuxt/test-utils npm](https://www.npmjs.com/package/@nuxt/test-utils)

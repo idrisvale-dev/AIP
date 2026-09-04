@@ -1,7 +1,7 @@
 ---
 name: evm-token-decimals
 description: 防止跨EVM链的静默小数不匹配错误。涵盖运行时小数查找、链感知缓存、桥接代币精度漂移以及面向机器人、仪表盘和DeFi工具的安全归一化。
-origin: ECC direct-port adaptation
+origin: AIP direct-port adaptation
 version: "1.0.0"
 ---
 

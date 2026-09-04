@@ -3,7 +3,7 @@ name: defi-amm-security
 description: Security checklist for Solidity AMM contracts, liquidity pools, and swap flows. Covers reentrancy, CEI ordering, donation or inflation attacks, oracle manipulation, slippage, admin controls, and integer math. Use when auditing or writing Solidity AMM, liquidity pool, or swap code.
 metadata:
   version: "1.0.0"
-  origin: ECC direct-port adaptation
+  origin: AIP direct-port adaptation
 ---
 
 # DeFi AMM Security
