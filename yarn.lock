@@ -68,10 +68,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint/js@npm:9.39.2":
-  version: 9.39.2
-  resolution: "@eslint/js@npm:9.39.2"
-  checksum: 10c0/00f51c52b04ac79faebfaa65a9652b2093b9c924e945479f1f3945473f78aee83cbc76c8d70bbffbf06f7024626575b16d97b66eab16182e1d0d39daff2f26f5
+"@eslint/js@npm:10.0.1":
+  version: 10.0.1
+  resolution: "@eslint/js@npm:10.0.1"
+  peerDependencies:
+    eslint: ^10.0.0
+  peerDependenciesMeta:
+    eslint:
+      optional: true
+  checksum: 10c0/9f3fcaf71ba7fdf65d82e8faad6ecfe97e11801cc3c362b306a88ea1ed1344ae0d35330dddb0e8ad18f010f6687a70b75491b9e01c8af57acd7987cee6b3ec6c
   languageName: node
   linkType: hard
 
@@ -353,6 +358,32 @@ __metadata:
   languageName: node
   linkType: hard
 
+"aip-universal@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "aip-universal@workspace:."
+  dependencies:
+    "@eslint/js": "npm:10.0.1"
+    "@iarna/toml": "npm:2.2.5"
+    "@opencode-ai/plugin": "npm:1.18.25"
+    "@types/node": "npm:26.4.0"
+    ajv: "npm:8.20.0"
+    c8: "npm:11.0.0"
+    eslint: "npm:10.9.1"
+    globals: "npm:17.11.0"
+    js-yaml: "npm:4.3.1"
+    markdownlint-cli: "npm:0.49.1"
+    sql.js: "npm:1.14.2"
+    typescript: "npm:6.0.3"
+  bin:
+    aip: scripts/aip.js
+    aip-control-pane: scripts/control-pane.js
+    aip-install: scripts/install-apply.js
+    aip-memory-mcp: scripts/memory-mcp.mjs
+    aip-plan-canvas: scripts/plan-canvas.js
+    aip-universal: scripts/aip.js
+  languageName: unknown
+  linkType: soft
+
 "ajv@npm:8.20.0":
   version: 8.20.0
   resolution: "ajv@npm:8.20.0"
@@ -593,32 +624,6 @@ __metadata:
   checksum: 10c0/e0928ab8f94c59417a2b8389c45c55ce0a02d9ac7fd74ef62d01ba48060129e1d594501b77de01f3eeafc7cb00773819b0df74d96251cf20b31c5b3071f45c0e
   languageName: node
   linkType: hard
-
-"ecc-universal@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "ecc-universal@workspace:."
-  dependencies:
-    "@eslint/js": "npm:9.39.2"
-    "@iarna/toml": "npm:2.2.5"
-    "@opencode-ai/plugin": "npm:1.18.25"
-    "@types/node": "npm:26.4.0"
-    ajv: "npm:8.20.0"
-    c8: "npm:11.0.0"
-    eslint: "npm:10.9.1"
-    globals: "npm:17.11.0"
-    js-yaml: "npm:4.3.1"
-    markdownlint-cli: "npm:0.49.1"
-    sql.js: "npm:1.14.2"
-    typescript: "npm:6.0.3"
-  bin:
-    ecc: scripts/ecc.js
-    ecc-control-pane: scripts/control-pane.js
-    ecc-install: scripts/install-apply.js
-    ecc-memory-mcp: scripts/memory-mcp.mjs
-    ecc-plan-canvas: scripts/plan-canvas.js
-    ecc-universal: scripts/ecc.js
-  languageName: unknown
-  linkType: soft
 
 "effect@npm:4.0.0-beta.83":
   version: 4.0.0-beta.83
