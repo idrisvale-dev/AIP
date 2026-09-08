@@ -11,7 +11,7 @@ function parseArgs(argv = process.argv) {
     staleOnly: false,
     cleanupPlan: false,
     help: false,
-    baseBranch: 'main',
+    baseBranch: 'master',
     staleDays: 7,
     repoRoot: process.cwd()
   };
@@ -60,7 +60,7 @@ function usage() {
     '  --conflicts       Only show worktrees that would conflict on merge',
     '  --stale           Only show stale (clean, inactive) worktrees',
     '  --cleanup-plan    Show which worktrees are safe to remove and why',
-    '  --base <branch>   Base branch to compare against (default: main)',
+    '  --base <branch>   Base branch to compare against (default: master)',
     '  --stale-days <n>  Days of inactivity before a clean worktree is stale (default: 7)',
     '  --repo <path>     Repository root (default: cwd)',
     '  -h, --help        Show this help'

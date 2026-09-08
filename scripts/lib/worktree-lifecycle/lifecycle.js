@@ -108,7 +108,7 @@ function analyzeWorktree(worktree, options, git) {
 
 function buildLifecycleReport(repoRoot, options = {}, deps = {}) {
   const git = deps.git || createGitRunner(repoRoot, deps.runImpl);
-  const baseBranch = options.baseBranch || 'main';
+  const baseBranch = options.baseBranch || 'master';
   const staleThresholdMs = Number.isFinite(options.staleThresholdMs)
     ? options.staleThresholdMs
     : DEFAULT_STALE_MS;

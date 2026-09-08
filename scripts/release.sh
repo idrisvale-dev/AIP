@@ -46,10 +46,10 @@ if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
   exit 1
 fi
 
-# Check current branch is main
+# Check current branch is master
 CURRENT_BRANCH=$(git branch --show-current)
-if [[ "$CURRENT_BRANCH" != "main" ]]; then
-  echo "Error: Must be on main branch (currently on $CURRENT_BRANCH)"
+if [[ "$CURRENT_BRANCH" != "master" ]]; then
+  echo "Error: Must be on master branch (currently on $CURRENT_BRANCH)"
   exit 1
 fi
 
