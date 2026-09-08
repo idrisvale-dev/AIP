@@ -398,6 +398,8 @@ function isGhTokenMonitorTokenPath(filePath) {
 const IGNORED_DIRS = new Set([
   '.git',
   '.next',
+  // Vendored third-party runtime source (scanned upstream, not AIP content).
+  'opencode',
   '.pytest_cache',
   '__pycache__',
   'coverage',

@@ -73,6 +73,14 @@ Instead of rebuilding that process in every prompt, you install it once and make
 
 AIP is MIT-licensed open source. It works best with Claude Code today, has a supported Codex sync path, and provides capability-limited adapters for Cursor, OpenCode, Gemini, Zed, GitHub Copilot, Antigravity, Qwen, and other harnesses. See the [support status matrix](#platform-support) before assuming feature parity.
 
+## Vendored OpenCode runtime
+
+The OpenCode runtime (the open-source coding agent) is vendored in full under
+`opencode/` (MIT, from `anomalyco/opencode`, commit `d6855b6`) — a single copy,
+integrated with AIP's `.opencode/` plugin layer (commands, tools, hooks,
+prompts). See `OPENCODE.md` for build/run instructions and
+`THIRD_PARTY_NOTICES.md` for attribution.
+
 Access to 68 agents, 286 skills, and 94 legacy command shims, plus hooks, rules, memory, continuous learning, and AgentShield security scanning. The agents are specialized for planning, review, build repair, security, architecture, and domain work.
 
 | Included         |       Count | What it gives you                                                                    |

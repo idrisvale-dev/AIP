@@ -12,6 +12,8 @@ const writeMode = process.argv.includes('--write');
 const ignoredDirs = new Set([
   '.git',
   'node_modules',
+  // Vendored third-party runtime source (not AIP-authored content).
+  'opencode',
   '.dmux',
   '.next',
   '.venv',

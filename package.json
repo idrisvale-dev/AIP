@@ -469,6 +469,9 @@
     "test": "node scripts/ci/check-unicode-safety.js && node scripts/ci/validate-agents.js && node scripts/ci/validate-commands.js && node scripts/ci/validate-rules.js && node scripts/ci/validate-skills.js && node scripts/ci/validate-hooks.js && node scripts/ci/validate-install-manifests.js && node scripts/ci/validate-no-personal-paths.js && npm run catalog:check && npm run command-registry:check && node tests/run-all.js",
     "coverage": "c8 --all --include=\"scripts/**/*.js\" --include=\"scripts/**/*.mjs\" --check-coverage --lines 80 --functions 80 --branches 79 --statements 80 --reporter=text --reporter=lcov node tests/run-all.js",
     "build:opencode": "node scripts/build-opencode.js",
+    "opencode:dev": "cd opencode && bun install && bun run dev",
+    "opencode:lint": "cd opencode && bun run lint",
+    "opencode:typecheck": "cd opencode && bun run typecheck",
     "prepack": "npm run build:opencode",
     "dashboard": "python3 ./aip_dashboard.py",
     "dashboard:web": "node scripts/dashboard-web.js"
