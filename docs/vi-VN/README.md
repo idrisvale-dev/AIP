@@ -4,9 +4,9 @@
 
 ![AIP - hệ thống hiệu năng cho AI agent harness](../../assets/hero.png)
 
-[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
-[![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
-[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/stargazers)
+[![Forks](https://img.shields.io/github/forks/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/graphs/contributors)
 [![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-universal)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 
@@ -28,7 +28,7 @@
 
 AIP không chỉ là một bộ cấu hình. Repo này đóng gói agents, skills, hooks, rules, MCP config, selective install, kiểm tra bảo mật, và workflow vận hành cho Claude Code, Codex, Cursor, OpenCode, Gemini và các harness agent khác.
 
-Trang tiếng Việt này là bản onboarding gọn, được phục hồi từ đóng góp cộng đồng trong PR [#1322](https://github.com/reborncursed/AIP/pull/1322) và cập nhật để khớp mặt cài đặt hiện tại. README tiếng Anh vẫn là nguồn chuẩn đầy đủ nhất.
+Trang tiếng Việt này là bản onboarding gọn, được phục hồi từ đóng góp cộng đồng trong PR [#1322](https://github.com/idrisvale-dev/AIP/pull/1322) và cập nhật để khớp mặt cài đặt hiện tại. README tiếng Anh vẫn là nguồn chuẩn đầy đủ nhất.
 
 ---
 
@@ -48,7 +48,7 @@ Nếu bạn đã cài chồng nhiều lần và thấy skill/hook bị trùng, x
 
 ```bash
 # Thêm marketplace
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Cài plugin
 /plugin install aip@aip
@@ -56,7 +56,7 @@ Nếu bạn đã cài chồng nhiều lần và thấy skill/hook bị trùng, x
 
 AIP có ba định danh công khai khác nhau:
 
-- Repo GitHub: `reborncursed/AIP`
+- Repo GitHub: `idrisvale-dev/AIP`
 - Plugin Claude marketplace: `aip@aip`
 - Gói npm: `aip-universal`
 
@@ -67,7 +67,7 @@ Các tên này cố ý khác nhau. Plugin Claude Code dùng `aip@aip`; npm vẫn
 Plugin Claude Code không tự phân phối `rules/`. Nếu bạn đã cài bằng plugin, **đừng** chạy thêm full installer. Hãy copy riêng rule pack bạn muốn:
 
 ```bash
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd aip
 
 mkdir -p ~/.claude/rules/aip
@@ -76,7 +76,7 @@ cp -R rules/typescript ~/.claude/rules/aip/
 ```
 
 ```powershell
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd aip
 
 New-Item -ItemType Directory -Force -Path "$HOME/.claude/rules/aip" | Out-Null

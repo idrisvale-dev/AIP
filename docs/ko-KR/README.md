@@ -2,9 +2,9 @@
 
 # AIP
 
-[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
-[![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
-[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/stargazers)
+[![Forks](https://img.shields.io/github/forks/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/graphs/contributors)
 [![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-universal)
 [![npm aip-agentshield](https://img.shields.io/npm/dw/aip-agentshield?label=aip-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-agentshield)
 [![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/aip-tools)
@@ -100,7 +100,7 @@
 - **30명 이상의 커뮤니티 기여** — 6개 언어에 걸친 30명의 기여자
 - **978개 내부 테스트** — 에이전트, 스킬, 커맨드, 훅, 룰 전반에 걸친 검증
 
-전체 변경 내역은 [Releases](https://github.com/reborncursed/AIP/releases)에서 확인하세요.
+전체 변경 내역은 [Releases](https://github.com/idrisvale-dev/AIP/releases)에서 확인하세요.
 
 ---
 
@@ -112,7 +112,7 @@
 
 ```bash
 # 마켓플레이스 추가
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # 플러그인 설치
 /plugin install aip@aip
@@ -124,7 +124,7 @@
 
 ```bash
 # 먼저 저장소 클론
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd aip
 
 # 권장: 설치 스크립트 사용 (common + 언어별 룰을 안전하게 처리)
@@ -310,9 +310,9 @@ npx aip-agentshield init
 
 **`--opus` 플래그**는 레드팀/블루팀/감사관 파이프라인으로 3개의 Claude Opus 4.6 에이전트를 실행합니다. 공격자가 익스플로잇 체인을 찾고, 방어자가 보호 조치를 평가하며, 감사관이 양쪽의 결과를 종합하여 우선순위가 매겨진 위험 평가를 작성합니다.
 
-Claude Code에서 `/security-scan`을 사용하거나, [GitHub Action](https://github.com/reborncursed/agentshield)으로 CI에 추가하세요.
+Claude Code에서 `/security-scan`을 사용하거나, [GitHub Action](https://github.com/idrisvale-dev/agentshield)으로 CI에 추가하세요.
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
+[GitHub](https://github.com/idrisvale-dev/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 
 ### 지속적 학습 v2
 
@@ -356,7 +356,7 @@ Claude Code v2.1+는 설치된 플러그인의 `hooks/hooks.json`을 **자동으
 
 ```bash
 # 마켓플레이스 추가
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # 플러그인 설치
 /plugin install aip@aip
@@ -370,7 +370,7 @@ Claude Code v2.1+는 설치된 플러그인의 `hooks/hooks.json`을 **자동으
     "aip": {
       "source": {
         "source": "github",
-        "repo": "reborncursed/AIP"
+        "repo": "idrisvale-dev/AIP"
       }
     }
   },
@@ -383,7 +383,7 @@ Claude Code v2.1+는 설치된 플러그인의 `hooks/hooks.json`을 **자동으
 > **참고:** Claude Code 플러그인 시스템은 `rules`를 플러그인으로 배포하는 것을 지원하지 않습니다. 룰은 수동으로 설치해야 합니다:
 >
 > ```bash
-> git clone https://github.com/reborncursed/AIP.git
+> git clone https://github.com/idrisvale-dev/AIP.git
 >
 > # 옵션 A: 사용자 레벨 룰 (모든 프로젝트에 적용)
 > mkdir -p ~/.claude/rules
@@ -403,7 +403,7 @@ Claude Code v2.1+는 설치된 플러그인의 `hooks/hooks.json`을 **자동으
 
 ```bash
 # 저장소 클론
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 
 # 에이전트 복사
 cp aip/agents/*.md ~/.claude/agents/
@@ -703,13 +703,13 @@ Claude Code 사용 비용이 부담된다면 토큰 소비를 관리해야 합�
 
 이 프로젝트는 무료 오픈소스입니다. 스폰서의 지원으로 유지보수와 성장이 이루어집니다.
 
-[**스폰서 되기**](https://github.com/sponsors/reborncursed) | [스폰서 티어](../../SPONSORS.md) | [스폰서십 프로그램](../../SPONSORING.md)
+[**스폰서 되기**](https://github.com/sponsors/idrisvale-dev) | [스폰서 티어](../../SPONSORS.md) | [스폰서십 프로그램](../../SPONSORING.md)
 
 ---
 
 ## Star 히스토리
 
-[![Star History Chart](https://api.star-history.com/svg?repos=reborncursed/AIP&type=Date)](https://star-history.com/#reborncursed/AIP&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=idrisvale-dev/AIP&type=Date)](https://star-history.com/#idrisvale-dev/AIP&Date)
 
 ---
 

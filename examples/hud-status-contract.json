@@ -4,7 +4,7 @@
   "context": {
     "harness": "codex",
     "model": "gpt-5",
-    "repo": "reborncursed/AIP",
+    "repo": "idrisvale-dev/AIP",
     "branch": "main",
     "worktree": "/repo/aip",
     "sessionId": "session-active",
@@ -52,7 +52,7 @@
       {
         "name": "CI",
         "status": "pass",
-        "url": "https://github.com/reborncursed/AIP/actions"
+        "url": "https://github.com/idrisvale-dev/AIP/actions"
       }
     ]
   },
@@ -106,7 +106,7 @@
       "latestStatusUpdateId": "status-update-id"
     },
     "GitHub": {
-      "repo": "reborncursed/AIP",
+      "repo": "idrisvale-dev/AIP",
       "latestPullRequest": 1820
     },
     "handoff": {

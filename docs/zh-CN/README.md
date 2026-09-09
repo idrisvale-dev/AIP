@@ -2,9 +2,9 @@
 
 # AIP
 
-[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
-[![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
-[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/stargazers)
+[![Forks](https://img.shields.io/github/forks/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/graphs/contributors)
 [![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads\&logo=npm)](https://www.npmjs.com/package/aip-universal)
 [![npm aip-agentshield](https://img.shields.io/npm/dw/aip-agentshield?label=aip-agentshield%20weekly%20downloads\&logo=npm)](https://www.npmjs.com/package/aip-agentshield)
 [![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/aip-tools)
@@ -139,7 +139,7 @@
 
 ### v1.4.1 — 错误修复 (2026年2月)
 
-* **修复了直觉导入内容丢失问题** — `parse_instinct_file()` 在 `/instinct-import` 期间会静默丢弃 frontmatter 之后的所有内容（Action, Evidence, Examples 部分）。已由社区贡献者 @ericcai0814 修复 ([#148](https://github.com/reborncursed/AIP/issues/148), [#161](https://github.com/reborncursed/AIP/pull/161))
+* **修复了直觉导入内容丢失问题** — `parse_instinct_file()` 在 `/instinct-import` 期间会静默丢弃 frontmatter 之后的所有内容（Action, Evidence, Examples 部分）。已由社区贡献者 @ericcai0814 修复 ([#148](https://github.com/idrisvale-dev/AIP/issues/148), [#161](https://github.com/idrisvale-dev/AIP/pull/161))
 
 ### v1.4.0 — 多语言规则、安装向导 & PM2 (2026年2月)
 
@@ -163,7 +163,7 @@
 * **会话管理** — `/sessions` 命令用于查看会话历史
 * **持续学习 v2** — 基于直觉的学习，带有置信度评分、导入/导出、进化
 
-完整的更新日志请参见 [Releases](https://github.com/reborncursed/AIP/releases)。
+完整的更新日志请参见 [Releases](https://github.com/idrisvale-dev/AIP/releases)。
 
 ***
 
@@ -203,7 +203,7 @@ command -v aip-memory-mcp
 
 ```bash
 # Add marketplace
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Install plugin
 /plugin install aip@aip
@@ -219,7 +219,7 @@ command -v aip-memory-mcp
 
 ```bash
 # Clone the repo first
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd aip
 
 # Install dependencies (pick your package manager)
@@ -580,9 +580,9 @@ npx aip-agentshield init
 
 **输出格式：** 终端（按颜色分级的 A-F）、JSON（CI 管道）、Markdown、HTML。在关键发现时退出代码 2，用于构建门控。
 
-在 Claude Code 中使用 `/security-scan` 来运行它，或者通过 [GitHub Action](https://github.com/reborncursed/agentshield) 添加到 CI。
+在 Claude Code 中使用 `/security-scan` 来运行它，或者通过 [GitHub Action](https://github.com/idrisvale-dev/agentshield) 添加到 CI。
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
+[GitHub](https://github.com/idrisvale-dev/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 
 ### Plankton — 编写时代码质量强制执行
 
@@ -627,7 +627,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 重复的钩子文件检测到：./hooks/hooks.json 解析到已加载的文件
 ```
 
-**历史背景：** 这已导致此仓库中多次修复/还原循环（[#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103)）。Claude Code 版本之间的行为发生了变化，导致了混淆。我们现在有一个回归测试来防止这种情况再次发生。
+**历史背景：** 这已导致此仓库中多次修复/还原循环（[#29](https://github.com/idrisvale-dev/AIP/issues/29), [#52](https://github.com/idrisvale-dev/AIP/issues/52), [#103](https://github.com/idrisvale-dev/AIP/issues/103)）。Claude Code 版本之间的行为发生了变化，导致了混淆。我们现在有一个回归测试来防止这种情况再次发生。
 
 ***
 
@@ -639,7 +639,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 
 ```bash
 # Add this repo as a marketplace
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Install the plugin
 /plugin install aip@aip
@@ -653,7 +653,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
     "aip": {
       "source": {
         "source": "github",
-        "repo": "reborncursed/AIP"
+        "repo": "idrisvale-dev/AIP"
       }
     }
   },
@@ -669,7 +669,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 >
 > ```bash
 > # 首先克隆仓库
-> git clone https://github.com/reborncursed/AIP.git
+> git clone https://github.com/idrisvale-dev/AIP.git
 >
 > # 选项 A：用户级规则（适用于所有项目）
 > mkdir -p ~/.claude/rules
@@ -693,7 +693,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 
 ```bash
 # Clone the repo
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 
 # Copy agents to your Claude config
 cp aip/agents/*.md ~/.claude/agents/
@@ -863,7 +863,7 @@ e2e-testing 技能                              → e2e-runner: 关键用户流�
 <details>
 <summary><b>我的钩子不工作 / 我看到“重复钩子文件”错误</b></summary>
 
-这是最常见的问题。**不要在 `.claude-plugin/plugin.json` 中添加 `"hooks"` 字段。** Claude Code v2.1+ 会自动从已安装的插件加载 `hooks/hooks.json`。显式声明它会导致重复检测错误。参见 [#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103)。
+这是最常见的问题。**不要在 `.claude-plugin/plugin.json` 中添加 `"hooks"` 字段。** Claude Code v2.1+ 会自动从已安装的插件加载 `hooks/hooks.json`。显式声明它会导致重复检测错误。参见 [#29](https://github.com/idrisvale-dev/AIP/issues/29), [#52](https://github.com/idrisvale-dev/AIP/issues/52), [#103](https://github.com/idrisvale-dev/AIP/issues/103)。
 
 </details>
 
@@ -935,7 +935,7 @@ cp -r aip/rules/common ~/.claude/rules/common
 
 * **Cursor**: 预翻译的配置位于 `.cursor/`。参见 [Cursor IDE 支持](#cursor-ide-支持)。
 * **OpenCode**: `.opencode/` 中的完整插件支持。参见 [OpenCode 支持](#opencode-支持)。
-* **Codex**: 对 macOS 应用和 CLI 的一流支持，带有适配器漂移防护和 SessionStart 回退。参见 PR [#257](https://github.com/reborncursed/AIP/pull/257)。
+* **Codex**: 对 macOS 应用和 CLI 的一流支持，带有适配器漂移防护和 SessionStart 回退。参见 PR [#257](https://github.com/idrisvale-dev/AIP/pull/257)。
 * **Antigravity**: 为工作流、技能和扁平化规则紧密集成的设置，位于 `.agents/`。参见 [Antigravity 指南](../ANTIGRAVITY-GUIDE.md)。
 * **Claude Code**: 原生支持 — 这是主要目标。
 
@@ -1422,13 +1422,13 @@ AIP 是**第一个最大化利用每个主要 AI 编码工具的插件**。以�
 
 这个项目是免费和开源的。赞助商帮助保持其维护和发展。
 
-[**成为赞助商**](https://github.com/sponsors/reborncursed) | [赞助层级](SPONSORS.md) | [赞助计划](SPONSORING.md)
+[**成为赞助商**](https://github.com/sponsors/idrisvale-dev) | [赞助层级](SPONSORS.md) | [赞助计划](SPONSORING.md)
 
 ***
 
 ## Star 历史
 
-[![Star History Chart](https://api.star-history.com/svg?repos=reborncursed/AIP\&type=Date)](https://star-history.com/#reborncursed/AIP\&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=idrisvale-dev/AIP\&type=Date)](https://star-history.com/#idrisvale-dev/AIP\&Date)
 
 ***
 

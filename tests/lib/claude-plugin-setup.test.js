@@ -139,7 +139,7 @@ function officialMarketplace(scope = 'user') {
   return {
     name: 'aip',
     source: 'github',
-    repo: 'reborncursed/AIP',
+    repo: 'idrisvale-dev/AIP',
     scope,
   };
 }
@@ -218,11 +218,11 @@ test('marketplace provenance is validated according to its source type', () => {
   assert.strictEqual(isOfficialMarketplace({
     name: 'aip',
     source: 'git',
-    url: 'https://github.com/reborncursed/AIP.git',
+    url: 'https://github.com/idrisvale-dev/AIP.git',
   }), true);
   for (const url of [
-    'reborncursed/AIP',
-    'http://github.com/reborncursed/AIP.git',
+    'idrisvale-dev/AIP',
+    'http://github.com/idrisvale-dev/AIP.git',
   ]) {
     assert.strictEqual(isOfficialMarketplace({
       name: 'aip',
@@ -633,7 +633,7 @@ test('dry-run snapshots local-scope inventory into isolated Claude and project r
     }, null, 2)}\n`);
     fs.writeFileSync(marketplacesPath, `${JSON.stringify({
       aip: {
-        source: { source: 'github', repo: 'reborncursed/AIP' },
+        source: { source: 'github', repo: 'idrisvale-dev/AIP' },
       },
     }, null, 2)}\n`);
 

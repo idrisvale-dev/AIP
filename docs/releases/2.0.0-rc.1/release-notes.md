@@ -114,7 +114,7 @@ What stays local:
 The GitHub prerelease and npm `next` package are live:
 
 - GitHub prerelease:
-  <https://github.com/reborncursed/AIP/releases/tag/v2.0.0-rc.1>
+  <https://github.com/idrisvale-dev/AIP/releases/tag/v2.0.0-rc.1>
 - npm rc package:
   <https://www.npmjs.com/package/aip-universal/v/2.0.0-rc.1>
 

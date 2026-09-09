@@ -4,9 +4,9 @@
 
 ![AIP - ایجنٹک کام کے لیے ہارنس-نیٹو آپریٹر سسٹم](../../assets/hero.png)
 
-[![Stars](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fstars&style=flat)](https://github.com/reborncursed/AIP/stargazers)
-[![Forks](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fforks&style=flat)](https://github.com/reborncursed/AIP/network/members)
-[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
+[![Stars](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fstars&style=flat)](https://github.com/idrisvale-dev/AIP/stargazers)
+[![Forks](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fforks&style=flat)](https://github.com/idrisvale-dev/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/graphs/contributors)
 [![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-universal)
 [![npm aip-agentshield](https://img.shields.io/npm/dw/aip-agentshield?label=aip-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-agentshield)
 [![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/aip-tools)
@@ -52,13 +52,13 @@ AIP v2.0.0-rc.1 اس قابل استعمال پرت پر عوامی Hermes آپ�
   </a>
 </td>
 <td width="25%" align="center">
-  <a href="https://github.com/sponsors/reborncursed">
+  <a href="https://github.com/sponsors/idrisvale-dev">
     <strong> اسپانسر</strong><br />
     <sub>OSS کو فنڈ کریں · $5/ماہ سے</sub>
   </a>
 </td>
 <td width="25%" align="center">
-  <a href="https://github.com/reborncursed/AIP/discussions">
+  <a href="https://github.com/idrisvale-dev/AIP/discussions">
     <strong> کمیونٹی</strong>
     <br />
     <sub>Discussions · Q&amp;A · Show & Tell</sub>
@@ -73,7 +73,7 @@ AIP v2.0.0-rc.1 اس قابل استعمال پرت پر عوامی Hermes آپ�
 </tr>
 </table>
 
-<sub>**OSS مفت رہتا ہے۔** یہ ریپو ہمیشہ کے لیے MIT لائسنس یافتہ ہے۔ AIP Pro نجی ریپوز کے لیے ہوسٹڈ GitHub App ہے۔ <a href="https://github.com/sponsors/reborncursed">اسپانسرز</a> اور <a href="https://bytecore.org/pricing">Pro سبسکرائبرز</a> اس کام کو فنڈ کرتے ہیں۔</sub>
+<sub>**OSS مفت رہتا ہے۔** یہ ریپو ہمیشہ کے لیے MIT لائسنس یافتہ ہے۔ AIP Pro نجی ریپوز کے لیے ہوسٹڈ GitHub App ہے۔ <a href="https://github.com/sponsors/idrisvale-dev">اسپانسرز</a> اور <a href="https://bytecore.org/pricing">Pro سبسکرائبرز</a> اس کام کو فنڈ کرتے ہیں۔</sub>
 
 ---
 
@@ -108,7 +108,7 @@ AIP v2.0.0-rc.1 اس قابل استعمال پرت پر عوامی Hermes آپ�
 
 ```bash
 # مارکیٹ پلیس شامل کریں
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # پلگ ان انسٹال کریں
 /plugin install aip@aip
@@ -118,7 +118,7 @@ AIP v2.0.0-rc.1 اس قابل استعمال پرت پر عوامی Hermes آپ�
 
 ```bash
 # ریپو کلون کریں
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 
 # AIP-owned نیم اسپیس میں rules کاپی کریں

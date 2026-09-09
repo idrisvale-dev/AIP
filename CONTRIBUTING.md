@@ -52,7 +52,7 @@ Slash commands that invoke useful workflows:
 
 ```bash
 # 1. Fork and clone
-gh repo fork reborncursed/AIP --clone
+gh repo fork idrisvale-dev/AIP --clone
 cd AIP
 
 # 2. Create a branch
@@ -511,7 +511,7 @@ Run `npm test` locally. It is the same gauntlet CI runs, and it catches almost e
 
 ## Questions?
 
-- **Issues:** [github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
+- **Issues:** [github.com/idrisvale-dev/AIP/issues](https://github.com/idrisvale-dev/AIP/issues)
 - **X/Twitter:** [@bytecore](https://bytecore.org)
 
 ---

@@ -173,4 +173,4 @@ src/
 
 ***
 
-*属于 [AIP](https://github.com/reborncursed/AIP)*
+*属于 [AIP](https://github.com/idrisvale-dev/AIP)*

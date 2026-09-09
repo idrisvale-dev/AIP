@@ -65,7 +65,7 @@ if (args[0] === 'pr' && args[1] === 'list') {
       number: 3,
       title: 'Conflicting queue cleanup',
       author: { login: 'contributor-a' },
-      url: 'https://github.com/reborncursed/AIP/pull/3',
+      url: 'https://github.com/idrisvale-dev/AIP/pull/3',
       updatedAt: '2026-05-11T10:00:00Z',
       mergeStateStatus: 'DIRTY',
       isDraft: false,
@@ -75,7 +75,7 @@ if (args[0] === 'pr' && args[1] === 'list') {
       number: 4,
       title: 'Clean docs update',
       author: { login: 'contributor-b' },
-      url: 'https://github.com/reborncursed/AIP/pull/4',
+      url: 'https://github.com/idrisvale-dev/AIP/pull/4',
       updatedAt: '2026-05-11T11:00:00Z',
       mergeStateStatus: 'CLEAN',
       isDraft: false,
@@ -89,7 +89,7 @@ if (args[0] === 'pr' && args[1] === 'list') {
       number: 9,
       title: 'Track release blocker',
       author: { login: 'reporter' },
-      url: 'https://github.com/reborncursed/AIP/issues/9',
+      url: 'https://github.com/idrisvale-dev/AIP/issues/9',
       updatedAt: '2026-05-11T12:00:00Z',
       labels: [{ name: 'release' }]
     }
@@ -560,7 +560,7 @@ async function runTests() {
         title: 'Add Qwen install target',
         status: 'merged',
         priority: 'normal',
-        url: 'https://github.com/reborncursed/AIP/pull/1738',
+        url: 'https://github.com/idrisvale-dev/AIP/pull/1738',
         owner: 'maintainer',
         createdAt: '2026-03-15T08:14:00.000Z',
         updatedAt: '2026-03-15T08:17:00.000Z',
@@ -946,7 +946,7 @@ async function runTests() {
     const testDir = createTempDir('aip-work-items-github-');
     const dbPath = path.join(testDir, 'state.db');
     const binDir = path.join(testDir, 'bin');
-    const repo = 'reborncursed/AIP';
+    const repo = 'idrisvale-dev/AIP';
 
     try {
       const env = {
@@ -970,7 +970,7 @@ async function runTests() {
       assert.strictEqual(syncPayload.issueCount, 1);
       assert.strictEqual(syncPayload.closedCount, 0);
       assert.strictEqual(syncPayload.items.length, 3);
-      assert.strictEqual(syncPayload.items[0].id, 'github-reborncursed-aip-pr-3');
+      assert.strictEqual(syncPayload.items[0].id, 'github-idrisvale-dev-aip-pr-3');
       assert.strictEqual(syncPayload.items[0].status, 'blocked');
       assert.strictEqual(syncPayload.items[1].status, 'needs-review');
       assert.strictEqual(syncPayload.items[2].metadata.labels[0], 'release');

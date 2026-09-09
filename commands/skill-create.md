@@ -175,4 +175,4 @@ For advanced features (10k+ commits, team sharing, auto-PRs), use the [Skill Cre
 
 ---
 
-*Part of [AIP](https://github.com/reborncursed/AIP)*
+*Part of [AIP](https://github.com/idrisvale-dev/AIP)*

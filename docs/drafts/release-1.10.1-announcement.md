@@ -33,7 +33,7 @@ This release is focused on install correctness, cross-surface naming clarity, Wi
 ## Important naming clarification
 - Claude marketplace/plugin identifier: `aip@aip`
 - npm package: `aip-universal`
-- GitHub repo: `reborncursed/AIP`
+- GitHub repo: `idrisvale-dev/AIP`
 
 Those are intentionally different surfaces. The plugin identifier follows Anthropic marketplace rules; the npm package remains `aip-universal`.
 

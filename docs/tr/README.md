@@ -1,8 +1,8 @@
 # AIP
 
-[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
-[![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
-[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/stargazers)
+[![Forks](https://img.shields.io/github/forks/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/graphs/contributors)
 [![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20haftalık%20indirme&logo=npm)](https://www.npmjs.com/package/aip-universal)
 [![npm aip-agentshield](https://img.shields.io/npm/dw/aip-agentshield?label=aip-agentshield%20haftalık%20indirme&logo=npm)](https://www.npmjs.com/package/aip-agentshield)
 [![GitHub App Install](https://img.shields.io/badge/GitHub%20App-150%20kurulum-2ea44f?logo=github)](https://github.com/marketplace/aip-tools)
@@ -118,7 +118,7 @@ Claude Code, Codex ve Kimi Code için incelenebilir çoklu harness kurulumu ve e
 - **Çapraz harness paritesi** — Claude Code, Cursor, OpenCode ve Codex app/CLI arasında davranış sıkılaştırıldı.
 - **997 internal test geçiyor** — Hook/runtime refactor ve uyumluluk güncellemelerinden sonra tam suite yeşil.
 
-[Tam değişiklik günlüğü için Releases bölümüne bakın](https://github.com/reborncursed/AIP/releases).
+[Tam değişiklik günlüğü için Releases bölümüne bakın](https://github.com/idrisvale-dev/AIP/releases).
 
 ---
 
@@ -130,7 +130,7 @@ Claude Code, Codex ve Kimi Code için incelenebilir çoklu harness kurulumu ve e
 
 ```bash
 # Marketplace ekle
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Plugin'i kur
 /plugin install aip@aip
@@ -142,7 +142,7 @@ Claude Code, Codex ve Kimi Code için incelenebilir çoklu harness kurulumu ve e
 
 ```bash
 # Önce repo'yu klonlayın
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd aip
 
 # Bağımlılıkları kurun (paket yöneticinizi seçin)
@@ -369,7 +369,7 @@ Bu, plugin'den mevcut tüm agent'ları, command'ları ve skill'leri gösterir.
 <details>
 <summary><b>Hook'larım çalışmıyor / "Duplicate hooks file" hatası alıyorum</b></summary>
 
-Bu en yaygın sorundur. `.claude-plugin/plugin.json`'a bir `"hooks"` alanı **EKLEMEYİN**. Claude Code v2.1+ kurulu plugin'lerden `hooks/hooks.json`'ı otomatik olarak yükler. Açıkça belirtmek duplicate algılama hatalarına neden olur. Bkz. [#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103).
+Bu en yaygın sorundur. `.claude-plugin/plugin.json`'a bir `"hooks"` alanı **EKLEMEYİN**. Claude Code v2.1+ kurulu plugin'lerden `hooks/hooks.json`'ı otomatik olarak yükler. Açıkça belirtmek duplicate algılama hatalarına neden olur. Bkz. [#29](https://github.com/idrisvale-dev/AIP/issues/29), [#52](https://github.com/idrisvale-dev/AIP/issues/52), [#103](https://github.com/idrisvale-dev/AIP/issues/103).
 </details>
 
 <details>
@@ -410,7 +410,7 @@ Her component tamamen bağımsızdır.
 Evet. AIP çapraz platformdur:
 - **Cursor**: `.cursor/` içinde önceden çevrilmiş config'ler. [Cursor IDE Desteği](../../README.md#cursor-ide-support) bölümüne bakın.
 - **OpenCode**: `.opencode/` içinde tam plugin desteği. [OpenCode Desteği](../../README.md#opencode-support) bölümüne bakın.
-- **Codex**: macOS app ve CLI için birinci sınıf destek. PR [#257](https://github.com/reborncursed/AIP/pull/257)'ye bakın.
+- **Codex**: macOS app ve CLI için birinci sınıf destek. PR [#257](https://github.com/idrisvale-dev/AIP/pull/257)'ye bakın.
 - **Antigravity**: İş akışları, skill'ler ve `.agents/` içinde düzleştirilmiş rule'lar için sıkı entegre kurulum.
 - **Claude Code**: Native — bu birincil hedeftir.
 </details>

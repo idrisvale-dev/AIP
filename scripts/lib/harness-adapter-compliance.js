@@ -138,7 +138,7 @@ const ADAPTER_RECORDS = Object.freeze([
       'Subagents, chains, approval prompts, and persistent todos require companion Pi packages and are not part of this adapter',
       'Pi core has no MCP surface, though AIP MCP configs load verbatim through the community pi-mcp-adapter package, which AIP neither installs nor depends on',
     ],
-    install_or_onramp: ['`pi install git:github.com/reborncursed/AIP`', '`pi install /path/to/AIP` from a local checkout'],
+    install_or_onramp: ['`pi install git:github.com/idrisvale-dev/AIP`', '`pi install /path/to/AIP` from a local checkout'],
     verification_commands: [
       '`node tests/pi/pi-package-manifest.test.js`',
       '`node tests/pi/pi-extension-adapter.test.js`',

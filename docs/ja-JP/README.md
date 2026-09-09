@@ -2,9 +2,9 @@
 
 # AIP
 
-[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
-[![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
-[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/stargazers)
+[![Forks](https://img.shields.io/github/forks/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/graphs/contributors)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Shell](https://img.shields.io/badge/-Shell-4EAA25?logo=gnu-bash&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -70,7 +70,7 @@
 
 ### v1.4.1 — バグ修正（2026年2月）
 
-- **instinctインポート時のコンテンツ喪失を修正** — `/instinct-import`実行時に`parse_instinct_file()`がfrontmatter後のすべてのコンテンツ（Action、Evidence、Examplesセクション）を暗黙的に削除していた問題を修正。コミュニティ貢献者@ericcai0814により解決されました（[#148](https://github.com/reborncursed/AIP/issues/148), [#161](https://github.com/reborncursed/AIP/pull/161)）
+- **instinctインポート時のコンテンツ喪失を修正** — `/instinct-import`実行時に`parse_instinct_file()`がfrontmatter後のすべてのコンテンツ（Action、Evidence、Examplesセクション）を暗黙的に削除していた問題を修正。コミュニティ貢献者@ericcai0814により解決されました（[#148](https://github.com/idrisvale-dev/AIP/issues/148), [#161](https://github.com/idrisvale-dev/AIP/pull/161)）
 
 ### v1.4.0 — マルチ言語ルール、インストールウィザード & PM2（2026年2月）
 
@@ -94,7 +94,7 @@
 - **セッション管理** — セッション履歴用の`/sessions`コマンド
 - **継続的学習 v2** — 信頼度スコアリング、インポート/エクスポート、進化を伴うinstinctベースの学習
 
-完全なチェンジログは[Releases](https://github.com/reborncursed/AIP/releases)を参照してください。
+完全なチェンジログは[Releases](https://github.com/idrisvale-dev/AIP/releases)を参照してください。
 
 ---
 
@@ -106,7 +106,7 @@
 
 ```bash
 # マーケットプレイスを追加
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # プラグインをインストール
 /plugin install aip@aip
@@ -118,7 +118,7 @@
 
 ```bash
 # まずリポジトリをクローン
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 
 # 共通ルールをインストール（必須）
 cp -r aip/rules/common ~/.claude/rules/common
@@ -373,9 +373,9 @@ npx aip-agentshield init
 
 CLAUDE.md、settings.json、MCP サーバー、フック、エージェント定義をチェックします。セキュリティグレード（A-F）と実行可能な結果を生成します。
 
-Claude Codeで`/security-scan`を実行、または[GitHub Action](https://github.com/reborncursed/agentshield)でCIに追加できます。
+Claude Codeで`/security-scan`を実行、または[GitHub Action](https://github.com/idrisvale-dev/agentshield)でCIに追加できます。
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
+[GitHub](https://github.com/idrisvale-dev/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 
 ### 継続的学習 v2
 
@@ -415,7 +415,7 @@ Claude Code v2.1+は、インストール済みプラグインの`hooks/hooks.js
 Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded file
 ```
 
-**背景:** これは本リポジトリで複数の修正/リバート循環を引き起こしました（[#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103)）。Claude Codeバージョン間で動作が変わったため混乱がありました。今後を防ぐため回帰テストがあります。
+**背景:** これは本リポジトリで複数の修正/リバート循環を引き起こしました（[#29](https://github.com/idrisvale-dev/AIP/issues/29), [#52](https://github.com/idrisvale-dev/AIP/issues/52), [#103](https://github.com/idrisvale-dev/AIP/issues/103)）。Claude Codeバージョン間で動作が変わったため混乱がありました。今後を防ぐため回帰テストがあります。
 
 ---
 
@@ -427,7 +427,7 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
 
 ```bash
 # このリポジトリをマーケットプレイスとして追加
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # プラグインをインストール
 /plugin install aip@aip
@@ -441,7 +441,7 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
     "aip": {
       "source": {
         "source": "github",
-        "repo": "reborncursed/AIP"
+        "repo": "idrisvale-dev/AIP"
       }
     }
   },
@@ -457,7 +457,7 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
 >
 > ```bash
 > # まずリポジトリをクローン
-> git clone https://github.com/reborncursed/AIP.git
+> git clone https://github.com/idrisvale-dev/AIP.git
 >
 > # オプション A：ユーザーレベルルール（すべてのプロジェクトに適用）
 > mkdir -p ~/.claude/rules
@@ -480,7 +480,7 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 
 # エージェントを Claude 設定にコピー
 cp aip/agents/*.md ~/.claude/agents/
@@ -775,7 +775,7 @@ npm install aip-universal
 
 ## Star 履歴
 
-[![Star History Chart](https://api.star-history.com/svg?repos=reborncursed/AIP&type=Date)](https://star-history.com/#reborncursed/AIP&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=idrisvale-dev/AIP&type=Date)](https://star-history.com/#idrisvale-dev/AIP&Date)
 
 ---
 

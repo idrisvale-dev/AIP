@@ -4,9 +4,9 @@
 
 ![AIP — система повышения эффективности сред агентного ИИ](../../assets/hero.png)
 
-[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
-[![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
-[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/stargazers)
+[![Forks](https://img.shields.io/github/forks/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/graphs/contributors)
 [![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-universal)
 [![npm aip-agentshield](https://img.shields.io/npm/dw/aip-agentshield?label=aip-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-agentshield)
 [![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/aip-tools)
@@ -136,7 +136,7 @@ AIP v2.0.0-rc.1 добавляет публичную историю опера�
 
 ### v1.4.1 — Исправление ошибки (февраль 2026)
 
-- **Исправлена потеря содержимого при импорте инстинктов** — `parse_instinct_file()` незаметно отбрасывал всё содержимое после frontmatter (разделы Action, Evidence, Examples) во время `/instinct-import`. ([#148](https://github.com/reborncursed/AIP/issues/148), [#161](https://github.com/reborncursed/AIP/pull/161))
+- **Исправлена потеря содержимого при импорте инстинктов** — `parse_instinct_file()` незаметно отбрасывал всё содержимое после frontmatter (разделы Action, Evidence, Examples) во время `/instinct-import`. ([#148](https://github.com/idrisvale-dev/AIP/issues/148), [#161](https://github.com/idrisvale-dev/AIP/pull/161))
 
 ### v1.4.0 — Многоязычные правила, мастер установки и PM2 (февраль 2026)
 
@@ -160,7 +160,7 @@ AIP v2.0.0-rc.1 добавляет публичную историю опера�
 - **Управление сессиями** — команда `/sessions` для истории сессий
 - **Непрерывное обучение v2** — обучение на основе инстинктов с оценкой уверенности, импортом/экспортом и эволюцией
 
-Полный журнал изменений смотрите в [Releases](https://github.com/reborncursed/AIP/releases).
+Полный журнал изменений смотрите в [Releases](https://github.com/idrisvale-dev/AIP/releases).
 
 ---
 
@@ -222,7 +222,7 @@ npx aip-universal consult "security reviews" --target claude
 
 ```bash
 # Добавьте marketplace
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Установите плагин
 /plugin install aip@aip
@@ -232,7 +232,7 @@ npx aip-universal consult "security reviews" --target claude
 
 У AIP теперь три публичных идентификатора, и они не взаимозаменяемы:
 
-- исходный репозиторий GitHub: `reborncursed/AIP`
+- исходный репозиторий GitHub: `idrisvale-dev/AIP`
 - идентификатор Claude marketplace/plugin: `aip@aip`
 - npm-пакет: `aip-universal`
 
@@ -252,7 +252,7 @@ npx aip-universal consult "security reviews" --target claude
 
 ```bash
 # Сначала клонируйте репозиторий
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd aip
 
 # Установите зависимости (выберите пакетный менеджер)
@@ -708,9 +708,9 @@ npx aip-agentshield init
 
 **Форматы вывода:** терминал (цветовая оценка A-F), JSON (CI pipelines), Markdown, HTML. Exit code 2 при критических находках для build gates.
 
-Используйте `/security-scan` в Claude Code, чтобы запустить его, или добавьте в CI через [GitHub Action](https://github.com/reborncursed/agentshield).
+Используйте `/security-scan` в Claude Code, чтобы запустить его, или добавьте в CI через [GitHub Action](https://github.com/idrisvale-dev/agentshield).
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
+[GitHub](https://github.com/idrisvale-dev/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 
 ### Непрерывное обучение v2
 
@@ -751,7 +751,7 @@ Claude Code v2.1+ **автоматически загружает** `hooks/hooks
 Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded file
 ```
 
-**История:** это уже приводило к повторяющимся циклам fix/revert в репозитории ([#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103)). Поведение менялось между версиями Claude Code, что вызывало путаницу. Теперь есть регрессионный тест, который не даёт вернуть эту ошибку.
+**История:** это уже приводило к повторяющимся циклам fix/revert в репозитории ([#29](https://github.com/idrisvale-dev/AIP/issues/29), [#52](https://github.com/idrisvale-dev/AIP/issues/52), [#103](https://github.com/idrisvale-dev/AIP/issues/103)). Поведение менялось между версиями Claude Code, что вызывало путаницу. Теперь есть регрессионный тест, который не даёт вернуть эту ошибку.
 
 ---
 
@@ -763,7 +763,7 @@ Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded fil
 
 ```bash
 # Добавить этот репозиторий как marketplace
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Установить плагин
 /plugin install aip@aip
@@ -777,7 +777,7 @@ Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded fil
     "aip": {
       "source": {
         "source": "github",
-        "repo": "reborncursed/AIP"
+        "repo": "idrisvale-dev/AIP"
       }
     }
   },
@@ -793,7 +793,7 @@ Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded fil
 >
 > ```bash
 > # Сначала клонируйте репозиторий
-> git clone https://github.com/reborncursed/AIP.git
+> git clone https://github.com/idrisvale-dev/AIP.git
 >
 > # Вариант A: правила user-level (применяются ко всем проектам)
 > mkdir -p ~/.claude/rules/aip
@@ -817,7 +817,7 @@ Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded fil
 
 ```bash
 # Клонировать репозиторий
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 
 # Скопировать агентов в ваш конфиг Claude
 cp aip/agents/*.md ~/.claude/agents/
@@ -1019,7 +1019,7 @@ e2e-testing skill                             → e2e-runner: тесты кри�
 <details>
 <summary><b>Хуки не работают / я вижу ошибки "Duplicate hooks file"</b></summary>
 
-Это самая частая проблема. **НЕ добавляйте поле `"hooks"` в `.claude-plugin/plugin.json`.** Claude Code v2.1+ автоматически загружает `hooks/hooks.json` из установленных плагинов. Явное объявление вызывает ошибки обнаружения дубликатов. См. [#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103).
+Это самая частая проблема. **НЕ добавляйте поле `"hooks"` в `.claude-plugin/plugin.json`.** Claude Code v2.1+ автоматически загружает `hooks/hooks.json` из установленных плагинов. Явное объявление вызывает ошибки обнаружения дубликатов. См. [#29](https://github.com/idrisvale-dev/AIP/issues/29), [#52](https://github.com/idrisvale-dev/AIP/issues/52), [#103](https://github.com/idrisvale-dev/AIP/issues/103).
 </details>
 
 <details>
@@ -1081,7 +1081,7 @@ cp -r aip/rules/common ~/.claude/rules/aip/
 - **Cursor**: предварительно адаптированные конфиги в `.cursor/`. См. [Поддержка Cursor IDE](#поддержка-cursor-ide).
 - **Gemini CLI**: экспериментальная project-local поддержка через `.gemini/GEMINI.md` и общий plumbing установщика.
 - **OpenCode**: полная поддержка плагина в `.opencode/`. См. [Поддержка OpenCode](#поддержка-opencode).
-- **Codex**: первоклассная поддержка macOS app и CLI, с guards против adapter drift и SessionStart fallback. См. PR [#257](https://github.com/reborncursed/AIP/pull/257).
+- **Codex**: первоклассная поддержка macOS app и CLI, с guards против adapter drift и SessionStart fallback. См. PR [#257](https://github.com/idrisvale-dev/AIP/pull/257).
 - **Antigravity**: плотная настройка для workflows, skills, agents и flattened rules в `.agents/`. См. [Antigravity Guide](../ANTIGRAVITY-GUIDE.md).
 - **Ненативные среды**: ручной fallback path для Grok и похожих интерфейсов. См. [Manual Adaptation Guide](../MANUAL-ADAPTATION-GUIDE.md).
 - **Claude Code**: нативно — это основная цель.
@@ -1587,13 +1587,13 @@ Agent Teams создаёт несколько context windows. Каждый уч
 
 Этот проект бесплатный и open source. Спонсоры помогают поддерживать и развивать его.
 
-[**Стать спонсором**](https://github.com/sponsors/reborncursed) | [Уровни спонсорства](../../SPONSORS.md) | [Программа спонсорства](../../SPONSORING.md)
+[**Стать спонсором**](https://github.com/sponsors/idrisvale-dev) | [Уровни спонсорства](../../SPONSORS.md) | [Программа спонсорства](../../SPONSORING.md)
 
 ---
 
 ## История звёзд
 
-[![Star History Chart](https://api.star-history.com/svg?repos=reborncursed/AIP&type=Date)](https://star-history.com/#reborncursed/AIP&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=idrisvale-dev/AIP&type=Date)](https://star-history.com/#idrisvale-dev/AIP&Date)
 
 ---
 

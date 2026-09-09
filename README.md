@@ -25,7 +25,7 @@
 </p>
 
 > [!WARNING]
-> **Official sources only.** Install AIP only from the verified repository [github.com/reborncursed/AIP](https://github.com/reborncursed/AIP). Third-party re-uploads and unofficial mirrors are not maintained or reviewed by ByteCore.org and may contain malware.
+> **Official sources only.** Install AIP only from the verified repository [github.com/idrisvale-dev/AIP](https://github.com/idrisvale-dev/AIP). Third-party re-uploads and unofficial mirrors are not maintained or reviewed by ByteCore.org and may contain malware.
 
 ## Install with Claude Code
 
@@ -48,7 +48,7 @@ records the hook profile you choose.
 Alternatively, run Claude Code's native plugin commands inside Claude Code:
 
 ```text
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 /plugin install aip@aip
 ```
 
@@ -130,7 +130,7 @@ You can use AIP with Claude Code, Codex, and other harnesses at the same time. C
 
 If you already layered multiple installs and things look duplicated, skip straight to [Reset / Uninstall AIP](#reset--uninstall-aip).
 
-**Install trouble?** Open the short [install or runtime problem form](https://github.com/reborncursed/AIP/issues/new?template=install-problem.yml), or run `aip feedback`. AIP never uploads diagnostics automatically.
+**Install trouble?** Open the short [install or runtime problem form](https://github.com/idrisvale-dev/AIP/issues/new?template=install-problem.yml), or run `aip feedback`. AIP never uploads diagnostics automatically.
 
 ### Claude Code details
 
@@ -141,7 +141,7 @@ After AIP is installed, `/aip:configure-aip` is the namespaced in-Claude reconfi
 Claude Code plugins cannot distribute `rules`, so add only the rule packs you actually want:
 
 ```bash
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 mkdir -p ~/.claude/rules/aip
 cp -R rules/common ~/.claude/rules/aip/
@@ -161,7 +161,7 @@ Add directly to your `~/.claude/settings.json`:
     "aip": {
       "source": {
         "source": "github",
-        "repo": "reborncursed/AIP"
+        "repo": "idrisvale-dev/AIP"
       }
     }
   },
@@ -175,11 +175,11 @@ This gives you the same result as the two `/plugin` commands above.
 </details>
 
 <details>
-<summary><strong>Naming + migration note (aip@aip, reborncursed/AIP, aip-universal)</strong></summary>
+<summary><strong>Naming + migration note (aip@aip, idrisvale-dev/AIP, aip-universal)</strong></summary>
 
 AIP has three public identifiers, and they are not interchangeable:
 
-- GitHub source repo: `reborncursed/AIP`
+- GitHub source repo: `idrisvale-dev/AIP`
 - Claude marketplace/plugin identifier: `aip@aip`
 - npm package: `aip-universal`
 
@@ -195,7 +195,7 @@ If your local Claude setup was wiped or reset, that does not mean you need to re
 Current Codex releases can install AIP as a native repo-marketplace plugin. The marketplace entry uses the repository root so Codex's cache receives the manifest together with all referenced skills, MCP configuration, hook runtime, scripts, and assets:
 
 ```bash
-codex plugin marketplace add reborncursed/AIP
+codex plugin marketplace add idrisvale-dev/AIP
 codex plugin add aip@aip
 codex plugin list --json
 node scripts/codex/check-plugin-cache.js
@@ -206,7 +206,7 @@ Both add commands are idempotent. To refresh later, run `codex plugin marketplac
 The older `scripts/sync-aip-to-codex.sh` path is a deprecated compatibility option for users who intentionally need copied and merged configuration in `~/.codex`; it is not required for the native plugin. New sync runs write an ownership manifest so cleanup can preserve modified user files. Run Codex once first so `~/.codex/config.toml` exists, then:
 
 ```bash
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 npm install
 bash scripts/sync-aip-to-codex.sh
@@ -233,7 +233,7 @@ For repo navigation, surface ownership, and PR diff packet guidance, read the [C
 Clone AIP once, then choose the target that matches your harness:
 
 ```bash
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 ```
 
@@ -437,7 +437,7 @@ Rules are always-loaded context, so begin with `common` and one pack for the sta
 Use this only when you are intentionally skipping the plugin path:
 
 ```bash
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 ./install.sh --profile full
 ```
@@ -445,7 +445,7 @@ cd AIP
 Windows:
 
 ```powershell
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 .\install.ps1 --profile full
 ```
@@ -538,7 +538,7 @@ node scripts/uninstall.js --dry-run
 node scripts/uninstall.js
 ```
 
-If you are leaving, the uninstall command prints an optional [20-second feedback form](https://github.com/reborncursed/AIP/issues/new?template=quick-feedback.yml). It is a public GitHub issue, never blocks uninstall, and AIP does not upload diagnostics. You can also run `aip feedback` at any time to see the problem, feedback, and feature routes.
+If you are leaving, the uninstall command prints an optional [20-second feedback form](https://github.com/idrisvale-dev/AIP/issues/new?template=quick-feedback.yml). It is a public GitHub issue, never blocks uninstall, and AIP does not upload diagnostics. You can also run `aip feedback` at any time to see the problem, feedback, and feature routes.
 
 Plugin users should remove the plugin from Claude Code, then delete only the rule folders they manually copied and no longer want. AIP only removes files recorded in its install-state. It does not claim unrelated files in your harness directories.
 
@@ -714,17 +714,17 @@ e2e-testing skill                             -> e2e-runner: critical user flow 
 
 > [!IMPORTANT]
 > **NEW IN AIP 2.1: Plan Canvas · Kimi harness · self-hosted compute on Itô GPUs.**
-> [See the full release notes →](https://github.com/reborncursed/AIP/blob/main/docs/releases/2.1.0/release-notes.md)
+> [See the full release notes →](https://github.com/idrisvale-dev/AIP/blob/main/docs/releases/2.1.0/release-notes.md)
 
 ### Plan Canvas: review plans by pointing, not retyping
 
 Your agent writes a plan, then opens it in a loopback-only browser canvas. Click the part you mean, attach numbered annotations, chat from a side rail, and hit **Approve plan** or **Request changes**. The verdict maps straight onto `/plan`'s CONFIRM gate. Mermaid diagrams render live, and edits to the plan file reload the page.
 
-![Plan Canvas demo: reviewing an AIP plan in the browser, scrolling diagrams, attaching an anchored annotation, chatting with the agent, and approving the plan](https://raw.githubusercontent.com/reborncursed/AIP/main/docs/releases/2.1.0/assets/aip-plan-canvas-demo.gif)
+![Plan Canvas demo: reviewing an AIP plan in the browser, scrolling diagrams, attaching an anchored annotation, chatting with the agent, and approving the plan](https://raw.githubusercontent.com/idrisvale-dev/AIP/main/docs/releases/2.1.0/assets/aip-plan-canvas-demo.gif)
 
 It's harness- and model-agnostic: a plain CLI (`aip-plan-canvas`) speaking JSON, so any agent can drive it. Try it: ask your agent to `/aip:plan` anything, then review from the page instead of the terminal.
 
-[Open the plan used in this demo →](https://github.com/reborncursed/AIP/blob/main/docs/releases/2.1.0/plan-canvas-demo.plan.md)
+[Open the plan used in this demo →](https://github.com/idrisvale-dev/AIP/blob/main/docs/releases/2.1.0/plan-canvas-demo.plan.md)
 
 ### Also in 2.1
 
@@ -742,18 +742,18 @@ It's harness- and model-agnostic: a plain CLI (`aip-plan-canvas`) speaking JSON,
 
 | Version | Highlights |
 |---|---|
-| [v2.0.0](https://github.com/reborncursed/AIP/releases/tag/v2.0.0) | The Agent Harness Operating System: cross-harness graduation, control-pane substrate, `orch-*` orchestrators, Discord + AIP bot, single-connector MCP policy |
-| [v1.10.0](https://github.com/reborncursed/AIP/releases/tag/v1.10.0) | Surface refresh, operator workflows, AIP 2.0 alpha |
-| [v1.9.0](https://github.com/reborncursed/AIP/releases/tag/v1.9.0) | Selective install, AIP Tools Pro, 12 language ecosystems |
-| [v1.8.0](https://github.com/reborncursed/AIP/releases/tag/v1.8.0) | Harness performance and cross-platform reliability |
-| [v1.7.0](https://github.com/reborncursed/AIP/releases/tag/v1.7.0) | Cross-platform expansion and presentation builder |
-| [v1.6.0](https://github.com/reborncursed/AIP/releases/tag/v1.6.0) | Codex Edition and the AIP Tools GitHub App |
-| [v1.5.0](https://github.com/reborncursed/AIP/releases/tag/v1.5.0) | Universal Edition |
-| [v1.4.0](https://github.com/reborncursed/AIP/releases/tag/v1.4.0) | Multi-language rules, installation wizard, PM2 orchestration |
-| [v1.3.0](https://github.com/reborncursed/AIP/releases/tag/v1.3.0) | Complete OpenCode plugin support |
-| [v1.2.0](https://github.com/reborncursed/AIP/releases/tag/v1.2.0) | Unified commands and skills |
-| [v1.1.0](https://github.com/reborncursed/AIP/releases/tag/v1.1.0) | Cross-platform support and community fixes |
-| [v1.0.0](https://github.com/reborncursed/AIP/releases/tag/v1.0.0) | Official plugin release |
+| [v2.0.0](https://github.com/idrisvale-dev/AIP/releases/tag/v2.0.0) | The Agent Harness Operating System: cross-harness graduation, control-pane substrate, `orch-*` orchestrators, Discord + AIP bot, single-connector MCP policy |
+| [v1.10.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.10.0) | Surface refresh, operator workflows, AIP 2.0 alpha |
+| [v1.9.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.9.0) | Selective install, AIP Tools Pro, 12 language ecosystems |
+| [v1.8.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.8.0) | Harness performance and cross-platform reliability |
+| [v1.7.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.7.0) | Cross-platform expansion and presentation builder |
+| [v1.6.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.6.0) | Codex Edition and the AIP Tools GitHub App |
+| [v1.5.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.5.0) | Universal Edition |
+| [v1.4.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.4.0) | Multi-language rules, installation wizard, PM2 orchestration |
+| [v1.3.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.3.0) | Complete OpenCode plugin support |
+| [v1.2.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.2.0) | Unified commands and skills |
+| [v1.1.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.1.0) | Cross-platform support and community fixes |
+| [v1.0.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.0.0) | Official plugin release |
 
 </details>
 
@@ -818,7 +818,7 @@ Stable graduation of the 2.0 line: the control-pane substrate (session adapters 
 
 ### v1.4.1: Bug Fix (Feb 2026)
 
-- **Fixed instinct import content loss**: `parse_instinct_file()` was silently dropping all content after frontmatter (Action, Evidence, Examples sections) during `/instinct-import`. ([#148](https://github.com/reborncursed/AIP/issues/148), [#161](https://github.com/reborncursed/AIP/pull/161))
+- **Fixed instinct import content loss**: `parse_instinct_file()` was silently dropping all content after frontmatter (Action, Evidence, Examples sections) during `/instinct-import`. ([#148](https://github.com/idrisvale-dev/AIP/issues/148), [#161](https://github.com/idrisvale-dev/AIP/pull/161))
 
 ### v1.4.0: Multi-Language Rules, Installation Wizard, and PM2 (Feb 2026)
 
@@ -842,7 +842,7 @@ Stable graduation of the 2.0 line: the control-pane substrate (session adapters 
 - **Session management**: `/sessions` command for session history
 - **Continuous learning v2**: Instinct-based learning with confidence scoring, import/export, evolution
 
-See the full changelog in [Releases](https://github.com/reborncursed/AIP/releases).
+See the full changelog in [Releases](https://github.com/idrisvale-dev/AIP/releases).
 </details>
 
 ## Why Choose AIP?
@@ -1253,9 +1253,9 @@ npx aip-agentshield init
 
 **Output formats:** Terminal (color-graded A-F), JSON (CI pipelines), Markdown, HTML. Exit code 2 on critical findings for build gates.
 
-Use `/security-scan` in Claude Code to run it, or add to CI with the [GitHub Action](https://github.com/reborncursed/agentshield).
+Use `/security-scan` in Claude Code to run it, or add to CI with the [GitHub Action](https://github.com/idrisvale-dev/agentshield).
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
+[GitHub](https://github.com/idrisvale-dev/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 </details>
 
 <details>
@@ -1346,9 +1346,9 @@ AIP's core Node.js CLI and managed installers run on **Windows, macOS, and Linux
 | Platform | Status | Current limitation |
 |---|---|---|
 | Linux | Supported core | Optional features may require Bash, Python, or provider-specific tools. |
-| macOS | Supported core | The standalone GAN shell path is not compatible with the system Bash 3.2 and currently has a score-parsing defect ([#2674](https://github.com/reborncursed/AIP/issues/2674)). |
+| macOS | Supported core | The standalone GAN shell path is not compatible with the system Bash 3.2 and currently has a score-parsing defect ([#2674](https://github.com/idrisvale-dev/AIP/issues/2674)). |
 | Windows + WSL | Supported core | WSL follows the Linux paths; Windows host integrations still vary by harness. |
-| Windows native | Supported with limitations | Continuous-learning v2's observer daemon and memory-vault writes have open native-Windows defects ([#2489](https://github.com/reborncursed/AIP/issues/2489), [#2626](https://github.com/reborncursed/AIP/issues/2626)). Shell-backed optional features require Git Bash/WSL or are unavailable. |
+| Windows native | Supported with limitations | Continuous-learning v2's observer daemon and memory-vault writes have open native-Windows defects ([#2489](https://github.com/idrisvale-dev/AIP/issues/2489), [#2626](https://github.com/idrisvale-dev/AIP/issues/2626)). Shell-backed optional features require Git Bash/WSL or are unavailable. |
 
 Treat `stable`, `beta`, `experimental`, and `instruction-only` below as capability statements, not marketing tiers.
 
@@ -1447,7 +1447,7 @@ Paths resolved under that root include:
 - `$AIP_AGENT_DATA_HOME/session-aliases.json`: session aliases
 - `$AIP_AGENT_DATA_HOME/metrics/`: cost and activity metrics
 
-See [reborncursed/AIP#2065](https://github.com/reborncursed/AIP/issues/2065).
+See [idrisvale-dev/AIP#2065](https://github.com/idrisvale-dev/AIP/issues/2065).
 </details>
 
 ## Platform Support
@@ -1456,8 +1456,8 @@ See [reborncursed/AIP#2065](https://github.com/reborncursed/AIP/issues/2065).
 |---|---|---|---|
 | Claude Code | Stable primary | Plugin or selective installer | The plugin advertises the installed catalog to the model; use a selective/manual profile when context footprint matters. Optional shell-backed skills are not portable to every OS. |
 | Codex | Supported native plugin | Codex marketplace plugin or repo config | Native hooks require an explicit trust decision and do not use Claude's hook profiles. The legacy sync is compatibility-only. |
-| Cursor | Beta project adapter | Selective installer into `.cursor/` | Agent discovery varies by Cursor build, and AIP's installer paths do not yet expose identical hook sets ([#2419](https://github.com/reborncursed/AIP/issues/2419)). |
-| OpenCode | Beta built plugin | Build plugin, then selective installer | AIP ships a subset of the catalog; connect a provider and select a model in OpenCode ([#2617](https://github.com/reborncursed/AIP/issues/2617)). |
+| Cursor | Beta project adapter | Selective installer into `.cursor/` | Agent discovery varies by Cursor build, and AIP's installer paths do not yet expose identical hook sets ([#2419](https://github.com/idrisvale-dev/AIP/issues/2419)). |
+| OpenCode | Beta built plugin | Build plugin, then selective installer | AIP ships a subset of the catalog; connect a provider and select a model in OpenCode ([#2617](https://github.com/idrisvale-dev/AIP/issues/2617)). |
 | GitHub Copilot | Instruction-only | Checked-in instructions and prompt files | No AIP hooks, runtime agents, delegation, or native skill discovery. |
 | Gemini, Zed, Antigravity, Qwen, Hermes, OpenClaw, Kimi, CodeBuddy, JoyCode | Experimental/minimal adapters | Harness-specific selective target | File placement and instruction portability are tested; full Claude feature parity is not claimed. |
 
@@ -1568,7 +1568,7 @@ AIP provides a supported native Codex marketplace plugin and repo-local configur
 
 ```bash
 # Recommended current install: add AIP's native plugin from the repo marketplace
-codex plugin marketplace add reborncursed/AIP
+codex plugin marketplace add idrisvale-dev/AIP
 codex plugin add aip@aip
 codex plugin list --json
 
@@ -1867,14 +1867,14 @@ Claude Code v2.1+ **automatically loads** `hooks/hooks.json` from any installed 
 Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded file
 ```
 
-**History:** This has caused repeated fix/revert cycles in this repo ([#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103)). The behavior changed between Claude Code versions, leading to confusion. There is now a regression test to prevent this from being reintroduced.
+**History:** This has caused repeated fix/revert cycles in this repo ([#29](https://github.com/idrisvale-dev/AIP/issues/29), [#52](https://github.com/idrisvale-dev/AIP/issues/52), [#103](https://github.com/idrisvale-dev/AIP/issues/103)). The behavior changed between Claude Code versions, leading to confusion. There is now a regression test to prevent this from being reintroduced.
 </details>
 
 ## Security
 
 Install AIP only from official sources:
 
-- GitHub repository: <https://github.com/reborncursed/AIP>
+- GitHub repository: <https://github.com/idrisvale-dev/AIP>
 - Claude Code plugin: `aip@aip`
 - npm packages: [`aip-universal`](https://www.npmjs.com/package/aip-universal) and [`aip-agentshield`](https://www.npmjs.com/package/aip-agentshield)
 - GitHub App: <https://github.com/apps/aip-tools>
@@ -1927,7 +1927,7 @@ For hook-specific checks, see the [hooks README](hooks/README.md).
 <details>
 <summary><strong>My hooks aren't working / "Duplicate hooks file" errors</strong></summary>
 
-**Do NOT add a `"hooks"` field to `.claude-plugin/plugin.json`.** Claude Code v2.1+ automatically loads `hooks/hooks.json` from installed plugins. Explicitly declaring it causes duplicate detection errors. See [#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103).
+**Do NOT add a `"hooks"` field to `.claude-plugin/plugin.json`.** Claude Code v2.1+ automatically loads `hooks/hooks.json` from installed plugins. Explicitly declaring it causes duplicate detection errors. See [#29](https://github.com/idrisvale-dev/AIP/issues/29), [#52](https://github.com/idrisvale-dev/AIP/issues/52), [#103](https://github.com/idrisvale-dev/AIP/issues/103).
 </details>
 
 <details>
@@ -2016,7 +2016,7 @@ The short version:
 ## Links
 
 - **Website:** [bytecore.org](https://bytecore.org)
-- **Repository:** [github.com/reborncursed/AIP](https://github.com/reborncursed/AIP)
+- **Repository:** [github.com/idrisvale-dev/AIP](https://github.com/idrisvale-dev/AIP)
 
 ## License
 

@@ -43,7 +43,7 @@ Esta política cubre:
 - Scripts de hooks que se ejecutan en tu máquina
 - Scripts del ciclo de vida de instalación/desinstalación/reparación
 - Configuraciones de MCP incluidas con AIP
-- El escáner de seguridad AgentShield ([github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield))
+- El escáner de seguridad AgentShield ([github.com/idrisvale-dev/agentshield](https://github.com/idrisvale-dev/agentshield))
 
 ## Orientación Operacional
 

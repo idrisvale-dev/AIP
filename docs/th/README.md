@@ -4,9 +4,9 @@
 
 ![AIP — ระบบเพิ่มประสิทธิภาพสำหรับ AI agent harness](../../assets/hero.png)
 
-[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
-[![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
-[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/stargazers)
+[![Forks](https://img.shields.io/github/forks/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/graphs/contributors)
 [![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-universal)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 
@@ -50,7 +50,7 @@ AIP ไม่ใช่แค่ชุดไฟล์คอนฟิก แต่
 
 ```bash
 # เพิ่ม marketplace
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # ติดตั้ง plugin
 /plugin install aip@aip
@@ -58,7 +58,7 @@ AIP ไม่ใช่แค่ชุดไฟล์คอนฟิก แต่
 
 AIP มีชื่อเรียกในระบบสาธารณะ 3 ชื่อที่ต่างกัน:
 
-- GitHub repo: `reborncursed/AIP`
+- GitHub repo: `idrisvale-dev/AIP`
 - Claude marketplace plugin: `aip@aip`
 - npm package: `aip-universal`
 
@@ -69,7 +69,7 @@ AIP มีชื่อเรียกในระบบสาธารณะ 3 �
 Plugin ของ Claude Code จะไม่ติดตั้ง `rules/` ให้อัตโนมัติ หากคุณติดตั้งผ่าน plugin **อย่า** รัน full installer เพิ่ม ให้คัดลอกเฉพาะชุด rule ที่ต้องการแทน:
 
 ```bash
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd aip
 
 mkdir -p ~/.claude/rules/aip
@@ -78,7 +78,7 @@ cp -R rules/typescript ~/.claude/rules/aip/
 ```
 
 ```powershell
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd aip
 
 New-Item -ItemType Directory -Force -Path "$HOME/.claude/rules/aip" | Out-Null
@@ -230,7 +230,7 @@ AIP จะลบเฉพาะไฟล์ที่อยู่ใน install-s
 
 ```bash
 # 1. Fork และ clone
-gh repo fork reborncursed/AIP --clone
+gh repo fork idrisvale-dev/AIP --clone
 cd aip
 
 # 2. สร้าง branch
@@ -249,8 +249,8 @@ git add . && git commit -m "feat: add my-skill" && git push -u origin feat/my-co
 
 ## ชุมชน & สนับสนุน
 
-- [GitHub Discussions](https://github.com/reborncursed/AIP/discussions) — ถาม-ตอบ, โชว์ผลงาน
-- [GitHub Sponsors](https://github.com/sponsors/reborncursed) — สนับสนุน OSS เริ่มที่ $5/เดือน
+- [GitHub Discussions](https://github.com/idrisvale-dev/AIP/discussions) — ถาม-ตอบ, โชว์ผลงาน
+- [GitHub Sponsors](https://github.com/sponsors/idrisvale-dev) — สนับสนุน OSS เริ่มที่ $5/เดือน
 - [AIP Pro](https://bytecore.org/pricing) — private repo + GitHub App ($19/seat/เดือน)
 - [AIP Tools GitHub App](https://github.com/marketplace/aip-tools) — ติดตั้ง, PR audit, มี free tier
 

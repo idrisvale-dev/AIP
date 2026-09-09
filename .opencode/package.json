@@ -43,16 +43,16 @@
     "hooks",
     "automation"
   ],
-  "author": "reborncursed",
+  "author": "idrisvale-dev",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/reborncursed/AIP.git"
+    "url": "git+https://github.com/idrisvale-dev/AIP.git"
   },
   "bugs": {
-    "url": "https://github.com/reborncursed/AIP/issues"
+    "url": "https://github.com/idrisvale-dev/AIP/issues"
   },
-  "homepage": "https://github.com/reborncursed/AIP#readme",
+  "homepage": "https://github.com/idrisvale-dev/AIP#readme",
   "publishConfig": {
     "access": "public"
   },

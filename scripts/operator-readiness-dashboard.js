@@ -826,7 +826,7 @@ function buildRequirements(rootDir, platformReport) {
       includesAll(namingMatrix, ['Claude plugin', 'Codex plugin', 'npm package', 'Publication Paths'])
         && includesAll(releasePublicationChecklist, [
           'Ship `v2.0.0-rc.1` as **AIP**',
-          'reborncursed/AIP',
+          'idrisvale-dev/AIP',
           'aip-universal',
           'claude plugin tag .claude-plugin --dry-run',
           'codex plugin marketplace add',

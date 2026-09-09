@@ -16,8 +16,8 @@ What ships:
 - cross-harness architecture docs
 - Hermes import guidance for turning local operator workflows into public AIP skills
 
-Start here: https://github.com/reborncursed/AIP
-Release notes: https://github.com/reborncursed/AIP/blob/main/docs/releases/2.0.0-rc.1/release-notes.md
+Start here: https://github.com/idrisvale-dev/AIP
+Release notes: https://github.com/idrisvale-dev/AIP/blob/main/docs/releases/2.0.0-rc.1/release-notes.md
 ```
 
 ## X Post: Proof + Metrics
@@ -68,6 +68,6 @@ This release-candidate surface includes:
 
 It does not include private workspace state, credentials, raw local exports, or personal datasets.
 
-Repo: https://github.com/reborncursed/AIP
-Release notes: https://github.com/reborncursed/AIP/blob/main/docs/releases/2.0.0-rc.1/release-notes.md
+Repo: https://github.com/idrisvale-dev/AIP
+Release notes: https://github.com/idrisvale-dev/AIP/blob/main/docs/releases/2.0.0-rc.1/release-notes.md
 ```

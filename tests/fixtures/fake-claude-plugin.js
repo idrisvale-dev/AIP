@@ -139,7 +139,7 @@ if (args[0] === 'plugin' && args[1] === 'marketplace' && args[2] === 'add') {
     {
       name: 'aip',
       source: 'github',
-      repo: 'reborncursed/AIP',
+      repo: 'idrisvale-dev/AIP',
       url: source,
       scope,
     },

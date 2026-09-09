@@ -1,12 +1,12 @@
 # Migrating From AIP 1.x (aip) To 2.0
 
-AIP 2.0 renamed the repo (`reborncursed/AIP` → `reborncursed/AIP`) and the plugin identifier (`aip@aip` → `aip@aip`). If you installed 1.x, follow this guide to upgrade cleanly. See also the [Naming + Migration Note](../README.md#naming--migration-note) in the README.
+AIP 2.0 renamed the repo (`idrisvale-dev/AIP` → `idrisvale-dev/AIP`) and the plugin identifier (`aip@aip` → `aip@aip`). If you installed 1.x, follow this guide to upgrade cleanly. See also the [Naming + Migration Note](../README.md#naming--migration-note) in the README.
 
 ## TL;DR
 
 ```bash
 # 1. Install 2.0
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 /plugin install aip@aip
 
 # 2. Remove the old plugin

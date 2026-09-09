@@ -10,7 +10,7 @@ description: 在庫管理、需要予測、補充戦略、およびサプライ�
   managing promotions, or optimizing inventory levels.
 license: Apache-2.0
 version: 1.0.0
-homepage: https://github.com/reborncursed/AIP
+homepage: https://github.com/idrisvale-dev/AIP
 origin: AIP
 metadata:
   author: evos

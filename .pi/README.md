@@ -31,7 +31,7 @@ directly from `skills/` and `commands/`, with no generated copies.
 
 ```bash
 # Install AIP as a Pi package
-pi install git:github.com/reborncursed/AIP
+pi install git:github.com/idrisvale-dev/AIP
 
 # Or from a local checkout
 pi install /path/to/AIP
@@ -48,7 +48,7 @@ Then inside Pi, run `/aip-doctor` to confirm skills, commands, and hooks are ava
 To uninstall:
 
 ```bash
-pi remove git:github.com/reborncursed/AIP
+pi remove git:github.com/idrisvale-dev/AIP
 ```
 
 ### Option 2: Zero-Install (Existing Claude Code Users)

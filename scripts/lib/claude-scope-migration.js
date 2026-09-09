@@ -286,7 +286,7 @@ function migrateClaudePluginScope(options = {}, dependencies = {}) {
   if (namedMarketplace && !isOfficialMarketplace(namedMarketplace)) {
     throw migrationError(
       'MARKETPLACE_COLLISION',
-      'Refusing the `aip` marketplace collision because it is not the official reborncursed/AIP source.',
+      'Refusing the `aip` marketplace collision because it is not the official idrisvale-dev/AIP source.',
       {
         phase: 'marketplace-inventory',
         observedScopes: migration.observedScopes,

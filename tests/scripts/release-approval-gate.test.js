@@ -263,7 +263,7 @@ function runTests() {
           '',
           '| Surface | Intended URL or command | Gate before use |',
           '| --- | --- | --- |',
-          `| GitHub prerelease | https://github.com/reborncursed/AIP/releases/tag/v${CURRENT_RELEASE} | must return the prerelease |`,
+          `| GitHub prerelease | https://github.com/idrisvale-dev/AIP/releases/tag/v${CURRENT_RELEASE} | must return the prerelease |`,
         ].join('\n'),
       });
 

@@ -11,9 +11,9 @@ const {
 
 const SCHEMA_VERSION = 'aip.platform-audit.v1';
 const DEFAULT_REPOS = Object.freeze([
-  'reborncursed/AIP',
-  'reborncursed/agentshield',
-  'reborncursed/JARVIS',
+  'idrisvale-dev/AIP',
+  'idrisvale-dev/agentshield',
+  'idrisvale-dev/JARVIS',
   'AIP-Tools/AIP-Tools',
   'AIP-Tools/AIP-website',
 ]);

@@ -49,7 +49,7 @@
 
 ```bash
 # 1. 포크 및 클론
-gh repo fork reborncursed/AIP --clone
+gh repo fork idrisvale-dev/AIP --clone
 cd aip
 
 # 2. 브랜치 생성
@@ -445,7 +445,7 @@ docs: improve contributing guide
 
 ## 질문이 있으신가요?
 
-- **이슈:** [github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
+- **이슈:** [github.com/idrisvale-dev/AIP/issues](https://github.com/idrisvale-dev/AIP/issues)
 - **X/Twitter:** [@bytecore](https://bytecore.org)
 
 ---

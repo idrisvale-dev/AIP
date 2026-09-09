@@ -105,7 +105,7 @@ function seedRepo(rootDir, overrides = {}) {
     'docs/releases/2.0.0-rc.1/naming-and-publication-matrix.md': 'Claude plugin Codex plugin npm package Publication Paths',
     'docs/releases/2.0.0-rc.1/release-name-plugin-publication-checklist-2026-05-18.md': [
       'Ship `v2.0.0-rc.1` as **AIP**',
-      'reborncursed/AIP',
+      'idrisvale-dev/AIP',
       'aip-universal',
       'claude plugin tag .claude-plugin --dry-run',
       'codex plugin marketplace add',
@@ -318,7 +318,7 @@ function runTests() {
         '--allow-untracked',
         'docs/drafts/',
         '--repo',
-        'reborncursed/AIP',
+        'idrisvale-dev/AIP',
         '--generated-at',
         '2026-05-15T00:00:00.000Z'
       ]);
@@ -327,7 +327,7 @@ function runTests() {
       assert.strictEqual(parsed.root, path.resolve(rootDir));
       assert.strictEqual(parsed.skipGithub, true);
       assert.deepStrictEqual(parsed.allowUntracked, ['docs/drafts/']);
-      assert.deepStrictEqual(parsed.repos, ['reborncursed/AIP']);
+      assert.deepStrictEqual(parsed.repos, ['idrisvale-dev/AIP']);
       assert.strictEqual(parsed.generatedAt, '2026-05-15T00:00:00.000Z');
 
       assert.throws(() => parseArgs(['node', 'script', '--format', 'xml']), /Invalid format/);

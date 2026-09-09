@@ -15,7 +15,7 @@ The native Claude marketplace install remains an independent install path
 throughout the npm rollout:
 
 ```text
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 /plugin install aip@aip
 ```
 
@@ -79,7 +79,7 @@ After the workflow succeeds:
 ```bash
 npm view aip-universal dist-tags --json
 npm view aip-universal@2.2.1 version dist.integrity
-gh release view v2.2.1 --repo reborncursed/AIP
+gh release view v2.2.1 --repo idrisvale-dev/AIP
 npx --yes aip-universal@2.2.1 setup --help
 npx --yes aip-universal@latest setup --help
 ```
@@ -106,7 +106,7 @@ npm view aip-universal dist-tags --json
 AIP_ROLLBACK_ROOT=$(mktemp -d)
 npm install --ignore-scripts --prefix "$AIP_ROLLBACK_ROOT" aip-universal@2.2.0
 node "$AIP_ROLLBACK_ROOT/node_modules/aip-universal/scripts/aip.js" --help
-gh release edit v2.2.0 --repo reborncursed/AIP --latest
+gh release edit v2.2.0 --repo idrisvale-dev/AIP --latest
 ```
 
 Then open a release incident, state that `2.2.1` remains available only by

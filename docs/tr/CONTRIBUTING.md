@@ -51,7 +51,7 @@ Faydalı workflow'ları çağıran slash command'lar:
 
 ```bash
 # 1. Fork ve clone
-gh repo fork reborncursed/AIP --clone
+gh repo fork idrisvale-dev/AIP --clone
 cd aip
 
 # 2. Branch oluştur
@@ -453,7 +453,7 @@ Bunu nasıl test ettiniz.
 
 ## Sorularınız mı var?
 
-- **Issue'lar:** [github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
+- **Issue'lar:** [github.com/idrisvale-dev/AIP/issues](https://github.com/idrisvale-dev/AIP/issues)
 - **X/Twitter:** [@bytecore](https://bytecore.org)
 
 ---

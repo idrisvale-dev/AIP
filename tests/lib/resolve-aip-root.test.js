@@ -192,7 +192,7 @@ function runTests() {
     const homeDir = createTempDir();
     try {
       const expected = setupLegacyPluginInstall(homeDir, ['marketplaces', 'aip']);
-      setupPluginCache(homeDir, 'aip', 'reborncursed', CURRENT_PACKAGE_VERSION);
+      setupPluginCache(homeDir, 'aip', 'idrisvale-dev', CURRENT_PACKAGE_VERSION);
       const result = resolveAipRoot({ envRoot: '', homeDir });
       assert.strictEqual(result, expected);
     } finally {
@@ -204,7 +204,7 @@ function runTests() {
   if (test('discovers plugin root from cache directory', () => {
     const homeDir = createTempDir();
     try {
-      const expected = setupPluginCache(homeDir, 'aip', 'reborncursed', CURRENT_PACKAGE_VERSION);
+      const expected = setupPluginCache(homeDir, 'aip', 'idrisvale-dev', CURRENT_PACKAGE_VERSION);
       const result = resolveAipRoot({ envRoot: '', homeDir });
       assert.strictEqual(result, expected);
     } finally {
@@ -216,7 +216,7 @@ function runTests() {
     const homeDir = createTempDir();
     try {
       const claudeDir = setupStandardInstall(homeDir);
-      setupPluginCache(homeDir, 'aip', 'reborncursed', CURRENT_PACKAGE_VERSION);
+      setupPluginCache(homeDir, 'aip', 'idrisvale-dev', CURRENT_PACKAGE_VERSION);
       const result = resolveAipRoot({ envRoot: '', homeDir });
       assert.strictEqual(result, claudeDir,
         'Standard install should take precedence over plugin cache');
@@ -229,7 +229,7 @@ function runTests() {
     const homeDir = createTempDir();
     try {
       setupPluginCache(homeDir, 'aip', 'legacy-org', '1.7.0');
-      const expected = setupPluginCache(homeDir, 'aip', 'reborncursed', CURRENT_PACKAGE_VERSION);
+      const expected = setupPluginCache(homeDir, 'aip', 'idrisvale-dev', CURRENT_PACKAGE_VERSION);
       const result = resolveAipRoot({ envRoot: '', homeDir });
       // Should find one of them (either is valid)
       assert.ok(
@@ -298,7 +298,7 @@ function runTests() {
       fs.writeFileSync(path.join(scriptDir, 'utils.js'), '// stub');
       fs.mkdirSync(path.join(claudeDir, 'skills', 'my-own-skill'), { recursive: true });
       // A COMPLETE AIP root exists in the plugin cache (scripts + AIP skill).
-      const expected = setupPluginCache(homeDir, 'aip', 'reborncursed', CURRENT_PACKAGE_VERSION);
+      const expected = setupPluginCache(homeDir, 'aip', 'idrisvale-dev', CURRENT_PACKAGE_VERSION);
       const result = resolveAipRoot({ envRoot: '', homeDir });
       assert.strictEqual(result, expected,
         'a scripts-only ~/.claude must not shadow a complete plugin-cache root');
@@ -334,7 +334,7 @@ function runTests() {
       fs.mkdirSync(partialScripts, { recursive: true });
       fs.writeFileSync(path.join(partialScripts, 'utils.js'), '// stub');
       // A COMPLETE AIP root exists in the plugin cache (scripts + AIP skill).
-      const expected = setupPluginCache(homeDir, 'aip', 'reborncursed', CURRENT_PACKAGE_VERSION);
+      const expected = setupPluginCache(homeDir, 'aip', 'idrisvale-dev', CURRENT_PACKAGE_VERSION);
       const result = resolveAipRoot({ envRoot: '', homeDir });
       assert.strictEqual(result, expected,
         'a scripts-only exact plugin root must not shadow a complete plugin-cache root');
@@ -350,7 +350,7 @@ function runTests() {
       // The stricter predicate must reject it on the cache branch, so the
       // resolver returns the last-resort ~/.claude rather than the partial root.
       const cacheScripts = path.join(
-        homeDir, '.claude', 'plugins', 'cache', 'aip', 'reborncursed', CURRENT_PACKAGE_VERSION,
+        homeDir, '.claude', 'plugins', 'cache', 'aip', 'idrisvale-dev', CURRENT_PACKAGE_VERSION,
         'scripts', 'lib'
       );
       fs.mkdirSync(cacheScripts, { recursive: true });
@@ -485,7 +485,7 @@ module.exports = { resolveAipRoot() { assert.strictEqual(process.env.HOME, ${JSO
     const homeDir = createTempDir();
     try {
       const resolverDir = path.join(
-        homeDir, '.claude', 'plugins', 'cache', 'aip', 'reborncursed', CURRENT_PACKAGE_VERSION,
+        homeDir, '.claude', 'plugins', 'cache', 'aip', 'idrisvale-dev', CURRENT_PACKAGE_VERSION,
         'scripts', 'lib'
       );
       fs.mkdirSync(resolverDir, { recursive: true });

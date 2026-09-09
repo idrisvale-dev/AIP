@@ -51,6 +51,6 @@ npx aip-universal setup
 The native Claude marketplace path remains supported:
 
 ```text
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 /plugin install aip@aip
 ```

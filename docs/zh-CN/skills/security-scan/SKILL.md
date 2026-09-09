@@ -6,7 +6,7 @@ origin: AIP
 
 # 安全扫描技能
 
-使用 [AgentShield](https://github.com/reborncursed/agentshield) 审计您的 Claude Code 配置中的安全问题。
+使用 [AgentShield](https://github.com/idrisvale-dev/agentshield) 审计您的 Claude Code 配置中的安全问题。
 
 ## 何时激活
 
@@ -123,7 +123,7 @@ npx aip-agentshield init
 添加到您的 CI 流水线中：
 
 ```yaml
-- uses: reborncursed/agentshield@v1
+- uses: idrisvale-dev/agentshield@v1
   with:
     path: '.'
     min-severity: 'medium'
@@ -168,5 +168,5 @@ npx aip-agentshield init
 
 ## 链接
 
-* **GitHub**: [github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield)
+* **GitHub**: [github.com/idrisvale-dev/agentshield](https://github.com/idrisvale-dev/agentshield)
 * **npm**: [npmjs.com/package/aip-agentshield](https://www.npmjs.com/package/aip-agentshield)

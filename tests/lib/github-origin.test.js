@@ -24,27 +24,27 @@ console.log('\nGitHub origin normalization');
 
 if (test('accepts only authenticated or TLS GitHub origins', () => {
   assert.strictEqual(
-    normalizeGitHubGitOrigin('https://github.com/reborncursed/AIP.git'),
-    'reborncursed/AIP'
+    normalizeGitHubGitOrigin('https://github.com/idrisvale-dev/AIP.git'),
+    'idrisvale-dev/AIP'
   );
   assert.strictEqual(
-    normalizeGitHubGitOrigin('ssh://git@github.com/reborncursed/AIP/'),
-    'reborncursed/AIP'
+    normalizeGitHubGitOrigin('ssh://git@github.com/idrisvale-dev/AIP/'),
+    'idrisvale-dev/AIP'
   );
   assert.strictEqual(
-    normalizeGitHubGitOrigin('git@github.com:reborncursed/AIP.git'),
-    'reborncursed/AIP'
+    normalizeGitHubGitOrigin('git@github.com:idrisvale-dev/AIP.git'),
+    'idrisvale-dev/AIP'
   );
 })) passed++; else failed++;
 
 if (test('rejects shorthand and insecure or unrelated origins', () => {
-  assert.strictEqual(normalizeGitHubGitOrigin('reborncursed/AIP'), null);
+  assert.strictEqual(normalizeGitHubGitOrigin('idrisvale-dev/AIP'), null);
   assert.strictEqual(
-    normalizeGitHubGitOrigin('http://github.com/reborncursed/AIP.git'),
+    normalizeGitHubGitOrigin('http://github.com/idrisvale-dev/AIP.git'),
     null
   );
   assert.strictEqual(
-    normalizeGitHubGitOrigin('https://example.com/reborncursed/AIP.git'),
+    normalizeGitHubGitOrigin('https://example.com/idrisvale-dev/AIP.git'),
     null
   );
   assert.strictEqual(normalizeGitHubGitOrigin(null), null);

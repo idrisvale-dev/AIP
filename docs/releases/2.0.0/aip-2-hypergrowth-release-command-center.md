@@ -91,7 +91,7 @@ through AIP, while live Itô data and account-specific calls remain gated by
 
 | Lane | Done when | Current action |
 | --- | --- | --- |
-| Repo identity | README, package metadata, plugin metadata, release docs, workflows, and launch copy all use `reborncursed/AIP` where public URLs are needed | Canonical URL sweep |
+| Repo identity | README, package metadata, plugin metadata, release docs, workflows, and launch copy all use `idrisvale-dev/AIP` where public URLs are needed | Canonical URL sweep |
 | Package and plugin publication | `aip-universal@2.0.0-rc.1` dry-runs clean, npm `next` is approved, Claude plugin tag dry-runs, Codex repo marketplace smoke passes, OpenCode build passes | Refresh publication evidence from final commit |
 | Product proof | Quickstart, cross-harness architecture, demo prompts, `aip2/` alpha boundary, AgentShield safety proof, and hosted AIP Tools links are consistent | Keep proof surfaces concrete |
 | Revenue proof | Sponsor tiers, Pro pricing, consulting CTA, partner CTA, and billing-readback language are current | Do not announce billing claims before live readback |

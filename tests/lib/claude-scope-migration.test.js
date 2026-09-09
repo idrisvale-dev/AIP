@@ -43,7 +43,7 @@ function marketplace(scope = 'user') {
   return {
     name: 'aip',
     source: 'github',
-    repo: 'reborncursed/AIP',
+    repo: 'idrisvale-dev/AIP',
     scope,
   };
 }

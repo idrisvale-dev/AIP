@@ -90,7 +90,7 @@ test('resolveAipRoot module covers current and legacy marketplace plugin roots',
 
   const cacheHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-marketplace-cache-'));
   try {
-    const cacheRoot = path.join(cacheHomeDir, '.claude', 'plugins', 'cache', 'aip', 'reborncursed', '1.0.0');
+    const cacheRoot = path.join(cacheHomeDir, '.claude', 'plugins', 'cache', 'aip', 'idrisvale-dev', '1.0.0');
     fs.mkdirSync(path.join(cacheRoot, 'scripts', 'lib'), { recursive: true });
     fs.writeFileSync(path.join(cacheRoot, 'scripts', 'lib', 'utils.js'), '// stub');
     fs.mkdirSync(path.join(cacheRoot, AIP_SKILL_SENTINEL), { recursive: true });

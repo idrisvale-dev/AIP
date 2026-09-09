@@ -171,4 +171,4 @@ Gelişmiş özellikler için (10k+ commit, ekip paylaşımı, otomatik PR'lar), 
 
 ---
 
-*[AIP](https://github.com/reborncursed/AIP)'un bir parçası*
+*[AIP](https://github.com/idrisvale-dev/AIP)'un bir parçası*

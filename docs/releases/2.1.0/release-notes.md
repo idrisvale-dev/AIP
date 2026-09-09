@@ -54,7 +54,7 @@ The catalog now stands at **67 agents, 281 skills, and 94 command shims** (2.0.0
 ## Install or upgrade
 
 ```text
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 /plugin install aip@aip
 ```
 
@@ -65,4 +65,4 @@ Existing installs: `/plugin update aip`
 Join the AIP community for release announcements, questions, and Show and Tell:
 <https://discord.gg/36yGMHGFbR>
 
-Full changelog: <https://github.com/reborncursed/AIP/compare/v2.0.0...v2.1.0>
+Full changelog: <https://github.com/idrisvale-dev/AIP/compare/v2.0.0...v2.1.0>

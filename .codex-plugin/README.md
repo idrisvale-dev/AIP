@@ -25,7 +25,7 @@ Codex 0.146.0 and newer use `plugin add`, not `plugin install`. Add AIP's
 repository marketplace, install the native plugin, and verify the registration:
 
 ```bash
-codex plugin marketplace add reborncursed/AIP
+codex plugin marketplace add idrisvale-dev/AIP
 codex plugin add aip@aip
 codex plugin list --json
 ```

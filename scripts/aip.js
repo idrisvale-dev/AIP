@@ -193,7 +193,7 @@ Examples:
   aip sessions
   aip sessions session-active --json
   aip work-items upsert linear-aip-20 --source linear --source-id AIP-20 --title "Review control-plane contract" --status blocked
-  aip work-items sync-github --repo reborncursed/AIP
+  aip work-items sync-github --repo idrisvale-dev/AIP
   aip session-inspect claude:latest
   aip loop-status --json
   aip uninstall --target antigravity --dry-run

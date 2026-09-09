@@ -11,7 +11,7 @@
  * ranking degrades to confidence-only (unchanged behaviour).
  *
  * Resolves part (b) of:
- * https://github.com/reborncursed/AIP/issues/2371
+ * https://github.com/idrisvale-dev/AIP/issues/2371
  */
 
 const fs = require('fs');

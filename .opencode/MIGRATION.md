@@ -365,4 +365,4 @@ If you need to switch back:
 
 For issues specific to:
 - **OpenCode CLI**: Report to OpenCode's issue tracker
-- **AIP Configuration**: Report to [github.com/reborncursed/AIP](https://github.com/reborncursed/AIP)
+- **AIP Configuration**: Report to [github.com/idrisvale-dev/AIP](https://github.com/idrisvale-dev/AIP)

@@ -5,7 +5,7 @@ edition = "2021"
 description = "AIP 2.0 — Agentic IDE control plane with TUI dashboard"
 license = "MIT"
 authors = ["ByteCore.org <hello@bytecore.org>"]
-repository = "https://github.com/reborncursed/AIP"
+repository = "https://github.com/idrisvale-dev/AIP"
 
 [features]
 default = ["vendored-openssl"]

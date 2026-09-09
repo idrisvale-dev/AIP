@@ -15,7 +15,7 @@ Security fixes land on `main` first. Backports are best-effort and only for curr
 
 Use GitHub private vulnerability reporting whenever possible — it reaches the maintainer directly:
 
-- <https://github.com/reborncursed/AIP/security/advisories/new>
+- <https://github.com/idrisvale-dev/AIP/security/advisories/new>
 
 You can also email **<security@bytecore.org>** (the `security@bytecore.org` alias is not monitored — use `security@bytecore.org`).
 
@@ -42,18 +42,18 @@ If a report is declined, we will explain whether it is not reproducible, out of 
 
 This policy covers:
 
-- the `reborncursed/AIP` repository
+- the `idrisvale-dev/AIP` repository
 - the `aip-universal` npm package
 - AIP plugin, install, repair, dashboard, hook, rule, skill, MCP, and command surfaces shipped from this repository
 - GitHub Actions workflows and release automation in this repository
 - the AIP Tools GitHub App integration points documented by this repository
-- AgentShield usage docs when they are embedded here. AgentShield code issues belong in <https://github.com/reborncursed/agentshield>
+- AgentShield usage docs when they are embedded here. AgentShield code issues belong in <https://github.com/idrisvale-dev/agentshield>
 
 ## Official Distribution Surfaces
 
 Official AIP surfaces are:
 
-- GitHub repo: <https://github.com/reborncursed/AIP>
+- GitHub repo: <https://github.com/idrisvale-dev/AIP>
 - npm package: `aip-universal`
 - GitHub App: <https://github.com/apps/aip-tools>
 - marketplace/plugin slug: `aip@aip`
@@ -62,7 +62,7 @@ Official AIP surfaces are:
 Official AgentShield surface:
 
 - npm package: `aip-agentshield`
-- GitHub repo: <https://github.com/reborncursed/agentshield>
+- GitHub repo: <https://github.com/idrisvale-dev/agentshield>
 
 The following packages have been observed using AIP repository metadata but are **not maintained by AIP**:
 
@@ -71,14 +71,14 @@ The following packages have been observed using AIP repository metadata but are 
 
 Treat any package not listed under official surfaces as unofficial until verified. Do not install packages named `opencode-aip`, `aip`, or other AIP-like aliases unless this repository explicitly documents them as official.
 
-GitHub dependency graph may also show Go module aliases such as `github.com/reborncursed/AIP` or historical repository paths. AIP is not currently distributed as a supported Go module.
+GitHub dependency graph may also show Go module aliases such as `github.com/idrisvale-dev/AIP` or historical repository paths. AIP is not currently distributed as a supported Go module.
 
 ## Out of Scope
 
 Reports are usually out of scope when they only show:
 
 - local command execution where the user already controls the local shell and no higher-privilege trust boundary is crossed
-- screenshots, stale line numbers, or reports against `reborncursed/AIP` that do not reproduce on current `reborncursed/AIP`
+- screenshots, stale line numbers, or reports against `idrisvale-dev/AIP` that do not reproduce on current `idrisvale-dev/AIP`
 - self-XSS or social engineering with no repository-controlled exploit path
 - dependency graph/package metadata confusion without an install path to an official AIP package
 - vulnerabilities in third-party packages unless AIP pins, installs, or executes them in a way that creates extra impact
@@ -92,7 +92,7 @@ AIP treats supply-chain exposure as a first-class security surface.
 - GitHub Actions must use pinned commit SHAs for third-party actions.
 - Workflows must avoid shelling untrusted GitHub context directly into `run:` blocks.
 - Release and install docs must point only to official packages.
-- Package metadata should point at `reborncursed/AIP`, not historical repo paths.
+- Package metadata should point at `idrisvale-dev/AIP`, not historical repo paths.
 - Private vulnerability reports are triaged privately before public disclosure.
 - Security advisories are published only when a supported release is affected and coordinated disclosure is appropriate.
 

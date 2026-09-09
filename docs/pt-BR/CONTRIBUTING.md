@@ -51,7 +51,7 @@ Comandos slash que invocam fluxos de trabalho úteis:
 
 ```bash
 # 1. Fork e clone
-gh repo fork reborncursed/AIP --clone
+gh repo fork idrisvale-dev/AIP --clone
 cd aip
 
 # 2. Criar uma branch
@@ -418,7 +418,7 @@ Como você testou isso.
 
 ## Dúvidas?
 
-- **Issues:** [github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
+- **Issues:** [github.com/idrisvale-dev/AIP/issues](https://github.com/idrisvale-dev/AIP/issues)
 - **X/Twitter:** [@bytecore](https://bytecore.org)
 
 ---

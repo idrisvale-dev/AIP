@@ -27,9 +27,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/reborncursed/AIP/stargazers"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fstars&style=flat" alt="Stars" /></a>
-  <a href="https://github.com/reborncursed/AIP/network/members"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fforks&style=flat" alt="Forks" /></a>
-  <a href="https://github.com/reborncursed/AIP/graphs/contributors"><img src="https://img.shields.io/github/contributors/reborncursed/AIP?style=flat" alt="Contributors" /></a>
+  <a href="https://github.com/idrisvale-dev/AIP/stargazers"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fstars&style=flat" alt="Stars" /></a>
+  <a href="https://github.com/idrisvale-dev/AIP/network/members"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Fforks&style=flat" alt="Forks" /></a>
+  <a href="https://github.com/idrisvale-dev/AIP/graphs/contributors"><img src="https://img.shields.io/github/contributors/idrisvale-dev/AIP?style=flat" alt="Contributors" /></a>
   <a href="https://github.com/marketplace/aip-tools"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github" alt="GitHub App installs" /></a>
 </p>
 
@@ -49,14 +49,14 @@
 </p>
 
 > [!WARNING]
-> **Лише офіційні джерела.** Встановлюйте AIP виключно з перевірених каналів: репозиторій GitHub [github.com/reborncursed/AIP](https://github.com/reborncursed/AIP), пакети npm [`aip-universal`](https://www.npmjs.com/package/aip-universal) та [`aip-agentshield`](https://www.npmjs.com/package/aip-agentshield), [GitHub App](https://github.com/apps/aip-tools), ідентифікатор плагіна `aip@aip`, та вебсайт проєкту [bytecore.org](https://bytecore.org). Сторонні перезавантаження та неофіційні дзеркала не підтримуються і не перевіряються проєктом та можуть містити шкідливе програмне забезпечення.
+> **Лише офіційні джерела.** Встановлюйте AIP виключно з перевірених каналів: репозиторій GitHub [github.com/idrisvale-dev/AIP](https://github.com/idrisvale-dev/AIP), пакети npm [`aip-universal`](https://www.npmjs.com/package/aip-universal) та [`aip-agentshield`](https://www.npmjs.com/package/aip-agentshield), [GitHub App](https://github.com/apps/aip-tools), ідентифікатор плагіна `aip@aip`, та вебсайт проєкту [bytecore.org](https://bytecore.org). Сторонні перезавантаження та неофіційні дзеркала не підтримуються і не перевіряються проєктом та можуть містити шкідливе програмне забезпечення.
 
 ## Встановлення через Claude Code
 
 Виконайте ці команди всередині Claude Code:
 
 ```text
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 /plugin install aip@aip
 ```
 
@@ -76,7 +76,7 @@
   <sub><a href="https://github.com/apps/aip-tools">Безкоштовне встановлення</a> · <a href="https://bytecore.org/pricing">Приватні репозиторії від $19/місце/міс</a></sub>
 </td>
 <td width="33%" align="center">
-  <a href="https://github.com/sponsors/reborncursed">
+  <a href="https://github.com/sponsors/idrisvale-dev">
     <img src="../../assets/images/community/heart.svg" height="42" alt="" /><br />
     <strong>Підтримати AIP</strong>
   </a><br />
@@ -94,7 +94,7 @@
 
 </div>
 
-<sub>**OSS залишається безкоштовним.** Цей репозиторій ліцензований за MIT назавжди. AIP Pro — розміщений GitHub App для приватних репозиторіїв. <a href="https://github.com/sponsors/reborncursed">Спонсори</a> та <a href="https://bytecore.org/pricing">Pro-підписники</a> фінансують роботу. Саме тому один розробник щотижня випускає оновлення для 7 оболонок.</sub>
+<sub>**OSS залишається безкоштовним.** Цей репозиторій ліцензований за MIT назавжди. AIP Pro — розміщений GitHub App для приватних репозиторіїв. <a href="https://github.com/sponsors/idrisvale-dev">Спонсори</a> та <a href="https://bytecore.org/pricing">Pro-підписники</a> фінансують роботу. Саме тому один розробник щотижня випускає оновлення для 7 оболонок.</sub>
 
 <div align="center">
 
@@ -110,7 +110,7 @@
 
 <sub><strong>Спонсори спільноти:</strong> <a href="https://github.com/mikejmorgan-ai">Mike Morgan</a> · <a href="https://github.com/jasonwu513">@jasonwu513</a> · <a href="https://github.com/1anter">@1anter</a> · <a href="https://github.com/massimotodaro">@massimotodaro</a> · <a href="https://github.com/meadmccabe">@meadmccabe</a></sub>
 
-<sub><a href="https://github.com/sponsors/reborncursed"><strong>Стати спонсором</strong></a> · <a href="../../SPONSORS.md">Рівні спонсорства</a> · <a href="../../SPONSORING.md">Програма спонсорства</a></sub>
+<sub><a href="https://github.com/sponsors/idrisvale-dev"><strong>Стати спонсором</strong></a> · <a href="../../SPONSORS.md">Рівні спонсорства</a> · <a href="../../SPONSORING.md">Програма спонсорства</a></sub>
 
 </div>
 
@@ -161,7 +161,7 @@ AIP — це MIT-ліцензований open source. Найкраще прац
 
 Якщо ви вже наклали кілька встановлень і щось виглядає продубльованим, перейдіть одразу до [Скидання / видалення AIP](#скидання--видалення-aip).
 
-**Проблеми зі встановленням?** Відкрийте коротку [форму проблеми встановлення чи виконання](https://github.com/reborncursed/AIP/issues/new?template=install-problem.yml) або запустіть `aip feedback`. AIP ніколи автоматично не завантажує діагностику.
+**Проблеми зі встановленням?** Відкрийте коротку [форму проблеми встановлення чи виконання](https://github.com/idrisvale-dev/AIP/issues/new?template=install-problem.yml) або запустіть `aip feedback`. AIP ніколи автоматично не завантажує діагностику.
 
 ### Деталі для Claude Code
 
@@ -172,7 +172,7 @@ Claude Code володіє цими вбудованими командами, �
 Плагіни Claude Code не можуть розповсюджувати `rules`, тому додавайте лише ті пакети правил, які вам справді потрібні:
 
 ```bash
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 mkdir -p ~/.claude/rules/aip
 cp -R rules/common ~/.claude/rules/aip/
@@ -192,7 +192,7 @@ cp -R rules/typescript ~/.claude/rules/aip/  # замініть на ваш ст
     "aip": {
       "source": {
         "source": "github",
-        "repo": "reborncursed/AIP"
+        "repo": "idrisvale-dev/AIP"
       }
     }
   },
@@ -206,11 +206,11 @@ cp -R rules/typescript ~/.claude/rules/aip/  # замініть на ваш ст
 </details>
 
 <details>
-<summary><strong>Примітка щодо іменування та міграції (aip@aip, reborncursed/AIP, aip-universal)</strong></summary>
+<summary><strong>Примітка щодо іменування та міграції (aip@aip, idrisvale-dev/AIP, aip-universal)</strong></summary>
 
 AIP має три публічних ідентифікатори, і вони не є взаємозамінними:
 
-- Вихідний репозиторій GitHub: `reborncursed/AIP`
+- Вихідний репозиторій GitHub: `idrisvale-dev/AIP`
 - Ідентифікатор marketplace/плагіна Claude: `aip@aip`
 - Пакет npm: `aip-universal`
 
@@ -226,7 +226,7 @@ AIP має три публічних ідентифікатори, і вони �
 Поточні релізи Codex можуть встановлювати AIP як нативний плагін репо-маркетплейсу. Запис маркетплейсу використовує корінь репозиторію, тому кеш Codex отримує маніфест разом з усіма навичками, конфігурацією MCP, середовищем виконання хуків, скриптами та ресурсами, на які є посилання:
 
 ```bash
-codex plugin marketplace add reborncursed/AIP
+codex plugin marketplace add idrisvale-dev/AIP
 codex plugin add aip@aip
 codex plugin list --json
 node scripts/codex/check-plugin-cache.js
@@ -237,7 +237,7 @@ node scripts/codex/check-plugin-cache.js
 Старіший шлях `scripts/sync-aip-to-codex.sh` залишається окремим варіантом сумісності для користувачів, які навмисно хочуть скопійовану та злиту конфігурацію в `~/.codex`; він не потрібен для нативного плагіна. Спочатку запустіть Codex один раз, щоб `~/.codex/config.toml` існував, потім:
 
 ```bash
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 npm install
 bash scripts/sync-aip-to-codex.sh
@@ -255,7 +255,7 @@ bash scripts/sync-aip-to-codex.sh
 Клонуйте AIP один раз, потім оберіть ціль, що відповідає вашій оболонці:
 
 ```bash
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 ```
 
@@ -386,7 +386,7 @@ cp -R /path/to/AIP/rules/typescript .claude/rules/aip/
 Використовуйте це лише коли ви навмисно пропускаєте шлях плагіна:
 
 ```bash
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 ./install.sh --profile full
 ```
@@ -394,7 +394,7 @@ cd AIP
 Windows:
 
 ```powershell
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd AIP
 .\install.ps1 --profile full
 ```
@@ -542,7 +542,7 @@ node scripts/uninstall.js --dry-run
 node scripts/uninstall.js
 ```
 
-Якщо ви йдете, команда видалення друкує опційну [20-секундну форму зворотного зв'язку](https://github.com/reborncursed/AIP/issues/new?template=quick-feedback.yml). Це публічний issue на GitHub, вона ніколи не блокує видалення, і AIP не завантажує діагностику. Ви також можете в будь-який час запустити `aip feedback`, щоб побачити маршрути для проблем, зворотного зв'язку та пропозицій функцій.
+Якщо ви йдете, команда видалення друкує опційну [20-секундну форму зворотного зв'язку](https://github.com/idrisvale-dev/AIP/issues/new?template=quick-feedback.yml). Це публічний issue на GitHub, вона ніколи не блокує видалення, і AIP не завантажує діагностику. Ви також можете в будь-який час запустити `aip feedback`, щоб побачити маршрути для проблем, зворотного зв'язку та пропозицій функцій.
 
 Користувачі плагіна повинні видалити плагін з Claude Code, а потім видалити лише ті папки правил, які вони скопіювали вручну і більше не хочуть мати. AIP видаляє лише файли, записані в його стані встановлення. Він не претендує на непов'язані файли у ваших директоріях оболонки.
 
@@ -718,17 +718,17 @@ AIP також постачає розширені керовані адапте
 
 > [!IMPORTANT]
 > **НОВЕ В AIP 2.1: Plan Canvas · оболонка Kimi · самостійне обслуговування на GPU Itô.**
-> [Дивіться повні примітки до релізу →](https://github.com/reborncursed/AIP/blob/main/docs/releases/2.1.0/release-notes.md)
+> [Дивіться повні примітки до релізу →](https://github.com/idrisvale-dev/AIP/blob/main/docs/releases/2.1.0/release-notes.md)
 
 ### Plan Canvas: переглядайте плани, вказуючи, а не передруковуючи
 
 Ваш агент пише план, потім відкриває його в браузерному канвасі, доступному лише локально. Клацніть частину, яку маєте на увазі, додайте пронумеровані анотації, спілкуйтесь з бічної панелі та натисніть **Схвалити план** чи **Запросити зміни**. Вердикт відображається безпосередньо на воротах CONFIRM команди `/plan`. Діаграми Mermaid відображаються наживо, а зміни в файлі плану перезавантажують сторінку.
 
-![Plan Canvas demo: reviewing an AIP plan in the browser, scrolling diagrams, attaching an anchored annotation, chatting with the agent, and approving the plan](https://raw.githubusercontent.com/reborncursed/AIP/main/docs/releases/2.1.0/assets/aip-plan-canvas-demo.gif)
+![Plan Canvas demo: reviewing an AIP plan in the browser, scrolling diagrams, attaching an anchored annotation, chatting with the agent, and approving the plan](https://raw.githubusercontent.com/idrisvale-dev/AIP/main/docs/releases/2.1.0/assets/aip-plan-canvas-demo.gif)
 
 Це агностично до оболонки та моделі: простий CLI (`aip-plan-canvas`), що говорить JSON, тому будь-який агент може ним керувати. Спробуйте: попросіть вашого агента виконати `/aip:plan` щось, а потім переглядайте зі сторінки замість терміналу.
 
-[Відкрити план, використаний у цьому демо →](https://github.com/reborncursed/AIP/blob/main/docs/releases/2.1.0/plan-canvas-demo.plan.md)
+[Відкрити план, використаний у цьому демо →](https://github.com/idrisvale-dev/AIP/blob/main/docs/releases/2.1.0/plan-canvas-demo.plan.md)
 
 ### Також у 2.1
 
@@ -746,18 +746,18 @@ AIP також постачає розширені керовані адапте
 
 | Версія | Основне |
 |---|---|
-| [v2.0.0](https://github.com/reborncursed/AIP/releases/tag/v2.0.0) | Операційна система агентних оболонок: крос-оболонкова градація, субстрат площини управління, оркестратори `orch-*`, Discord + бот AIP, політика єдиного конектора MCP |
-| [v1.10.0](https://github.com/reborncursed/AIP/releases/tag/v1.10.0) | Оновлення поверхні, оператори процеси, альфа-версія AIP 2.0 |
-| [v1.9.0](https://github.com/reborncursed/AIP/releases/tag/v1.9.0) | Вибіркове встановлення, AIP Tools Pro, 12 мовних екосистем |
-| [v1.8.0](https://github.com/reborncursed/AIP/releases/tag/v1.8.0) | Продуктивність оболонок та крос-платформна надійність |
-| [v1.7.0](https://github.com/reborncursed/AIP/releases/tag/v1.7.0) | Крос-платформне розширення та конструктор презентацій |
-| [v1.6.0](https://github.com/reborncursed/AIP/releases/tag/v1.6.0) | Codex Edition та AIP Tools GitHub App |
-| [v1.5.0](https://github.com/reborncursed/AIP/releases/tag/v1.5.0) | Universal Edition |
-| [v1.4.0](https://github.com/reborncursed/AIP/releases/tag/v1.4.0) | Мультимовні правила, майстер встановлення, оркестрація PM2 |
-| [v1.3.0](https://github.com/reborncursed/AIP/releases/tag/v1.3.0) | Повна підтримка плагіна OpenCode |
-| [v1.2.0](https://github.com/reborncursed/AIP/releases/tag/v1.2.0) | Уніфіковані команди та навички |
-| [v1.1.0](https://github.com/reborncursed/AIP/releases/tag/v1.1.0) | Крос-платформна підтримка та виправлення від спільноти |
-| [v1.0.0](https://github.com/reborncursed/AIP/releases/tag/v1.0.0) | Офіційний реліз плагіна |
+| [v2.0.0](https://github.com/idrisvale-dev/AIP/releases/tag/v2.0.0) | Операційна система агентних оболонок: крос-оболонкова градація, субстрат площини управління, оркестратори `orch-*`, Discord + бот AIP, політика єдиного конектора MCP |
+| [v1.10.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.10.0) | Оновлення поверхні, оператори процеси, альфа-версія AIP 2.0 |
+| [v1.9.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.9.0) | Вибіркове встановлення, AIP Tools Pro, 12 мовних екосистем |
+| [v1.8.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.8.0) | Продуктивність оболонок та крос-платформна надійність |
+| [v1.7.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.7.0) | Крос-платформне розширення та конструктор презентацій |
+| [v1.6.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.6.0) | Codex Edition та AIP Tools GitHub App |
+| [v1.5.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.5.0) | Universal Edition |
+| [v1.4.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.4.0) | Мультимовні правила, майстер встановлення, оркестрація PM2 |
+| [v1.3.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.3.0) | Повна підтримка плагіна OpenCode |
+| [v1.2.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.2.0) | Уніфіковані команди та навички |
+| [v1.1.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.1.0) | Крос-платформна підтримка та виправлення від спільноти |
+| [v1.0.0](https://github.com/idrisvale-dev/AIP/releases/tag/v1.0.0) | Офіційний реліз плагіна |
 
 </details>
 
@@ -822,7 +822,7 @@ AIP також постачає розширені керовані адапте
 
 ### v1.4.1: Виправлення помилки (лют. 2026)
 
-- **Виправлено втрату вмісту при імпорті інстинктів**: `parse_instinct_file()` мовчки відкидав увесь вміст після frontmatter (розділи Action, Evidence, Examples) під час `/instinct-import`. ([#148](https://github.com/reborncursed/AIP/issues/148), [#161](https://github.com/reborncursed/AIP/pull/161))
+- **Виправлено втрату вмісту при імпорті інстинктів**: `parse_instinct_file()` мовчки відкидав увесь вміст після frontmatter (розділи Action, Evidence, Examples) під час `/instinct-import`. ([#148](https://github.com/idrisvale-dev/AIP/issues/148), [#161](https://github.com/idrisvale-dev/AIP/pull/161))
 
 ### v1.4.0: Мультимовні правила, майстер встановлення та PM2 (лют. 2026)
 
@@ -846,7 +846,7 @@ AIP також постачає розширені керовані адапте
 - **Управління сесіями**: команда `/sessions` для історії сесій.
 - **Безперервне навчання v2**: навчання на основі інстинктів з оцінюванням довіри, імпортом/експортом, еволюцією.
 
-Повний журнал змін у [Releases](https://github.com/reborncursed/AIP/releases).
+Повний журнал змін у [Releases](https://github.com/idrisvale-dev/AIP/releases).
 </details>
 
 ## Чому обрати AIP?
@@ -1086,9 +1086,9 @@ npx aip-agentshield init
 
 **Формати виводу:** термінал (кольорова градація A-F), JSON (CI-конвеєри), Markdown, HTML. Код виходу 2 при критичних знахідках для воріт збирання.
 
-Використовуйте `/security-scan` у Claude Code для запуску, або додайте до CI через [GitHub Action](https://github.com/reborncursed/agentshield).
+Використовуйте `/security-scan` у Claude Code для запуску, або додайте до CI через [GitHub Action](https://github.com/idrisvale-dev/agentshield).
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
+[GitHub](https://github.com/idrisvale-dev/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 </details>
 
 <details>
@@ -1179,9 +1179,9 @@ rules/
 | Платформа | Статус | Поточне обмеження |
 |---|---|---|
 | Linux | Підтримується основний | Опційні функції можуть вимагати Bash, Python чи інструменти конкретного провайдера. |
-| macOS | Підтримується основний | Автономний шлях GAN shell не сумісний із системним Bash 3.2 і наразі має дефект розбору оцінок ([#2674](https://github.com/reborncursed/AIP/issues/2674)). |
+| macOS | Підтримується основний | Автономний шлях GAN shell не сумісний із системним Bash 3.2 і наразі має дефект розбору оцінок ([#2674](https://github.com/idrisvale-dev/AIP/issues/2674)). |
 | Windows + WSL | Підтримується основний | WSL слідує шляхам Linux; інтеграції з хостом Windows все ще відрізняються залежно від оболонки. |
-| Windows нативний | Підтримується з обмеженнями | Демон спостерігача та записи сховища пам'яті continuous-learning v2 мають відкриті дефекти на нативному Windows ([#2489](https://github.com/reborncursed/AIP/issues/2489), [#2626](https://github.com/reborncursed/AIP/issues/2626)). Опційні функції на основі shell вимагають Git Bash/WSL чи недоступні. |
+| Windows нативний | Підтримується з обмеженнями | Демон спостерігача та записи сховища пам'яті continuous-learning v2 мають відкриті дефекти на нативному Windows ([#2489](https://github.com/idrisvale-dev/AIP/issues/2489), [#2626](https://github.com/idrisvale-dev/AIP/issues/2626)). Опційні функції на основі shell вимагають Git Bash/WSL чи недоступні. |
 
 Розглядайте `stable`, `beta`, `experimental` та `instruction-only` нижче як твердження про можливості, а не маркетингові рівні.
 
@@ -1277,7 +1277,7 @@ export AIP_AGENT_DATA_HOME="$HOME/.cursor/aip"
 - `$AIP_AGENT_DATA_HOME/session-aliases.json`: псевдоніми сесій
 - `$AIP_AGENT_DATA_HOME/metrics/`: метрики витрат та активності
 
-Дивіться [reborncursed/AIP#2065](https://github.com/reborncursed/AIP/issues/2065).
+Дивіться [idrisvale-dev/AIP#2065](https://github.com/idrisvale-dev/AIP/issues/2065).
 </details>
 
 ## Підтримка платформ
@@ -1286,8 +1286,8 @@ export AIP_AGENT_DATA_HOME="$HOME/.cursor/aip"
 |---|---|---|---|
 | Claude Code | Стабільна основна | Плагін чи вибірковий інсталятор | Плагін рекламує встановлений каталог моделі; використовуйте вибірковий/ручний профіль, коли важливий обсяг контексту. Опційні навички на основі shell не портативні на кожну ОС. |
 | Codex | Підтримувана синхронізація; маркетплейс експериментальний | Конфігурація репозиторію чи `sync-aip-to-codex.sh` | Немає середовища виконання хуків AIP. Пакет маркетплейсу може пропускати спільний вміст репозиторію з кешу Codex; використовуйте синхронізацію для надійного шляху. |
-| Cursor | Бета-адаптер проєкту | Вибірковий інсталятор у `.cursor/` | Виявлення агентів залежить від збірки Cursor, а шляхи інсталятора AIP ще не показують ідентичні набори хуків ([#2419](https://github.com/reborncursed/AIP/issues/2419)). |
-| OpenCode | Бета зібраний плагін | Зберіть плагін, потім вибірковий інсталятор | AIP постачає підмножину каталогу, а еталонна конфігурація прив'язує моделі Anthropic; оберіть моделі, доступні вашому провайдеру ([#2617](https://github.com/reborncursed/AIP/issues/2617)). |
+| Cursor | Бета-адаптер проєкту | Вибірковий інсталятор у `.cursor/` | Виявлення агентів залежить від збірки Cursor, а шляхи інсталятора AIP ще не показують ідентичні набори хуків ([#2419](https://github.com/idrisvale-dev/AIP/issues/2419)). |
+| OpenCode | Бета зібраний плагін | Зберіть плагін, потім вибірковий інсталятор | AIP постачає підмножину каталогу, а еталонна конфігурація прив'язує моделі Anthropic; оберіть моделі, доступні вашому провайдеру ([#2617](https://github.com/idrisvale-dev/AIP/issues/2617)). |
 | GitHub Copilot | Лише інструкції | Закомічені інструкції та файли промптів | Немає хуків AIP, агентів часу виконання, делегування чи нативного виявлення навичок. |
 | Gemini, Zed, Antigravity, Qwen, Hermes, OpenClaw, Kimi, CodeBuddy, JoyCode | Експериментальні/мінімальні адаптери | Ціль вибіркова для оболонки | Розміщення файлів та портативність інструкцій перевірені; повний паритет функцій Claude не заявляється. |
 
@@ -1688,14 +1688,14 @@ Claude Code v2.1+ **автоматично завантажує** `hooks/hooks.j
 Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded file
 ```
 
-**Передісторія:** Це спричинило повторювані цикли виправлення/відкату в цьому репозиторії ([#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103)). Поведінка змінювалася між версіями Claude Code, що призводило до плутанини. Тепер є регресійний тест для запобігання повторного введення цього.
+**Передісторія:** Це спричинило повторювані цикли виправлення/відкату в цьому репозиторії ([#29](https://github.com/idrisvale-dev/AIP/issues/29), [#52](https://github.com/idrisvale-dev/AIP/issues/52), [#103](https://github.com/idrisvale-dev/AIP/issues/103)). Поведінка змінювалася між версіями Claude Code, що призводило до плутанини. Тепер є регресійний тест для запобігання повторного введення цього.
 </details>
 
 ## Безпека
 
 Встановлюйте AIP лише з офіційних джерел:
 
-- Репозиторій GitHub: <https://github.com/reborncursed/AIP>
+- Репозиторій GitHub: <https://github.com/idrisvale-dev/AIP>
 - Плагін Claude Code: `aip@aip`
 - Пакети npm: [`aip-universal`](https://www.npmjs.com/package/aip-universal) та [`aip-agentshield`](https://www.npmjs.com/package/aip-agentshield)
 - GitHub App: <https://github.com/apps/aip-tools>
@@ -1749,7 +1749,7 @@ npx -y aip-agentshield scan --path .
 <details>
 <summary><strong>Мої хуки не працюють / помилки "Duplicate hooks file"</strong></summary>
 
-**НЕ додавайте поле `"hooks"` до `.claude-plugin/plugin.json`.** Claude Code v2.1+ автоматично завантажує `hooks/hooks.json` зі встановлених плагінів. Явне оголошення спричиняє помилки виявлення дублікатів. Дивіться [#29](https://github.com/reborncursed/AIP/issues/29), [#52](https://github.com/reborncursed/AIP/issues/52), [#103](https://github.com/reborncursed/AIP/issues/103).
+**НЕ додавайте поле `"hooks"` до `.claude-plugin/plugin.json`.** Claude Code v2.1+ автоматично завантажує `hooks/hooks.json` зі встановлених плагінів. Явне оголошення спричиняє помилки виявлення дублікатів. Дивіться [#29](https://github.com/idrisvale-dev/AIP/issues/29), [#52](https://github.com/idrisvale-dev/AIP/issues/52), [#103](https://github.com/idrisvale-dev/AIP/issues/103).
 </details>
 
 <details>
@@ -1761,7 +1761,7 @@ npx -y aip-agentshield scan --path .
 node scripts/codex/check-plugin-cache.js
 ```
 
-Якщо повідомляється про невирішені батьківські посилання, використовуйте `bash scripts/sync-aip-to-codex.sh`. Реєстрація в `codex plugin list` підтверджує запис маркетплейсу, а не те, що кожен файл, на який є посилання, досягнув кешу плагіна. Завантаження навичок під час виконання з локальних/репо-маркетплейсів все ще ненадійне вище за течією ([openai/codex#26037](https://github.com/openai/codex/issues/26037)); дивіться [#2128](https://github.com/reborncursed/AIP/issues/2128) для повного дослідження.
+Якщо повідомляється про невирішені батьківські посилання, використовуйте `bash scripts/sync-aip-to-codex.sh`. Реєстрація в `codex plugin list` підтверджує запис маркетплейсу, а не те, що кожен файл, на який є посилання, досягнув кешу плагіна. Завантаження навичок під час виконання з локальних/репо-маркетплейсів все ще ненадійне вище за течією ([openai/codex#26037](https://github.com/openai/codex/issues/26037)); дивіться [#2128](https://github.com/idrisvale-dev/AIP/issues/2128) для повного дослідження.
 </details>
 
 <details>
@@ -1811,7 +1811,7 @@ cp -r rules/common ~/.claude/rules/aip/
 <details>
 <summary><strong>Моєї платформи немає в списку</strong></summary>
 
-Використовуйте [посібник з ручної адаптації](../../docs/MANUAL-ADAPTATION-GUIDE.md), чи відкрийте [обговорення GitHub](https://github.com/reborncursed/AIP/discussions) з назвою оболонки та форматами файлів, навичок, команд і хуків, які вона підтримує.
+Використовуйте [посібник з ручної адаптації](../../docs/MANUAL-ADAPTATION-GUIDE.md), чи відкрийте [обговорення GitHub](https://github.com/idrisvale-dev/AIP/discussions) з назвою оболонки та форматами файлів, навичок, команд і хуків, які вона підтримує.
 </details>
 
 ## Запуск тестів
@@ -1846,13 +1846,13 @@ AIP Pro додає аналіз приватних репозиторіїв, а�
 <table>
 <tr>
 <td width="25%" align="center"><a href="https://bytecore.org/pricing"><strong>AIP Pro</strong><br /><sub>Розміщений GitHub App для приватних репозиторіїв</sub></a></td>
-<td width="25%" align="center"><a href="https://github.com/sponsors/reborncursed"><strong>Спонсорувати AIP</strong><br /><sub>Фінансувати OSS-роботу</sub></a></td>
-<td width="25%" align="center"><a href="https://github.com/reborncursed/AIP/discussions"><strong>Спільнота</strong><br /><sub>Питання, ідеї та Show and Tell</sub></a></td>
+<td width="25%" align="center"><a href="https://github.com/sponsors/idrisvale-dev"><strong>Спонсорувати AIP</strong><br /><sub>Фінансувати OSS-роботу</sub></a></td>
+<td width="25%" align="center"><a href="https://github.com/idrisvale-dev/AIP/discussions"><strong>Спільнота</strong><br /><sub>Питання, ідеї та Show and Tell</sub></a></td>
 <td width="25%" align="center"><a href="https://github.com/apps/aip-tools"><strong>GitHub App</strong><br /><sub>Аудити PR та розміщені процеси</sub></a></td>
 </tr>
 </table>
 
-[Стати спонсором](https://github.com/sponsors/reborncursed) | [Рівні спонсорства](../../SPONSORS.md) | [Програма спонсорства](../../SPONSORING.md)
+[Стати спонсором](https://github.com/sponsors/idrisvale-dev) | [Рівні спонсорства](../../SPONSORS.md) | [Програма спонсорства](../../SPONSORING.md)
 </details>
 
 <details>

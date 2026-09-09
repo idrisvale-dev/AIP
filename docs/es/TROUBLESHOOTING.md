@@ -274,7 +274,7 @@ claude --version
 # Requiere Claude Code 2.0+
 
 # Instalación manual (si el marketplace falla)
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cp -r aip ~/.claude/plugins/aip
 ```
 
@@ -406,7 +406,7 @@ find ~/.claude/plugins -name "*.sh" -exec dos2unix {} \;
 
 Si sigues experimentando problemas:
 
-1. **Revisa los Issues de GitHub**: [github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
+1. **Revisa los Issues de GitHub**: [github.com/idrisvale-dev/AIP/issues](https://github.com/idrisvale-dev/AIP/issues)
 2. **Habilita el Registro de Depuración**:
    ```bash
    export CLAUDE_DEBUG=1

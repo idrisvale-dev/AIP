@@ -9,7 +9,7 @@ social announcement.
 | Field | Evidence |
 | --- | --- |
 | Upstream main | `c2471fe5c535310f8a8008c9ed7ea9f6757b33f2` |
-| Git remote | `https://github.com/reborncursed/AIP.git` |
+| Git remote | `https://github.com/idrisvale-dev/AIP.git` |
 | Evidence scope | Current `main` after PR #1990 harness-audit GitHub integration scoring, PR #1991 canonical AIP identity gate, PR #1992 release video-suite gate, PR #1993 growth outreach pack, PR #1994 May 19 publication evidence refresh, PR #1995 operator dashboard refresh, PR #1996 primary render self-eval gate, PR #1997 publish-candidate gate, PR #1998 visual QA gate, PR #1999 video dashboard evidence refresh, PR #2000 suite-count evidence refresh, PR #2001 owner approval packet addition, PR #2002 owner approval dashboard gate refresh, PR #2004 Linear readiness evidence sync, PR #2005 post-PR #2004 evidence refresh, PR #2008 release supply-chain evidence gate fix, PR #2006 per-project Claude Code adapter, PR #2009 continuous-learning project registry hygiene fix, PR #2011 GateGuard quoted git introspection fix, PR #2013 deterministic release approval gate, PR #2017 AgentShield adapter evidence sync, PR #2018 AgentShield Dependabot evidence sync, AIP-Tools #80-#91 hosted observability/readback, Marketplace Pro selected-target, selected-target announcement gate, and env-file operator-path batch, AgentShield #94 Zed/VS Code adapter coverage, AgentShield #95 Dependabot alert closure, PR #2019 Marketplace Pro release-gate sync, and PR #2020 selected-target announcement gate sync |
 | Local status caveat | `git status --short --branch` was clean after pulling `origin/main`; generated evidence files are committed after the source snapshot they describe |
 
@@ -21,16 +21,16 @@ release commit with a strictly clean checkout before publishing.
 | Surface | Command | Result |
 | --- | --- | --- |
 | Platform audit | `node scripts/platform-audit.js --json` | Ready true; tracked repos report 0 open PRs, 0 open issues, 0 discussion maintainer-touch gaps, 0 answerable Q&A gaps, 0 conflicting PRs, and 0 blocking dirty files |
-| Trunk PRs | `gh pr list --repo reborncursed/AIP --state open --json number,title,url,author --limit 100` | `[]` |
-| Trunk issues | `gh issue list --repo reborncursed/AIP --state open --json number,title,url,author --limit 100` | `[]` |
-| Discussion audit through platform audit | `node scripts/platform-audit.js --json` | `reborncursed/AIP` discussions enabled; 60 sampled after #2015 setup-location Q&A was answered and accepted; 0 needing maintainer touch; 0 answerable without accepted answer |
+| Trunk PRs | `gh pr list --repo idrisvale-dev/AIP --state open --json number,title,url,author --limit 100` | `[]` |
+| Trunk issues | `gh issue list --repo idrisvale-dev/AIP --state open --json number,title,url,author --limit 100` | `[]` |
+| Discussion audit through platform audit | `node scripts/platform-audit.js --json` | `idrisvale-dev/AIP` discussions enabled; 60 sampled after #2015 setup-location Q&A was answered and accepted; 0 needing maintainer touch; 0 answerable without accepted answer |
 | Worktree | `git status --short --branch` | `## main...origin/main` |
 
 Tracked repositories in the platform audit were:
 
-- `reborncursed/AIP`
-- `reborncursed/agentshield`
-- `reborncursed/JARVIS`
+- `idrisvale-dev/AIP`
+- `idrisvale-dev/agentshield`
+- `idrisvale-dev/JARVIS`
 - `AIP-Tools/AIP-Tools`
 - `AIP-Tools/AIP-website`
 
@@ -68,7 +68,7 @@ Tracked repositories in the platform audit were:
 | Surface | Evidence |
 | --- | --- |
 | AIP approval gate | PR #2013 merged as `9819626459a662773be7d0b1c18d82c1316b8c36`; GitHub Actions run `26128749863` completed successfully; `npm run release:approval-gate -- --format json` remains intentionally blocked with digest `ef8f49f727b7`, 4/6 passing, and failures only on owner decisions plus live URL readbacks |
-| AIP platform audit | `node scripts/platform-audit.js --json` at `2026-05-19T22:45:15Z` returned ready true, 0 open PRs, 0 open issues, 0 discussion maintainer-touch gaps, 0 answerable Q&A gaps, and 0 dirty blockers across `reborncursed/AIP`, `reborncursed/agentshield`, `reborncursed/JARVIS`, `AIP-Tools/AIP-Tools`, and `AIP-Tools/AIP-website` |
+| AIP platform audit | `node scripts/platform-audit.js --json` at `2026-05-19T22:45:15Z` returned ready true, 0 open PRs, 0 open issues, 0 discussion maintainer-touch gaps, 0 answerable Q&A gaps, and 0 dirty blockers across `idrisvale-dev/AIP`, `idrisvale-dev/agentshield`, `idrisvale-dev/JARVIS`, `AIP-Tools/AIP-Tools`, and `AIP-Tools/AIP-website` |
 | AIP-Tools billing hardening | AIP-Tools PR #79 merged as `67ee247ae1b7b50ecc1261ed5d62d65cc8390da8`; preflight and live billing-announcement output now redact account login values to a stable fingerprint while preserving readiness blockers/actions; local validation passed targeted tests, full test suite 678/678, lint, typecheck, manual preflight, and `git diff --check`; post-merge main CI run `26129253509` completed successfully |
 | JARVIS queue drain | JARVIS PR #15 merged the Dependabot `idna` 3.11 to 3.15 security bump as `4b3685d6ee23b4da1f1a7d22281c6b5d6c0a42c7`; PR checks and post-merge CI/CodeQL passed |
 | JARVIS deploy repair | JARVIS PR #16 merged as `4369c34babd21d539c420866da51c7a8365f1c9e`; the deploy workflow no longer uses an invalid job-level `secrets.*` condition, Vercel deploy skips cleanly when secrets are absent, backend image build/push succeeds, and main CI, CodeQL, and Deploy runs `26129539376`, `26129539427`, and `26129539425` completed successfully |
@@ -79,14 +79,14 @@ Tracked repositories in the platform audit were:
 | Surface | Evidence |
 | --- | --- |
 | AIP discussion queue | Discussion #2015 was answered and marked accepted with conservative setup guidance: do not install in `C:\`; use a normal workspace; install `aip@aip` once through the Claude plugin marketplace; copy only needed rule folders when using manual rules; do not stack plugin plus full manual install. |
-| AIP platform audit | `node scripts/platform-audit.js --json` at `2026-05-20T00:25:38Z` returned ready true with 0 open PRs, 0 open issues, 0 discussion maintainer-touch gaps, 0 answerable Q&A gaps, 0 conflicting PRs, and 0 dirty blockers across `reborncursed/AIP`, `reborncursed/agentshield`, `reborncursed/JARVIS`, `AIP-Tools/AIP-Tools`, and `AIP-Tools/AIP-website`. |
+| AIP platform audit | `node scripts/platform-audit.js --json` at `2026-05-20T00:25:38Z` returned ready true with 0 open PRs, 0 open issues, 0 discussion maintainer-touch gaps, 0 answerable Q&A gaps, 0 conflicting PRs, and 0 dirty blockers across `idrisvale-dev/AIP`, `idrisvale-dev/agentshield`, `idrisvale-dev/JARVIS`, `AIP-Tools/AIP-Tools`, and `AIP-Tools/AIP-website`. |
 | AIP platform audit recheck | `npm run platform:audit -- --json` at `2026-05-20T00:42:11Z` returned ready true with 0 open PRs, 0 open issues, 0 discussion maintainer-touch gaps, 0 answerable Q&A gaps, 0 conflicting PRs, 0 GitHub errors, and 0 dirty blockers across the same tracked repo set after AgentShield #94 merged. |
 | AIP-Tools #80/#81/#82 | PR #80 merged runtime-receipt failure-reason enforcement as `4efc8cc858022f84c844690f3298633b081c4398`; PR #81 preserved AgentShield fleet approval IDs as `1fbf635f492284f75ba7166c029c39eb8cc15794`; PR #82 rendered those approval IDs in hosted security review comments/check-runs as `7a7b4d096a176ae80b3a2076c09d45601e36013a`. |
 | AIP-Tools #83/#84 | PR #83 merged deterministic Linear external-ID reuse for deferred follow-ups as `b6b107f33961bef18a85fb619f3a976eb5d752dd`; PR #84 merged hosted AgentShield remediation sync to Linear as `73bac7058071c55cb30c6b8ac6db779b3660c02c`. Local validation covered focused route/client tests, typecheck, lint, full AIP-Tools test suite, and whitespace checks before merge; GitHub Verify, Security Audit, and Workers Builds passed. |
 | AIP-Tools #85/#86/#87 | PR #85 merged hosted job observability events as `1637e0f2bfa0a889387f2c20675680ccc5528123`; PR #86 merged hosted status observability readback as `5a9e94d3ff860307c3e7fd9fd065f0de2bd633dd`; PR #87 merged hosted depth-plan observability readback as `508fbc02b63cf1fcb5af2f3624608fa66e53b5d4`. Local validation for the final depth-plan readback slice passed the focused hosted depth-plan route test, full route suite (89/89), typecheck, lint, full AIP-Tools Vitest suite (683/683), and `git diff --check`; GitHub Verify, Security Audit, and Workers Builds passed before merge. |
 | AIP-Tools #88 | PR #88 merged authenticated hosted observability API readback as `c836ac3fb24ed7e2ae38cd61e41c9651ac9c00f8`. `GET /api/analysis/observability` now summarizes hosted events by event type and job for operator/dashboard readback, skips malformed stale KV records, and the deployment runbook includes the production smoke command. Local verification passed typecheck, lint, full AIP-Tools Vitest suite (686/686), and `git diff --check`; GitHub Verify, Security Audit, and Workers Builds passed before merge. |
 | AgentShield #94 | PR #94 merged Zed/VS Code adapter coverage as `4caee27acfadb50a4cd024e738b5c3cbd4b0bb03`. AgentShield now reports Zed and VS Code as first-class harness adapters, discovers `.zed/settings.json`, `.zed/tasks.json`, and `.zed` hook-code files, and flags `.zed/setup.mjs` in the AI-tool persistence IOC rule alongside `.vscode/setup.mjs`. Local verification passed typecheck, lint, focused scanner/rule tests, full `npm test` (1822 tests), `npm run build`, and `git diff --check`; GitHub checks passed across GitGuardian, scan suite, self-scan, self-scan examples, Node 18/20/22 CI, CodeRabbit, and Cubic after rerunning a transient artifact-upload failure. |
-| AgentShield #95 | PR #95 merged the `brace-expansion` Dependabot fix as `25d91f0002214c408da4ceaac7def20bad40ca10`. The lockfile now resolves vulnerable transitive `brace-expansion` 5.x entries to `5.0.6`, local `npm audit --audit-level=moderate` returns 0 vulnerabilities, and `gh api repos/reborncursed/agentshield/dependabot/alerts?state=open` returns `[]`. Local validation passed typecheck, lint, full `npm test` (1822 tests), build, audit, and whitespace checks; GitHub checks passed across Verify Node 18/20/22, self-scan, self-scan examples, Test GitHub Action, GitGuardian, CodeRabbit, and Cubic. |
+| AgentShield #95 | PR #95 merged the `brace-expansion` Dependabot fix as `25d91f0002214c408da4ceaac7def20bad40ca10`. The lockfile now resolves vulnerable transitive `brace-expansion` 5.x entries to `5.0.6`, local `npm audit --audit-level=moderate` returns 0 vulnerabilities, and `gh api repos/idrisvale-dev/agentshield/dependabot/alerts?state=open` returns `[]`. Local validation passed typecheck, lint, full `npm test` (1822 tests), build, audit, and whitespace checks; GitHub checks passed across Verify Node 18/20/22, self-scan, self-scan examples, Test GitHub Action, GitGuardian, CodeRabbit, and Cubic. |
 | Linear roadmap sync | Linear ITO-54 comment `74dcc101-3be5-4173-be13-62b80d54f569` and AIP Platform Roadmap project comment `348ea8f5-2a2d-46d9-a0fe-ed99653e7fe5` record the May 20 hosted observability status/depth-plan readback batch; Linear comments `291e2a4b-06e3-4672-a057-cdb141478161` and `b2d35de0-ca49-44cb-982a-ddec229e7691` add the #88 observability API readback; Linear ITO-49 comment `faed69dd-35f5-469d-acb5-ddde6a70d6a1` and project comment `70187c1e-d481-4181-b418-09bd65d54b5e` add the #94 AgentShield Zed/VS Code adapter evidence; Linear ITO-49 comment `371fc3e4-611f-4d20-a23f-67db1260b418`, ITO-57 comment `bd06e252-15c1-4256-b667-caa3f64f5968`, and project comment `22c2c388-2fd1-4dea-a939-6141f40c9a21` add the #95 AgentShield Dependabot alert closure; earlier comments on ITO-54, ITO-48, and the project record the #84 hosted remediation sync and #85 hosted observability event emission batches. |
 
 ## May 20 Marketplace Pro Release-Gate Sync
@@ -146,7 +146,7 @@ Tracked repositories in the platform audit were:
 
 | Surface | Evidence |
 | --- | --- |
-| Canonical repo identity | Public URLs and release docs now use `https://github.com/reborncursed/AIP` where public links are needed |
+| Canonical repo identity | Public URLs and release docs now use `https://github.com/idrisvale-dev/AIP` where public links are needed |
 | Release claim | Release notes and launch collateral frame AIP as the harness-native operator system for agentic work, not a Claude-only config pack |
 | Video proof | `video-suite-production.md` gates the local rough render, timeline, captions, source inventory, publish-candidate clip set, self-eval, black-frame QA, and no-private-path publication rules |
 | Growth proof | `partner-sponsor-talks-pack.md` provides approval-gated copy for sponsors, partners, consulting, talks, podcasts, GitHub Discussion, and video CTAs |

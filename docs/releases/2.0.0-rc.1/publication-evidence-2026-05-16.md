@@ -8,7 +8,7 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 | Field | Evidence |
 | --- | --- |
 | Upstream main | `6bced468d76b269243a6f0bd28472853aa78e0e4` |
-| Git remote | `https://github.com/reborncursed/AIP.git` |
+| Git remote | `https://github.com/idrisvale-dev/AIP.git` |
 | Evidence scope | Current `main` after PR #1944, PR #1945, issue #1946 triage, PR #1947 supply-chain protection, AgentShield PR #87, AgentShield PR #88, AgentShield PR #89, AgentShield PR #90, AgentShield PR #91, AgentShield PR #92, AIP-Tools PR #76, AIP-Tools PR #77, AIP-Tools PR #78, Japanese localization triage, ITO-57 sync, and operator dashboard refresh |
 | Local status caveat | `git status --short --branch` showed `## main...origin/main` plus unrelated untracked `docs/drafts/` |
 

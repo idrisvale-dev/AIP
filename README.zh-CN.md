@@ -1,8 +1,8 @@
 # AIP
 
-[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
-[![Forks](https://img.shields.io/github/forks/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/network/members)
-[![Contributors](https://img.shields.io/github/contributors/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/stargazers)
+[![Forks](https://img.shields.io/github/forks/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/network/members)
+[![Contributors](https://img.shields.io/github/contributors/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/graphs/contributors)
 [![npm aip-universal](https://img.shields.io/npm/dw/aip-universal?label=aip-universal%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-universal)
 [![npm aip-agentshield](https://img.shields.io/npm/dw/aip-agentshield?label=aip-agentshield%20weekly%20downloads&logo=npm)](https://www.npmjs.com/package/aip-agentshield)
 [![GitHub App Install](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.bytecore.org%2Fbadge%2Finstalls&logo=github)](https://github.com/marketplace/aip-tools)
@@ -135,7 +135,7 @@ command -v aip-memory-mcp
 
 ```bash
 # 添加市场
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # 安装插件
 /plugin install aip@aip
@@ -153,7 +153,7 @@ command -v aip-memory-mcp
 
 ```bash
 # 首先克隆仓库
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cd aip
 
 # 安装依赖（选择你常用的包管理器）
@@ -530,9 +530,9 @@ npx aip-agentshield init
 
 **输出格式：** 终端（彩色等级 A-F）、JSON（CI 流水线）、Markdown、HTML。发现严重问题时返回退出码 2，可用于构建门禁。
 
-在 Claude Code 中使用 `/security-scan` 运行，或通过 [GitHub Action](https://github.com/reborncursed/agentshield) 集成到 CI。
+在 Claude Code 中使用 `/security-scan` 运行，或通过 [GitHub Action](https://github.com/idrisvale-dev/agentshield) 集成到 CI。
 
-[GitHub](https://github.com/reborncursed/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
+[GitHub](https://github.com/idrisvale-dev/agentshield) | [npm](https://www.npmjs.com/package/aip-agentshield)
 
 ### 持续学习 v2
 
@@ -571,7 +571,7 @@ Claude Code v2.1+ 会**按照约定自动加载**已安装插件中的 `hooks/ho
 检测到重复的钩子文件：./hooks/hooks.json 指向已加载的文件
 ```
 
-**历史说明**：该问题曾在本仓库中引发多次「修复-回滚」循环（[#29](https://github.com/reborncursed/AIP/issues/29)、[#52](https://github.com/reborncursed/AIP/issues/52)、[#103](https://github.com/reborncursed/AIP/issues/103)）。因 Claude Code 版本间行为变更导致混淆，现已添加回归测试，防止该问题再次出现。
+**历史说明**：该问题曾在本仓库中引发多次「修复-回滚」循环（[#29](https://github.com/idrisvale-dev/AIP/issues/29)、[#52](https://github.com/idrisvale-dev/AIP/issues/52)、[#103](https://github.com/idrisvale-dev/AIP/issues/103)）。因 Claude Code 版本间行为变更导致混淆，现已添加回归测试，防止该问题再次出现。
 
 ---
 
@@ -583,7 +583,7 @@ Claude Code v2.1+ 会**按照约定自动加载**已安装插件中的 `hooks/ho
 
 ```bash
 # 将此仓库添加为市场
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # 安装插件
 /plugin install aip@aip
@@ -597,7 +597,7 @@ Claude Code v2.1+ 会**按照约定自动加载**已安装插件中的 `hooks/ho
     "aip": {
       "source": {
         "source": "github",
-        "repo": "reborncursed/AIP"
+        "repo": "idrisvale-dev/AIP"
       }
     }
   },
@@ -613,7 +613,7 @@ Claude Code v2.1+ 会**按照约定自动加载**已安装插件中的 `hooks/ho
 >
 > ```bash
 > # 首先克隆仓库
-> git clone https://github.com/reborncursed/AIP.git
+> git clone https://github.com/idrisvale-dev/AIP.git
 >
 > # 方案 A：用户级规则（对所有项目生效）
 > mkdir -p ~/.claude/rules
@@ -637,7 +637,7 @@ Claude Code v2.1+ 会**按照约定自动加载**已安装插件中的 `hooks/ho
 
 ```bash
 # 克隆仓库
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 
 # 将智能体文件复制到 Claude 配置目录
 cp aip/agents/*.md ~/.claude/agents/
@@ -832,13 +832,13 @@ node tests/hooks/hooks.test.js
 
 本项目免费开源。赞助支持项目持续维护与功能迭代。
 
-[成为赞助者](https://github.com/sponsors/reborncursed) | [赞助档位](SPONSORS.md) | [赞助计划](SPONSORING.md)
+[成为赞助者](https://github.com/sponsors/idrisvale-dev) | [赞助档位](SPONSORS.md) | [赞助计划](SPONSORING.md)
 
 ---
 
 ## Star 历史
 
-[![Star History Chart](https://api.star-history.com/svg?repos=reborncursed/AIP&type=Date)](https://star-history.com/#reborncursed/AIP&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=idrisvale-dev/AIP&type=Date)](https://star-history.com/#idrisvale-dev/AIP&Date)
 
 ---
 

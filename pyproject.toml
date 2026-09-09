@@ -35,8 +35,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/reborncursed/AIP"
-Repository = "https://github.com/reborncursed/AIP"
+Homepage = "https://github.com/idrisvale-dev/AIP"
+Repository = "https://github.com/idrisvale-dev/AIP"
 
 [project.scripts]
 llm-select = "llm.cli.selector:main"

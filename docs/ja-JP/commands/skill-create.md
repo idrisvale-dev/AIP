@@ -171,4 +171,4 @@ src/
 
 ---
 
-*[AIP](https://github.com/reborncursed/AIP)の一部*
+*[AIP](https://github.com/idrisvale-dev/AIP)の一部*

@@ -10,7 +10,7 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 | Upstream main base | `797f283036904128bb1b348ae62019eb9f08cf39` |
 | Evidence branch | `docs/release-readiness-20260513` |
 | Evidence scope | Current `main` after PR #1846 plus markdownlint-only zh-CN CLAUDE list-marker normalization |
-| Git remote | `https://github.com/reborncursed/AIP.git` |
+| Git remote | `https://github.com/idrisvale-dev/AIP.git` |
 | Local status caveat | Working tree had the unrelated untracked `docs/drafts/` directory |
 
 The actual release operator should repeat these checks from the final release
@@ -21,7 +21,7 @@ commit with a clean checkout before publishing.
 | Surface | Command | Result |
 | --- | --- | --- |
 | GitHub PRs and issues | `gh pr list` / `gh issue list` across trunk, AgentShield, JARVIS, AIP-Tools, AIP-website | 0 open PRs and 0 open issues across tracked repos |
-| Trunk discussions | GraphQL discussion sweep for `reborncursed/AIP` | Latest 100 discussions were closed; no open discussion backlog found |
+| Trunk discussions | GraphQL discussion sweep for `idrisvale-dev/AIP` | Latest 100 discussions were closed; no open discussion backlog found |
 | npm audit signature gate | PR #1846 | Merged as `797f283`; workflows that run `npm audit` now need `npm audit signatures` |
 
 ## Required Command Evidence

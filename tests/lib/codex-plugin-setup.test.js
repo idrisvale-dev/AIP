@@ -74,7 +74,7 @@ function createExecFile(steps) {
 function dependenciesFor(fake, overrides = {}) {
   return {
     execFile: fake.execFile,
-    resolveMarketplaceRepository: async () => 'https://github.com/reborncursed/AIP.git',
+    resolveMarketplaceRepository: async () => 'https://github.com/idrisvale-dev/AIP.git',
     ...overrides,
   };
 }
@@ -116,15 +116,15 @@ async function runTests() {
         'aip@aip'
       );
       assert.strictEqual(
-        normalizeGitHubGitOrigin('git@github.com:reborncursed/AIP.git'),
-        'reborncursed/AIP'
+        normalizeGitHubGitOrigin('git@github.com:idrisvale-dev/AIP.git'),
+        'idrisvale-dev/AIP'
       );
     }],
     ['resolves marketplace provenance with execFile and exact Git argv', async () => {
       const fake = createExecFile([{
         command: 'git',
         args: ['-C', '/cache/aip', 'remote', 'get-url', 'origin'],
-        stdout: 'https://github.com/reborncursed/AIP.git\n',
+        stdout: 'https://github.com/idrisvale-dev/AIP.git\n',
       }]);
 
       const repository = await resolveMarketplaceRepository(
@@ -133,7 +133,7 @@ async function runTests() {
         { execFile: fake.execFile }
       );
 
-      assert.strictEqual(repository, 'https://github.com/reborncursed/AIP.git');
+      assert.strictEqual(repository, 'https://github.com/idrisvale-dev/AIP.git');
       assert.strictEqual(fake.calls[0].options.shell, false);
       assert.strictEqual(fake.calls[0].options.cwd, '/workspace with spaces');
       assert.ok(fake.calls[0].options.timeout > 0);
@@ -344,7 +344,7 @@ async function runTests() {
           resolveMarketplaceRepository: async () => {
             provenanceChecks += 1;
             return provenanceChecks === 1
-              ? 'https://github.com/reborncursed/AIP.git'
+              ? 'https://github.com/idrisvale-dev/AIP.git'
               : 'https://github.com/attacker/aip.git';
           },
         })),
@@ -484,8 +484,8 @@ async function runTests() {
     }],
     ['rejects relative and insecure Git origins before marketplace mutation', async () => {
       for (const origin of [
-        'reborncursed/AIP',
-        'http://github.com/reborncursed/AIP.git',
+        'idrisvale-dev/AIP',
+        'http://github.com/idrisvale-dev/AIP.git',
       ]) {
         const fake = createExecFile([
           { args: MARKETPLACE_LIST, stdout: marketplaceInventory(true) },
@@ -553,9 +553,9 @@ async function runTests() {
       );
       assert.strictEqual(normalizeGitHubGitOrigin(null), null);
       assert.strictEqual(normalizeGitHubGitOrigin('not a repository'), null);
-      assert.strictEqual(normalizeGitHubGitOrigin('reborncursed/AIP'), null);
+      assert.strictEqual(normalizeGitHubGitOrigin('idrisvale-dev/AIP'), null);
       assert.strictEqual(
-        normalizeGitHubGitOrigin('http://github.com/reborncursed/AIP.git'),
+        normalizeGitHubGitOrigin('http://github.com/idrisvale-dev/AIP.git'),
         null
       );
     }],

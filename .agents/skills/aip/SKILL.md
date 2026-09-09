@@ -5,7 +5,7 @@ description: Development conventions and patterns for aip. JavaScript project wi
 
 # AIP Conventions
 
-> Generated from [reborncursed/AIP](https://github.com/reborncursed/AIP) on 2026-03-20
+> Generated from [idrisvale-dev/AIP](https://github.com/idrisvale-dev/AIP) on 2026-03-20
 
 ## Overview
 

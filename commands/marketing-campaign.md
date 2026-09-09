@@ -126,4 +126,4 @@ This command invokes:
 
 ---
 
-*Part of [AIP](https://github.com/reborncursed/AIP)*
+*Part of [AIP](https://github.com/idrisvale-dev/AIP)*

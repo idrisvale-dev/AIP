@@ -52,7 +52,7 @@ npx aip-universal install typescript
 Clone and run OpenCode in the repository:
 
 ```bash
-git clone https://github.com/reborncursed/AIP
+git clone https://github.com/idrisvale-dev/AIP
 cd AIP
 opencode
 ```

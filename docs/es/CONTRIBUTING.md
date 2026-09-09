@@ -52,7 +52,7 @@ Comandos slash que invocan flujos de trabajo útiles:
 
 ```bash
 # 1. Hacer fork y clonar
-gh repo fork reborncursed/AIP --clone
+gh repo fork idrisvale-dev/AIP --clone
 cd aip
 
 # 2. Crear una rama
@@ -465,7 +465,7 @@ Cómo lo probaste.
 
 ## ¿Preguntas?
 
-- **Issues:** [github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
+- **Issues:** [github.com/idrisvale-dev/AIP/issues](https://github.com/idrisvale-dev/AIP/issues)
 - **X/Twitter:** [@bytecore](https://bytecore.org)
 
 ---

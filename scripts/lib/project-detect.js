@@ -4,7 +4,7 @@
  * Cross-platform (Windows, macOS, Linux) project type detection
  * by inspecting files in the working directory.
  *
- * Resolves: https://github.com/reborncursed/AIP/issues/293
+ * Resolves: https://github.com/idrisvale-dev/AIP/issues/293
  */
 
 const fs = require('fs');

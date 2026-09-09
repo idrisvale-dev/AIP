@@ -34,10 +34,10 @@ The AIP Discord is live: <https://discord.gg/36yGMHGFbR>
 ## Install or upgrade
 
 ```
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 /plugin install aip
 ```
 
 Existing installs: `/plugin update aip`
 
-Full changelog: <https://github.com/reborncursed/AIP/compare/v2.0.0-rc.1...v2.0.0>
+Full changelog: <https://github.com/idrisvale-dev/AIP/compare/v2.0.0-rc.1...v2.0.0>

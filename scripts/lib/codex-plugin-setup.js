@@ -6,7 +6,7 @@ const { normalizeGitHubGitOrigin } = require('./github-origin');
 
 const CODEX_PLUGIN_ID = 'aip@aip';
 const OFFICIAL_MARKETPLACE_NAME = 'aip';
-const OFFICIAL_MARKETPLACE_REPO = 'reborncursed/AIP';
+const OFFICIAL_MARKETPLACE_REPO = 'idrisvale-dev/AIP';
 const NORMALIZED_OFFICIAL_MARKETPLACE_REPO = OFFICIAL_MARKETPLACE_REPO.toLowerCase();
 const MAX_OUTPUT_BYTES = 10 * 1024 * 1024;
 const PROVIDER_COMMAND_TIMEOUT_MS = 120 * 1000;
@@ -267,7 +267,7 @@ async function assertOfficialMarketplace(
   if (repository !== NORMALIZED_OFFICIAL_MARKETPLACE_REPO) {
     fail(
       'MARKETPLACE_COLLISION',
-      'Refusing the existing `aip` marketplace because it is not the official reborncursed/AIP source.',
+      'Refusing the existing `aip` marketplace because it is not the official idrisvale-dev/AIP source.',
       { phase }
     );
   }

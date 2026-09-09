@@ -275,7 +275,7 @@ claude --version
 # Claude Code 2.0+が必要
 
 # 手動インストール（Marketplaceが失敗する場合）
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 cp -r aip ~/.claude/plugins/aip
 ```
 
@@ -407,7 +407,7 @@ find ~/.claude/plugins -name "*.sh" -exec dos2unix {} \;
 
 問題が解決しない場合：
 
-1. **GitHub Issuesを確認**: [github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
+1. **GitHub Issuesを確認**: [github.com/idrisvale-dev/AIP/issues](https://github.com/idrisvale-dev/AIP/issues)
 2. **デバッグログを有効化**:
    ```bash
    export CLAUDE_DEBUG=1

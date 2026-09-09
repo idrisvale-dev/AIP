@@ -208,7 +208,7 @@ So the rule is simple:
 
 ## Related Work
 
-- [Issue #1186](https://github.com/reborncursed/AIP/issues/1186)
-- [Discussion #1077](https://github.com/reborncursed/AIP/discussions/1077)
+- [Issue #1186](https://github.com/idrisvale-dev/AIP/issues/1186)
+- [Discussion #1077](https://github.com/idrisvale-dev/AIP/discussions/1077)
 - [Antigravity Guide](./ANTIGRAVITY-GUIDE.md)
 - [Troubleshooting](./TROUBLESHOOTING.md)

@@ -149,7 +149,7 @@ claim those profiles map to Codex.
 If the AIP marketplace is missing, add it. Otherwise refresh its snapshot:
 
 ```bash
-codex plugin marketplace add reborncursed/AIP
+codex plugin marketplace add idrisvale-dev/AIP
 codex plugin marketplace upgrade aip --json
 ```
 

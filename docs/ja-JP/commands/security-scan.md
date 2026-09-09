@@ -72,7 +72,7 @@ npm run scan -- --path "${TARGET_PATH:-.}" --format text
 強制ゲートのためにGitHub ActionsでAgentShieldを使用:
 
 ```yaml
-- uses: reborncursed/agentshield@v1
+- uses: idrisvale-dev/agentshield@v1
   with:
     path: "."
     min-severity: "medium"
@@ -83,7 +83,7 @@ npm run scan -- --path "${TARGET_PATH:-.}" --format text
 
 - スキル: `skills/security-scan/SKILL.md`
 - エージェント: `agents/security-reviewer.md`
-- スキャナー: <https://github.com/reborncursed/agentshield>
+- スキャナー: <https://github.com/idrisvale-dev/agentshield>
 
 ## 引数
 

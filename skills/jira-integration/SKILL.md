@@ -37,7 +37,7 @@ Install the `mcp-atlassian` MCP server. This exposes Jira tools directly to your
     "args": ["mcp-atlassian==0.21.0"],
     "env": {
       "JIRA_URL": "https://YOUR_ORG.atlassian.net",
-      "JIRA_EMAIL": "reborncursed@gmail.com",
+      "JIRA_EMAIL": "idrisvale.dev@gmail.com",
       "JIRA_API_TOKEN": "your-api-token"
     },
     "description": "Jira issue tracking — search, create, update, comment, transition"

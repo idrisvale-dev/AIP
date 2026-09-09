@@ -180,7 +180,7 @@ function runTests() {
         `--root=${rootDir}`,
         '--json',
         '--repo',
-        'reborncursed/AIP',
+        'idrisvale-dev/AIP',
         '--max-open-prs',
         '5',
         '--max-open-issues',
@@ -191,7 +191,7 @@ function runTests() {
 
       assert.strictEqual(parsed.format, 'json');
       assert.strictEqual(parsed.root, path.resolve(rootDir));
-      assert.deepStrictEqual(parsed.repos, ['reborncursed/AIP']);
+      assert.deepStrictEqual(parsed.repos, ['idrisvale-dev/AIP']);
       assert.strictEqual(parsed.thresholds.maxOpenPrs, 5);
       assert.strictEqual(parsed.thresholds.maxOpenIssues, 6);
       assert.deepStrictEqual(parsed.allowUntracked, ['docs/drafts/']);
@@ -285,12 +285,12 @@ function runTests() {
     try {
       seedRepo(projectRoot);
       const shimPath = writeGhShim(projectRoot, {
-        'pr list --repo reborncursed/AIP --state open --json number,title,isDraft,mergeStateStatus,updatedAt,url,author': [],
-        'issue list --repo reborncursed/AIP --state open --json number,title,updatedAt,url,author,labels': [],
-        [discussionEnabledGhKey('reborncursed', 'AIP')]: {
+        'pr list --repo idrisvale-dev/AIP --state open --json number,title,isDraft,mergeStateStatus,updatedAt,url,author': [],
+        'issue list --repo idrisvale-dev/AIP --state open --json number,title,updatedAt,url,author,labels': [],
+        [discussionEnabledGhKey('idrisvale-dev', 'AIP')]: {
           data: { repository: { hasDiscussionsEnabled: true } }
         },
-        [discussionGhKey('reborncursed', 'AIP')]: {
+        [discussionGhKey('idrisvale-dev', 'AIP')]: {
           data: {
             repository: {
               hasDiscussionsEnabled: true,
@@ -318,7 +318,7 @@ function runTests() {
         '--format=json',
         `--root=${projectRoot}`,
         '--repo',
-        'reborncursed/AIP'
+        'idrisvale-dev/AIP'
       ], {
         cwd: projectRoot,
         env: {
@@ -354,12 +354,12 @@ function runTests() {
         author: { login: 'contributor' }
       }));
       const shimPath = writeGhShim(projectRoot, {
-        'pr list --repo reborncursed/AIP --state open --json number,title,isDraft,mergeStateStatus,updatedAt,url,author': prs,
-        'issue list --repo reborncursed/AIP --state open --json number,title,updatedAt,url,author,labels': [],
-        [discussionEnabledGhKey('reborncursed', 'AIP')]: {
+        'pr list --repo idrisvale-dev/AIP --state open --json number,title,isDraft,mergeStateStatus,updatedAt,url,author': prs,
+        'issue list --repo idrisvale-dev/AIP --state open --json number,title,updatedAt,url,author,labels': [],
+        [discussionEnabledGhKey('idrisvale-dev', 'AIP')]: {
           data: { repository: { hasDiscussionsEnabled: true } }
         },
-        [discussionGhKey('reborncursed', 'AIP')]: {
+        [discussionGhKey('idrisvale-dev', 'AIP')]: {
           data: {
             repository: {
               hasDiscussionsEnabled: true,
@@ -387,7 +387,7 @@ function runTests() {
         '--format=json',
         `--root=${projectRoot}`,
         '--repo',
-        'reborncursed/AIP',
+        'idrisvale-dev/AIP',
         '--max-open-prs',
         '2'
       ], {

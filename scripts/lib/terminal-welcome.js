@@ -3,9 +3,9 @@
 const { version: AIP_VERSION } = require('../../package.json');
 
 const COMMUNITY_LINKS = Object.freeze({
-  github: 'https://github.com/reborncursed/AIP',
+  github: 'https://github.com/idrisvale-dev/AIP',
   discord: 'https://discord.gg/36yGMHGFbR',
-  documentation: 'https://github.com/reborncursed/AIP#readme',
+  documentation: 'https://github.com/idrisvale-dev/AIP#readme',
   githubApp: 'https://github.com/apps/aip-tools',
 });
 

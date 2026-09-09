@@ -632,7 +632,7 @@ go build ./examples/...
 ### 1. Fork and Clone
 
 ```bash
-gh repo fork reborncursed/AIP --clone
+gh repo fork idrisvale-dev/AIP --clone
 cd aip
 ```
 

@@ -43,7 +43,7 @@ Bu politika aşağıdakileri kapsar:
 - Makinenizde çalışan hook script'leri
 - Install/uninstall/repair yaşam döngüsü script'leri
 - AIP ile birlikte gelen MCP konfigürasyonları
-- AgentShield güvenlik tarayıcısı ([github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield))
+- AgentShield güvenlik tarayıcısı ([github.com/idrisvale-dev/agentshield](https://github.com/idrisvale-dev/agentshield))
 
 ## Güvenlik Kaynakları
 

@@ -43,7 +43,7 @@ AIPでセキュリティ脆弱性を発見した場合は、責任ある方法�
 - あなたのマシンで実行されるフックスクリプト
 - インストール/アンインストール/修復ライフサイクルスクリプト
 - AIPに同梱されるMCP設定
-- AgentShieldセキュリティスキャナー（[github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield)）
+- AgentShieldセキュリティスキャナー（[github.com/idrisvale-dev/agentshield](https://github.com/idrisvale-dev/agentshield)）
 
 ## 運用ガイダンス
 

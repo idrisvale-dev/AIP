@@ -22,7 +22,7 @@ Free, zero-account, local-only (unchanged, MIT):
 - `agentshield runtime install|status|repair`, local `runtime.ndjson` logging.
 - `agentshield policy init|export|promote`, all 6 policy packs (`oss`, `team`, `enterprise`, `regulated`, `high-risk-hooks-mcp`, `ci-enforcement`).
 - Local `agentshield watch` (fs.watch drift, terminal/webhook alerts).
-- GitHub Action `reborncursed/agentshield@v1` (CI scanning, SARIF upload, baseline gate).
+- GitHub Action `idrisvale-dev/agentshield@v1` (CI scanning, SARIF upload, baseline gate).
 - MiniClaw local server.
 
 Pro, hosted, account-required (the recurring-revenue surface):

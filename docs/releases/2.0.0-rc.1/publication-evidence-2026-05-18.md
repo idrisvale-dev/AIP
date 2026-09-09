@@ -8,7 +8,7 @@ npm publication, plugin tag, marketplace submission, or announcement post.
 | Field | Evidence |
 | --- | --- |
 | Upstream main | `4470e2e6702f17099d6feb137ba03ff00582c202` |
-| Git remote | `https://github.com/reborncursed/AIP.git` |
+| Git remote | `https://github.com/idrisvale-dev/AIP.git` |
 | Evidence scope | Current `main` after PR #1970 workflow-security validator bypass fixes, PR #1971 metrics bridge cost-reporting fixes, PR #1972 `uncloud` skill merge, PR #1973 stale script cleanup, issue #1974 cost-reporting verification/closure, PR #1976 OpenAI/AstraFlow provider response guards, PR #1978 review/closure, catalog/operator dashboard refresh, AIP-Tools Wrangler OAuth billing readback mirror, AgentShield `840952a` fleet-ticket and Mini Shai-Hulud IOC evidence mirror, Mini Shai-Hulud/TanStack protection recheck, defensive-deny IOC scanner hardening, release name/plugin publication checklist, readiness/smoke gate enforcement for that checklist, release OIDC publishing-scope hardening, workflow line-ending normalization, current-head CI/security scan, work-items sync, Linear progress sync, the ITO-46 publication-path dry-run refresh, ITO-46 Linear closure, and the post-closure operator dashboard refresh |
 | Local status caveat | `git status --short --branch` was clean at dashboard generation time; generated evidence files are committed after the source snapshot they describe |
 
@@ -21,16 +21,16 @@ final release commit with a strictly clean checkout before publishing.
 | --- | --- | --- |
 | Trunk PRs | `gh pr list --limit 100 --json number,title,state,author,updatedAt,url` | 0 open PRs |
 | Trunk issues | `gh issue list --limit 100 --json number,title,state,updatedAt,url,labels` | 0 open issues |
-| Discussion audit | `npm run discussion:audit -- --json` | Ready; 58 sampled discussions in `reborncursed/AIP`, 0 needing maintainer touch, 0 answerable discussions missing accepted answer, and 0 fetch errors |
+| Discussion audit | `npm run discussion:audit -- --json` | Ready; 58 sampled discussions in `idrisvale-dev/AIP`, 0 needing maintainer touch, 0 answerable discussions missing accepted answer, and 0 fetch errors |
 | Platform audit | `node scripts/platform-audit.js --json --allow-untracked docs/drafts/` | Ready; tracked repos report 0 open PRs, 0 open issues, 0 discussion maintainer-touch gaps, 0 answerable Q&A missing accepted answers, and 0 blocking dirty files |
 | Work-items sync | `node scripts/work-items.js sync-github --repo <tracked-repo>` for five tracked repos; `node scripts/status.js --json`; `node scripts/work-items.js list --json` | All five tracked repos synced with 0 open PRs/issues and no changed work items; local status reports 0 open, 0 blocked, and 0 closed work items |
 | Operator dashboard | `npm run operator:dashboard -- --markdown --write docs/releases/2.0.0-rc.1/operator-readiness-dashboard-2026-05-18.md` | Regenerated at `4470e2e6702f17099d6feb137ba03ff00582c202`; dashboard ready true, publication ready false because release, npm, plugin, billing, and announcement gates are approval-gated; 0 PRs, 0 issues, and 0 discussion gaps remain across tracked repos; AgentShield enterprise evidence includes `840952a`; AIP Tools native-payments gate now names the narrowed ITO-61 blocker: create or verify Marketplace-managed Pro target billing-state with webhook provenance, configure the target account and `INTERNAL_API_SECRET`, then rerun target readback and the live announcement gate |
 
 Tracked repositories in the platform audit and work-items sync were:
 
-- `reborncursed/AIP`
-- `reborncursed/agentshield`
-- `reborncursed/JARVIS`
+- `idrisvale-dev/AIP`
+- `idrisvale-dev/agentshield`
+- `idrisvale-dev/JARVIS`
 - `AIP-Tools/AIP-Tools`
 - `AIP-Tools/AIP-website`
 
@@ -73,23 +73,23 @@ Tracked repositories in the platform audit and work-items sync were:
 | npm signatures | `npm audit signatures` | 213 verified registry signatures; 17 verified attestations |
 | Workflow security | `node scripts/ci/validate-workflow-security.js` | Validated 8 workflow files after the release OIDC publishing-scope hardening |
 | AgentShield project scan | `npx --no-install aip-agentshield scan --format json` | Grade A / 99; 0 critical, 0 high, 0 medium; 6 low docs-example skill telemetry/governance findings |
-| Current-head CI security scan | `gh run view 26057806361 --repo reborncursed/AIP --json status,conclusion,headSha,jobs,url` | Completed successfully for `4470e2e6702f17099d6feb137ba03ff00582c202`; 37/37 CI jobs passed, including lint, workflow/component validation, coverage, cross-platform package-manager tests, npm audit, and supply-chain IOC scan |
-| Latest Supply-Chain Watch | `gh run view 26010432490 --repo reborncursed/AIP --json status,conclusion,headSha,url` | Completed successfully for `25ac57ac40e9fc5a0606e76e6339e72c79748c99`; rerun from the final release commit before publication |
+| Current-head CI security scan | `gh run view 26057806361 --repo idrisvale-dev/AIP --json status,conclusion,headSha,jobs,url` | Completed successfully for `4470e2e6702f17099d6feb137ba03ff00582c202`; 37/37 CI jobs passed, including lint, workflow/component validation, coverage, cross-platform package-manager tests, npm audit, and supply-chain IOC scan |
+| Latest Supply-Chain Watch | `gh run view 26010432490 --repo idrisvale-dev/AIP --json status,conclusion,headSha,url` | Completed successfully for `25ac57ac40e9fc5a0606e76e6339e72c79748c99`; rerun from the final release commit before publication |
 
 ## ITO-46 Publication Path Refresh
 
 | Gate | Command | Result |
 | --- | --- | --- |
-| Clean publication-path baseline | `git status --short --branch`; `git rev-parse HEAD`; `git remote get-url origin` | Clean `main` at `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b`; remote `https://github.com/reborncursed/AIP.git` |
+| Clean publication-path baseline | `git status --short --branch`; `git rev-parse HEAD`; `git remote get-url origin` | Clean `main` at `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b`; remote `https://github.com/idrisvale-dev/AIP.git` |
 | Package/plugin identity readback | `node -p "JSON.stringify({pkg, claude, codex, opencode}, null, 2)"` | `aip-universal@2.0.0-rc.1`; Claude plugin `aip@2.0.0-rc.1`; Codex plugin `aip@2.0.0-rc.1`; OpenCode package `aip-universal@2.0.0-rc.1` |
-| Name availability | `npm view aip name version description repository.url --json`; `npm view @reborncursed/AIP name version --json`; `npm view aip-universal name version dist-tags --json` | `aip` is occupied by unrelated `aip@0.0.2`; `@reborncursed/AIP` returns 404; `aip-universal` registry latest remains `1.10.0` with no `next` dist-tag |
+| Name availability | `npm view aip name version description repository.url --json`; `npm view @idrisvale-dev/AIP name version --json`; `npm view aip-universal name version dist-tags --json` | `aip` is occupied by unrelated `aip@0.0.2`; `@idrisvale-dev/AIP` returns 404; `aip-universal` registry latest remains `1.10.0` with no `next` dist-tag |
 | Plugin manifest tests | `node tests/plugin-manifest.test.js` | 54 passed, 0 failed |
 | Release surface tests | `node tests/docs/aip2-release-surface.test.js` | 21 passed, 0 failed |
 | Claude plugin validation | `claude plugin validate .claude-plugin/plugin.json`; `claude plugin validate .`; `claude plugin tag .claude-plugin --dry-run` | Claude Code `2.1.143`; manifest validation passed; full plugin validation passed with one expected root `CLAUDE.md` context warning; tag dry run would create `aip--v2.0.0-rc.1` |
 | Claude marketplace source help | `claude plugin marketplace add --help`; `claude plugin marketplace update --help` | Marketplace add supports URL, local path, GitHub repo, `--scope`, and `--sparse`; update supports targeted or all-marketplace refresh |
 | Codex marketplace help | `codex plugin marketplace add --help` | Codex CLI `0.131.0`; marketplace add supports local paths, `owner/repo[@ref]`, HTTPS Git URL, SSH Git URL, `--ref`, and `--sparse` |
 | Codex local marketplace smoke | `HOME="$(mktemp -d)" codex plugin marketplace add ./` | Added marketplace `aip` from the local checkout without touching the real Codex config |
-| Codex GitHub-ref marketplace smoke | `HOME="$(mktemp -d)" codex plugin marketplace add reborncursed/AIP --ref "$(git rev-parse HEAD)"` | Added marketplace `aip` from the public GitHub repo pinned to `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b` without touching the real Codex config |
+| Codex GitHub-ref marketplace smoke | `HOME="$(mktemp -d)" codex plugin marketplace add idrisvale-dev/AIP --ref "$(git rev-parse HEAD)"` | Added marketplace `aip` from the public GitHub repo pinned to `67e63e63f9bfd074bd6a21bf6bac71f3dfefa58b` without touching the real Codex config |
 | npm package dry-run | `NPM_CONFIG_USERCONFIG=/dev/null npm pack --dry-run --json`; `NPM_CONFIG_USERCONFIG=/dev/null npm publish --tag next --dry-run` | Pack produced `aip-universal-2.0.0-rc.1.tgz`, 2228 files, 4,348,504 bytes packed, 13,024,929 bytes unpacked, shasum `29d6a17029d80f5cb1df068880ba86c55a5d60f1`; publish dry-run would publish `aip-universal@2.0.0-rc.1` with tag `next` |
 | OpenCode package build | `npm run build:opencode` | Passed |
 | Preview pack smoke | `npm run preview-pack:smoke` | Ready yes; digest `0ed831dbd0cf`; 5 passed, 0 failed |

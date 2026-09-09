@@ -53,7 +53,7 @@
 
 ```bash
 # 1. Fork とクローン
-gh repo fork reborncursed/AIP --clone
+gh repo fork idrisvale-dev/AIP --clone
 cd aip
 
 # 2. ブランチを作成
@@ -422,7 +422,7 @@ docs: improve contributing guide
 
 ## 質問がありますか？
 
-- **Issues:** [github.com/reborncursed/AIP/issues](https://github.com/reborncursed/AIP/issues)
+- **Issues:** [github.com/idrisvale-dev/AIP/issues](https://github.com/idrisvale-dev/AIP/issues)
 - **X/Twitter:** [@bytecore](https://bytecore.org)
 
 ---

@@ -26,7 +26,7 @@
  *
  * Option 2: Clone and use directly
  * ```bash
- * git clone https://github.com/reborncursed/AIP
+ * git clone https://github.com/idrisvale-dev/AIP
  * cd AIP
  * opencode
  * ```

@@ -4,7 +4,7 @@ This is a starter governance file for enterprise AIP deployments.
 
 ## Baseline
 
-- Repository: https://github.com/reborncursed/AIP
+- Repository: https://github.com/idrisvale-dev/AIP
 - Recommended profile: full
 - Keep install manifests, audit allowlists, and Codex baselines under review.
 

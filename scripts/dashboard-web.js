@@ -6,7 +6,7 @@
  * Usage: node scripts/dashboard-web.js [port]
  * Open http://localhost:3456
  *
- * Contribution: https://github.com/reborncursed/AIP
+ * Contribution: https://github.com/idrisvale-dev/AIP
  */
 
 const fs = require('fs');
@@ -440,7 +440,7 @@ function renderHTML(data) {
 
 <div class="toast" id="toast"><span class="ck">✓</span> <span id="toast-msg"></span></div>
 <div class="footer">
-  <a href="https://github.com/reborncursed/AIP" target="_blank">github.com/reborncursed/AIP</a>
+  <a href="https://github.com/idrisvale-dev/AIP" target="_blank">github.com/idrisvale-dev/AIP</a>
   <span class="dt"></span>
   <span>AIP v2.0.0-rc.1</span>
   <span class="dt"></span>

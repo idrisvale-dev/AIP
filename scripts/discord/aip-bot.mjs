@@ -22,7 +22,7 @@ if (!TOKEN || !APP_ID) {
   process.exit(1);
 }
 const REPO = process.env.AIP_REPO || join(homedir(), 'GitHub/AIP/aip');
-const REPO_URL = 'https://github.com/reborncursed/AIP';
+const REPO_URL = 'https://github.com/idrisvale-dev/AIP';
 const INVITE = process.env.DISCORD_INVITE || '';
 const API = 'https://discord.com/api/v10';
 
@@ -138,7 +138,7 @@ const handlers = {
     '',
     `- repo: ${REPO_URL}`,
     '- site: https://bytecore.org',
-    `- install: \`/plugin marketplace add reborncursed/AIP\` then \`/plugin install aip\``,
+    `- install: \`/plugin marketplace add idrisvale-dev/AIP\` then \`/plugin install aip\``,
     INVITE ? `- invite a friend: ${INVITE}` : '',
   ].filter(Boolean).join('\n'),
 
@@ -164,7 +164,7 @@ const handlers = {
   },
 
   release: async () => {
-    const res = await fetch('https://api.github.com/repos/reborncursed/AIP/releases/latest', {
+    const res = await fetch('https://api.github.com/repos/idrisvale-dev/AIP/releases/latest', {
       headers: { 'User-Agent': 'aip-discord-bot' },
     });
     if (!res.ok) return `couldn't reach GitHub (${res.status}) — ${REPO_URL}/releases`;

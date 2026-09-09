@@ -23,19 +23,19 @@ assert.equal(findReleaseDiscussion([
   { id: 'untrusted', body: marker, category: { name: 'General' } },
   { id: 'canonical', body: marker, category: { name: 'Announcements' } },
 ], marker).id, 'canonical');
-assert.equal(announcementKey({ repository: 'reborncursed/AIP', discussionId: 'D_kw123' }), 'reborncursed/AIP:discussion:D_kw123');
+assert.equal(announcementKey({ repository: 'idrisvale-dev/AIP', discussionId: 'D_kw123' }), 'idrisvale-dev/AIP:discussion:D_kw123');
 
 const payload = buildDiscordPayload({
   title: '@everyone AIP 2.2.0',
   body: 'A'.repeat(5000),
-  url: 'https://github.com/reborncursed/AIP/discussions/3000',
-  key: 'reborncursed/AIP:discussion:D_kw123',
+  url: 'https://github.com/idrisvale-dev/AIP/discussions/3000',
+  key: 'idrisvale-dev/AIP:discussion:D_kw123',
 });
 assert.deepEqual(payload.allowed_mentions, { parse: [] });
 assert.equal(payload.embeds.length, 1);
 assert.ok(payload.embeds[0].description.length <= 4000);
 assert.equal(payload.embeds[0].footer.text, 'aip:D_kw123');
-assert.equal(payload.embeds[0].url, 'https://github.com/reborncursed/AIP/discussions/3000');
+assert.equal(payload.embeds[0].url, 'https://github.com/idrisvale-dev/AIP/discussions/3000');
 assert.equal(payload.enforce_nonce, true);
 assert.match(payload.nonce, /^aip-[a-f0-9]{16}$/);
 
@@ -48,7 +48,7 @@ assert.throws(() => normalizeDiscordWebhookUrl('https://user@discord.com/api/web
 assert.throws(() => normalizeDiscordWebhookUrl('https://discord.com:444/api/webhooks/123456789012345678/secret-token-long-enough'), /invalid Discord webhook URL/);
 assert.throws(() => normalizeDiscordWebhookUrl('https://discord.com/api/webhooks/123456789012345678/secret-token-long-enough?leak=1'), /invalid Discord webhook URL/);
 
-const receiptMarker = discussionReceiptMarker('reborncursed/AIP:discussion:D_kw123');
+const receiptMarker = discussionReceiptMarker('idrisvale-dev/AIP:discussion:D_kw123');
 assert.match(receiptMarker, /^<!-- aip-discord-receipt:[a-f0-9]{32} -->$/);
 assert.equal(findDiscussionReceipt([
   { id: 'forged', body: `Discord delivery: complete\n${receiptMarker}`, author: { login: 'attacker' } },

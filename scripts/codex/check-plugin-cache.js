@@ -187,7 +187,7 @@ function checkCache(options) {
     } else {
       log(`No installed cache entries found for ${options.marketplace}/${options.plugin}.`);
       if (options.marketplace === 'aip' && options.plugin === 'aip') {
-        log('Run: codex plugin marketplace add reborncursed/AIP');
+        log('Run: codex plugin marketplace add idrisvale-dev/AIP');
       } else {
         log('Install the requested plugin into the Codex plugin cache.');
       }

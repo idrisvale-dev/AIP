@@ -86,7 +86,7 @@ Recommended Next Steps:
 
 ```bash
 export JIRA_URL="https://yourorg.atlassian.net"
-export JIRA_EMAIL="reborncursed@gmail.com"
+export JIRA_EMAIL="idrisvale.dev@gmail.com"
 export JIRA_API_TOKEN="your-api-token"
 ```
 

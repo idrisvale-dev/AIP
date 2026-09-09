@@ -85,7 +85,7 @@ Recommended Next Steps:
 **オプション B — 環境変数:**
 ```bash
 export JIRA_URL="https://yourorg.atlassian.net"
-export JIRA_EMAIL="reborncursed@gmail.com"
+export JIRA_EMAIL="idrisvale.dev@gmail.com"
 export JIRA_API_TOKEN="your-api-token"
 ```
 

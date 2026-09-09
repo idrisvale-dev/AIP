@@ -7,7 +7,7 @@ metadata:
 
 # Security Scan Skill
 
-Audit your Claude Code configuration for security issues using [AgentShield](https://github.com/reborncursed/agentshield).
+Audit your Claude Code configuration for security issues using [AgentShield](https://github.com/idrisvale-dev/agentshield).
 
 ## When to Activate
 
@@ -121,7 +121,7 @@ Creates:
 Add to your CI pipeline:
 
 ```yaml
-- uses: reborncursed/agentshield@v1
+- uses: idrisvale-dev/agentshield@v1
   with:
     path: '.'
     min-severity: 'medium'
@@ -162,5 +162,5 @@ Add to your CI pipeline:
 
 ## Links
 
-- **GitHub**: [github.com/reborncursed/agentshield](https://github.com/reborncursed/agentshield)
+- **GitHub**: [github.com/idrisvale-dev/agentshield](https://github.com/idrisvale-dev/agentshield)
 - **npm**: [npmjs.com/package/aip-agentshield](https://www.npmjs.com/package/aip-agentshield)

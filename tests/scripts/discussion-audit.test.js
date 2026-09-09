@@ -102,10 +102,10 @@ function runTests() {
 
     try {
       const shimPath = writeGhShim(rootDir, {
-        [discussionEnabledGhKey('reborncursed', 'AIP')]: {
+        [discussionEnabledGhKey('idrisvale-dev', 'AIP')]: {
           data: { repository: { hasDiscussionsEnabled: true } }
         },
-        [discussionGhKey('reborncursed', 'AIP')]: {
+        [discussionGhKey('idrisvale-dev', 'AIP')]: {
           data: {
             repository: {
               hasDiscussionsEnabled: true,
@@ -142,7 +142,7 @@ function runTests() {
       const parsed = JSON.parse(run([
         '--json',
         '--repo',
-        'reborncursed/AIP'
+        'idrisvale-dev/AIP'
       ], {
         cwd: rootDir,
         env: {
@@ -165,10 +165,10 @@ function runTests() {
 
     try {
       const shimPath = writeGhShim(rootDir, {
-        [discussionEnabledGhKey('reborncursed', 'AIP')]: {
+        [discussionEnabledGhKey('idrisvale-dev', 'AIP')]: {
           data: { repository: { hasDiscussionsEnabled: true } }
         },
-        [discussionGhKey('reborncursed', 'AIP')]: {
+        [discussionGhKey('idrisvale-dev', 'AIP')]: {
           data: {
             repository: {
               hasDiscussionsEnabled: true,
@@ -195,7 +195,7 @@ function runTests() {
       const result = runProcess([
         '--json',
         '--repo',
-        'reborncursed/AIP',
+        'idrisvale-dev/AIP',
         '--exit-code'
       ], {
         cwd: rootDir,
@@ -220,10 +220,10 @@ function runTests() {
 
     try {
       const shimPath = writeGhShim(rootDir, {
-        [discussionEnabledGhKey('reborncursed', 'AIP')]: {
+        [discussionEnabledGhKey('idrisvale-dev', 'AIP')]: {
           data: { repository: { hasDiscussionsEnabled: true } }
         },
-        [discussionGhKey('reborncursed', 'AIP')]: {
+        [discussionGhKey('idrisvale-dev', 'AIP')]: {
           data: {
             repository: {
               hasDiscussionsEnabled: true,
@@ -237,7 +237,7 @@ function runTests() {
         '--write',
         outputPath,
         '--repo',
-        'reborncursed/AIP'
+        'idrisvale-dev/AIP'
       ], {
         cwd: rootDir,
         env: { AIP_GH_SHIM: shimPath }

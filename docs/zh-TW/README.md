@@ -1,6 +1,6 @@
 # AIP
 
-[![Stars](https://img.shields.io/github/stars/reborncursed/AIP?style=flat)](https://github.com/reborncursed/AIP/stargazers)
+[![Stars](https://img.shields.io/github/stars/idrisvale-dev/AIP?style=flat)](https://github.com/idrisvale-dev/AIP/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Shell](https://img.shields.io/badge/-Shell-4EAA25?logo=gnu-bash&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -67,7 +67,7 @@
 
 ```bash
 # 新增市集
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # 安裝外掛程式
 /plugin install aip@aip
@@ -79,7 +79,7 @@
 
 ```bash
 # 首先複製儲存庫
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 
 # 複製規則（應用於所有專案）
 cp -r aip/rules/* ~/.claude/rules/
@@ -267,7 +267,7 @@ aip/
 
 ```bash
 # 將此儲存庫新增為市集
-/plugin marketplace add https://github.com/reborncursed/AIP
+/plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # 安裝外掛程式
 /plugin install aip@aip
@@ -281,7 +281,7 @@ aip/
     "aip": {
       "source": {
         "source": "github",
-        "repo": "reborncursed/AIP"
+        "repo": "idrisvale-dev/AIP"
       }
     }
   },
@@ -301,7 +301,7 @@ aip/
 
 ```bash
 # 複製儲存庫
-git clone https://github.com/reborncursed/AIP.git
+git clone https://github.com/idrisvale-dev/AIP.git
 
 # 將代理程式複製到您的 Claude 設定
 cp aip/agents/*.md ~/.claude/agents/
@@ -459,7 +459,7 @@ node tests/hooks/hooks.test.js
 
 ## Star 歷史
 
-[![Star History Chart](https://api.star-history.com/svg?repos=reborncursed/AIP&type=Date)](https://star-history.com/#reborncursed/AIP&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=idrisvale-dev/AIP&type=Date)](https://star-history.com/#idrisvale-dev/AIP&Date)
 
 ---
 

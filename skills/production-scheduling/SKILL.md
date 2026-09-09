@@ -9,7 +9,7 @@ description: >
   resolving bottlenecks, optimizing changeovers, responding to disruptions,
   or balancing manufacturing lines.
 license: Apache-2.0
-homepage: https://github.com/reborncursed/AIP
+homepage: https://github.com/idrisvale-dev/AIP
 metadata:
   version: 1.0.0
   origin: AIP

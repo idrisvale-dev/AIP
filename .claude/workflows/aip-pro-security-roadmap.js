@@ -115,7 +115,7 @@ const GUARDRAILS = [
   'CONSTRAINTS: research/triage only. Do NOT modify any code, do NOT open/close/merge PRs, do NOT post comments,',
   'do NOT send any external message. Return findings as data only.',
   'Brand it "AIP" (never "everything claude code"). AgentShield was FEATURED at a hackathon, never say it "won".',
-  'AgentShield npm package is "aip-agentshield". Local clone: ~/GitHub/AIP/agentshield. AIP repo: reborncursed/AIP. AgentShield repo: reborncursed/agentshield.',
+  'AgentShield npm package is "aip-agentshield". Local clone: ~/GitHub/AIP/agentshield. AIP repo: idrisvale-dev/AIP. AgentShield repo: idrisvale-dev/agentshield.',
   'You have Bash (gh CLI), Read, Grep, Glob, and web tools (load via ToolSearch: WebSearch / firecrawl / exa).'
 ].join(' ');
 
@@ -134,12 +134,12 @@ const surveyThunks = [
     ),
   () =>
     agent(
-      `${GUARDRAILS}\n\nTRIAGE every OPEN PR and ISSUE on the AIP repo (reborncursed/AIP). Use gh: \`gh pr list --repo reborncursed/AIP --state open --limit 80 --json number,title,author,isDraft\` and \`gh issue list --repo reborncursed/AIP --state open --limit 80 --json number,title,labels\`. For the higher-signal ones, peek at the diff/body (\`gh pr view <n> --repo reborncursed/AIP\`). Categorize each: merge / close / needs-work / triage-later / security-priority, with a one-line rationale and any Pro/MRR value. Prioritize identifying security-relevant and Pro-relevant items. repo="reborncursed/AIP".`,
+      `${GUARDRAILS}\n\nTRIAGE every OPEN PR and ISSUE on the AIP repo (idrisvale-dev/AIP). Use gh: \`gh pr list --repo idrisvale-dev/AIP --state open --limit 80 --json number,title,author,isDraft\` and \`gh issue list --repo idrisvale-dev/AIP --state open --limit 80 --json number,title,labels\`. For the higher-signal ones, peek at the diff/body (\`gh pr view <n> --repo idrisvale-dev/AIP\`). Categorize each: merge / close / needs-work / triage-later / security-priority, with a one-line rationale and any Pro/MRR value. Prioritize identifying security-relevant and Pro-relevant items. repo="idrisvale-dev/AIP".`,
       { label: 'triage:aip', phase: 'Survey', agentType: 'general-purpose', schema: TRIAGE_SCHEMA }
     ),
   () =>
     agent(
-      `${GUARDRAILS}\n\nTRIAGE every OPEN PR and ISSUE on the AgentShield repo (reborncursed/agentshield). Use gh similarly. Pay special attention to the false-positive cluster (issues #100, #102, #99 "bm", PR #103) where the scanner penalizes its own recommended fix and flags benign strings — these hurt trust and conversion. Also assess #101 (external rule-pack loader --rule-pack) and #97 (FAQ docs). Categorize each: merge / close / needs-work / triage-later / security-priority, with rationale and Pro/MRR value. repo="reborncursed/agentshield".`,
+      `${GUARDRAILS}\n\nTRIAGE every OPEN PR and ISSUE on the AgentShield repo (idrisvale-dev/agentshield). Use gh similarly. Pay special attention to the false-positive cluster (issues #100, #102, #99 "bm", PR #103) where the scanner penalizes its own recommended fix and flags benign strings — these hurt trust and conversion. Also assess #101 (external rule-pack loader --rule-pack) and #97 (FAQ docs). Categorize each: merge / close / needs-work / triage-later / security-priority, with rationale and Pro/MRR value. repo="idrisvale-dev/agentshield".`,
       { label: 'triage:agentshield', phase: 'Survey', agentType: 'general-purpose', schema: TRIAGE_SCHEMA }
     )
 ];

@@ -1,4 +1,4 @@
-const REPOSITORY_ISSUES_URL = 'https://github.com/reborncursed/AIP/issues/new';
+const REPOSITORY_ISSUES_URL = 'https://github.com/idrisvale-dev/AIP/issues/new';
 
 const FEEDBACK_ROUTES = Object.freeze({
   problem: `${REPOSITORY_ISSUES_URL}?template=install-problem.yml`,
