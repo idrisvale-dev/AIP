@@ -35,7 +35,7 @@ The AIP Discord is live: <https://discord.gg/36yGMHGFbR>
 
 ```
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
-/plugin install aip
+claude plugin install aip
 ```
 
 Existing installs: `/plugin update aip`

@@ -7,7 +7,7 @@ AIP 2.0 renamed the repo (`idrisvale-dev/AIP` → `idrisvale-dev/AIP`) and the p
 ```bash
 # 1. Install 2.0
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
-/plugin install aip@aip
+claude plugin install aip@aip
 
 # 2. Remove the old plugin
 /plugin uninstall aip@aip

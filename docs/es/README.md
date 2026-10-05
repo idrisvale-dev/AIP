@@ -270,7 +270,7 @@ npx aip-universal install --profile minimal --target claude --with capability:ma
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Instalar plugin
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 ### Nota de Nombres y Migración
@@ -391,7 +391,7 @@ Si combinaste métodos, limpia en este orden:
 # /plan "Añadir autenticación de usuario"
 
 # Ver comandos disponibles
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 **¡Listo!** Ahora tienes acceso a 63 agentes, 249 skills y 79 shims de comandos legados.
@@ -690,7 +690,7 @@ La forma más fácil de usar este repo — instálalo como plugin de Claude Code
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Instalar el plugin
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 O añade directamente a tu `~/.claude/settings.json`:
@@ -936,7 +936,7 @@ skill e2e-testing                             → e2e-runner: pruebas de flujos 
 <summary><b>¿Cómo veo qué agentes/comandos están instalados?</b></summary>
 
 ```bash
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 Muestra todos los agentes, comandos y skills disponibles del plugin.

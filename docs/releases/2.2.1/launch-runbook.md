@@ -16,7 +16,7 @@ throughout the npm rollout:
 
 ```text
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 Never unpublish `2.2.0` or `2.2.1`. npm dist-tags provide the reversible

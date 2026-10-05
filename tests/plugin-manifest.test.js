@@ -234,10 +234,9 @@ test('claude plugin.json commands is an array', () => {
 });
 
 test('claude plugin.json disables bundled MCP servers for provider tool-name compatibility', () => {
-  const legacyPluginName = 'aip';
-  const reportedOverlongToolName = `mcp__plugin_${legacyPluginName}_github__create_pull_request_review`;
-
-  assert.ok(reportedOverlongToolName.length > 64, 'Expected the reported GitHub MCP tool name to exceed strict provider limits without the MCP opt-out');
+  // Keep the opt-out contract independent of provider-specific tool-name
+  // length calculations. Claude may change its MCP naming or provider limits;
+  // the stable invariant is that the plugin must not auto-load root MCPs.
   assert.ok(Object.prototype.hasOwnProperty.call(claudePlugin, 'mcpServers'), 'Expected mcpServers to be explicitly declared so Claude Code does not auto-load root .mcp.json');
   assert.deepStrictEqual(claudePlugin.mcpServers, {}, 'Claude plugin installs must not auto-bundle root MCP servers; document/manual MCP install remains supported');
 });

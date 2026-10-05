@@ -138,7 +138,7 @@ command -v aip-memory-mcp
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # 安装插件
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 > 安装名称说明：较早的帖子里可能还会出现较长的旧标识符。Anthropic 的 marketplace/plugin 安装是按规范化插件标识符寻址的，因此 AIP 现在统一为 `aip@aip`，让工具名和 slash command 命名空间保持简短。
@@ -193,7 +193,7 @@ Copy-Item -Recurse rules/typescript "$HOME/.claude/rules/"
 # /plan "添加用户认证"
 
 # 查看可用命令
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 **完成！** 你现在可以使用 68 个代理、286 个技能和 94 个命令。
@@ -586,7 +586,7 @@ Claude Code v2.1+ 会**按照约定自动加载**已安装插件中的 `hooks/ho
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # 安装插件
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 或直接添加到你的 `~/.claude/settings.json`：

@@ -70,7 +70,7 @@
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # 安裝外掛程式
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 ### 第二步：安裝規則（必需）
@@ -95,7 +95,7 @@ cp -r aip/rules/* ~/.claude/rules/
 # /plan "新增使用者認證"
 
 # 查看可用指令
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 **完成！** 您現在使用 15+ 代理程式、30+ 技能和 20+ 指令。
@@ -270,7 +270,7 @@ aip/
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # 安裝外掛程式
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 或直接新增到您的 `~/.claude/settings.json`：

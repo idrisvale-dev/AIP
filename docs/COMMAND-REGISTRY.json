@@ -3,6 +3,18 @@
   "totalCommands": 94,
   "commands": [
     {
+      "command": "aip-guide",
+      "description": "Navigate AIP's current agents, skills, commands, hooks, install profiles, and docs from the live repository surface.",
+      "type": "review",
+      "primaryAgents": [],
+      "allAgents": [],
+      "skills": [
+        "aip-guide",
+        "security-scan"
+      ],
+      "path": "commands/aip-guide.md"
+    },
+    {
       "command": "aside",
       "description": "Answer a quick side question without interrupting or losing context from the current task. Resume work automatically after answering.",
       "type": "testing",
@@ -98,18 +110,6 @@
         "tdd-workflow"
       ],
       "path": "commands/cpp-test.md"
-    },
-    {
-      "command": "aip-guide",
-      "description": "Navigate AIP's current agents, skills, commands, hooks, install profiles, and docs from the live repository surface.",
-      "type": "review",
-      "primaryAgents": [],
-      "allAgents": [],
-      "skills": [
-        "aip-guide",
-        "security-scan"
-      ],
-      "path": "commands/aip-guide.md"
     },
     {
       "command": "epic-claim",
@@ -1112,11 +1112,11 @@
         "count": 3
       },
       {
-        "skill": "cpp-coding-standards",
+        "skill": "aip-guide",
         "count": 2
       },
       {
-        "skill": "cpp-testing",
+        "skill": "cpp-coding-standards",
         "count": 2
       }
     ]

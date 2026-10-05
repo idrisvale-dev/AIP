@@ -133,7 +133,7 @@ Claude Code, Codex ve Kimi Code için incelenebilir çoklu harness kurulumu ve e
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Plugin'i kur
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 ### Adım 2: Rule'ları Kurun (Gerekli)
@@ -178,7 +178,7 @@ Manuel kurulum talimatları için `rules/` klasöründeki README'ye bakın.
 # /plan "Kullanıcı kimlik doğrulaması ekle"
 
 # Mevcut command'ları kontrol edin
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 **Bu kadar!** Artık 28 agent, 116 skill ve 59 command'a erişiminiz var.
@@ -360,7 +360,7 @@ Nereden başlayacağınızdan emin değil misiniz? Bu hızlı referansı kullan�
 <summary><b>Hangi agent/command'ların kurulu olduğunu nasıl kontrol ederim?</b></summary>
 
 ```bash
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 Bu, plugin'den mevcut tüm agent'ları, command'ları ve skill'leri gösterir.

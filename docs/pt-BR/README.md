@@ -131,7 +131,7 @@ Comece em menos de 2 minutos:
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Instalar plugin
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 ### Passo 2: Instalar as Regras (Obrigatório)
@@ -174,7 +174,7 @@ npx aip-universal install typescript
 # /plan "Adicionar autenticação de usuário"
 
 # Verificar comandos disponíveis
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 **Pronto!** Você agora tem acesso a 28 agentes, 116 skills e 59 comandos.
@@ -320,7 +320,7 @@ claude --version
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Instalar o plugin
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 Ou adicione diretamente ao seu `~/.claude/settings.json`:
@@ -459,7 +459,7 @@ Regras são diretrizes sempre seguidas, organizadas em `common/` (agnóstico à 
 <summary><b>Como verificar quais agentes/comandos estão instalados?</b></summary>
 
 ```bash
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 </details>
 

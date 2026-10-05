@@ -206,7 +206,7 @@ command -v aip-memory-mcp
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Install plugin
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 ### 步骤 2：安装规则（必需）
@@ -257,7 +257,7 @@ Copy-Item -Recurse rules/typescript "$HOME/.claude/rules/"
 # /plan "Add user authentication"
 
 # Check available commands
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 **搞定！** 你现在可以使用 68 个智能体、286 项技能和 94 个命令了。
@@ -642,7 +642,7 @@ Claude Code v2.1+ **会自动加载** 任何已安装插件中的 `hooks/hooks.j
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Install the plugin
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 或者直接添加到您的 `~/.claude/settings.json`：
@@ -853,7 +853,7 @@ e2e-testing 技能                              → e2e-runner: 关键用户流�
 <summary><b>如何检查已安装的代理/命令？</b></summary>
 
 ```bash
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 这会显示插件中所有可用的代理、命令和技能。

@@ -111,7 +111,7 @@ AIP v2.0.0-rc.1 اس قابل استعمال پرت پر عوامی Hermes آپ�
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # پلگ ان انسٹال کریں
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 ### مرحلہ 2: Rules انسٹال کریں (اگر ضرورت ہو)
@@ -134,7 +134,7 @@ cp -R rules/typescript ~/.claude/rules/aip/  # اپنی زبان منتخب کر
 /aip:plan "یوزر تصدیق شامل کریں"
 
 # دستیاب commands چیک کریں
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 **بس!** آپ کو اب 61 agents، 246 skills، اور 76 legacy command shims تک رسائی حاصل ہے۔
@@ -271,7 +271,7 @@ export AIP_SESSION_START_CONTEXT=off
 
 **میں کیسے چیک کروں کہ کون سے agents/commands انسٹال ہیں؟**
 ```bash
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 **میری hooks کام نہیں کر رہیں / "Duplicate hooks file" errors آ رہی ہیں**

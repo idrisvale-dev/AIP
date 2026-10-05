@@ -107,3 +107,4 @@ aip2/target/
 assets/images/security/badrudi-exploit.mp4
 
 .aider*
+.opencode/motapis.local.json

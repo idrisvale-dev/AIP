@@ -109,7 +109,7 @@
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # プラグインをインストール
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 ### ステップ2：ルールをインストール（必須）
@@ -139,7 +139,7 @@ cp -r aip/rules/golang ~/.claude/rules/golang
 # /plan "ユーザー認証を追加"
 
 # 利用可能なコマンドを確認
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 **完了です！** これで13のエージェント、43のスキル、31のコマンドにアクセスできます。
@@ -430,7 +430,7 @@ Duplicate hook file detected: ./hooks/hooks.json is already resolved to a loaded
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # プラグインをインストール
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 または、`~/.claude/settings.json` に直接追加：

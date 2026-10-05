@@ -51,7 +51,7 @@ Nếu bạn đã cài chồng nhiều lần và thấy skill/hook bị trùng, x
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Cài plugin
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 AIP có ba định danh công khai khác nhau:
@@ -173,7 +173,7 @@ AIP chỉ xoá file có trong install-state của nó. Nó không xoá file khô
 # /plan "Thêm xác thực người dùng"
 
 # Xem plugin đang cài
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 AIP hiện cung cấp hàng chục agent, hơn 200 skill và legacy command shim cho các workflow agent khác nhau. Kiểm tra README tiếng Anh để xem danh sách và hướng dẫn chi tiết nhất.

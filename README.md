@@ -49,7 +49,7 @@ Alternatively, run Claude Code's native plugin commands inside Claude Code:
 
 ```text
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 The native path installs AIP's skills, agents, commands, and plugin-managed hooks. If you choose it, stop there. Do not also run a full manual install into Claude Code.
@@ -652,7 +652,7 @@ Manual installs may expose the shorter compatibility form:
 Skills are the primary workflow surface. Commands remain convenient entry points and compatibility shims. Check what is installed with:
 
 ```bash
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 </details>
 

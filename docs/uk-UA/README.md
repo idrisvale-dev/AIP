@@ -57,7 +57,7 @@
 
 ```text
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 Це встановлює навички, агенти, команди та керовані плагіном хуки AIP. Якщо ви обираєте цей шлях, зупиніться на цьому. Не запускайте також повне ручне встановлення в Claude Code.
@@ -656,7 +656,7 @@ AIP також постачає розширені керовані адапте
 Навички — це основна поверхня процесів. Команди залишаються зручними точками входу та шимами сумісності. Перевірте, що встановлено:
 
 ```bash
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 </details>
 

@@ -53,7 +53,7 @@ AIP ไม่ใช่แค่ชุดไฟล์คอนฟิก แต่
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # ติดตั้ง plugin
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 AIP มีชื่อเรียกในระบบสาธารณะ 3 ชื่อที่ต่างกัน:
@@ -197,7 +197,7 @@ AIP จะลบเฉพาะไฟล์ที่อยู่ใน install-s
 # /plan "เพิ่มระบบยืนยันตัวตนผู้ใช้"
 
 # ดู plugin ที่ติดตั้งอยู่
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 คำสั่งหลักที่ใช้บ่อย:

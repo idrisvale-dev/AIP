@@ -52,5 +52,5 @@ The native Claude marketplace path remains supported:
 
 ```text
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
-/plugin install aip@aip
+claude plugin install aip@aip
 ```

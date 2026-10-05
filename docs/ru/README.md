@@ -225,7 +225,7 @@ npx aip-universal consult "security reviews" --target claude
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Установите плагин
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 ### Примечание об именовании и миграции
@@ -346,7 +346,7 @@ AIP удаляет только файлы, записанные в его insta
 # /plan "Добавить аутентификацию пользователей"
 
 # Проверить доступные команды
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 **Готово.** Теперь у вас есть доступ к 50 агентам, 185 навыкам и 68 устаревшим совместимым заглушкам команд.
@@ -766,7 +766,7 @@ Duplicate hooks file detected: ./hooks/hooks.json resolves to already-loaded fil
 /plugin marketplace add https://github.com/idrisvale-dev/AIP
 
 # Установить плагин
-/plugin install aip@aip
+claude plugin install aip@aip
 ```
 
 Или добавьте напрямую в `~/.claude/settings.json`:
@@ -1010,7 +1010,7 @@ e2e-testing skill                             → e2e-runner: тесты кри�
 <summary><b>Как проверить, какие агенты/команды установлены?</b></summary>
 
 ```bash
-/plugin list aip@aip
+claude plugin list aip@aip
 ```
 
 Показывает всех доступных агентов, команды и навыки из плагина.
